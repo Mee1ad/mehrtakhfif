@@ -1,0 +1,86 @@
+GET http://{{host}}/test
+###
+POST {{host}}/signup
+Content-Type: Application/json
+
+{
+  "phone": "09015518445",
+  "password": "09015518445"
+}
+###
+POST {{host}}/activate
+Content-Type: Application/json
+
+{
+  "code": "260375"
+}
+###
+POST {{host}}/login
+Content-Type: Application/json
+
+{
+  "username": "admin",
+  "password": "admin"
+}
+###
+POST {{host}}/reset_password_request
+Content-Type: Application/json
+
+{
+  "username": "09015518445"
+}
+###
+POST {{host}}/reset_password
+Content-Type: Application/json
+
+{
+  "new_password": "1995",
+  "token": "4ee56082975173f7d3cf3e111882726e3ef3698d3e30c5d7b851e0037e7070a5c433ac81e96c4d4ffcfa4cf6127a71fa815e4a0bbe640d4162a3c3d9c0578468e8cc290368af9642ee78e42034bd84fc777b91e3155085438cf54bce47df3f4189bf2b43fdd6e467fd17922b8dff2c5ad44a7451aec4b41bfe819d720cd53b81891fe8203faf1a82106a2f8dfbcc6e2cc016112361f24d942dd6d41575471f916e8281dbeb11bfe58facf4c23a57a18032b29d3fdb3f4a10326e2d1845885dcd65e72322ed1e548b782e90e664ba13fc2c6f2751a5ae8461bf251afe08f173de5925ebcb32ae3f8ca69c3ebf38b381eaff67d06dcdff1497e66338b1b4afee"
+}
+###
+POST {{host}}/add_product
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+access-token: {{access-token}}
+device-id: {{device-id}}
+
+--WebAppBoundary
+Content-Disposition: form-data; name="data"
+
+{"type": "accessories", "platform": "PlayStation 4", "title": "poof", "description":"dsgsdgsdgsgsd",
+ "address":"rasht",  "location": "2626.1651", "new":true, "price": 5000000}
+--WebAppBoundary--
+Content-Disposition: form-data; name="file"; filename="ios.jpg"
+
+< E:\Pictures\ios.jpg
+###
+GET http://{{host}}/home
+###
+GET http://{{host}}/single/1
+###
+GET http://{{host}}/box/3
+###
+GET http://{{host}}/category/1
+###
+GET http://{{host}}/tag/1
+###
+GET http://{{host}}/comment?blog_id=1
+###
+POST http://{{host}}/wishlist
+Content-Type: Application/json
+
+{
+  "type": "admin",
+  "notify": false,
+  "product_id": "1"
+
+}
+###
+POST http://{{host}}/buy
+Content-Type: Application/json
+
+{
+  "count": "3",
+  "description": "this is a test basket",
+  "product_id": [1,2]
+}
+###
