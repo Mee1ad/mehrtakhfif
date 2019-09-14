@@ -53,7 +53,7 @@ Content-Disposition: form-data; name="file"; filename="ios.jpg"
 
 < E:\Pictures\ios.jpg
 ###
-GET http://{{host}}/home
+GET http://{{host}}/http:/slider/home
 ###
 GET http://digikala.com/
 ###
@@ -95,4 +95,9 @@ Content-Type: Application/json
   "description": "this is a test basket",
   "product_id": [1,2]
 }
+###
+GET http://192.168.137.95/slider?type=home&media_id__in[]=41&media_id__in[]=42
+###
+GET http://localhost/slider?id__in=2&type__in=home&created_by_id__in=1&media_id__in=41&updated_by_id__in=1
+
 ###
