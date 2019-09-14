@@ -14,21 +14,34 @@ from server.serialize import *
 
 
 class GetSlider(Tools):
-    def get(self, request, box):
-        slider = Slider.objects.select_related('media').filter(type=box)
+    def get(self, request):
+        # step = request.GET.get('type', None)
+        # step = request.GET.get('type', None)
+        params = request.GET
+        print(type(params))
+        p = {}
+        for key in params.keys():
+            value = params.getlist(key)
+            if len(value) == 1:
+                p[key] = value[0]
+                continue
+            p[key[:-2]] = value
+        print(p)
+        param_dict = request.GET.dict()
+        slider = Slider.objects.select_related('media').filter(**p)
         res = {'slider': SliderSchema(language='english').dump(slider, many=True)}
         return JsonResponse(res)
 
 
 class GetSpecialOffer(Tools):
-    def get(self, request, box):
+    def get(self, request):
         special_offer = SpecialOffer.objects.select_related('media').all()
         res = {'special_offer': SpecialOfferSchema().dump(special_offer, many=True)}
         return JsonResponse(res)
 
 
 class GetSpecialProduct(Tools):
-    def get(self, request, box):
+    def get(self, request):
         page = self.page
         step = self.step
         special_product = SpecialProduct.objects.select_related(
