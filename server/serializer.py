@@ -127,7 +127,7 @@ def storage(obj, array=False):
 
 
 def basket(obj, array=False):
-    fields = ('id', 'product', 'user', 'count', 'description')
+    fields = ('id', 'user', 'count', 'description')
     return serialize(obj, fields, array=array)
 
 

@@ -16,8 +16,10 @@ from server.decorators import try_except
 
 
 class Tools(View):
-    start = 0
-    end = 10
+    step = 12
+    page = 1
+
+
 
     def safe_delete(self, obj, user):
         obj.deleted_by_id = user
