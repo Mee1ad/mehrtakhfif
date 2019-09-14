@@ -26,11 +26,14 @@ class Base:
 
 
 class BoxAdmin(SafeDeleteAdmin):
-    list_display = ('name', 'created_by', 'updated_at', 'deleted_by') + SafeDeleteAdmin.list_display
+    list_display = ('persian', 'created_by', 'updated_at', 'deleted_by') + SafeDeleteAdmin.list_display
     list_filter = ('name',) + SafeDeleteAdmin.list_filter
     search_fields = ['name']
     list_per_page = 10
     ordering = ('-created_at',)
+
+    def persian(self, obj):
+        return obj.name['persian']
 
 
 class CategoryAdmin(SafeDeleteAdmin):
@@ -170,6 +173,7 @@ admin.site.register(BlogPost)
 admin.site.register(WishList)
 admin.site.register(NotifyUser)
 admin.site.register(Tourism, TourismAdmin)
+admin.site.register(Ad)
 
 admin.site.register(Permission)
 admin.site.site_header = "Mehr Takhfif"

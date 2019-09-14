@@ -16,6 +16,10 @@ class AuthMiddleware:
 
     def __call__(self, request):
         try:
+            request.lang = request.headers['language']
+        except Exception:
+            request.lang = 'persian'
+        try:
             # request.user = User.objects.get(pk=2)
             pass
             # print(request.headers)

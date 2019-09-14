@@ -55,13 +55,23 @@ Content-Disposition: form-data; name="file"; filename="ios.jpg"
 ###
 GET http://{{host}}/home
 ###
-GET http://{{host}}/single/1
+GET http://digikala.com/
+###
+GET http://{{host}}/single/17
+###
+GET http://{{host}}/box_detail/3
 ###
 GET http://{{host}}/box/3
 ###
 GET http://{{host}}/category/1
 ###
+GET http://{{host}}/menu1
+###
 GET http://{{host}}/tag/1
+###
+GET http://{{host}}/test2
+###
+GET http://{{host}}/test3
 ###
 GET http://{{host}}/comment?blog_id=1
 ###
@@ -74,6 +84,8 @@ Content-Type: Application/json
   "product_id": "1"
 
 }
+###
+GET http://{{host}}/buy?basket_id=4
 ###
 POST http://{{host}}/buy
 Content-Type: Application/json
