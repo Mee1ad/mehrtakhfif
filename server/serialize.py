@@ -66,6 +66,11 @@ class BaseSchema(Schema):
             return MediaSchema(self.lang).dump(obj.media)
         return None
 
+    def get_thumbnail(self, obj):
+        if obj.thumbnail is not None:
+            return MediaSchema(self.lang).dump(obj.thumbnail)
+        return None
+
     def get_short_description(self, obj):
         return obj.short_description[self.lang]
 
@@ -150,6 +155,7 @@ class ProductSchema(BaseSchema):
     category = fields.Function(lambda o: o.category_id)
     tag = TagField()
     media = MediaField()
+    thumbnail = fields.Function(lambda o: HOST + o.thumbnail.file.url)
     short_description = fields.Method("get_short_description")
     description = fields.Method("get_description")
     usage_condition = fields.Method("get_usage_condition")
@@ -165,8 +171,8 @@ class SliderSchema(BaseSchema):
 
 class StorageSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'available_count_for_sale', 'start_price', 'final_price', 'transportation_price',
-                      'discount_price', 'discount_vip_price')
+        additional = ('id', 'available_count_for_sale', 'final_price', 'transportation_price',
+                      'discount_price', 'discount_vip_price', 'discount_price_percent', 'discount_vip_price_percent')
 
     product = fields.Method("get_product")
     category = fields.Function(lambda o: o.category_id)
@@ -203,7 +209,7 @@ class CommentSchema(Schema):
 class FactorSchema(BaseSchema):
     class Meta:
         additional = ('id', 'price', 'product', 'user', 'payed_at', 'successful', 'type', 'special_offer_id', 'address',
-                      'description', 'final_price', 'discount_price', 'count', 'tax', 'start_price')
+                      'description', 'final_price', 'discount_price', 'count', 'tax')
     product = fields.Int()
 
 

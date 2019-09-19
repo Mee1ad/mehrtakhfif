@@ -19,8 +19,6 @@ class Tools(View):
     step = 12
     page = 1
 
-
-
     def safe_delete(self, obj, user):
         obj.deleted_by_id = user
         obj.delete()
@@ -80,6 +78,17 @@ class Tools(View):
             os.rename(old_path, new_path)
         finally:
             obj.save()
+
+    @staticmethod
+    def get_params(params):
+        p = {}
+        for key in params.keys():
+            value = params.getlist(key)
+            if len(value) == 1:
+                p[key] = value[0]
+                continue
+            p[key + '__in'] = value
+        return p
 
 
 class Validation(Tools):

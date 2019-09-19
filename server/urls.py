@@ -17,11 +17,16 @@ home = [path('test', Test.as_view(), name='test'),
         path('special_product', home.GetSpecialProduct.as_view(), name='special_product'),
         path('all_special_product', home.AllSpecialProduct.as_view(), name='all_special_product'),
         path('menu', home.GetMenu.as_view(), name='menu'),
-        path('search', home.Search.as_view(), name='search')]
-box = [path('box/<int:pk>', box.BoxView.as_view(), name='box'),
+        path('filter', home.Filter.as_view(), name='filter'),
+        path('search', home.Search.as_view(), name='search'),
+        ]
+
+box = [path('special_product/<int:pk>', box.GetSpecialProduct.as_view(), name='special_product'),
        path('box_detail/<int:pk>', box.BoxDetail.as_view(), name='box_detail'),
-       path('category/<int:pk>', box.CategoryView.as_view(), name='category'),
-       path('tag/<int:pk>', box.TagView.as_view(), name='tag')]
+       path('box/<int:pk>', box.BoxView.as_view(), name='box'),
+       # path('tag/<int:pk>', box.TagView.as_view(), name='tag'),
+       path('category/<int:pk>', box.CategoryView.as_view(), name='category')
+       ]
 single = [path('single/<int:pk>', single.Single.as_view(), name='single')]
 shopping = [path('buy', shopping.Buy.as_view(), name='buy')]
 user = []
@@ -33,4 +38,4 @@ auth = [path('signup', Signup.as_view(), name='signup'),
         path('reset_password_request', ResetPasswordRequest.as_view(), name='reset_password_request'),
         path('reset_password', ResetPassword.as_view(), name='reset_password')]
 
-urlpatterns = [*home]
+urlpatterns = [*home, *box]

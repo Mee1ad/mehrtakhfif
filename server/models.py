@@ -6,11 +6,10 @@ from safedelete.models import SafeDeleteModel, SOFT_DELETE_CASCADE
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import *
 from django.utils import timezone
-import pysnooper
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
-import magic
-import re
+from django.contrib.postgres.indexes import GinIndex
+import django.contrib.postgres.search as pg_search
 import os
 
 
@@ -131,7 +130,7 @@ class Media(SafeDeleteModel):
     id = models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')
     file = models.FileField(upload_to=upload_to)
     title = JSONField(default=multilanguage)
-    type = models.CharField(max_length=255, blank=True, null=True)
+    type = models.CharField(max_length=255, blank=True, null=True, choices=[(1, 'video'), (2, 'image'), (3, 'audio')])
     box = models.ForeignKey(Box, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Created by',
@@ -229,6 +228,7 @@ class Product(SafeDeleteModel):
     category = models.ForeignKey(Category, on_delete=CASCADE)
     box = models.ForeignKey(Box, on_delete=PROTECT)
     name = JSONField(default=multilanguage)
+    # name = pg_search.SearchVectorField(null=True)
     tag = models.ManyToManyField(Tag)
     permalink = models.URLField(blank=True, null=True)
     gender = models.BooleanField(blank=True, null=True)
@@ -248,9 +248,10 @@ class Product(SafeDeleteModel):
 
     class Meta:
         db_table = 'product'
+        indexes = [GinIndex(fields=['name'])]
 
-from django_serializable_model import SerializableModel
-class Storage(SafeDeleteModel, SerializableModel):
+
+class Storage(SafeDeleteModel):
     def __str__(self):
         return f"{self.product}"
 
@@ -259,8 +260,8 @@ class Storage(SafeDeleteModel, SerializableModel):
     product = models.ForeignKey(Product, on_delete=CASCADE)
     box = models.ForeignKey(Box, on_delete=PROTECT)
     category = models.ForeignKey(Category, on_delete=CASCADE)
-    available_count = models.BigIntegerField(blank=True, null=True, verbose_name='Available count')
-    available_count_for_sale = models.BigIntegerField(blank=True, null=True, verbose_name='Available count for sale')
+    available_count = models.BigIntegerField(default=0, blank=True, verbose_name='Available count')
+    available_count_for_sale = models.BigIntegerField(default=0, blank=True, verbose_name='Available count for sale')
     count = models.BigIntegerField(blank=True, null=True)
     final_price = models.BigIntegerField(blank=True, null=True, verbose_name='Final price')
     start_price = models.BigIntegerField(blank=True, null=True, verbose_name='Start price')

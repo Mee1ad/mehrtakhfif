@@ -53,27 +53,11 @@ Content-Disposition: form-data; name="file"; filename="ios.jpg"
 
 < E:\Pictures\ios.jpg
 ###
-GET http://{{host}}/http:/slider/home
+GET http://{{host}}/slider
 ###
-GET http://digikala.com/
+GET http://{{host}}/special_product
 ###
-GET http://{{host}}/single/17
-###
-GET http://{{host}}/box_detail/3
-###
-GET http://{{host}}/box/3
-###
-GET http://{{host}}/category/1
-###
-GET http://{{host}}/menu1
-###
-GET http://{{host}}/tag/1
-###
-GET http://{{host}}/test2
-###
-GET http://{{host}}/test3
-###
-GET http://{{host}}/comment?blog_id=1
+GET http://{{host}}/all_special_product
 ###
 POST http://{{host}}/wishlist
 Content-Type: Application/json
