@@ -15,20 +15,7 @@ from server.serialize import *
 
 class GetSlider(Tools):
     def get(self, request):
-        # step = request.GET.get('type', None)
-        # step = request.GET.get('type', None)
-        params = request.GET
-        print(type(params))
-        p = {}
-        for key in params.keys():
-            value = params.getlist(key)
-            if len(value) == 1:
-                p[key] = value[0]
-                continue
-            p[key[:-2]] = value
-        print(p)
-        param_dict = request.GET.dict()
-        slider = Slider.objects.select_related('media').filter(**p)
+        slider = Slider.objects.select_related('media').all()
         res = {'slider': SliderSchema(language='english').dump(slider, many=True)}
         return JsonResponse(res)
 
@@ -58,19 +45,19 @@ class AllSpecialProduct(Tools):
         page = self.page
         step = self.step
         all_box = Box.objects.all()
-        special_products = {}
-        best_seller = {}
+        products = []
         for box, index in zip(all_box, range(len(all_box))):
             box_special_product = SpecialProduct.objects.select_related('storage', 'media').filter(
                 box=box).order_by('-created_by')[(page - 1) * step:step * page]
-
-            special_products['items'] = SpecialProductSchema(request.lang).dump(box_special_product, many=True)
+            product = {}
+            product['id'] = box.pk
+            product['name'] = box.name[request.lang]
+            product['special_product'] = SpecialProductSchema(request.lang).dump(box_special_product, many=True)
             best_seller_storage = Storage.objects.select_related('product', 'product__thumbnail').filter(
                 default=True).order_by('-product__sold_count')[(page - 1) * step:step * page]
-            best_seller['id'] = box.pk
-            best_seller['name'] = box.name[request.lang]
-            best_seller['items'] = StorageSchema(request.lang).dump(best_seller_storage, many=True)
-        res = {'box_special_product': special_products, 'best_seller': best_seller}
+            product['best_seller'] = StorageSchema(request.lang).dump(best_seller_storage, many=True)
+            products.append(product)
+        res = {'products': products}
         return JsonResponse(res)
 
 
@@ -80,6 +67,33 @@ class GetMenu(Tools):
             Menu.objects.select_related('media', 'parent').all(), many=True)})
 
 
+class Filter(Tools):
+    def get(self, request):
+        params = self.get_params(request.GET)
+        products = Storage.objects.filter(**params)
+        return JsonResponse({'products': StorageSchema(language=request.lang).dump(products, many=True)})
+
+    def box_search(self, params):
+        box = Storage.objects.filter(**params)
+
+
 class Search(Tools):
     def get(self, request):
-        pass
+        from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
+        from django.contrib.postgres.fields.jsonb import KeyTextTransform
+        from django.contrib.postgres.search import TrigramSimilarity
+
+        sv = SearchVector(KeyTextTransform('persian', 'product__name'),
+                          KeyTextTransform('persian', 'product__category__name'))
+        sq = SearchQuery("هتل | متل", search_type='raw')
+
+        # product = Storage.objects.annotate(rank=SearchRank(sv, sq)).order_by('rank')\
+        #     .values_list(KeyTextTransform('persian', 'product__name'), flat=True)
+
+        product = Product.objects.annotate(
+            similarity=TrigramSimilarity(KeyTextTransform('persian', 'name'), 'اگامت')) \
+            .values_list(KeyTextTransform('persian', 'name'), flat=True).order_by('similarity')
+
+        print(product)
+        print(len(product))
+        return HttpResponse(product)

@@ -14,11 +14,11 @@ from server.serialize import *
 
 
 class GetSpecialProduct(Tools):
-    def get(self, request, box):
+    def get(self, request, pk):
         page = self.page
         step = self.step
         special_product = SpecialProduct.objects.select_related(
-            'storage', 'storage__product', 'media').filter(box=box).order_by('-id')
+            'storage', 'storage__product', 'media').filter(box=pk).order_by('-id')
         best_sell_storage = Storage.objects.select_related('product', 'product__thumbnail').filter(
             default=True).order_by('-product__sold_count')[(page - 1) * step:step * page]
         res = {'special_product': SpecialProductSchema(language=request.lang).dump(special_product, many=True),

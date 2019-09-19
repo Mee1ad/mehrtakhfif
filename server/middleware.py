@@ -6,6 +6,7 @@ import jwt
 import json
 from django.http import JsonResponse, HttpResponse, HttpRequest
 from mehr_takhfif.settings import TOKEN_SECRET
+from server.views.mylib import Tools
 
 
 class AuthMiddleware:
@@ -19,6 +20,10 @@ class AuthMiddleware:
             request.lang = request.headers['language']
         except Exception:
             request.lang = 'persian'
+        try:
+            request.params = Tools.get_params(request)
+        except Exception:
+            request.params = {}
         try:
             # request.user = User.objects.get(pk=2)
             pass

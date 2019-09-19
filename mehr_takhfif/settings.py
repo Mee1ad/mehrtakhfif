@@ -35,6 +35,7 @@ ALLOWED_HOSTS = ['*']
 
 # HOST = 'http://192.168.1.95'
 HOST = 'http://192.168.137.95'
+# HOST = 'http://192.168.137.1'
 
 AUTH_USER_MODEL = 'server.User'
 
