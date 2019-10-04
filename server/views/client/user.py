@@ -3,7 +3,7 @@ from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from server import serializer as serialize
-from server.views.mylib import Tools
+from server.views.utils import Tools
 from server.views.admin_panel.read import ReadAdminView
 import json
 import time
@@ -41,22 +41,44 @@ class AddressView(Tools):
         return HttpResponse('ok')
 
 
+class GetState(Tools):
+    def get(self, request):
+        states = State.objects.all()
+        return JsonResponse({'states': StateSchema().dump(states, many=True)})
+
+
+class GetCity(Tools):
+    def get(self, request, state_id):
+        cities = City.objects.filter(state_id=state_id)
+        return JsonResponse({'cities': CitySchema().dump(cities, many=True)})
+
+
 class WishlistView(Tools):
     def get(self, request):
         wishlists = WishList.objects.filter(user_id=request.user)
-        return JsonResponse({'wishlists': serialize.wishlist(wishlists)})
+        return JsonResponse({'wishlists': WishListSchema(request.lang).dump(wishlists, many=True)})
 
     def post(self, request):
         data = json.loads(request.body)
-        WishList(type=data['type'], notify=data['notify'], product_id=data['product_id'], user_id=request.user,
-                 created_by=request.user, updated_by=request.user).save()
-        return HttpResponse(status=201)
+        try:
+            assert WishList.objects.filter(user=request.user, product_id=data['product_id']).exists()
+            WishList(type=data['type'], notify=data['notify'], product_id=data['product_id'], user=request.user,
+                     created_by=request.user, updated_by=request.user).save()
+            return HttpResponse('ok', status=201)
+        except AssertionError:
+            WishList.objects.filter(user=request.user, product_id=data['product_id'])\
+                .update(type=data['type'])
+            return HttpResponse('updated', status=204)
 
     def delete(self, request):
         product_id = request.GET.get('product_id', None)
-        address = WishList.objects.filter(pk=product_id, user_id=request.user).first()
-        address.delete()
-        return HttpResponse('ok')
+        try:
+            assert not WishList.objects.filter(user=request.user, product_id=product_id).exists()
+            address = WishList.objects.filter(pk=product_id, user_id=request.user).first()
+            address.delete()
+            return HttpResponse('ok')
+        except AssertionError:
+            return HttpResponse('product does not exist', status=406)
 
 
 class NotifyView(Tools):

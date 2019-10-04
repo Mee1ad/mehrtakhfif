@@ -1,5 +1,44 @@
 GET http://{{host}}/test
+############### Home ###############
+GET http://{{host}}/search?q='تور'
 ###
+GET http://{{host}}/slider
+###
+GET http://{{host}}/special_offer
+###
+GET http://{{host}}/special_product
+###
+GET http://{{host}}/all_special_product
+###
+GET http://{{host}}/menu
+###
+GET http://{{host}}/filter?final_price__gte=50000
+###
+GET http://{{host}}/search?q='تور'
+###
+
+POST http://{{host}}/wishlist
+Content-Type: Application/json
+
+{
+  "type": "admin",
+  "notify": false,
+  "product_id": "1"
+
+}
+###
+GET http://{{host}}/buy?basket_id=4
+###
+POST http://{{host}}/buy
+Content-Type: Application/json
+
+{
+  "count": "3",
+  "description": "this is a test basket",
+  "product_id": [1,2]
+}
+###
+############### Auth ###############
 POST {{host}}/signup
 Content-Type: Application/json
 
@@ -37,51 +76,3 @@ Content-Type: Application/json
   "new_password": "1995",
   "token": "4ee56082975173f7d3cf3e111882726e3ef3698d3e30c5d7b851e0037e7070a5c433ac81e96c4d4ffcfa4cf6127a71fa815e4a0bbe640d4162a3c3d9c0578468e8cc290368af9642ee78e42034bd84fc777b91e3155085438cf54bce47df3f4189bf2b43fdd6e467fd17922b8dff2c5ad44a7451aec4b41bfe819d720cd53b81891fe8203faf1a82106a2f8dfbcc6e2cc016112361f24d942dd6d41575471f916e8281dbeb11bfe58facf4c23a57a18032b29d3fdb3f4a10326e2d1845885dcd65e72322ed1e548b782e90e664ba13fc2c6f2751a5ae8461bf251afe08f173de5925ebcb32ae3f8ca69c3ebf38b381eaff67d06dcdff1497e66338b1b4afee"
 }
-###
-POST {{host}}/add_product
-Content-Type: multipart/form-data; boundary=WebAppBoundary
-access-token: {{access-token}}
-device-id: {{device-id}}
-
---WebAppBoundary
-Content-Disposition: form-data; name="data"
-
-{"type": "accessories", "platform": "PlayStation 4", "title": "poof", "description":"dsgsdgsdgsgsd",
- "address":"rasht",  "location": "2626.1651", "new":true, "price": 5000000}
---WebAppBoundary--
-Content-Disposition: form-data; name="file"; filename="ios.jpg"
-
-< E:\Pictures\ios.jpg
-###
-GET http://{{host}}/slider
-###
-GET http://{{host}}/special_product
-###
-GET http://{{host}}/all_special_product
-###
-POST http://{{host}}/wishlist
-Content-Type: Application/json
-
-{
-  "type": "admin",
-  "notify": false,
-  "product_id": "1"
-
-}
-###
-GET http://{{host}}/buy?basket_id=4
-###
-POST http://{{host}}/buy
-Content-Type: Application/json
-
-{
-  "count": "3",
-  "description": "this is a test basket",
-  "product_id": [1,2]
-}
-###
-GET http://192.168.137.95/slider?type=home&media_id__in[]=41&media_id__in[]=42
-###
-GET http://localhost/slider?id__in=2&type__in=home&created_by_id__in=1&media_id__in=41&updated_by_id__in=1
-
-###

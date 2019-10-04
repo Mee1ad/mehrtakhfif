@@ -7,7 +7,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.core import serializers
 import json
-from .mylib import *
+from .utils import *
 from django.contrib import messages
 import random
 from django.contrib.auth.hashers import make_password
@@ -92,7 +92,6 @@ class Activate(Tools):
             user.save()
             login(request, user)
             user = serialize.user(user)
-            print(user)
             return JsonResponse(user)
         except User.DoesNotExist:
             return JsonResponse({'message': 'code not found'}, status=406)
@@ -115,7 +114,6 @@ class ResendCode(Tools):
 
 class Login(Validation):
     @try_except
-    @pysnooper.snoop()
     def post(self, request):
         data = json.loads(request.body)
         phone = self.valid_phone(data['username'], raise_error=False)

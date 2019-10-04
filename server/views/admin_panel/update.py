@@ -7,7 +7,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.core import serializers
 import json
-from server.views.mylib import Tools
+from server.views.utils import Tools
 
 
 class UpdateAdminView(Tools, PermissionRequiredMixin, LoginRequiredMixin):

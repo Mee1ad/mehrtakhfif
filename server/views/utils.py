@@ -13,11 +13,13 @@ import pysnooper
 from django.http import JsonResponse
 import magic
 from server.decorators import try_except
+import difflib
 
 
 class Tools(View):
     step = 12
     page = 1
+    response = {'ok': {'message': 'ok'}, 'bad': {'message': 'bad request'}}
 
     def safe_delete(self, obj, user):
         obj.deleted_by_id = user
@@ -80,19 +82,34 @@ class Tools(View):
             obj.save()
 
     @staticmethod
-    def get_params(params):
-        p = {}
-        for key in params.keys():
-            value = params.getlist(key)
-            if len(value) == 1:
-                p[key] = value[0]
-                continue
-            p[key + '__in'] = value
-        return p
+    def filter_params(params):
+        print(params)
+        filters = ('discount_price', 'discount_vip_price', 'discount_price_percent', 'discount_vip_price_percent',
+                   'product__sold_count', 'created_at')
+        filters_op = ('__gt', '__gte', '__lt', '__lte')
+        valid_filters = (x + y for y in filters_op for x in filters)
+        filterby = {}
+        orderby = '-created_at'
+        try:
+            orderby = params['orderby']
+        except KeyError:
+            pass
+        try:
+            for key in params.keys():
+                if key == 'orderby':
+                    continue
+                value = params.getlist(key)
+                if len(value) == 1:
+                    valid_key = difflib.get_close_matches(key, valid_filters)[0]
+                    filterby[valid_key] = value[0]
+                    continue
+                filterby[key + '__in'] = value
+        except Exception:
+            pass
+        return {'filter': filterby, 'order':orderby}
 
 
 class Validation(Tools):
-
     def __init__(self):
         super().__init__()
         self.phone_pattern = r'^(09[0-9]{9})$'
