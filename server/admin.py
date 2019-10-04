@@ -74,7 +74,7 @@ class SliderAdmin(SafeDeleteAdmin):
     slider_title.short_description = 'name'
 
     def url(self, obj):
-        return mark_safe(f'<a href="{HOST + obj.media.file.url}">{escape(obj.media.title)}</a>')
+        return mark_safe(f'<a href="{HOST + obj.media.file.url}">{escape(obj.media.title["persian"])}</a>')
     url.short_description = 'url'
 
 
@@ -150,6 +150,25 @@ class MediaAdmin(admin.ModelAdmin):
         return mark_safe(f'<a href="http://localhost{obj.file.url}">{obj.file.name}</a>')
 
 
+class StateAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name',)
+    search_fields = ['name',]
+    list_per_page = 10
+    ordering = ('-id',)
+
+
+class CityAdmin(admin.ModelAdmin):
+    list_display = ('get_state', 'name')
+    search_fields = ['state', 'name']
+    list_filter = ('state',)
+    list_per_page = 10
+    ordering = ('-id',)
+
+    def get_state(self, obj):
+        link = reverse("admin:server_state_change", args=[obj.state_id])
+        return mark_safe(f'<a href="{link}">{escape(obj.state.__str__())}</a>')
+
+
 admin.site.register(User, UserAdmin)
 admin.site.register(Box, BoxAdmin)
 admin.site.register(Category, CategoryAdmin)
@@ -174,6 +193,8 @@ admin.site.register(WishList)
 admin.site.register(NotifyUser)
 admin.site.register(Tourism, TourismAdmin)
 admin.site.register(Ad)
+admin.site.register(State, StateAdmin)
+admin.site.register(City, CityAdmin)
 
 admin.site.register(Permission)
 admin.site.site_header = "Mehr Takhfif"

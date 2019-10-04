@@ -108,6 +108,7 @@ class Box(SafeDeleteModel):
     objects = MyManager()
     id = models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')
     name = JSONField(default=multilanguage)
+    meta_key = models.CharField(max_length=255, unique=True, null=True)
     admin = models.OneToOneField(User, on_delete=PROTECT)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Created by',
@@ -123,14 +124,14 @@ class Box(SafeDeleteModel):
 
 
 class Media(SafeDeleteModel):
-    # def __str__(self):
-    #     return self.title
+    def __str__(self):
+        return self.title['persian']
 
     _safedelete_policy = SOFT_DELETE_CASCADE
     id = models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')
     file = models.FileField(upload_to=upload_to)
     title = JSONField(default=multilanguage)
-    type = models.CharField(max_length=255, blank=True, null=True, choices=[(1, 'video'), (2, 'image'), (3, 'audio')])
+    type = models.CharField(max_length=255, blank=True, null=True, choices=[('video', 'video'), ('image', 'image'), ('audio', 'audio')])
     box = models.ForeignKey(Box, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Created by',
@@ -151,6 +152,7 @@ class Category(SafeDeleteModel):
     parent = models.ForeignKey("self", on_delete=models.CASCADE, null=True, blank=True)
     box = models.ForeignKey(Box, on_delete=CASCADE)
     name = JSONField(default=multilanguage)
+    meta_key = models.CharField(max_length=255, unique=True, null=True)
     priority = models.SmallIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Created by',
@@ -193,6 +195,7 @@ class Tag(SafeDeleteModel):
     _safedelete_policy = SOFT_DELETE_CASCADE
     id = models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')
     name = JSONField(default=multilanguage)
+    meta_key = models.CharField(max_length=255, unique=True, null=True)
     box = models.ForeignKey(Box, on_delete=models.CASCADE, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Created by',
@@ -243,7 +246,7 @@ class Product(SafeDeleteModel):
     profit = models.BigIntegerField(default=0)
     deactive = models.BooleanField(default=True)
     verify = models.BooleanField(default=False)
-    type = models.CharField(max_length=255)
+    type = models.CharField(max_length=255, choices=[('service', 'service'), ('product', 'product')])
     feature = models.ManyToManyField(Feature)
 
     class Meta:
@@ -304,6 +307,8 @@ class Basket(SafeDeleteModel):
     deleted_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Deleted by',
                                    related_name='basket_deleted_by')
     description = models.TextField(blank=True, null=True)
+    status = models.CharField(default='active', choices=((0, 'active'), (1, 'rejected'), (2, 'paid')),
+                              max_length=100)
 
     class Meta:
         db_table = 'basket'
@@ -314,7 +319,7 @@ class BasketProduct(models.Model):
         return f"{self.id}"
 
     id = models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')
-    product = models.ForeignKey(Storage, on_delete=models.CASCADE)
+    storage = models.ForeignKey(Storage, on_delete=models.CASCADE)
     basket = models.ForeignKey(Basket, on_delete=PROTECT)
     count = models.IntegerField(default=1)
 
@@ -478,7 +483,7 @@ class Rate(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     rate = models.FloatField()
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    storage = models.ForeignKey(Storage, on_delete=models.CASCADE, null=True, blank=True)
 
     class Meta:
         db_table = 'rate'
@@ -500,7 +505,6 @@ class Slider(SafeDeleteModel):
                                    related_name='slider_created_by')
     updated_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Updated by',
                                    related_name='slider_updated_by')
-    deleted_at = models.DateTimeField(blank=True, null=True, verbose_name='Deleted at')
     deleted_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Deleted by',
                                    related_name='slider_deleted_by')
 
@@ -553,7 +557,7 @@ class SpecialProduct(SafeDeleteModel):
     id = models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')
     title = JSONField(default=multilanguage, null=True, blank=True)
     url = models.URLField(null=True, blank=True)
-    storage = models.ForeignKey(Storage, on_delete=CASCADE)
+    storage = models.ForeignKey(Storage, on_delete=CASCADE, null=True, blank=True)
     box = models.ForeignKey(Box, on_delete=PROTECT)
     category = models.ForeignKey(Category, on_delete=CASCADE)
     media = models.ForeignKey(Media, on_delete=CASCADE, null=True, blank=True)
@@ -654,6 +658,28 @@ class Ad(models.Model):
 
     class Meta:
         db_table = 'ad'
+
+
+class State(models.Model):
+    def __str__(self):
+        return self.name
+
+    id = models.IntegerField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')
+    name = models.CharField(max_length=255)
+
+    class Meta:
+        db_table = 'state'
+
+
+class City(models.Model):
+    def __str__(self):
+        return self.name
+
+    name = models.CharField(max_length=255)
+    state = models.ForeignKey(State, on_delete=CASCADE)
+
+    class Meta:
+        db_table = 'city'
 
 
 @receiver(post_delete, sender=Media)

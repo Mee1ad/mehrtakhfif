@@ -16,3 +16,17 @@ Content-Disposition: form-data; name="file"; filename="VID_20180706_203959.mp4"
 
 < E:\Pictures\VID_20180706_203959.mp4
 ###
+POST {{host}}/add_product
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+access-token: {{access-token}}
+device-id: {{device-id}}
+
+--WebAppBoundary
+Content-Disposition: form-data; name="data"
+
+{"type": "accessories", "platform": "PlayStation 4", "title": "poof", "description":"dsgsdgsdgsgsd",
+ "address":"rasht",  "location": "2626.1651", "new":true, "price": 5000000}
+--WebAppBoundary--
+Content-Disposition: form-data; name="file"; filename="ios.jpg"
+
+< E:\Pictures\ios.jpg

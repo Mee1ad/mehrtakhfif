@@ -3,7 +3,7 @@ from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from server import serializer as serialize
-from server.views.mylib import Tools
+from server.views.utils import Tools
 from server.views.admin_panel.read import ReadAdminView
 import json
 import time
@@ -11,6 +11,16 @@ import pysnooper
 from django.views.decorators.cache import cache_page
 from django.db.models import Max, Min
 from server.serialize import *
+from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
+from django.contrib.postgres.fields.jsonb import KeyTextTransform
+from django.contrib.postgres.search import TrigramSimilarity
+import requests
+
+
+class Test(Tools):
+    def get(self, request):
+        pass
+        return JsonResponse({})
 
 
 class GetSlider(Tools):
@@ -69,31 +79,23 @@ class GetMenu(Tools):
 
 class Filter(Tools):
     def get(self, request):
-        params = self.get_params(request.GET)
-        products = Storage.objects.filter(**params)
+        params = self.filter_params(request.GET)
+        print(params)
+        try:
+            products = Storage.objects.filter(**params['filter']).order_by(params['order'])
+        except Exception:
+            products = Storage.objects.all().order_by('-created_at')
         return JsonResponse({'products': StorageSchema(language=request.lang).dump(products, many=True)})
-
-    def box_search(self, params):
-        box = Storage.objects.filter(**params)
 
 
 class Search(Tools):
     def get(self, request):
-        from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
-        from django.contrib.postgres.fields.jsonb import KeyTextTransform
-        from django.contrib.postgres.search import TrigramSimilarity
-
+        step = self.step
+        page = self.page
+        q = request.GET.get('q', '')
         sv = SearchVector(KeyTextTransform('persian', 'product__name'),
                           KeyTextTransform('persian', 'product__category__name'))
-        sq = SearchQuery("هتل | متل", search_type='raw')
-
-        # product = Storage.objects.annotate(rank=SearchRank(sv, sq)).order_by('rank')\
-        #     .values_list(KeyTextTransform('persian', 'product__name'), flat=True)
-
-        product = Product.objects.annotate(
-            similarity=TrigramSimilarity(KeyTextTransform('persian', 'name'), 'اگامت')) \
-            .values_list(KeyTextTransform('persian', 'name'), flat=True).order_by('similarity')
-
-        print(product)
-        print(len(product))
-        return HttpResponse(product)
+        sq = SearchQuery(q)
+        product = Storage.objects.select_related('product').annotate(rank=SearchRank(sv, sq)).order_by('rank')\
+        [(page-1)*step:step*page]
+        return JsonResponse({'products': StorageSchema(request.lang).dump(product, many=True)})

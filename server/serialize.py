@@ -161,6 +161,20 @@ class ProductSchema(BaseSchema):
     usage_condition = fields.Method("get_usage_condition")
 
 
+class ProductBoxSchema(BaseSchema):
+    class Meta:
+        additional = ('id', 'permalink', 'gender', 'location', 'type')
+    name = fields.Method("get_name")
+    box = fields.Function(lambda o: o.box_id)
+    category = fields.Function(lambda o: o.category_id)
+    tag = TagField()
+    media = MediaField()
+    thumbnail = fields.Function(lambda o: HOST + o.thumbnail.file.url)
+    short_description = fields.Method("get_short_description")
+    description = fields.Method("get_description")
+    usage_condition = fields.Method("get_usage_condition")
+
+
 class SliderSchema(BaseSchema):
     class Meta:
         additional = ('id', 'type', 'link')
@@ -171,11 +185,18 @@ class SliderSchema(BaseSchema):
 
 class StorageSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'available_count_for_sale', 'final_price', 'transportation_price',
+        additional = ('id', 'final_price', 'transportation_price',
                       'discount_price', 'discount_vip_price', 'discount_price_percent', 'discount_vip_price_percent')
 
     product = fields.Method("get_product")
     category = fields.Function(lambda o: o.category_id)
+
+
+class BasketProductSchema(BaseSchema):
+    class Meta:
+        additional = ('count',)
+
+    product = fields.Method("get_storage")
 
 
 class BasketSchema(BaseSchema):
@@ -263,9 +284,9 @@ class WalletDetailSchema(Schema):
         additional = ('id', 'credit', 'user')
 
 # todo user view
-class WishListSchema(Schema):
+class WishListSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'user', 'type', 'notify')
+        additional = ('id', 'type', 'notify')
     product = fields.Method("get_product")
 
 
@@ -281,3 +302,15 @@ class TourismSchema(Schema):
     class Meta:
         additional = ('id', 'date', 'price')
 
+
+class StateSchema(Schema):
+    class Meta:
+        additional = ('id', 'name')
+
+
+
+class CitySchema(Schema):
+    class Meta:
+        additional = ('id', 'name')
+
+    state = fields.Function(lambda o: o.state_id)

@@ -3,7 +3,7 @@ from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from server import serializer as serialize
-from server.views.mylib import Tools
+from server.views.utils import Tools
 from server.views.admin_panel.read import ReadAdminView
 import json
 import time
@@ -13,16 +13,10 @@ from django.db.models import Max, Min
 from server.serialize import *
 
 
-class GetSpecialProduct(Tools):
-    def get(self, request, pk):
-        page = self.page
-        step = self.step
-        special_product = SpecialProduct.objects.select_related(
-            'storage', 'storage__product', 'media').filter(box=pk).order_by('-id')
-        best_sell_storage = Storage.objects.select_related('product', 'product__thumbnail').filter(
-            default=True).order_by('-product__sold_count')[(page - 1) * step:step * page]
-        res = {'special_product': SpecialProductSchema(language=request.lang).dump(special_product, many=True),
-               'best_sell_product': StorageSchema().dump(best_sell_storage, many=True)}
+class GetSpecialOffer(Tools):
+    def get(self, request, name):
+        special_offer = SpecialOffer.objects.select_related('media').filter(box__name__persian=name).order_by('-id')
+        res = {'special_product': SpecialProductSchema(language=request.lang).dump(special_offer, many=True)}
         return JsonResponse(res)
 
 
@@ -38,22 +32,19 @@ class BoxDetail(Tools):
 
 
 class BoxView(Tools):
-    def get(self, request, pk):
+    def get(self, request, name):
         step = int(request.GET.get('s', self.step))
         page = int(request.GET.get('p', self.page))
-        latest = Storage.objects.filter(box_id=pk).select_related(
+        params = self.get_params(request.GET)
+        print(params)
+        box = Box.objects.filter(meta_key=name).first()
+        latest = Storage.objects.filter(box=box, **params).select_related(
             'product', 'product__thumbnail').order_by('-updated_by')[(page-1)*step:step*page]
-        best_seller = Storage.objects.select_related('product', 'product__thumbnail').filter(
-            box_id=pk).order_by('-product__sold_count')[:5]
-        special_offer = SpecialOffer.objects.filter(box_id=pk).select_related('media')
-        special_product = SpecialProduct.objects.filter(box_id=pk).select_related('storage', 'storage__product', 'media')
         return JsonResponse({'latest': StorageSchema(request.lang).dump(latest, many=True),
-                             'best_seller': StorageSchema(request.lang).dump(best_seller, many=True),
-                             'special_offer': SpecialOfferSchema(request.lang).dump(special_offer, many=True),
-                             'special_product': SpecialProductSchema(request.lang).dump(special_product, many=True)})
+})
 
 
-class CategoryView(Tools):
+class BoxCategory(Tools):
     def get(self, request, pk):
         step = int(request.GET.get('s', self.step))
         page = int(request.GET.get('e', self.page))

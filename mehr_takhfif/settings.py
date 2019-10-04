@@ -18,12 +18,15 @@ from django.utils.timezone import activate
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+# GEOS_LIBRARY_PATH = 'C:\\OSGeo4W64\\bin\\geos_c.dll'
+# GDAL_LIBRARY_PATH = 'C:\\OSGeo4W64\\bin\\gdal201.dll'
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = '#)@^eytrqed7)ka1qa0gcg$vx9&0ocru_xwqjlq%9e7baob_bn'
+SALT = 'we\w[34=-otl34e[rl][qwe;w328474/*2342+-325(*^&%><>.'
 # noinspection SpellCheckingInspection
 TOKEN_SECRET = 'NRJu&@D-sqQa@2xEu6^yt8yjfd!*K4TawDD?v&LxChs2uJ7=9YvXF6pGEXNJHnPZ-gbHmnJf&D-9?y2g78YgKC?AX-FbHR6fgws_' \
                '&hGbAHuhE_TZh3yN?PGZky!Zx&uc'
@@ -50,8 +53,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'server',
     'safedelete',
-    'rest_framework',
     'corsheaders',
+    'debug_toolbar',
+    'mehrpeyk',
 ]
 
 MIDDLEWARE = [
@@ -64,8 +68,12 @@ MIDDLEWARE = [
     'server.middleware.AuthMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
 
+INTERNAL_IPS = [
+    '127.0.0.1',
+]
 
 # CORS_ORIGIN_WHITELIST = [
 #     "http://192.168.1.96:3000",
@@ -127,10 +135,12 @@ WSGI_APPLICATION = 'mehr_takhfif.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
+        # 'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        # 'ENGINE': 'django.contrib.gis.db.backends.postgis',
         'NAME': 'mehr_takhfif',
         'HOST': 'localhost',
-        'USER': 'meelad',
-        'PASSWORD': '1995',
+        'USER': 'postgres',
+        'PASSWORD': 'admin',
         'port': '5432',
     }
 }

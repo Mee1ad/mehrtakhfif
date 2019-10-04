@@ -10,8 +10,7 @@ from server.views.client import blog
 
 app_name = 'server'
 
-home = [path('test', Test.as_view(), name='test'),
-        path('error', Error.as_view(), name='error'),
+home = [path('test', home.Test.as_view(), name='test'),
         path('slider', home.GetSlider.as_view(), name='slider'),
         path('special_offer', home.GetSpecialOffer.as_view(), name='special_offer'),
         path('special_product', home.GetSpecialProduct.as_view(), name='special_product'),
@@ -19,17 +18,23 @@ home = [path('test', Test.as_view(), name='test'),
         path('menu', home.GetMenu.as_view(), name='menu'),
         path('filter', home.Filter.as_view(), name='filter'),
         path('search', home.Search.as_view(), name='search'),
-        ]
+]
 
-box = [path('special_product/<int:pk>', box.GetSpecialProduct.as_view(), name='special_product'),
-       path('box_detail/<int:pk>', box.BoxDetail.as_view(), name='box_detail'),
-       path('box/<int:pk>', box.BoxView.as_view(), name='box'),
-       # path('tag/<int:pk>', box.TagView.as_view(), name='tag'),
-       path('category/<int:pk>', box.CategoryView.as_view(), name='category')
-       ]
+box = [
+        path('box/<str:name>', box.BoxView.as_view(), name='box'),
+        path('special_product/<str:name>', box.GetSpecialOffer.as_view(), name='special_product'),
+        path('box_detail/<int:pk>', box.BoxDetail.as_view(), name='box_detail'),
+        # path('tag/<int:pk>', box.TagView.as_view(), name='tag'),
+        path('category/<int:pk>', box.BoxCategory.as_view(), name='category'),
+        # path('box/<str:name>', box.Filter.as_view(), name='box')
+]
 single = [path('single/<int:pk>', single.Single.as_view(), name='single')]
-shopping = [path('buy', shopping.Buy.as_view(), name='buy')]
-user = []
+shopping = [path('basket', shopping.Buy.as_view(), name='basket')]
+user = [
+        path('get_states', user.GetState.as_view(), name='get_states'),
+        path('get_cities/<int:state_id>', user.GetCity.as_view(), name='get_cities'),
+        path('wishlist', user.WishlistView.as_view(), name='wishlist'),
+]
 blog = []
 auth = [path('signup', Signup.as_view(), name='signup'),
         path('login', Login.as_view(), name='login'),
@@ -38,4 +43,4 @@ auth = [path('signup', Signup.as_view(), name='signup'),
         path('reset_password_request', ResetPasswordRequest.as_view(), name='reset_password_request'),
         path('reset_password', ResetPassword.as_view(), name='reset_password')]
 
-urlpatterns = [*home, *box]
+urlpatterns = [*home, *box, *user, *blog, *shopping]
