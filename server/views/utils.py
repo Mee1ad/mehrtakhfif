@@ -3,7 +3,7 @@ from django.core import serializers
 import json
 from server.models import *
 from secrets import token_hex
-from server import serializer as serialize
+from server.serialize import *
 from mehr_takhfif import settings
 import os
 import jwt
@@ -36,14 +36,23 @@ class Tools(View):
         return timezone.now() + timezone.timedelta(minutes=minutes)
 
     def generate_token(self, request, user):
-        data = {'user': serialize.user(user)}
+        data = {'user': f'{user.last_login}'}
         first_encrypt = jwt.encode(data, TOKEN_SECRET, algorithm='HS256')
         secret = token_hex(10)
-        counter = hashlib.md5(b'amghezi0').hexdigest()
         second_encrypt = jwt.encode({'data': first_encrypt.decode()}, secret, algorithm='HS256')
-        access_token = f'{second_encrypt.decode()}{secret}{counter}'
+        access_token = f'{second_encrypt.decode()}{secret}'
         request.session['counter'] = 0
         return access_token
+
+    def hsencode(self, data, secret):
+        return jwt.encode(data, secret, algorithm='HS256').decode()
+
+    def hsdecode(self, token, secret):
+        return jwt.decode(token, secret, algorithms=['HS256'])
+
+    def get_token_data(self, token):
+        first_decrypt = jwt.decode(token[7:-52], token[-52:-32], algorithms=['HS256'])
+        return jwt.decode(first_decrypt['data'].encode(), TOKEN_SECRET, algorithms=['HS256'])
 
     def increase_token_counter(self, request):
         request.session['counter'] += 1
@@ -83,15 +92,14 @@ class Tools(View):
 
     @staticmethod
     def filter_params(params):
-        print(params)
         filters = ('discount_price', 'discount_vip_price', 'discount_price_percent', 'discount_vip_price_percent',
                    'product__sold_count', 'created_at')
         filters_op = ('__gt', '__gte', '__lt', '__lte')
         valid_filters = (x + y for y in filters_op for x in filters)
         filterby = {}
-        orderby = '-created_at'
+        orderby = ['-created_at']
         try:
-            orderby = params['orderby']
+            orderby += params['orderby']
         except KeyError:
             pass
         try:

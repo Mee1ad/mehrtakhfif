@@ -18,8 +18,10 @@ class Single(Tools):
         storage = Storage.objects.filter(pk=pk).select_related('product').first()
         feature = storage.product.feature.all()
         related_product = Storage.objects.filter(product__tag__in=storage.product.tag.all())
-        return JsonResponse({'storage': serialize.storage(storage), 'feature': serialize.feature(feature),
-                             'related_product': serialize.storage(related_product)})
+        lang = request.lang
+        return JsonResponse({'storage': StorageSchema(lang).dump(storage),
+                             'feature': FeatureSchema(lang).dump(feature, many=True),
+                             'related_product': StorageSchema(lang).dump(related_product, many=True)})
 
 
 class CommentView(Tools):
@@ -28,21 +30,26 @@ class CommentView(Tools):
         blog_id = request.GET.get('blog_id', None)
         if product_id:
             comments = Comment.objects.filter(product_id=product_id).order_by('-created_at')
-            return JsonResponse({'comments': serialize.comment(comments)})
+            return JsonResponse({'comments': CommentSchema().dump(comments, many=True)})
         if blog_id:
             comments = Comment.objects.filter(blog_post_id=blog_id).order_by('-created_at')
-            return JsonResponse({'comments': serialize.comment(comments)})
+            return JsonResponse({'comments': CommentSchema().dump(comments, many=True)})
         comments = Comment.objects.filter(user=request.user).order_by('-created_at')
-        return JsonResponse({'comments': serialize.comment(comments)})
+        return JsonResponse({'comments': CommentSchema().dump(comments, many=True)})
 
     def post(self, request):
         data = json.loads(request.body)
-        Comment(text=data['text'], user=request.user, reply=data['reply'], type=data['type'],
-                product_id=data['product_id']).save()
-        return HttpResponse(status=201)
+        try:
+            if data['reply']:
+                comment = Comment.objects.filter(pk=data['reply']).first()
+                assert not comment.reply
+            Comment(text=data['text'], user=request.user, reply_id=data['reply'], type=data['type'],
+                    product_id=data['product_id']).save()
+            return JsonResponse(self.response['ok'], status=201)
+        except Exception:
+            return JsonResponse(self.response['bad'], status=400)
 
     def delete(self, request):
-        comment_id = request.GET.get('comment_id', None)
-        comment = Comment.objects.filter(pk=comment_id, user=request.user).first()
-        comment.delete()
-        return HttpResponse('ok')
+        pk = request.GET.get('id', None)
+        Comment.objects.filter(pk=pk, user=request.user).delete()
+        return JsonResponse(self.response['ok'])

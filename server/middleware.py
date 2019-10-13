@@ -8,6 +8,7 @@ from django.http import JsonResponse, HttpResponse, HttpRequest
 from mehr_takhfif.settings import TOKEN_SECRET
 from server.views.utils import Tools
 from django.urls import resolve
+import hashlib
 
 
 class AuthMiddleware:
@@ -17,6 +18,8 @@ class AuthMiddleware:
         # One-time configuration and initialization.
 
     def __call__(self, request):
+        # print(request.headers)
+        # print(json.loads(request.body))
         try:
             request.lang = request.headers['language']
         except Exception:
@@ -30,7 +33,8 @@ class AuthMiddleware:
             if app_name == 'mehrpeyk':
                 import time
                 time.sleep(.6)
-                s = ['mehrpeyk/splash', 'mehrpeyk/login', 'mehrpeyk/sign_up']
+                s = ['mehrpeyk/splash', 'mehrpeyk/login', 'mehrpeyk/sign_up', 'mehrpeyk/activate',
+                     'mehrpeyk/resend_activation', 'mehrpeyk/get_location/<str:factor>', 'mehrpeyk/get_locations']
                 if resolve(request.path_info).route not in s:
                     try:
                         token = request.headers['Authorization']
@@ -40,7 +44,22 @@ class AuthMiddleware:
                     except Exception as e:
                         print(e)
                         return JsonResponse({'message': f'{e}'}, status=401)
-            request.user = User.objects.get(pk=1)
+            if app_name == 'server':
+                request.user = User.objects.get(pk=1)
+                try:
+                    token = request.headers['Authorization']
+                    assert User.objects.filter(access_token=token[7:-32]).exists()
+                    counter = str.encode(f"amghezi{request.session.get('counter')}")
+                    counter = hashlib.md5(counter).hexdigest()
+                    assert token == request.user.access_token + counter
+                    request.session['counter'] += 1
+                except Exception:
+                    print('token issue')
+                    try:
+                        assert request.headers['Postman-Token']
+                    except Exception:
+                        pass
+                    # return JsonResponse({}, status=401)
             delay = request.GET.get('delay', None)
             if delay:
                 import time
@@ -51,13 +70,6 @@ class AuthMiddleware:
                 status_code = request.GET.get('status_code', 501)
                 return JsonResponse({}, status=status_code)
 
-            # print(request.headers)
-            # print(json.loads(request.body))
-            # token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkYXRhIjoiZXlKMGVYQWlPaUpLVjFRaUxDSmhiR2NpT2lKSVV6STFOaUo5LmV5SjFjMlZ5SWpwN0ltWnBjbk4wWDI1aGJXVWlPbTUxYkd3c0lteGhjM1JmYm1GdFpTSTZiblZzYkN3aWJHRnVaM1ZoWjJVaU9pSm1ZU0lzSW1WdFlXbHNJam9pSWl3aWNHaHZibVVpT2lJaUxDSjNZV3hzWlhSZmJXOXVaWGtpT201MWJHd3NJblpwY0NJNlptRnNjMlVzSW1GalkyVnpjMTkwYjJ0bGJpSTZJbk5zYTIxbWJHdHpaV3B1Wm05bGFYTm9iMlpwYUdWemIybG1hbVYzYjJsbWFuQnZkMlU3YW1admQyVm1ORGMxZDJWbU5qVjNaU3M1Tm1ZMUszZGxPVFkxWnpRNE9UWjNjalZuS3prMmNuZGxOR2M1T0RaeWR6VTJPR2M1TlhKbEt6azJaelZ5WlNzNVp6VmxjalZuT1hKbE5pSjlmUS5GR3BTQlU2VTdncU9kUDJnUFYxNS1SRE9JY2FFWUw1OExtaXFMenkyNXlJIn0.pAzbUs9iB5XPQ_TMVkNqpD9SD4YWM7iCoAfliXWQpXs4696f0769f6e850968ffe9aad83d756a6765e62a4b0e7b6766c0"
-            # first_decrypt = jwt.decode(token[:-52], token[-52:-32], algorithms=['HS256'])
-            # second_decrypt = jwt.decode(first_decrypt['data'].encode(), TOKEN_SECRET, algorithms=['HS256'])
-        except KeyError:
-            pass
         except json.decoder.JSONDecodeError:
             pass
         response = self.get_response(request)

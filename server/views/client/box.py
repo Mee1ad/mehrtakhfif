@@ -15,7 +15,7 @@ from server.serialize import *
 
 class GetSpecialOffer(Tools):
     def get(self, request, name):
-        special_offer = SpecialOffer.objects.select_related('media').filter(box__name__persian=name).order_by('-id')
+        special_offer = SpecialOffer.objects.select_related('media').filter(box__meta_key=name).order_by('-id')
         res = {'special_product': SpecialProductSchema(language=request.lang).dump(special_offer, many=True)}
         return JsonResponse(res)
 
@@ -35,24 +35,25 @@ class BoxView(Tools):
     def get(self, request, name):
         step = int(request.GET.get('s', self.step))
         page = int(request.GET.get('p', self.page))
-        params = self.get_params(request.GET)
-        print(params)
+        params = self.filter_params(request.GET)
         box = Box.objects.filter(meta_key=name).first()
-        latest = Storage.objects.filter(box=box, **params).select_related(
-            'product', 'product__thumbnail').order_by('-updated_by')[(page-1)*step:step*page]
-        return JsonResponse({'latest': StorageSchema(request.lang).dump(latest, many=True),
-})
+        latest = Storage.objects.filter(box=box, **params['filter']).select_related(
+            'product', 'product__thumbnail').order_by(*params['order'])[(page-1)*step:step*page]
+        return JsonResponse({'latest': StorageSchema(request.lang).dump(latest, many=True)})
 
 
 class BoxCategory(Tools):
-    def get(self, request, pk):
+    def get(self, request, box, category):
         step = int(request.GET.get('s', self.step))
         page = int(request.GET.get('e', self.page))
-        storage = Storage.objects.filter(category_id=pk).select_related(
+        cat = Category.objects.filter(meta_key=category).first()
+        print(CategorySchema(request.lang).dump(cat))
+        storage = Storage.objects.filter(box__meta_key=box, category__meta_key=category).select_related(
                 'product', 'product__thumbnail').order_by('-updated_at')[(page-1)*step:step*page]
-        special_products = SpecialProduct.objects.filter(category_id=pk).select_related('storage')
-        return JsonResponse({'products': serialize.storage(storage, True),
-                             'special_products': serialize.special_product(special_products, True)})
+        # special_products = SpecialProduct.objects.filter(category_id=pk).select_related('storage')
+        # return JsonResponse({'products': serialize.storage(storage, True)})
+        return JsonResponse({'category': CategorySchema(request.lang).dump(cat)})
+        # 'special_products': serialize.special_product(special_products, True)}
 
 
 class TagView(Tools):
@@ -62,3 +63,15 @@ class TagView(Tools):
         tag = Tag.objects.filter(pk=pk).first()
         products = tag.product.all().order_by('created_at')[(page-1)*step:step*page]
         return JsonResponse({'products': serialize.product(products)})
+
+
+class Filter(Tools):
+    @pysnooper.snoop()
+    def get(self, request):
+        params = self.filter_params(request.GET)
+        print(params)
+        try:
+            products = Storage.objects.filter(**params['filter']).order_by(*params['order'])
+        except Exception:
+            products = Storage.objects.all().order_by('-created_at')
+        return JsonResponse({'products': StorageSchema(language=request.lang).dump(products, many=True)})

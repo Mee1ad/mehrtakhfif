@@ -8,11 +8,11 @@ from django.dispatch import receiver
 from django.contrib.postgres.fields import ArrayField
 
 
-
 class Peyk(models.Model):
     def __str__(self):
         return self.phone
     phone = models.CharField(max_length=15, unique=True, validators=[RegexValidator()])
+    active = models.BooleanField(default=False)
     verified = models.BooleanField(default=False)
     password = models.CharField(max_length=255, blank=True, null=True)
     vehicle = models.CharField(max_length=100, blank=True, null=True)
@@ -29,12 +29,13 @@ class Mission(models.Model):
 
     date = timezone.now().strftime("%Y-%m-%d")
     time = timezone.now().strftime("%H-%M-%S-%f")[:-4]
-    image = models.FileField(upload_to='mehrpeyk/date/', null=True, blank=True)
+    name = models.CharField(max_length=255, default='گل ez53')
+    image = models.FileField(upload_to='mehrpeyk/date/', null=True, blank=True, default='https://fyf.tac-cdn.net/images/products/large/BF116-11KM_R.jpg?auto=webp&quality=60')
     customer = models.CharField(max_length=255, blank=True, null=True)
     address = models.TextField(blank=True, null=True)
     phone = models.CharField(max_length=15, blank=True, null=True)
     factor_number = models.CharField(max_length=100, unique=True)
-    status = models.CharField(max_length=31, default=0)
+    status = models.CharField(max_length=31, default=1)
     peyk = models.ForeignKey(Peyk, on_delete=models.PROTECT, null=True, blank=True)
 
 

@@ -77,15 +77,10 @@ class GetMenu(Tools):
             Menu.objects.select_related('media', 'parent').all(), many=True)})
 
 
-class Filter(Tools):
+class GetAds(Tools):
     def get(self, request):
-        params = self.filter_params(request.GET)
-        print(params)
-        try:
-            products = Storage.objects.filter(**params['filter']).order_by(params['order'])
-        except Exception:
-            products = Storage.objects.all().order_by('-created_at')
-        return JsonResponse({'products': StorageSchema(language=request.lang).dump(products, many=True)})
+        return JsonResponse({'ads': AdSchema(request.lang).dump(
+            Ad.objects.select_related('media', 'storage').all(), many=True)})
 
 
 class Search(Tools):
