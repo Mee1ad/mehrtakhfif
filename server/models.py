@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.postgres.fields import JSONField, DateRangeField, DateTimeRangeField
+from django.contrib.postgres.fields import JSONField, DateRangeField, DateTimeRangeField, ArrayField
 from django.db.models import CASCADE, PROTECT
 from django.contrib.auth.models import AbstractUser
 from safedelete.models import SafeDeleteModel, SOFT_DELETE_CASCADE
@@ -54,9 +54,10 @@ class User(AbstractUser):
                                   validators=[validate_slug])
     last_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='Last name',
                                  validators=[validate_slug])
+    full_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='full name',
+                                 validators=[validate_slug])
     username = models.CharField(max_length=150, unique=True, error_messages={
-            'unique': _("A user with that username already exists."),
-        },)
+            'unique': _("A user with that username already exists.")},)
     language = models.CharField(max_length=7, default='fa')
     email = models.TextField(max_length=255, blank=True, null=True, validators=[validate_email])
     password = models.CharField(max_length=255, blank=True, null=True)
@@ -65,33 +66,61 @@ class User(AbstractUser):
     updated_at = models.DateTimeField(blank=True, auto_now=True, verbose_name='Updated at')
     is_ban = models.BooleanField(default=False)
     is_active = models.BooleanField(default=False, verbose_name='Phone verified')
+    default_address = models.IntegerField(null=True, blank=True)
     email_verified = models.BooleanField(default=False, verbose_name='Email verified')
     is_superuser = models.BooleanField(default=False, verbose_name='Superuser')
     is_staff = models.BooleanField(default=False, verbose_name='Staff')
     avatar_id = models.BigIntegerField(blank=True, null=True)
     meli_code = models.CharField(max_length=15, blank=True, null=True, verbose_name='National code', unique=True)
-    wallet_money = models.IntegerField(blank=True, null=True, verbose_name='Wallet money')
+    wallet_money = models.IntegerField(default=0, verbose_name='Wallet money')
     suspend_expire_date = models.DateTimeField(blank=True, null=True, verbose_name='Suspend expire date')
     vip = models.BooleanField(default=False)
     activation_code = models.CharField(max_length=127, null=True, blank=True)
     activation_expire = models.DateTimeField(null=True, blank=True)
     access_token = models.TextField(max_length=255, null=True, blank=True)
     access_token_expire = models.DateTimeField(auto_now_add=True)
+    reset_token = models.CharField(max_length=255, unique=True, null=True, blank=True)
+    reset_token_expire = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = 'user'
+
+
+class State(models.Model):
+    def __str__(self):
+        return self.name
+
+    id = models.IntegerField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')
+    name = models.CharField(max_length=255)
+
+    class Meta:
+        db_table = 'state'
+
+
+class City(models.Model):
+    def __str__(self):
+        return self.name
+
+    name = models.CharField(max_length=255)
+    state = models.ForeignKey(State, on_delete=CASCADE)
+
+    class Meta:
+        db_table = 'city'
 
 
 class Address(models.Model):
     def __str__(self):
         return self.city
     id = models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')
-    province = models.CharField(max_length=255, blank=True, null=True)
-    city = models.CharField(max_length=255, blank=True, null=True)
-    postal_code = models.CharField(max_length=15, blank=True, null=True, verbose_name='Postal code')
-    address = models.TextField(blank=True, null=True)
-    location = models.CharField(max_length=65, blank=True, null=True)
+    state = models.ForeignKey(State, on_delete=PROTECT)
+    city = models.ForeignKey(City, on_delete=PROTECT)
+    name = models.CharField(max_length=255)
+    phone = models.CharField(max_length=15)
+    postal_code = models.CharField(max_length=15, verbose_name='Postal code')
+    address = models.TextField()
+    location = ArrayField(models.CharField(max_length=100, blank=True), size=2, null=True, blank=True)
     user = models.ForeignKey(User, blank=True, null=True, on_delete=models.CASCADE)
+    active = models.BooleanField(default=False)
 
     class Meta:
         db_table = 'address'
@@ -131,8 +160,10 @@ class Media(SafeDeleteModel):
     id = models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')
     file = models.FileField(upload_to=upload_to)
     title = JSONField(default=multilanguage)
-    type = models.CharField(max_length=255, blank=True, null=True, choices=[('video', 'video'), ('image', 'image'), ('audio', 'audio')])
-    box = models.ForeignKey(Box, on_delete=models.CASCADE)
+    type = models.CharField(max_length=255,
+                            choices=[('video', 'video'), ('image', 'image'), ('audio', 'audio'),
+                                     ('slider', 'slider')])
+    box = models.ForeignKey(Box, on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Created by',
                                    related_name='media_created_by')
@@ -263,18 +294,18 @@ class Storage(SafeDeleteModel):
     product = models.ForeignKey(Product, on_delete=CASCADE)
     box = models.ForeignKey(Box, on_delete=PROTECT)
     category = models.ForeignKey(Category, on_delete=CASCADE)
-    available_count = models.BigIntegerField(default=0, blank=True, verbose_name='Available count')
-    available_count_for_sale = models.BigIntegerField(default=0, blank=True, verbose_name='Available count for sale')
-    count = models.BigIntegerField(blank=True, null=True)
-    final_price = models.BigIntegerField(blank=True, null=True, verbose_name='Final price')
-    start_price = models.BigIntegerField(blank=True, null=True, verbose_name='Start price')
+    available_count = models.BigIntegerField(default=0, verbose_name='Available count')
+    available_count_for_sale = models.BigIntegerField(default=0, verbose_name='Available count for sale')
+    count = models.BigIntegerField(default=0)
+    final_price = models.BigIntegerField(default=0, verbose_name='Final price')
+    start_price = models.BigIntegerField(default=0, verbose_name='Start price')
     transportation_price = models.IntegerField(default=0)
-    discount_price = models.BigIntegerField(blank=True, null=True, verbose_name='Discount price')
-    discount_vip_price = models.BigIntegerField(blank=True, null=True, verbose_name='Discount vip price')
+    discount_price = models.BigIntegerField(default=0, verbose_name='Discount price')
+    discount_vip_price = models.BigIntegerField(default=0, verbose_name='Discount vip price')
     discount_price_percent = models.PositiveSmallIntegerField(
-        blank=True, null=True, verbose_name='Discount price percent')
+        default=0, verbose_name='Discount price percent')
     discount_vip_price_percent = models.PositiveSmallIntegerField(
-        blank=True, null=True, verbose_name='Discount vip price percent')
+        default=0, verbose_name='Discount vip price percent')
     default = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
     created_by = models.ForeignKey(User, on_delete=CASCADE, verbose_name='Created by',
@@ -380,11 +411,7 @@ class Comment(SafeDeleteModel):
     _safedelete_policy = SOFT_DELETE_CASCADE
     id = models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Created by',
-                                   related_name='comment_created_by')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
-    updated_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Updated by',
-                                   related_name='comment_updated_by')
     deleted_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Deleted by',
                                    related_name='comment_deleted_by')
     text = models.TextField(null=True, blank=True)
@@ -658,28 +685,6 @@ class Ad(models.Model):
 
     class Meta:
         db_table = 'ad'
-
-
-class State(models.Model):
-    def __str__(self):
-        return self.name
-
-    id = models.IntegerField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')
-    name = models.CharField(max_length=255)
-
-    class Meta:
-        db_table = 'state'
-
-
-class City(models.Model):
-    def __str__(self):
-        return self.name
-
-    name = models.CharField(max_length=255)
-    state = models.ForeignKey(State, on_delete=CASCADE)
-
-    class Meta:
-        db_table = 'city'
 
 
 @receiver(post_delete, sender=Media)

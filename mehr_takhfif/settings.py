@@ -36,8 +36,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
-# HOST = 'http://192.168.1.95'
-HOST = 'http://192.168.137.95'
+HOST = 'http://192.168.1.95'
+# HOST = 'http://192.168.137.95'
 # HOST = 'http://192.168.137.1'
 
 AUTH_USER_MODEL = 'server.User'
@@ -75,12 +75,15 @@ INTERNAL_IPS = [
     '127.0.0.1',
 ]
 
-# CORS_ORIGIN_WHITELIST = [
-#     "http://192.168.1.96:3000",
-#     "http://192.168.43.96:3000",
-#     "http://localhost:3000",
-# ]
-CORS_ORIGIN_ALLOW_ALL = True
+CORS_ORIGIN_WHITELIST = [
+    "http://192.168.1.96:3000",
+    "http://192.168.43.96:3000",
+    "http://localhost:3000",
+    "http://192.168.1.95",
+    "http://mt.com",
+    "http://mt.com:3000"
+]
+# CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = [
     'DELETE',

@@ -24,6 +24,22 @@ class Base:
         link = reverse(f"admin:server_{table}_change", args=[obj.name.id])
         return mark_safe(f'<a href="{link}">{escape(obj.name)}</a>')
 
+    @staticmethod
+    def get_user(obj):
+        link = reverse(f"admin:server_user_change", args=[obj.user_id])
+        return mark_safe(f'<a href="{link}">{escape(obj)}</a>')
+
+    @staticmethod
+    def get_product(obj):
+        link = reverse(f"admin:server_product_change", args=[obj.product_id])
+        return mark_safe(f'<a href="{link}">{escape(obj.product.name["persian"])}</a>')
+
+    @staticmethod
+    def get_post(obj):
+        # link = reverse(f"admin:server_blog_post_change", args=[obj.blog_post_id])
+        # return mark_safe(f'<a href="{link}">{escape(obj)}</a>')
+        return None
+
 
 class BoxAdmin(SafeDeleteAdmin):
     list_display = ('persian', 'created_by', 'updated_at', 'deleted_by') + SafeDeleteAdmin.list_display
@@ -59,6 +75,25 @@ class MenuAdmin(SafeDeleteAdmin):
     def menu_name(self, obj):
         return obj.name['persian']
     menu_name.short_description = 'name'
+
+
+class CommentAdmin(SafeDeleteAdmin):
+    list_display = ('get_user', 'type', 'get_product', 'get_post', 'approved') + SafeDeleteAdmin.list_display
+    list_filter = ('user', 'type', 'product', 'blog_post', 'approved') + SafeDeleteAdmin.list_filter
+    # list_display_links = ('name',)
+    search_fields = ['user', 'product']
+    list_per_page = 10
+    ordering = ('-created_at',)
+
+    def get_user(self, obj):
+        return Base.get_user(obj)
+
+    def get_product(self, obj):
+        return Base.get_product(obj)
+
+    def get_post(self, obj):
+        return Base.get_post(obj)
+    get_user.short_description = 'user'
 
 
 class SliderAdmin(SafeDeleteAdmin):
@@ -178,7 +213,7 @@ admin.site.register(Media, MediaAdmin)
 admin.site.register(Product, ProductAdmin)
 admin.site.register(Storage)
 admin.site.register(Basket)
-admin.site.register(Comment)
+admin.site.register(Comment, CommentAdmin)
 admin.site.register(Factor)
 admin.site.register(Menu, MenuAdmin)
 admin.site.register(Tag)

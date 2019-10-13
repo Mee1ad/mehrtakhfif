@@ -22,18 +22,18 @@ class PeykSchema(Schema):
 
 class MissionSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'customer', 'phone', 'address', 'status')
+        additional = ('id', 'customer', 'phone', 'address', 'status', 'name', 'factor_number')
 
-    # peyk = fields.Method("get_peyk")
     # image = fields.Method("get_file")
-    image = fields.Function(lambda o:"")
+    image = fields.Function(lambda o:"https://fyf.tac-cdn.net/images/products/large/BF116-11KM_R.jpg?auto=webp&quality=60")
 
     def get_file(self, obj):
         return HOST + obj.image.url
 
 
-class BoxLocation(BaseSchema):
+class LocationSchema(BaseSchema):
     point = fields.Function(lambda o: (float(o.point[0]), float(o.point[1])))
     created_at = fields.DateTime()
     mission = fields.Method("get_mission")
+    id = fields.Int()
 

@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.views import View
 from server.models import *
 from django.http import JsonResponse, HttpResponse, HttpRequest
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.core import serializers
@@ -27,11 +27,7 @@ from django.core.cache import cache
 from mehr_takhfif.settings import CACHE_TTL
 from django.contrib.auth.hashers import make_password
 from server import serializer as serialize
-
-
-class Error(Tools):
-    def get(self, request):
-        return HttpResponse(status=413)
+from secrets import token_hex
 
 
 class Test(Tools):
@@ -50,6 +46,7 @@ class Test(Tools):
 
 
 class Signup(Validation):
+    @pysnooper.snoop()
     @try_except
     def post(self, request):
         data = json.loads(request.body)
@@ -76,13 +73,13 @@ class Signup(Validation):
 
 
 class Activate(Tools):
+    @pysnooper.snoop()
     @try_except
     def post(self, request):
         data = json.loads(request.body)
         # todo get csrf code
         code = data['code']
         try:
-            print(make_password(code, 'activation_code'))
             user = User.objects.get(activation_code=make_password(code, 'activation_code'), is_ban=False,
                                     activation_expire__gte=timezone.now())
             user.activation_code = timezone.now()
@@ -91,40 +88,41 @@ class Activate(Tools):
             user.access_token = self.generate_token(request, user)
             user.save()
             login(request, user)
-            user = serialize.user(user)
-            return JsonResponse(user)
+            return JsonResponse(UserSchema().dump(user))
         except User.DoesNotExist:
             return JsonResponse({'message': 'code not found'}, status=406)
 
 
 class ResendCode(Tools):
+    @pysnooper.snoop()
     @try_except
     def post(self, request):
         data = json.loads(request.body)
-        token = data['token']
         try:
+            token = data['token']
             user = User.objects.get(activation_code=token, is_ban=False)
             activation_code = random.randint(10000, 99999)
             user.activation_code = make_password(activation_code, 'activation_code')
             user.save()
             return JsonResponse({'code': activation_code, 'token': user.activation_code})
-        except User.DoesNotExist:
+        except Exception:
             return JsonResponse({'message': 'token not found'}, status=406)
 
 
 class Login(Validation):
     @try_except
+    @pysnooper.snoop()
     def post(self, request):
         data = json.loads(request.body)
-        phone = self.valid_phone(data['username'], raise_error=False)
-        email = self.valid_email(data['username'], raise_error=False)
-        password = data['password']
-        time.sleep(3)
         try:
+            phone = self.valid_phone(data['username'], raise_error=False)
+            email = self.valid_email(data['username'], raise_error=False)
+            password = data['password']
             if phone:
                 user = User.objects.get(phone=phone)
             if email:
                 user = User.objects.get(email=email)
+            # assert not request.user.is_authenticated
             valid_password = user.check_password(password)
             if user.is_ban:
                 return JsonResponse({'message': 'user is banned'}, status=403)
@@ -136,47 +134,57 @@ class Login(Validation):
                 user.activation_code = activation_code_salted
                 activation_expire = self.add_minutes(5)
                 user.activation_expire = activation_expire
+                user.access_token = self.generate_token(request, user)
                 user.save()
+                login(request, user)
                 res = {'token': user.activation_code, 'code': activation_code}
                 # todo send sms
                 return JsonResponse(res, status=201)
+            user.access_token = self.generate_token(request, user)
+            user.save()
             login(request, user)
-            request.session['counter'] = 1
-            user = serialize.user(obj=user)
-            res = JsonResponse({'user': user})
-            return res
+            print(user.access_token)
+            user = UserSchema().dump(User.objects.get(access_token=user.access_token))
+            print(user['access_token'])
+            return JsonResponse(user)
+        # except AssertionError:
+        #     return JsonResponse({'message': 'user is  logged in'}, status=401)
         except Exception:
             return JsonResponse({'message': 'user does not exist'}, status=401)
 
 
 class ResetPasswordRequest(Validation):
     @try_except
+    @pysnooper.snoop()
     def post(self, request):
         data = json.loads(request.body)
-        phone = self.valid_phone(data['username'], raise_error=False)
-        email = self.valid_email(data['username'], raise_error=False)
+        phone = self.valid_phone(data['phone'], raise_error=False)
+        # email = self.valid_email(data['username'], raise_error=False)
         try:
-            user = User.objects.get(Q(phone=phone) | Q(email=email), is_active=True)
-            self.generate_token(request, user)
-            # todo send email or sms
-            return JsonResponse({'url': host + '/reset_password?token=' + user.access_token})
+            token = token_hex(10)
+            User.objects.filter(phone=phone, is_active=True).update(
+                reset_token=token, reset_token_expire=self.add_minutes(5))
+            return JsonResponse({'token': token})
         except User.DoesNotExist:
             return JsonResponse({'message': 'user not found'}, status=404)
 
 
 class ResetPassword(Tools):
     @try_except
+    @pysnooper.snoop()
     def post(self, request):
         data = json.loads(request.body)
         token = data['token']
         password = data['new_password']
         try:
-            user = User.objects.get(access_token=token)
+            user = User.objects.get(reset_token=token, reset_token_expire__gt=timezone.now())
             user.set_password(password)
-            self.generate_token(request, user)
-            return JsonResponse({'message': 'password changed'})
+            user.reset_token_expire = timezone.now()
+            user.access_token = self.generate_token(request, user)
+            user.save()
+            return JsonResponse(UserSchema().dump(user))
         except User.DoesNotExist:
-            return JsonResponse({'message': 'page not found'}, status=404)
+            return JsonResponse({'message': 'user not found'}, status=404)
 
 
 

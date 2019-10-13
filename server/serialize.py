@@ -1,5 +1,7 @@
 from marshmallow import Schema, fields
 from mehr_takhfif.settings import HOST, MEDIA_URL
+import pysnooper
+from secrets import token_hex
 
 # ءManyToMany Relations
 
@@ -43,7 +45,7 @@ class BaseSchema(Schema):
 
     def get_parent(self, obj):
         if obj.parent is not None:
-            return ParentSchema(self.lang).dump(obj.parent)
+            return CategorySchema(self.lang).dump(obj.parent)
         return None
 
     def get_category(self, obj):
@@ -61,6 +63,11 @@ class BaseSchema(Schema):
             return StorageSchema(self.lang).dump(obj.storage)
         return None
 
+    def get_comment(self, obj):
+        if obj.reply is not None:
+            return CommentSchema().dump(obj.reply)
+        return None
+
     def get_media(self, obj):
         if obj.media is not None:
             return MediaSchema(self.lang).dump(obj.media)
@@ -69,6 +76,11 @@ class BaseSchema(Schema):
     def get_thumbnail(self, obj):
         if obj.thumbnail is not None:
             return MediaSchema(self.lang).dump(obj.thumbnail)
+        return None
+
+    def get_location(self, obj):
+        if obj.location is not None:
+            return {'lat': float(obj.location[0]), 'lng': float(obj.location[1])}
         return None
 
     def get_short_description(self, obj):
@@ -92,13 +104,22 @@ class BaseSchema(Schema):
 
 class UserSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'first_name', 'last_name', 'language', 'email', 'gender',
-                      'phone', 'meli_code', 'wallet_money', 'vip', 'access_token')
+        additional = ('id', 'full_name', 'email', 'gender',
+                      'phone', 'meli_code', 'wallet_money', 'vip', 'active_address')
+
+    access_token = fields.Function(lambda o: o.access_token + token_hex(16))
 
 
-class AddressSchema(Schema):
+class AddressSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'province', 'city', 'postal_code', 'address', 'location', 'user')
+        additional = ('id', 'province', 'postal_code', 'address', 'location', 'name', 'phone')
+
+    city = fields.Method("get_city")
+    state = fields.Function(lambda o: o.state.id)
+    location = fields.Method("get_location")
+
+    def get_city(self, obj):
+        return CitySchema().dump(obj.city)
 
 
 class BoxSchema(BaseSchema):
@@ -115,6 +136,7 @@ class MediaSchema(Schema):
     type = fields.Str()
     file = fields.Method("get_file")
     title = fields.Method("get_title")
+    box = fields.Function(lambda o: o.box_id)
 
     def get_file(self, obj):
         return HOST + obj.file.url
@@ -124,6 +146,9 @@ class MediaSchema(Schema):
 
 
 class CategorySchema(BaseSchema):
+    class Meta:
+        additional = ('parent_id',)
+
     id = fields.Int()
     name = fields.Method('get_name')
     parent = fields.Method('get_parent')
@@ -221,10 +246,11 @@ class BlogPostSchema(BaseSchema):
     media = MediaField()
 
 
-class CommentSchema(Schema):
+class CommentSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'text', 'reply', 'suspend', 'type')
+        additional = ('id', 'text', 'reply_id', 'type', 'created_at')
     user = fields.Function(lambda obj: obj.user_id)
+    reply = fields.Method("get_comment")
 
 # todo
 class FactorSchema(BaseSchema):
@@ -306,7 +332,6 @@ class TourismSchema(Schema):
 class StateSchema(Schema):
     class Meta:
         additional = ('id', 'name')
-
 
 
 class CitySchema(Schema):
