@@ -30,31 +30,44 @@ class AddressView(Tools):
         return JsonResponse({'addresses': AddressSchema().dump(addresses, many=True),
                              'default_address': request.user.default_address})
 
+    @pysnooper.snoop()
     def post(self, request):
         data = json.loads(request.body)
-        location = data['location']
         try:
             assert City.objects.filter(pk=data['city_id'], state_id=data['state_id'])
             address_count = Address.objects.filter(user=request.user).count()
             address = Address(state_id=data['state_id'], city_id=data['city_id'], postal_code=data['postal_code'],
-                              address=data['address'], location=[location[0], location[1]], user=request.user,
-                              name=data['name']).save()
-            if address_count < 2:
+                              address=data['address'], location=data['location'], user=request.user,
+                              name=data['name'], phone=data['phone'])
+            address.save()
+            if address_count < 2 or data['set_default']:
                 request.user.default_address = address.pk
-            return JsonResponse({'message': 'ok'})
+                request.user.save()
+            return JsonResponse(AddressSchema().dump(address))
         except AssertionError:
+            return JsonResponse({}, status=400)
+
+    def patch(self, request):
+        data = json.loads(request.body)
+        try:
+            request.user.default_address = data['id']
+            request.user.save()
+            return JsonResponse({'message': 'ok'})
+        except Exception:
             return JsonResponse({}, status=400)
 
     @pysnooper.snoop()
     def put(self, request):
         data = json.loads(request.body)
-        location = data['location']
         try:
-            address = Address.objects.filter(pk=data['id'])
+            address = Address.objects.filter(pk=data['id'], user=request.user)
             assert address.exists()
             address.update(state_id=data['state_id'], city_id=data['city_id'], postal_code=data['postal_code'],
-                           address=data['address'], location=[location[0], location[1]], user=request.user,
-                           name=data['name'])
+                           address=data['address'], location=data['location'], user=request.user,
+                           name=data['name'], phone=data['phone'])
+            if data['set_default']:
+                request.user.default_address = address.first().id
+                request.user.save()
             return JsonResponse({'message': 'ok'})
         except Exception:
             return JsonResponse({}, status=400)
