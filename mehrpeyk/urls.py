@@ -1,7 +1,7 @@
 from django.urls import path
 from django.views.decorators.cache import cache_page
 from server.views.client import home
-from mehrpeyk.views import *
+from .views import *
 
 app_name = 'mehrpeyk'
 
