@@ -30,12 +30,13 @@ class AuthMiddleware:
             request.params = {}
         try:
             app_name = resolve(request.path_info).app_name
+            route = resolve(request.path_info).route
             if app_name == 'mehrpeyk':
                 import time
                 time.sleep(.6)
-                s = ['mehrpeyk/splash', 'mehrpeyk/login', 'mehrpeyk/sign_up', 'mehrpeyk/activate',
+                s = ['mehrpeyk/login', 'mehrpeyk/sign_up', 'mehrpeyk/activate',
                      'mehrpeyk/resend_activation', 'mehrpeyk/get_location/<str:factor>', 'mehrpeyk/get_locations']
-                if resolve(request.path_info).route not in s:
+                if route not in s:
                     try:
                         token = request.headers['Authorization']
                         first_decrypt = jwt.decode(token[7:-20], token[-20:], algorithms=['HS256'])
@@ -43,7 +44,8 @@ class AuthMiddleware:
                         request.peyk_id = second_decrypt['user']['id']
                     except Exception as e:
                         print(e)
-                        return JsonResponse({'message': f'{e}'}, status=401)
+                        if route != 'mehrpeyk/splash':
+                            return JsonResponse({'message': f'{e}'}, status=401)
             if app_name == 'server':
                 request.user = User.objects.get(pk=1)
                 try:
@@ -71,7 +73,7 @@ class AuthMiddleware:
                 return JsonResponse({}, status=status_code)
 
         except json.decoder.JSONDecodeError:
-            pass
+            return HttpResponse('')
         response = self.get_response(request)
         # sleep(.5)
         # Code to be executed for each request/response after
