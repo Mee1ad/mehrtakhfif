@@ -210,7 +210,7 @@ class GetLocation(View):
     def get(self, request, factor):
         try:
             mission = Mission.objects.get(factor_number=factor)
-            assert mission.status == 2
+            assert not mission.status == 2
             location = Location.objects.filter(mission=mission).order_by('created_at').last()
             return JsonResponse({'lang': location.point[0], 'lat': location.point[1]})
         except Location.DoesNotExist:
@@ -219,6 +219,12 @@ class GetLocation(View):
             return JsonResponse({'message': 'mission ended'}, status=202)
         except Exception:
             return JsonResponse({}, status=400)
+
+
+class GetFactors(View):
+    def get(self, request):
+        missions = Mission.objects.filter(status=0)
+        return JsonResponse({'factors': MissionSchema().dump(missions, many=True)})
 
 
 class GetActiveLocations(View):
