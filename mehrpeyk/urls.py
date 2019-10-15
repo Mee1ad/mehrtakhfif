@@ -17,5 +17,6 @@ urlpatterns = [
     path('login', Login.as_view(), name='login'),
     path('splash', VersionInfo.as_view(), name='splash'),
     path('get_location/<str:factor>', GetLocation.as_view(), name='get_location'),
+    path('get_factors', GetFactors.as_view(), name='get_factors'),
     path('get_locations', GetActiveLocations.as_view(), name='get_locations'),
 ]
