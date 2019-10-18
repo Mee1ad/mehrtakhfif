@@ -15,6 +15,7 @@ home = [path('test', home.Test.as_view(), name='test'),
         path('special_offer', home.GetSpecialOffer.as_view(), name='special_offer'),
         path('special_product', home.GetSpecialProduct.as_view(), name='special_product'),
         path('all_special_product', home.AllSpecialProduct.as_view(), name='all_special_product'),
+        path('category', home.AllCategory.as_view(), name='category'),
         path('menu', home.GetMenu.as_view(), name='menu'),
         path('search', home.Search.as_view(), name='search'),
         path('ads', home.GetAds.as_view(), name='ads')]

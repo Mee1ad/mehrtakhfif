@@ -48,6 +48,8 @@ class BaseSchema(Schema):
             return CategorySchema(self.lang).dump(obj.parent)
         return None
 
+
+
     def get_category(self, obj):
         if obj.category is not None:
             return CategorySchema(self.lang).dump(obj.category)
@@ -153,6 +155,21 @@ class CategorySchema(BaseSchema):
     name = fields.Method('get_name')
     parent = fields.Method('get_parent')
     box = fields.Function(lambda o: o.box_id)
+
+
+class CategoryMinSchema(BaseSchema):
+
+    id = fields.Int()
+    name = fields.Method('get_name')
+    child = fields.Method('get_child')
+
+    def get_child(self, obj):
+        if hasattr(obj, 'child'):
+            childes = []
+            for child in obj.child:
+                childes.append(CategoryMinSchema().dump(child))
+            return childes
+        return None
 
 
 class ParentSchema(BaseSchema):

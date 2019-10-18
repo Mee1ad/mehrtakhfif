@@ -181,6 +181,7 @@ class Category(SafeDeleteModel):
     _safedelete_policy = SOFT_DELETE_CASCADE
     id = models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')
     parent = models.ForeignKey("self", on_delete=models.CASCADE, null=True, blank=True)
+    # child = models.CharField(max_length=null=True, blank=True)
     box = models.ForeignKey(Box, on_delete=CASCADE)
     name = JSONField(default=multilanguage)
     meta_key = models.CharField(max_length=255, unique=True, null=True)

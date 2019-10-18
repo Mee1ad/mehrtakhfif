@@ -140,13 +140,13 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         # 'ENGINE': 'django.db.backends.postgresql_psycopg2',
         # 'ENGINE': 'django.contrib.gis.db.backends.postgis',
-        # 'NAME': 'mehr_takhfif',
-        'NAME': 'mehrtak1_db',
+        'NAME': 'mehr_takhfif',
+        # 'NAME': 'mehrtak1_db',
         'HOST': 'localhost',
-        # 'USER': 'postgres',
-        'USER': 'mehrtak1_admeen',
-        # 'PASSWORD': 'admin',
-        'PASSWORD': '_Rz*5g;mTFF*0#quq&',
+        'USER': 'postgres',
+        # 'USER': 'mehrtak1_admeen',
+        'PASSWORD': 'admin',
+        # 'PASSWORD': '_Rz*5g;mTFF*0#quq&',
         'port': '5432',
     }
 }
@@ -207,6 +207,68 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "static"),
 ]
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'filters': {
+        'require_debug_false': {
+            '()': 'django.utils.log.RequireDebugFalse'
+        },
+        'require_debug_true': {
+            '()': 'django.utils.log.RequireDebugTrue'
+        }
+    },
+    'formatters': {
+        'verbose': {
+            'format': '{levelname}: {asctime}, {module}, {message}',
+            'style': '{'
+        },
+        'simple': {
+             'format': '{levelname} {message}',
+             'style': '{'
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'level': 'INFO',
+            'formatter': 'verbose'
+        },
+        'info_file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': os.path.join(BASE_DIR + '/logs/info', 'info.log'),
+            'formatter': 'verbose',
+            'when': 'D',
+            'backupCount': 30
+
+        },
+        'debug_file': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': os.path.join(BASE_DIR + '/logs/debug', 'debug.log'),
+            'formatter': 'verbose',
+            'when': 'D',
+            'backupCount': 30
+        },
+        'error_file': {
+            'level': 'ERROR',
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': os.path.join(BASE_DIR + '/logs/error', 'error.log'),
+            'formatter': 'verbose',
+            'when': 'D',
+            'backupCount': 30
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'info_file', 'debug_file', 'error_file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    },
+}
 
 if DEBUG and os.environ.get('RUN_MAIN', None) != 'true':
     LOGGING = {}
