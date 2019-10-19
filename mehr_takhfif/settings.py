@@ -39,6 +39,8 @@ ALLOWED_HOSTS = ['*']
 HOST = 'http://192.168.1.95'
 # HOST = 'http://192.168.137.95'
 # HOST = 'http://192.168.137.1'
+# HOST = 'http://mehrtakhfif.com'
+# HOST = 'http://mt.com'
 
 AUTH_USER_MODEL = 'server.User'
 
@@ -81,7 +83,7 @@ CORS_ORIGIN_WHITELIST = [
     "http://localhost:3000",
     "http://192.168.1.95",
     "http://mt.com",
-    "http://mt.com:3000"
+    "http://mt.com:3000",
 ]
 # CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_CREDENTIALS = True

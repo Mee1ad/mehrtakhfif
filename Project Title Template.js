@@ -1,0 +1,1 @@
+<% if (projectDefaultTitle) { %><%= projectDefaultTitle %><% } %>

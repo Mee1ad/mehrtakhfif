@@ -64,7 +64,8 @@ class AllSpecialProduct(Tools):
             product['name'] = box.name[request.lang]
             product['special_product'] = SpecialProductSchema(request.lang).dump(box_special_product, many=True)
             best_seller_storage = Storage.objects.select_related('product', 'product__thumbnail').filter(
-                default=True).order_by('-product__sold_count')[(page - 1) * step:step * page]
+                default=True, box=box).order_by('-product__sold_count')[(page - 1) * step:step * page]
+            print(best_seller_storage)
             product['best_seller'] = StorageSchema(request.lang).dump(best_seller_storage, many=True)
             products.append(product)
         res = {'products': products}
