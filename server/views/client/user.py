@@ -15,6 +15,7 @@ from server.serialize import *
 
 class Profile(Tools):
     def get(self, request):
+        print('this is user profile')
         return JsonResponse({'user': serialize.user(request.user)})
 
     def put(self, request):
