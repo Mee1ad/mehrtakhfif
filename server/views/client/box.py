@@ -2,8 +2,7 @@ from server.models import *
 from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.mixins import PermissionRequiredMixin
-from server import serializer as serialize
-from server.views.utils import Tools
+from server.views.utils import *
 from server.views.admin_panel.read import ReadAdminView
 import json
 import time
@@ -13,14 +12,14 @@ from django.db.models import Max, Min
 from server.serialize import *
 
 
-class GetSpecialOffer(Tools):
+class GetSpecialOffer(View):
     def get(self, request, name):
         special_offer = SpecialOffer.objects.select_related('media').filter(box__meta_key=name).order_by('-id')
         res = {'special_product': SpecialProductSchema(language=request.lang).dump(special_offer, many=True)}
         return JsonResponse(res)
 
 
-class BoxDetail(Tools):
+class BoxDetail(View):
     def get(self, request, pk):
         max_price = Storage.objects.filter(box_id=pk).aggregate(Max('discount_price'))['discount_price__max']
         min_price = Storage.objects.filter(box_id=pk).aggregate(Min('discount_price'))['discount_price__min']
@@ -31,7 +30,7 @@ class BoxDetail(Tools):
                              'categories': CategorySchema(request.lang).dump(categories, many=True)})
 
 
-class BoxView(Tools):
+class BoxView(View):
     def get(self, request, name):
         step = int(request.GET.get('s', self.step))
         page = int(request.GET.get('p', self.page))
@@ -42,7 +41,7 @@ class BoxView(Tools):
         return JsonResponse({'latest': StorageSchema(request.lang).dump(latest, many=True)})
 
 
-class BoxCategory(Tools):
+class BoxCategory(View):
     def get(self, request, box, category):
         step = int(request.GET.get('s', self.step))
         page = int(request.GET.get('e', self.page))
@@ -56,7 +55,7 @@ class BoxCategory(Tools):
         # 'special_products': serialize.special_product(special_products, True)}
 
 
-class TagView(Tools):
+class TagView(View):
     def get(self, request, pk):
         step = int(request.GET.get('s', self.step))
         page = int(request.GET.get('p', self.page))
@@ -65,8 +64,7 @@ class TagView(Tools):
         return JsonResponse({'products': serialize.product(products)})
 
 
-class Filter(Tools):
-    @pysnooper.snoop()
+class Filter(View):
     def get(self, request):
         params = self.filter_params(request.GET)
         print(params)

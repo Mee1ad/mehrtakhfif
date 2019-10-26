@@ -11,7 +11,7 @@ from mehr_takhfif import settings
 import os
 from mehr_takhfif.settings import HOST
 
-UserAdmin.list_display += ('phone', 'updated_at')
+UserAdmin.list_display += ('updated_at',)
 UserAdmin.list_filter = ('username',)
 UserAdmin.ordering = ('-id',)
 UserAdmin.list_per_page = 10
@@ -165,13 +165,6 @@ class StorageAdmin(SafeDeleteAdmin):
     product_name.short_description = 'name'
 
 
-class TourismAdmin(admin.ModelAdmin):
-    list_display = ('date', 'price')
-    # search_fields = ['name']
-    list_per_page = 10
-    ordering = ('-id',)
-
-
 class MediaAdmin(admin.ModelAdmin):
     list_display = ('type', 'box', 'url')
     search_fields = ['name', 'box', 'type']
@@ -226,7 +219,6 @@ admin.site.register(Blog)
 admin.site.register(BlogPost)
 admin.site.register(WishList)
 admin.site.register(NotifyUser)
-admin.site.register(Tourism, TourismAdmin)
 admin.site.register(Ad)
 admin.site.register(State, StateAdmin)
 admin.site.register(City, CityAdmin)

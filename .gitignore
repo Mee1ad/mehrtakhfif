@@ -104,3 +104,7 @@ venv.bak/
 .mypy_cache/
 
 /GameExchange 2
+*/migrations
+settings.json
+.vscode/settings.json
+staticfiles

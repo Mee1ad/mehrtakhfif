@@ -1,20 +1,18 @@
 from django.views import View
 from server.models import *
 from django.http import JsonResponse, HttpResponse
-from django.contrib.auth import authenticate
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.core import serializers
 import json
-from server.views.utils import Tools
+from server.views.utils import View
 from django.contrib.admin.utils import NestedObjects
 from mehr_takhfif.settings import TOKEN_SECRET
 import jwt
-from server import serializer as serialize
 
 
-class AdminView(Tools, PermissionRequiredMixin, LoginRequiredMixin):
+class AdminView(View, PermissionRequiredMixin, LoginRequiredMixin):
     @staticmethod
     def get_data(request, model, serializer):
         pk = request.GET.get('pk', None)

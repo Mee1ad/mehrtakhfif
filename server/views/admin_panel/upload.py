@@ -6,11 +6,11 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.core import serializers
 import json
-from server.views.utils import Tools
+from server.views.utils import View
 from server.decorators import try_except
 
 
-class AdminView(Tools, PermissionRequiredMixin, LoginRequiredMixin):
+class AdminView(View, PermissionRequiredMixin, LoginRequiredMixin):
     pass
 
 
