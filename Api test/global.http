@@ -1,9 +1,25 @@
-$Host: localhost
-
-###
-GET $Host
-###
 GET http://{{host}}/test
+
+############### Authentication ###############
+POST http://{{host}}/login
+Content-Type: Application/json
+
+{
+  "username": "09129999999",
+  "password": "admin"
+}
+###
+POST {{host}}/reset_password_request
+Content-Type: Application/json
+
+{
+  "username": "09015518440"
+}
+###
+
+############### User ###############
+GET http://{{host}}/get_states
+
 ############### Home ###############
 GET http://{{host}}/search?q='تور'
 ###
@@ -16,6 +32,8 @@ GET http://{{host}}/special_product
 GET http://{{host}}/all_special_product
 ###
 GET http://{{host}}/menu
+charset: utf-8
+Content-Type: Application/json
 ###
 GET http://{{host}}/filter?final_price__gte=50000
 ###
@@ -65,13 +83,6 @@ Content-Type: Application/json
 {
   "username": "admin",
   "password": "admin"
-}
-###
-POST {{host}}/reset_password_request
-Content-Type: Application/json
-
-{
-  "username": "09015518445"
 }
 ###
 POST {{host}}/reset_password

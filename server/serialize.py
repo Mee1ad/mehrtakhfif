@@ -106,10 +106,9 @@ class BaseSchema(Schema):
 
 class UserSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'full_name', 'email', 'gender',
-                      'phone', 'meli_code', 'wallet_money', 'vip', 'active_address')
+        additional = ('id', 'email', 'gender', 'username', 'meli_code', 'wallet_money', 'vip', 'active_address')
 
-    access_token = fields.Function(lambda o: o.access_token + token_hex(16))
+    full_name = fields.Function(lambda o: o.get_full_name())
 
 
 class AddressSchema(BaseSchema):

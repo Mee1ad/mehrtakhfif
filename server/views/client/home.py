@@ -2,8 +2,7 @@ from server.models import *
 from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.mixins import PermissionRequiredMixin
-from server import serializer as serialize
-from server.views.utils import Tools
+from server.views.utils import *
 from server.views.admin_panel.read import ReadAdminView
 import json
 import time
@@ -14,33 +13,32 @@ from server.serialize import *
 from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
 from django.contrib.postgres.fields.jsonb import KeyTextTransform
 from django.contrib.postgres.search import TrigramSimilarity
-import requests
 
 
-class Test(Tools):
+class Test(View):
     def get(self, request):
-        pass
-        return JsonResponse({})
+        data = json.loads(request.body)
+        return JsonResponse(data)
 
 
-class GetSlider(Tools):
+class GetSlider(View):
     def get(self, request):
         slider = Slider.objects.select_related('media').all()
-        res = {'slider': SliderSchema(language='english').dump(slider, many=True)}
+        res = {'slider': SliderSchema(
+            language='english').dump(slider, many=True)}
         return JsonResponse(res)
 
 
-class GetSpecialOffer(Tools):
+class GetSpecialOffer(View):
     def get(self, request):
         special_offer = SpecialOffer.objects.select_related('media').all()
-        res = {'special_offer': SpecialOfferSchema().dump(special_offer, many=True)}
+        res = {'special_offer': SpecialOfferSchema().dump(
+            special_offer, many=True)}
         return JsonResponse(res)
 
 
-class GetSpecialProduct(Tools):
+class GetSpecialProduct(View):
     def get(self, request):
-        page = self.page
-        step = self.step
         special_product = SpecialProduct.objects.select_related(
             'storage', 'storage__product', 'media').all().order_by('-id')[(page - 1) * step:step * page]
         best_sell_storage = Storage.objects.select_related('product', 'product__thumbnail').filter(
@@ -50,10 +48,8 @@ class GetSpecialProduct(Tools):
         return JsonResponse(res)
 
 
-class AllSpecialProduct(Tools):
+class AllSpecialProduct(View):
     def get(self, request):
-        page = self.page
-        step = self.step
         all_box = Box.objects.all()
         products = []
         for box, index in zip(all_box, range(len(all_box))):
@@ -62,17 +58,17 @@ class AllSpecialProduct(Tools):
             product = {}
             product['id'] = box.pk
             product['name'] = box.name[request.lang]
-            product['special_product'] = SpecialProductSchema(request.lang).dump(box_special_product, many=True)
+            # product['special_product'] = SpecialProductSchema(request.lang).dump(box_special_product, many=True)
             best_seller_storage = Storage.objects.select_related('product', 'product__thumbnail').filter(
                 default=True, box=box).order_by('-product__sold_count')[(page - 1) * step:step * page]
-            print(best_seller_storage)
-            product['best_seller'] = StorageSchema(request.lang).dump(best_seller_storage, many=True)
+            product['best_seller'] = StorageSchema(
+                request.lang).dump(best_seller_storage, many=True)
             products.append(product)
         res = {'products': products}
         return JsonResponse(res)
 
 
-class AllCategory(Tools):
+class AllCategory(View):
     @pysnooper.snoop()
     def get(self, request):
         category = Category.objects.all()
@@ -81,7 +77,8 @@ class AllCategory(Tools):
         for cat, index in zip(category, range(len(category))):
             if cat.parent is None:
                 continue
-            parent_index = new_cats.index(category.filter(pk=cat.parent_id).first())
+            parent_index = new_cats.index(
+                category.filter(pk=cat.parent_id).first())
             if not hasattr(new_cats[parent_index], 'child'):
                 new_cats[parent_index].child = []
             new_cats[parent_index].child.append(cat)
@@ -91,7 +88,7 @@ class AllCategory(Tools):
         return JsonResponse(b)
 
 
-class AllCategoryOld(Tools):
+class AllCategoryOld(View):
     def get(self, request):
         category = Category.objects.all()
         cat_ids = []
@@ -132,10 +129,10 @@ class AllCategoryOld(Tools):
             try:
                 cat[0] = category.filter(pk=cat[0]).first()
             except TypeError:
-                categories[categories.index(cat)] = category.filter(pk=cat).first()
+                categories[categories.index(cat)] = category.filter(
+                    pk=cat).first()
                 print(cat)
         print(categories)
-
 
     def test(self, parent_childes):
         for parent_child in parent_childes:
@@ -147,7 +144,6 @@ class AllCategoryOld(Tools):
                     parent_child[1].append([i[0], i[1]])
                     parent_childes.remove(i)
         return parent_childes
-
 
     def organize_cat(self, category):
         print('category.child:', category.child)
@@ -167,26 +163,24 @@ class AllCategoryOld(Tools):
         return self.organize_cat(category.parent)
 
 
-class GetMenu(Tools):
+class GetMenu(View):
     def get(self, request):
-        return JsonResponse({'menu': MenuSchema(request.lang).dump(
-            Menu.objects.select_related('media', 'parent').all(), many=True)})
+        return JsonResponse(json.dumps({'menu': MenuSchema(request.lang).dump(
+            Menu.objects.select_related('media', 'parent').all(), many=True)}))
 
 
-class GetAds(Tools):
+class GetAds(View):
     def get(self, request):
         return JsonResponse({'ads': AdSchema(request.lang).dump(
             Ad.objects.select_related('media', 'storage').all(), many=True)})
 
 
-class Search(Tools):
+class Search(View):
     def get(self, request):
-        step = self.step
-        page = self.page
         q = request.GET.get('q', '')
         sv = SearchVector(KeyTextTransform('persian', 'product__name'),
                           KeyTextTransform('persian', 'product__category__name'))
         sq = SearchQuery(q)
-        product = Storage.objects.select_related('product').annotate(rank=SearchRank(sv, sq)).order_by('rank')\
-        [(page-1)*step:step*page]
+        product = Storage.objects.select_related('product').annotate(
+            rank=SearchRank(sv, sq)).order_by('rank')[(page-1)*step:step*page]
         return JsonResponse({'products': StorageSchema(request.lang).dump(product, many=True)})

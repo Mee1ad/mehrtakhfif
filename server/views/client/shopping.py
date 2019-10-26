@@ -1,13 +1,13 @@
 from server.models import *
 from django.http import JsonResponse, HttpResponse
-from server.views.utils import Tools
+from server.views.utils import View
 import json
 from server.serialize import *
 from django.db import IntegrityError
 from django.db.models import F
 
 
-class Buy(Tools):
+class Buy(View):
 
     def get(self, request):
         products = BasketProduct.objects.select_related('storage', 'basket').filter(basket__user=request.user)

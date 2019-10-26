@@ -3,11 +3,10 @@ from server.models import *
 from django.http import JsonResponse
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.mixins import PermissionRequiredMixin
-from server import serializer as serialize
-from server.views.utils import Tools
+from server.views.utils import *
 
 
-class ReadAdminView(Tools):
+class ReadAdminView(View):
 
     @staticmethod
     def get_data(request, model, serializer):

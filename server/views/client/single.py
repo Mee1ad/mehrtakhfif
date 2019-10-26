@@ -2,8 +2,7 @@ from server.models import *
 from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.mixins import PermissionRequiredMixin
-from server import serializer as serialize
-from server.views.utils import Tools
+from server.views.utils import View
 from server.views.admin_panel.read import ReadAdminView
 import json
 import time
@@ -13,7 +12,7 @@ from django.db.models import Max, Min
 from server.serialize import *
 
 
-class Single(Tools):
+class Single(View):
     def get(self, request, pk):
         storage = Storage.objects.filter(pk=pk).select_related('product').first()
         feature = storage.product.feature.all()
@@ -24,7 +23,7 @@ class Single(Tools):
                              'related_product': StorageSchema(lang).dump(related_product, many=True)})
 
 
-class CommentView(Tools):
+class CommentView(View):
     def get(self, request):
         product_id = request.GET.get('product_id', None)
         blog_id = request.GET.get('blog_id', None)

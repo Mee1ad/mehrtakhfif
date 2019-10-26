@@ -7,16 +7,15 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.core import serializers
 import json
-from server.views.utils import Tools
+from server.views.utils import View
 from django.views.generic.edit import DeleteView
 from django.urls import reverse_lazy
 from django.contrib.admin.utils import NestedObjects
 import jwt
 from mehr_takhfif.settings import TOKEN_SECRET
-from server import serializer as serialize
 
 
-class DeleteAdminView(Tools, PermissionRequiredMixin):
+class DeleteAdminView(View, PermissionRequiredMixin):
     def get_token(self, obj, serializer):
         data = {'object': serializer(obj)}
         return jwt.encode(data, TOKEN_SECRET, algorithm='HS256')

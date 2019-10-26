@@ -7,91 +7,96 @@ from server.serialize import *
 from mehr_takhfif import settings
 import os
 import jwt
-import hashlib
-from mehr_takhfif.settings import TOKEN_SECRET
+from mehr_takhfif.settings import TOKEN_SECRET, SECRET_KEY
 import pysnooper
-from django.http import JsonResponse
 import magic
-from server.decorators import try_except
 import difflib
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.utils import timezone
+from datetime import datetime
 
+step = 12
+page = 1
+response = {'ok': {'message': 'ok'}, 'bad': {'message': 'bad request'}}
 
-class Tools(View):
-    step = 12
-    page = 1
-    response = {'ok': {'message': 'ok'}, 'bad': {'message': 'bad request'}}
+def safe_delete(obj, user):
+    obj.deleted_by_id = user
+    obj.delete()
 
-    def safe_delete(self, obj, user):
-        obj.deleted_by_id = user
-        obj.delete()
+def to_json(obj=None, string=None):
+    if obj is not list:
+        obj = [obj]
+    if obj:
+        string = serializers.serialize("json", obj)
+    return json.loads(string[1:-1])['fields']
 
-    def to_json(self, obj=None, string=None):
-        if obj is not list:
-            obj = [obj]
-        if obj:
-            string = serializers.serialize("json", obj)
-        return json.loads(string[1:-1])['fields']
+def add_minutes(minutes):
+    return timezone.now() + timezone.timedelta(minutes=minutes)
 
-    def add_minutes(self, minutes):
-        return timezone.now() + timezone.timedelta(minutes=minutes)
+def add_days(days):
+    return timezone.now() + timezone.timedelta(days=days)
 
-    def generate_token(self, request, user):
-        data = {'user': f'{user.last_login}'}
-        first_encrypt = jwt.encode(data, TOKEN_SECRET, algorithm='HS256')
-        secret = token_hex(10)
-        second_encrypt = jwt.encode({'data': first_encrypt.decode()}, secret, algorithm='HS256')
-        access_token = f'{second_encrypt.decode()}{secret}'
-        request.session['counter'] = 0
-        return access_token
+def timestamp_to_date(timestamp):
+    return datetime.fromtimestamp(timestamp)
 
-    def hsencode(self, data, secret):
-        return jwt.encode(data, secret, algorithm='HS256').decode()
+@pysnooper.snoop()
+def generate_token(user):
+    expire = add_days(30).timestamp()
+    data = {'username': user.phone, 'expire': expire}
+    return {'token': hsencode(data, SECRET_KEY), 'expire': expire}
 
-    def hsdecode(self, token, secret):
-        return jwt.decode(token, secret, algorithms=['HS256'])
+def generate_token_old(request, user):
+    data = {'user': f'{user.last_login}'}
+    first_encrypt = jwt.encode(data, TOKEN_SECRET, algorithm='HS256')
+    secret = token_hex(10)
+    second_encrypt = jwt.encode({'data': first_encrypt.decode()}, secret, algorithm='HS256')
+    access_token = f'{second_encrypt.decode()}{secret}'
+    request.session['counter'] = 0
+    return access_token
 
-    def get_token_data(self, token):
-        first_decrypt = jwt.decode(token[7:-52], token[-52:-32], algorithms=['HS256'])
-        return jwt.decode(first_decrypt['data'].encode(), TOKEN_SECRET, algorithms=['HS256'])
+def hsencode(data, secret=SECRET_KEY):
+    return jwt.encode(data, secret, algorithm='HS256').decode()
 
-    def increase_token_counter(self, request):
-        request.session['counter'] += 1
+def hsdecode(token, secret=SECRET_KEY):
+    return jwt.decode(token, secret, algorithms=['HS256'])
 
-    @try_except
-    def upload(self, request, title, box=1):
-        image_formats = ['.jpeg', '.jpg', '.gif', '.png']
-        video_formats = ['.avi', '.mp4', '.mkv', '.flv', '.mov', '.webm', '.wmv']
-        for file in request.FILES.getlist('file'):
-            if file is not None:
-                file_format = os.path.splitext(file.name)[-1]
-                mimetype = self.get_mimetype(file).split('/')[0]
-                if mimetype == 'image' and file_format not in image_formats:
-                    return False
-                if mimetype == 'video' and file_format not in video_formats:
-                    return False
-                media = Media(file=file, box_id=box, created_by_id=1, type=mimetype, title=title or file)
-                media.save()
-                return True
+def get_token_data(token):
+    first_decrypt = jwt.decode(token[7:-52], token[-52:-32], algorithms=['HS256'])
+    return jwt.decode(first_decrypt['data'].encode(), TOKEN_SECRET, algorithms=['HS256'])
 
-    def get_mimetype(self, image):
-        mime = magic.Magic(mime=True)
-        mimetype = mime.from_buffer(image.read(1024))
-        image.seek(0)
-        return mimetype
+def upload(request, title, box=1):
+    image_formats = ['.jpeg', '.jpg', '.gif', '.png']
+    video_formats = ['.avi', '.mp4', '.mkv', '.flv', '.mov', '.webm', '.wmv']
+    for file in request.FILES.getlist('file'):
+        if file is not None:
+            file_format = os.path.splitext(file.name)[-1]
+            mimetype = self.get_mimetype(file).split('/')[0]
+            if mimetype == 'image' and file_format not in image_formats:
+                return False
+            if mimetype == 'video' and file_format not in video_formats:
+                return False
+            media = Media(file=file, box_id=box, created_by_id=1, type=mimetype, title=title or file)
+            media.save()
+            return True
 
-    def move(self, obj, folder):
-        old_path = obj.file.path
-        new_path = settings.MEDIA_ROOT + f'\\{folder}\\' + obj.file.name
-        try:
-            os.rename(old_path, new_path)
-        except FileNotFoundError:
-            os.makedirs(settings.MEDIA_ROOT + f'\\{folder}\\')
-            os.rename(old_path, new_path)
-        finally:
-            obj.save()
+def get_mimetype(image):
+    mime = magic.Magic(mime=True)
+    mimetype = mime.from_buffer(image.read(1024))
+    image.seek(0)
+    return mimetype
 
-    @staticmethod
-    def filter_params(params):
+def move(obj, folder):
+    old_path = obj.file.path
+    new_path = settings.MEDIA_ROOT + f'\\{folder}\\' + obj.file.name
+    try:
+        os.rename(old_path, new_path)
+    except FileNotFoundError:
+        os.makedirs(settings.MEDIA_ROOT + f'\\{folder}\\')
+        os.rename(old_path, new_path)
+    finally:
+        obj.save()
+
+def filter_params(params):
         filters = ('discount_price', 'discount_vip_price', 'discount_price_percent', 'discount_vip_price_percent',
                    'product__sold_count', 'created_at')
         filters_op = ('__gt', '__gte', '__lt', '__lte')
@@ -116,12 +121,17 @@ class Tools(View):
             pass
         return {'filter': filterby, 'order':orderby}
 
+class LoginRequired(LoginRequiredMixin, View):
+    raise_exception = True
 
-class Validation(Tools):
+class Validation(View):
     def __init__(self):
         super().__init__()
         self.phone_pattern = r'^(09[0-9]{9})$'
-        self.email_pattern = r'^\w+.*-*@\w+.com$'
+        self.email_pattern = r'^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$'
+        self.postal_pattern = r'^\d{5}[ -]?\d{5}$'
+        self.fullname_pattern = r'^[آ-یA-z]{2,}( [آ-یA-z]{2,})+([آ-یA-z]|[ ]?)$'
+        self.activate_pattern = 'test'
 
     def regex(self, data, pattern, error, raise_error=True):
         data = re.search(pattern, f'{data}')

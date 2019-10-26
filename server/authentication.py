@@ -1,26 +1,24 @@
-import inspect
-import warnings
-
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
-from django.utils.deprecation import RemovedInDjango31Warning
 from .models import User
-from django.http import JsonResponse
+from django.utils import timezone
+from server.views.utils import add_days
+from mehr_takhfif.settings import SECRET_KEY
 import pysnooper
 
 UserModel = get_user_model()
 
-
-# noinspection PyMethodMayBeStatic
 class ModelBackend:
-    def authenticate(self, request, access_token=None):
+      
+    def authenticate(self, token):
         try:
-            user = User.objects.get(access_token=access_token)
+            data = hsdecode(token, SECRET_KEY)
+            assert timezone.now() < data['expire']
+            username = data['username']
+            user = User.objects.get(username=username, is_active=True)
+            return True
         except UserModel.DoesNotExist:
-            return JsonResponse({}, status=401)
-        else:
-            if self.user_can_authenticate(user):
-                return user
+            return False
 
     def user_can_authenticate(self, user):
         is_active = getattr(user, 'is_active', None)

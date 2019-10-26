@@ -5,6 +5,11 @@ verify_ssl = true
 
 [dev-packages]
 pylint = "*"
+autopep8 = "*"
+flake8 = "*"
+bandit = "*"
+prospector = "*"
+pylama = "*"
 
 [packages]
 django = "*"

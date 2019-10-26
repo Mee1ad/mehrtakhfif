@@ -1,9 +1,7 @@
 from server.models import *
 from django.http import JsonResponse, HttpResponse
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.mixins import PermissionRequiredMixin
-from server import serializer as serialize
-from server.views.utils import Tools
+from server.views.utils import View
 from server.views.admin_panel.read import ReadAdminView
 import json
 import time
@@ -11,9 +9,10 @@ import pysnooper
 from django.views.decorators.cache import cache_page
 from django.db.models import Max, Min
 from server.serialize import *
+from server.views.utils import LoginRequired
 
 
-class Profile(Tools):
+class Profile(View):
     def get(self, request):
         print('this is user profile')
         return JsonResponse({'user': serialize.user(request.user)})
@@ -25,7 +24,7 @@ class Profile(Tools):
         return HttpResponse('ok', status=200)
 
 
-class AddressView(Tools):
+class AddressView(View):
     def get(self, request):
         addresses = Address.objects.filter(user=request.user)
         return JsonResponse({'addresses': AddressSchema().dump(addresses, many=True),
@@ -79,19 +78,19 @@ class AddressView(Tools):
         return HttpResponse('ok')
 
 
-class GetState(Tools):
+class GetState(LoginRequired):
     def get(self, request):
         states = State.objects.all()
         return JsonResponse({'states': StateSchema().dump(states, many=True)})
 
 
-class GetCity(Tools):
+class GetCity(View):
     def get(self, request, state_id):
         cities = City.objects.filter(state_id=state_id)
         return JsonResponse({'cities': CitySchema().dump(cities, many=True)})
 
 
-class WishlistView(Tools):
+class WishlistView(View):
     def get(self, request):
         wishlists = WishList.objects.filter(user_id=request.user)
         return JsonResponse({'wishlists': WishListSchema(request.lang).dump(wishlists, many=True)})
@@ -119,7 +118,7 @@ class WishlistView(Tools):
             return HttpResponse('product does not exist', status=406)
 
 
-class NotifyView(Tools):
+class NotifyView(View):
     def get(self, request):
         notify = WishList.objects.filter(user_id=request.user)
         return JsonResponse({'wishlists': serialize.notify(notify)})
@@ -136,11 +135,11 @@ class NotifyView(Tools):
         return HttpResponse('ok')
 
 
-class MyTransactions(Tools):
+class MyTransactions(View):
     def get(self, request):
         pass
 
 
-class WalletView(Tools):
+class WalletView(View):
     def get(self, request):
         pass
