@@ -24,7 +24,7 @@ class UpdateCategory(UpdateAdminView):
             request.session['box_id'] = request.user.box.id
         Category.objects.filter(
             pk=category_id).update(parent=data['parent'], box=request.session['box_id'],
-                                   name=data['name'], deactive=data['deactive'], media=data['media'])
+                                   name=data['name'], disable=data['disable'], media=data['media'])
         return HttpResponse('ok', status=200)
 
 
@@ -59,7 +59,7 @@ class UpdateProduct(UpdateAdminView):
             name=data['name'], permalink=data['permalink'], category=data['category'], gender=data['gender'],
             short_description=data['short_description'], description=data['description'], media=data['media'],
             usage_condition=data['usage_condition'], location=data['location'], profit=data['profit'],
-            deactive=data['deactive'], verify=data['verify'], type=data['type'])
+            disable=data['disable'], verify=data['verify'], type=data['type'])
         return HttpResponse('ok', status=200)
 
 

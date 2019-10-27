@@ -25,7 +25,7 @@ class BoxDetail(View):
         min_price = Storage.objects.filter(box_id=pk).aggregate(Min('discount_price'))['discount_price__min']
         box = Box.objects.filter(pk=pk).first()
         categories = Category.objects.select_related('media', 'parent').filter(
-            box_id=pk, deactive=False).order_by('-priority')
+            box_id=pk, disable=False).order_by('-priority')
         return JsonResponse({'box': BoxSchema(request.lang).dump(box), 'max_price': max_price, 'min_price': min_price,
                              'categories': CategorySchema(request.lang).dump(categories, many=True)})
 
@@ -66,8 +66,7 @@ class TagView(View):
 
 class Filter(View):
     def get(self, request):
-        params = self.filter_params(request.GET)
-        print(params)
+        params = filter_params(request.GET)
         try:
             products = Storage.objects.filter(**params['filter']).order_by(*params['order'])
         except Exception:
