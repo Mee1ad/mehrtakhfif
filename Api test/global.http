@@ -19,6 +19,8 @@ Content-Type: Application/json
 
 ############### User ###############
 GET http://{{host}}/get_states
+###
+GET http://{{host}}/profile
 
 ############### Home ###############
 GET http://{{host}}/search?q='تور'

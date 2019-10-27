@@ -184,7 +184,7 @@ class Category(SafeDeleteModel):
                                    related_name='category_updated_by')
     deleted_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Deleted by',
                                    related_name='category_deleted_by')
-    deactive = models.BooleanField(default=False)
+    disable = models.BooleanField(default=False)
     media = models.ForeignKey(Media, on_delete=CASCADE, null=True, blank=True)
 
     class Meta:
@@ -274,7 +274,7 @@ class Product(SafeDeleteModel):
     sold_count = models.BigIntegerField(default=0, verbose_name='Sold count')
     income = models.BigIntegerField(default=0)
     profit = models.BigIntegerField(default=0)
-    deactive = models.BooleanField(default=True)
+    disable = models.BooleanField(default=True)
     verify = models.BooleanField(default=False)
     type = models.CharField(max_length=255, choices=[(
         'service', 'service'), ('product', 'product')])

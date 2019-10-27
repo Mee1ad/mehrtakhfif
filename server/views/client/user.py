@@ -24,6 +24,18 @@ class Profile(View):
         return HttpResponse('ok', status=200)
 
 
+class ShoppingList(View):
+    def get(self, request):
+        shopping_list = Factor.objects.filter(user=request.user).order_by('created_at')
+        return JsonResponse({'shopping_list': FactorSchema().dump(shopping_list, many=True)})
+
+
+class UserComment(View):
+    def get(self, request):
+        comments = Comment.objects.filter(user=request.user).order_by('created_at')
+        return JsonResponse({'comments': CommentSchema().dump(comments, many=True)})
+
+
 class AddressView(View):
     def get(self, request):
         addresses = Address.objects.filter(user=request.user)

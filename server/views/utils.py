@@ -100,8 +100,8 @@ def filter_params(params):
         filters = ('discount_price', 'discount_vip_price', 'discount_price_percent', 'discount_vip_price_percent',
                    'product__sold_count', 'created_at')
         filters_op = ('__gt', '__gte', '__lt', '__lte')
-        valid_filters = (x + y for y in filters_op for x in filters)
-        filterby = {}
+        valid_filters = [x + y for y in filters_op for x in filters]
+        filter_by = {}
         orderby = ['-created_at']
         try:
             orderby += params['orderby']
@@ -114,12 +114,12 @@ def filter_params(params):
                 value = params.getlist(key)
                 if len(value) == 1:
                     valid_key = difflib.get_close_matches(key, valid_filters)[0]
-                    filterby[valid_key] = value[0]
+                    filter_by[valid_key] = value[0]
                     continue
-                filterby[key + '__in'] = value
+                filter_by[key + '__in'] = value
         except Exception:
             pass
-        return {'filter': filterby, 'order':orderby}
+        return {'filter': filter_by, 'order':orderby}
 
 class LoginRequired(LoginRequiredMixin, View):
     raise_exception = True

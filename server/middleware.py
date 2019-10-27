@@ -17,11 +17,11 @@ class AuthMiddleware:
         self.get_response = get_response
         # One-time configuration and initialization.
 
-    @pysnooper.snoop()
     def __call__(self, request):
         # print(request.headers)
         # print(json.loads(request.body))
         try:
+            # request.user = User.objects.get(pk=1)
             request.lang = request.headers['language']
         except Exception:
             request.lang = 'persian'
@@ -63,15 +63,15 @@ class AuthMiddleware:
             #         except Exception:
             #             pass
                     # return JsonResponse({}, status=401)
-            # delay = request.GET.get('delay', None)
-            # if delay:
-            #     import time
-            #     print(delay)
-            #     time.sleep(float(delay))
-            # error = request.GET.get('error', None)
-            # if error:
-            #     status_code = request.GET.get('status_code', 501)
-            #     return JsonResponse({}, status=status_code)
+            delay = request.GET.get('delay', None)
+            if delay:
+                import time
+                print(delay)
+                time.sleep(float(delay))
+            error = request.GET.get('error', None)
+            if error:
+                status_code = request.GET.get('status_code', 501)
+                return JsonResponse({}, status=status_code)
 
         except json.decoder.JSONDecodeError:
             return HttpResponse('')

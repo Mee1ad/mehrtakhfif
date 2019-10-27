@@ -3,7 +3,7 @@ from mehr_takhfif.settings import HOST, MEDIA_URL
 import pysnooper
 from secrets import token_hex
 
-# ءManyToMany Relations
+# ManyToMany Relations
 
 
 class MediaField(fields.Field):

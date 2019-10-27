@@ -35,7 +35,8 @@ single = [path('single/<int:pk>', single.Single.as_view(), name='single'),
 
 shopping = [path('basket', shopping.Buy.as_view(), name='basket')]
 
-user = [path('get_states', user.GetState.as_view(), name='get_states'),
+user = [path('profile', user.Profile.as_view(), name='profile'),
+        path('get_states', user.GetState.as_view(), name='get_states'),
         path('get_cities/<int:state_id>', user.GetCity.as_view(), name='get_cities'),
         path('wishlist', user.WishlistView.as_view(), name='wishlist'),
         path('address', user.AddressView.as_view(), name='address')]
