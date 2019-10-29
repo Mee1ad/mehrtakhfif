@@ -57,6 +57,7 @@ class User(AbstractUser):
     is_superuser = models.BooleanField(default=False, verbose_name='Superuser')
     is_staff = models.BooleanField(default=False, verbose_name='Staff')
     is_vip = models.BooleanField(default=False)
+    privacy_agreement = models.BooleanField(default=False)
     default_address = models.IntegerField(null=True, blank=True)
     email_verified = models.BooleanField(default=False, verbose_name='Email verified')
     avatar_id = models.BigIntegerField(blank=True, null=True)

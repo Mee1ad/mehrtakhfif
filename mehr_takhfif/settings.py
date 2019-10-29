@@ -90,7 +90,10 @@ MESSAGE_STORAGE = 'django.contrib.messages.storage.cookie.CookieStorage'
 
 ROOT_URLCONF = 'mehr_takhfif.urls'
 
-AUTHENTICATION_BACKENDS = ['django.contrib.auth.backends.ModelBackend']
+AUTHENTICATION_BACKENDS = [
+    'server.views.auth.Backend',
+    # 'django.contrib.auth.backends.ModelBackend',
+]
 
 TEMPLATES = [
     {
