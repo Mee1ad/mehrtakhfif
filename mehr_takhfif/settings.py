@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'debug_toolbar',
     'mehrpeyk',
+    'sorl.thumbnail',
 ]
 
 MIDDLEWARE = [

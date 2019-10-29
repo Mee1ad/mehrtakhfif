@@ -14,6 +14,8 @@ import difflib
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils import timezone
 from datetime import datetime
+from PIL import Image
+from mehr_takhfif.settings import MEDIA_ROOT
 
 step = 12
 page = 1
@@ -30,8 +32,8 @@ def to_json(obj=None, string=None):
         string = serializers.serialize("json", obj)
     return json.loads(string[1:-1])['fields']
 
-def add_minutes(minutes):
-    return timezone.now() + timezone.timedelta(minutes=minutes)
+def add_minutes(minutes, time=None):
+    return (time or timezone.now()) + timezone.timedelta(minutes=minutes)
 
 def add_days(days):
     return timezone.now() + timezone.timedelta(days=days)
@@ -70,13 +72,15 @@ def upload(request, title, box=1):
     for file in request.FILES.getlist('file'):
         if file is not None:
             file_format = os.path.splitext(file.name)[-1]
-            mimetype = self.get_mimetype(file).split('/')[0]
-            if mimetype == 'image' and file_format not in image_formats:
-                return False
+            mimetype = get_mimetype(file).split('/')[0]
+            if mimetype == 'image':
+                if file_format not in image_formats:
+                    return False
             if mimetype == 'video' and file_format not in video_formats:
                 return False
             media = Media(file=file, box_id=box, created_by_id=1, type=mimetype, title=title or file)
             media.save()
+
             return True
 
 def get_mimetype(image):

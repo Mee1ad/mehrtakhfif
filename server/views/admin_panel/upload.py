@@ -8,6 +8,7 @@ from django.core import serializers
 import json
 from server.views.utils import View
 from server.decorators import try_except
+from server.views.utils import upload
 
 
 class AdminView(View, PermissionRequiredMixin, LoginRequiredMixin):
@@ -17,11 +18,10 @@ class AdminView(View, PermissionRequiredMixin, LoginRequiredMixin):
 class BoxMedia(AdminView):
     permission_required = 'add_media'
 
-    @try_except
     def post(self, request):
         data = json.loads(request.POST.get('data'))
         title = data['title']
         # box = request.user.box
-        if self.upload(request, title, box=1):
+        if upload(request, title, box=1):
             return HttpResponse('ok')
         return HttpResponse('error')

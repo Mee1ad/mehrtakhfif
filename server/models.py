@@ -1,4 +1,5 @@
 from django.db import models
+from sorl.thumbnail import ImageField
 from django.contrib.postgres.fields import JSONField, DateRangeField, DateTimeRangeField, ArrayField
 from django.db.models import CASCADE, PROTECT
 from django.contrib.auth.models import AbstractUser
@@ -11,6 +12,8 @@ from django.dispatch import receiver
 from django.contrib.postgres.indexes import GinIndex
 import django.contrib.postgres.search as pg_search
 import os
+import re
+from PIL import Image
 
 
 def multilanguage():
@@ -144,9 +147,21 @@ class Media(SafeDeleteModel):
     def __str__(self):
         return self.title['persian']
 
+    def save(self, *args, **kwargs):
+        sizes = {'small': (200, 200), 'medium': (500, 500), 'large': (800, 800)}
+        super().save(*args, **kwargs)
+        name = self.file.name
+        format = re.search(r'\.[a-z]+', name)
+        path = self.file.path
+        new_path = self.file.path.replace(format[0], '')
+        for size in sizes:
+            Image.open(path).resize((sizes[size][0], sizes[size][1]))\
+                    .save(new_path + f'_{size}' + format[0], 'JPEG')
+
     _safedelete_policy = SOFT_DELETE_CASCADE
     id = models.BigAutoField(auto_created=True, primary_key=True)
     file = models.FileField(upload_to=upload_to)
+    img = ImageField(upload_to='test')
     title = JSONField(default=multilanguage)
     type = models.CharField(max_length=255, choices=[('video', 'video'), ('image', 'image'), ('audio', 'audio'),
                                      ('slider', 'slider')])

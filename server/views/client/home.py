@@ -13,12 +13,24 @@ from server.serialize import *
 from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
 from django.contrib.postgres.fields.jsonb import KeyTextTransform
 from django.contrib.postgres.search import TrigramSimilarity
+from mehr_takhfif.settings import HOST, MEDIA_ROOT
 
 
 class Test(View):
+    @pysnooper.snoop()
     def get(self, request):
-        data = json.loads(request.body)
-        return JsonResponse(data)
+        from PIL import Image
+        media = Media.objects.get(pk=1)
+        # url = HOST + media.file.url
+        img = Image.open(media.file.path)
+        img2 = img.resize((500, 500))
+        img2.save(MEDIA_ROOT + '/test.jpg', 'JPEG')
+        w = request.GET.get('w', 300)
+        h = request.GET.get('h', 300)
+        from sorl.thumbnail import get_thumbnail
+        im = get_thumbnail(media.file.path, f'{w}x{h}', quality=100)
+        return HttpResponse(im.read(), content_type="image/jpeg")
+        # return HttpResponse(img2)
 
 
 class GetSlider(View):

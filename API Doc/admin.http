@@ -1,20 +1,19 @@
-DELETE {{admin_host}}/delete_category/1
+DELETE {{host}}/delete_category/1
 ###
-GET {{admin_host}}/get_category?pk=1
+GET {{host}}/get_category?pk=1
 ###
-POST {{admin_host}}/upload
-Content-Type: multipart/form-data; boundary=WebAppBoundary
-access-token: {{access-token}}
-device-id: {{device-id}}
+POST {{host}}/upload
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary
+admin: True
 
 --WebAppBoundary
 Content-Disposition: form-data; name="data"
 
 {"title": "test"}
 --WebAppBoundary--
-Content-Disposition: form-data; name="file"; filename="VID_20180706_203959.mp4"
+Content-Disposition: form-data; name="file"; filename="2.jpg"
 
-< E:\Pictures\VID_20180706_203959.mp4
+< F:\Download\Chrome\wallpaper\nice\2.jpg
 ###
 POST {{host}}/add_product
 Content-Type: multipart/form-data; boundary=WebAppBoundary
