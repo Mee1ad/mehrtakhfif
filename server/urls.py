@@ -46,6 +46,6 @@ auth = [path('signup', auth.Signup.as_view(), name='signup'),
         path('activate', auth.Activate.as_view(), name='activate'),
         path('resend_code', auth.ResendCode.as_view(), name='resend_code'),
         path('reset_password_request', auth.ResetPasswordRequest.as_view(), name='reset_password_request'),
-        path('reset_password', auth.ResetPassword.as_view(), name='reset_password')]
+        path('reset_password', auth.SetPassword.as_view(), name='reset_password')]
 
 urlpatterns = [*home, *box, *user, *shopping, *single, *auth]
