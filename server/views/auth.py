@@ -1,3 +1,4 @@
+from django.contrib.auth.backends import ModelBackend
 from django.views import View
 from server.models import *
 from django.http import JsonResponse
@@ -23,60 +24,112 @@ import time
 from django.core.cache import cache
 from mehr_takhfif.settings import CACHE_TTL
 from secrets import token_hex
+from django.contrib.auth import get_user_model
 
 token_salt = 'nkU^&*()JH*757H*&^)_IJIO7JI874434%^&OHdfgdG457HIO44'
 
+
+class Backend(ModelBackend):
+    @staticmethod
+    def get_user_from_cookie(request):
+        try:
+            client_token = request.get_signed_cookie('token', False, salt=token_salt)
+            return User.objects.get(token=client_token, is_ban=False)
+        except Exception:
+            return None
+
+
 class Login(Validation):
-    resend_timeout = 0.5
-    activation_expire = 2
-    # @pysnooper.snoop()
+    @pysnooper.snoop()
     def post(self, request):
         data = json.loads(request.body)
         cookie_age = 30 * 60
-        token = token_hex(100)
         try: # Login
-            # assert not request.user.is_authenticated
             username = data['username']
             password = data['password']
             user = User.objects.get(username=username)
             if user.is_ban:
                 return JsonResponse({'message': 'user is banned'}, status=403)
             if password is None: # otp
-                res = JsonResponse(self.activate(request, user, token), status=202)
-                res.set_signed_cookie('token', token, token_salt, max_age=cookie_age, expires=cookie_age)
-                return res
+                if user.privacy_agreement: # 202 need activation code (login)
+                    return self.set_token(user, self.send_activation(user))
+                # res = JsonResponse({}, status=251) # please agree privacy policy (signup)
+                # return self.set_token(user, res)
+                raise User.DoesNotExist # redirect to signup
             if not user.is_active: # incomplete signup
-                user.delete()
-                raise User.DoesNotExist
+                raise User.DoesNotExist # redirect to signup
             assert user.check_password(password)
             login(request, user)
             return JsonResponse(UserSchema().dump(user))
         except User.DoesNotExist: # Signup
-            activation_code = random.randint(10000, 99999)                
-            user = User.objects.create_user(username=username, activation_code=activation_code, password=password,
-                                            activation_expire=add_minutes(self.activation_expire))
-            user.token = token
-            user.save()
-            self.send_sms(user.username, activation_code)
-            res = JsonResponse({'code': user.activation_code, 'resend_timeout': self.resend_timeout,
-                                'timeout': self.activation_expire}, status=202)
-            res.set_signed_cookie('token', token, token_salt, max_age=cookie_age, expires=cookie_age)
-            return res
+            if 'user' in locals():
+                user.delete()      
+            user = User.objects.create_user(username=username, password=password)
+            res = JsonResponse({}, status=251) # please agree privacy policy
+            return self.set_token(user, res)
         except AssertionError: # invalid password
             return JsonResponse({}, status=401)
-
-    def activate(self, request, user, token):
-        # user.refresh_from_db()
+    
+    @staticmethod
+    @pysnooper.snoop()
+    def send_activation(user):
+        resend_timeout = 0.5
+        activation_expire = 2
         user.activation_code = random.randint(10000, 99999)
-        user.activation_expire = add_minutes(self.activation_expire)
-        user.token = token
+        user.activation_expire = add_minutes(activation_expire)
         user.save()          
-        self.send_sms(user.username, user.activation_code)
-        return {'code': user.activation_code, 'resend_timeout': self.resend_timeout, 'timeout': self.activation_expire}
+        Login.send_sms(user.username, user.activation_code)
+        res = {'code': user.activation_code, 'resend_timeout': resend_timeout, 'timeout': activation_expire}
+        return JsonResponse(res , status=202)
+
+    @staticmethod
+    def set_token(user, response):
+        try:
+            user.token = token_hex(100)
+            user.save()
+            response.set_signed_cookie('token', user.token, token_salt, max_age=7200, expires=7200)
+            return response
+        except Exception:
+            return JsonResponse({}, status=401)
 
     @staticmethod
     def send_sms(phone, code):
         pass # TODO: send sms
+
+    @staticmethod
+    def check_password(user):
+        print(user.password[:6])
+        return user.password[:6] == 'argon2'
+
+
+class PrivacyPolicy(View):
+    @pysnooper.snoop()
+    def put(self, request):
+        try:
+            user = Backend.get_user_from_cookie(request)
+            user.privacy_agreement = True
+            user.save()
+            return Login.send_activation(user) # need activation code
+        except Exception:
+            return JsonResponse({}, status=401)
+
+    @staticmethod
+    def get_user(request):
+        client_token = request.get_signed_cookie('token', False, salt=token_salt)
+        return User.objects.get(token=client_token)
+
+
+class SetPassword(View):
+    @pysnooper.snoop()
+    def put(self, request):
+        try:
+            user = Backend.get_user_from_cookie(request)
+            data = json.loads(request.body)
+            user.set_password(data['new_password'])
+            user.save()
+            return JsonResponse(UserSchema().dump(user))
+        except Exception:
+            return JsonResponse({}, status=400)
 
 
 class ResendCode(View):
@@ -85,8 +138,7 @@ class ResendCode(View):
         resend_timeout = Login.resend_timeout
         activation_expire = Login.activation_expire
         try:
-            client_token = request.get_signed_cookie('token', salt=token_salt)
-            user = User.objects.get(token=client_token, is_ban=False)
+            user = Backend.get_user_from_cookie(request)
             user.activation_code = random.randint(10000, 99999)
             assert timezone.now() > add_minutes(resend_timeout-activation_expire, time=user.activation_expire)
             user.activation_expire = add_minutes(activation_expire)
@@ -103,7 +155,6 @@ class Activate(View):
         # TODO: get csrf code
         try:
             client_token = request.get_signed_cookie('token', False, salt=token_salt)
-            assert client_token
             code = data['code']
             user = User.objects.get(activation_code=code, token=client_token, is_ban=False, activation_expire__gte=timezone.now())
             user.activation_expire = timezone.now()
@@ -111,7 +162,7 @@ class Activate(View):
             user.save()
             login(request, user)
             res = JsonResponse(UserSchema().dump(user), status=201) # signup without password
-            if user.password[:5] == 'argon2':
+            if Login.check_password(user):
                 res = JsonResponse(UserSchema().dump(user)) # successfull login
                 res.delete_cookie('token')
             return res
@@ -119,135 +170,12 @@ class Activate(View):
             return JsonResponse({'message': 'code not found'}, status=406)
 
     
-class SetPassword(LoginRequired):
-    @pysnooper.snoop()
-    def post(self, request):
-        data = json.loads(request.body)
-        request.user.set_password(data['new_password'])
-        request.user.save()
-        res = JsonResponse(UserSchema().dump(request.user))
-        if request.get_signed_cookie('token', False, salt=token_salt):
-            res.delete_cookie('token')
-        return res
 
 
 
 
 
 
-class Test(View):
-    permission_required = ''
-
-    def get(self, request):
-        qs = User.objects.get(pk=1)
-        # print(user)
-        # self.generate_token(request, user)
-        # user = serialize.user(user)
-        # cache.set('secret', 'test')
-        # print(request.session.keys())
-        # request.session['name'] = 'bilad'
-        # a = request.session.get('name', 'nothing')
-        return HttpResponse('ok')
-
-
-class Signup(Validation):
-    @pysnooper.snoop()
-    def post(self, request):
-        data = json.loads(request.body)
-        username = self.valid_phone(data['username'])
-        password = data['password']
-        activation_code = random.randint(10000, 99999)
-        activation_expire = add_minutes(5)
-        try:
-            user = User.objects.get(username=username)
-            if user.is_active:
-                return JsonResponse({'message': 'already signed up'}, status=204)
-            user.activation_code = activation_code
-            user.activation_expire = activation_expire
-        except User.DoesNotExist:
-            user = User.objects.create_user(username=username, password=password, email=None, activation_code=activation_code,
-                                            activation_expire=activation_expire)
-        user.refresh_token = token_hex(100)
-        user.save()
-        # todo send sms
-        res = {'token': user.refresh_token, 'code': activation_code}
-        # user.groups.add(1)
-        return JsonResponse(res, status=201)
-
-
-
-class Login_old(Validation):
-    @pysnooper.snoop()
-    def post(self, request):
-        data = json.loads(request.body)
-        try:
-            phone = self.valid_phone(data['username'], raise_error=False)
-            email = self.valid_email(data['username'], raise_error=False)
-            password = data['password']
-            if phone:
-                user = User.objects.get(phone=phone)
-            if email:
-                user = User.objects.get(email=email)
-            # assert not request.user.is_authenticated
-            valid_password = user.check_password(password)
-            if user.is_ban:
-                return JsonResponse({'message': 'user is banned'}, status=403)
-            if not valid_password:
-                return JsonResponse({'message': 'password is wrong'}, status=406)
-            if not user.is_active:
-                activation_code = random.randint(10000, 99999)
-                activation_code_salted = make_password(activation_code, 'activation_code')
-                user.activation_code = activation_code_salted
-                activation_expire = add_minutes(5)
-                user.activation_expire = activation_expire
-                user.access_token = generate_token(user)
-                user.save()
-                login(request, user)
-                res = {'token': user.activation_code, 'code': activation_code}
-                # todo send sms
-                return JsonResponse(res, status=201)
-            token = generate_token(user)
-            user.access_token = token['token']
-            user.access_token_expire = token['expire']
-            user.save()
-            login(request, user)
-            user = UserSchema().dump(User.objects.get(access_token=user.access_token))
-            return JsonResponse(user)
-        # except AssertionError:
-        #     return JsonResponse({'message': 'user is  logged in'}, status=401)
-        except Exception:
-            return JsonResponse({'message': 'user does not exist'}, status=401)
-
-
-class ResetPasswordRequest(Validation):
-    @pysnooper.snoop()
-    def post(self, request):
-        username = json.loads(request.body)['username']
-        try:
-            token = token_hex(10)
-            user = User.objects.filter(username=username, is_active=True)
-            user.update(token=token, token_expire=add_minutes(5))
-            Login.send_sms(user.username, code)
-            return JsonResponse({'token': token})
-        except User.DoesNotExist:
-            return JsonResponse({'message': 'user not found'}, status=404)
-
-
-class ResetPassword(View):
-    @pysnooper.snoop()
-    def post(self, request):
-        data = json.loads(request.body)
-        token = data['token']
-        password = data['new_password']
-        try:
-            user = User.objects.get(reset_token=token, reset_token_expire__gt=timezone.now())
-            user.set_password(password)
-            user.reset_token_expire = timezone.now()
-            user.access_token = self.generate_token(request, user)
-            user.save()
-            return JsonResponse(UserSchema().dump(user))
-        except User.DoesNotExist:
-            return JsonResponse({'message': 'user not found'}, status=404)
 
 
 

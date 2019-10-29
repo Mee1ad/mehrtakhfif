@@ -41,11 +41,11 @@ user = [path('profile', user.Profile.as_view(), name='profile'),
         path('wishlist', user.WishlistView.as_view(), name='wishlist'),
         path('address', user.AddressView.as_view(), name='address')]
 
-auth = [path('signup', auth.Signup.as_view(), name='signup'),
-        path('login', auth.Login.as_view(), name='login'),
+auth = [path('login', auth.Login.as_view(), name='login'),
         path('activate', auth.Activate.as_view(), name='activate'),
         path('resend_code', auth.ResendCode.as_view(), name='resend_code'),
-        path('reset_password_request', auth.ResetPasswordRequest.as_view(), name='reset_password_request'),
-        path('reset_password', auth.SetPassword.as_view(), name='reset_password')]
+        path('reset_password', auth.SetPassword.as_view(), name='reset_password'),
+        path('privacy_policy', auth.PrivacyPolicy.as_view(), name='privacy_policy'),
+        ]
 
 urlpatterns = [*home, *box, *user, *shopping, *single, *auth]
