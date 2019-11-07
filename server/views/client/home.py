@@ -51,6 +51,8 @@ class GetSpecialOffer(View):
 
 class GetSpecialProduct(View):
     def get(self, request):
+        step = int(request.GET.get('s', default_step))
+        page = int(request.GET.get('e', default_page))
         special_product = SpecialProduct.objects.select_related(
             'storage', 'storage__product', 'media').all().order_by('-id')[(page - 1) * step:step * page]
         best_sell_storage = Storage.objects.select_related('product', 'product__thumbnail').filter(
@@ -62,6 +64,8 @@ class GetSpecialProduct(View):
 
 class AllSpecialProduct(View):
     def get(self, request):
+        step = int(request.GET.get('s', default_step))
+        page = int(request.GET.get('e', default_page))
         all_box = Box.objects.all()
         products = []
         for box, index in zip(all_box, range(len(all_box))):
@@ -70,6 +74,7 @@ class AllSpecialProduct(View):
             product = {}
             product['id'] = box.pk
             product['name'] = box.name[request.lang]
+            product['key'] = box.meta_key
             # product['special_product'] = SpecialProductSchema(request.lang).dump(box_special_product, many=True)
             best_seller_storage = Storage.objects.select_related('product', 'product__thumbnail').filter(
                 default=True, box=box).order_by('-product__sold_count')[(page - 1) * step:step * page]
@@ -82,21 +87,8 @@ class AllSpecialProduct(View):
 
 class AllCategory(View):
     def get(self, request):
-        category = Category.objects.all()
-        new_cats = [*category]
-        remove_index = []
-        for cat, index in zip(category, range(len(category))):
-            if cat.parent is None:
-                continue
-            parent_index = new_cats.index(
-                category.filter(pk=cat.parent_id).first())
-            if not hasattr(new_cats[parent_index], 'child'):
-                new_cats[parent_index].child = []
-            new_cats[parent_index].child.append(cat)
-            remove_index.append(cat)
-        new_cats = [x for x in new_cats if x not in remove_index]
-        b = {'items': CategoryMinSchema().dump(new_cats, many=True)}
-        return JsonResponse(b)
+        categories = get_categories()
+        return JsonResponse(categories)
 
 
 class GetMenu(View):

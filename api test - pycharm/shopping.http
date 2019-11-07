@@ -1,0 +1,20 @@
+GET {{host}}/basket
+admin: True
+###
+POST {{host}}/basket
+Content-Type: Application/json
+admin: True
+
+{
+  "products": [
+    {
+      "id": 17,
+      "count": 25
+    },
+    {
+      "id": 18,
+      "count": 10
+    }
+  ]
+}
+###

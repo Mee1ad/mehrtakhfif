@@ -30,12 +30,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
     'server',
     'safedelete',
     'corsheaders',
     'debug_toolbar',
     'mehrpeyk',
-    'sorl.thumbnail',
+    'push_notifications'
 ]
 
 MIDDLEWARE = [
@@ -158,6 +159,12 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
+
+# https://github.com/jazzband/django-push-notifications
+
+PUSH_NOTIFICATIONS_SETTINGS = {
+        "FCM_API_KEY": "[your api key]",
+}
 
 
 # Internationalization

@@ -273,7 +273,7 @@
     <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
       <option name="ignoredPackages">
         <value>
-          <list size="38">
+          <list size="47">
             <item index="0" class="java.lang.String" itemvalue="mysqlclient" />
             <item index="1" class="java.lang.String" itemvalue="geopy" />
             <item index="2" class="java.lang.String" itemvalue="rsa" />
@@ -312,6 +312,15 @@
             <item index="35" class="java.lang.String" itemvalue="idna" />
             <item index="36" class="java.lang.String" itemvalue="Pillow" />
             <item index="37" class="java.lang.String" itemvalue="requests-toolbelt" />
+            <item index="38" class="java.lang.String" itemvalue="pbr" />
+            <item index="39" class="java.lang.String" itemvalue="gitdb2" />
+            <item index="40" class="java.lang.String" itemvalue="pyflakes" />
+            <item index="41" class="java.lang.String" itemvalue="bandit" />
+            <item index="42" class="java.lang.String" itemvalue="pylint" />
+            <item index="43" class="java.lang.String" itemvalue="pycodestyle" />
+            <item index="44" class="java.lang.String" itemvalue="astroid" />
+            <item index="45" class="java.lang.String" itemvalue="gitpython" />
+            <item index="46" class="java.lang.String" itemvalue="flake8" />
           </list>
         </value>
       </option>

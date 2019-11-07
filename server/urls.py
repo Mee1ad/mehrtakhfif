@@ -23,7 +23,7 @@ home = [path('test', home.Test.as_view(), name='test'),
 box = [
         path('box/<str:name>', box.BoxView.as_view(), name='box'),
         path('special_offer/<str:name>', box.GetSpecialOffer.as_view(), name='special_offer'),
-        path('box_detail/<int:pk>', box.BoxDetail.as_view(), name='box_detail'),
+        path('box_detail/<str:key>', box.BoxDetail.as_view(), name='box_detail'),
         path('filter', box.Filter.as_view(), name='filter'),
         # path('tag/<int:pk>', box.TagView.as_view(), name='tag'),
         path('box/<str:box>/category/<str:category>', box.BoxCategory.as_view(), name='category'),
@@ -33,7 +33,10 @@ box = [
 single = [path('single/<int:pk>', single.Single.as_view(), name='single'),
           path('comment', single.CommentView.as_view(), name='comment')]
 
-shopping = [path('basket', shopping.Buy.as_view(), name='basket')]
+shopping = [
+        path('basket', shopping.Buy.as_view(), name='basket'),
+        path('show_codes', shopping.ShowCodes.as_view(), name='show_codes'),
+]
 
 user = [path('profile', user.Profile.as_view(), name='profile'),
         path('get_states', user.GetState.as_view(), name='get_states'),
@@ -42,6 +45,7 @@ user = [path('profile', user.Profile.as_view(), name='profile'),
         path('address', user.AddressView.as_view(), name='address')]
 
 auth = [path('login', auth.Login.as_view(), name='login'),
+        path('logout', auth.LogoutView.as_view(), name='logout'),
         path('activate', auth.Activate.as_view(), name='activate'),
         path('resend_code', auth.ResendCode.as_view(), name='resend_code'),
         path('reset_password', auth.SetPassword.as_view(), name='reset_password'),

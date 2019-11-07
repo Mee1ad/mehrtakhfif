@@ -49,7 +49,6 @@ class BaseSchema(Schema):
         return None
 
 
-
     def get_category(self, obj):
         if obj.category is not None:
             return CategorySchema(self.lang).dump(obj.category)

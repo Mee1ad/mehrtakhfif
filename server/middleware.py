@@ -22,6 +22,7 @@ class AuthMiddleware:
         # print(json.loads(request.body))
         try:
             if request.headers['admin'] == 'True':
+                print('this is admin')
                 request.user = User.objects.get(pk=1)
             request.lang = request.headers['language']
         except Exception:
