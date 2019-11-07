@@ -25,6 +25,7 @@ from django.core.cache import cache
 from mehr_takhfif.settings import CACHE_TTL
 from secrets import token_hex
 from django.contrib.auth import get_user_model
+from django.contrib.auth import logout
 
 token_salt = 'nkU^&*()JH*757H*&^)_IJIO7JI874434%^&OHdfgdG457HIO44'
 
@@ -44,32 +45,36 @@ class Login(Validation):
     def post(self, request):
         data = json.loads(request.body)
         cookie_age = 30 * 60
-        try: # Login
+        try:  # Login
             username = data['username']
             password = data['password']
             user = User.objects.get(username=username)
             if user.is_ban:
                 return JsonResponse({'message': 'user is banned'}, status=403)
-            if password is None: # otp
-                if user.privacy_agreement: # 202 need activation code (login)
+            if password is None:  # otp
+                if user.privacy_agreement:  # 202 need activation code (login)
                     return self.set_token(user, self.send_activation(user))
                 # res = JsonResponse({}, status=251) # please agree privacy policy (signup)
                 # return self.set_token(user, res)
-                raise User.DoesNotExist # redirect to signup
-            if not user.is_active: # incomplete signup
-                raise User.DoesNotExist # redirect to signup
+                raise User.DoesNotExist  # redirect to signup
+            if not user.is_active:  # incomplete signup
+                raise User.DoesNotExist  # redirect to signup
             assert user.check_password(password)
             login(request, user)
-            return JsonResponse(UserSchema().dump(user))
-        except User.DoesNotExist: # Signup
+            res = {'user': UserSchema().dump(user)}
+            basket = Basket.objects.filter(user=user, status=0)
+            if basket.exists():
+                res['basket_count'] = basket.first().products.all().count()
+            return JsonResponse(res)
+        except User.DoesNotExist:  # Signup
             if 'user' in locals():
-                user.delete()      
+                user.delete()
             user = User.objects.create_user(username=username, password=password)
-            res = JsonResponse({}, status=251) # please agree privacy policy
+            res = JsonResponse({}, status=251)  # please agree privacy policy
             return self.set_token(user, res)
-        except AssertionError: # invalid password
-            return JsonResponse({}, status=401)
-    
+        except AssertionError:  # invalid password
+            return JsonResponse({}, status=450)
+
     @staticmethod
     @pysnooper.snoop()
     def send_activation(user):
@@ -77,10 +82,10 @@ class Login(Validation):
         activation_expire = 2
         user.activation_code = random.randint(10000, 99999)
         user.activation_expire = add_minutes(activation_expire)
-        user.save()          
+        user.save()
         Login.send_sms(user.username, user.activation_code)
         res = {'code': user.activation_code, 'resend_timeout': resend_timeout, 'timeout': activation_expire}
-        return JsonResponse(res , status=202)
+        return JsonResponse(res, status=202)
 
     @staticmethod
     def set_token(user, response):
@@ -94,7 +99,7 @@ class Login(Validation):
 
     @staticmethod
     def send_sms(phone, code):
-        pass # TODO: send sms
+        pass  # TODO: send sms
 
     @staticmethod
     def check_password(user):
@@ -109,7 +114,7 @@ class PrivacyPolicy(View):
             user = Backend.get_user_from_cookie(request)
             user.privacy_agreement = True
             user.save()
-            return Login.send_activation(user) # need activation code
+            return Login.send_activation(user)  # need activation code
         except Exception:
             return JsonResponse({}, status=401)
 
@@ -140,7 +145,7 @@ class ResendCode(View):
         try:
             user = Backend.get_user_from_cookie(request)
             user.activation_code = random.randint(10000, 99999)
-            assert timezone.now() > add_minutes(resend_timeout-activation_expire, time=user.activation_expire)
+            assert timezone.now() > add_minutes(resend_timeout - activation_expire, time=user.activation_expire)
             user.activation_expire = add_minutes(activation_expire)
             user.save()
             return JsonResponse({'code': user.activation_code, 'timeout': resend_timeout}, status=204)
@@ -156,26 +161,26 @@ class Activate(View):
         try:
             client_token = request.get_signed_cookie('token', False, salt=token_salt)
             code = data['code']
-            user = User.objects.get(activation_code=code, token=client_token, is_ban=False, activation_expire__gte=timezone.now())
+            user = User.objects.get(activation_code=code, token=client_token, is_ban=False,
+                                    activation_expire__gte=timezone.now())
             user.activation_expire = timezone.now()
             user.is_active = True
             user.save()
             login(request, user)
-            res = JsonResponse(UserSchema().dump(user), status=201) # signup without password
+            res = JsonResponse(UserSchema().dump(user), status=201)  # signup without password
             if Login.check_password(user):
-                res = JsonResponse(UserSchema().dump(user)) # successfull login
+                res = JsonResponse(UserSchema().dump(user))  # successfull login
                 res.delete_cookie('token')
             return res
         except Exception:
             return JsonResponse({'message': 'code not found'}, status=406)
 
-    
 
-
-
-
-
-
-
-
-
+class LogoutView(LoginRequired):
+    @pysnooper.snoop()
+    def post(self, request):
+        try:
+            logout(request)
+            return JsonResponse({})
+        except Exception:
+            return JsonResponse({}, status=401)

@@ -14,6 +14,7 @@ import django.contrib.postgres.search as pg_search
 import os
 import re
 from PIL import Image
+from push_notifications.models import GCMDevice
 
 
 def multilanguage():
@@ -21,8 +22,10 @@ def multilanguage():
             "english": "",
             "arabic": ""}
 
+
 def feature_value():
     return {"persian": "", "english": "", "arabic": "", "price": 0}
+
 
 def upload_to(instance, filename):
         date = timezone.now().strftime("%Y-%m-%d")
@@ -71,6 +74,17 @@ class User(AbstractUser):
 
     class Meta:
         db_table = 'user'
+        ordering = ['-id']
+
+
+class Client(models.Model):
+    id = models.BigAutoField(auto_created=True, primary_key=True)
+    device_id = models.CharField(max_length=255)
+    user_agent = models.CharField(max_length=255)
+    last_login_ip = models.CharField(max_length=31)
+
+    class Meta:
+        ordering = ['-id']
 
 
 class State(models.Model):
@@ -83,6 +97,7 @@ class State(models.Model):
 
     class Meta:
         db_table = 'state'
+        ordering = ['-id']
 
 
 class City(models.Model):
@@ -94,6 +109,7 @@ class City(models.Model):
 
     class Meta:
         db_table = 'city'
+        ordering = ['-id']
 
 
 class Address(models.Model):
@@ -115,6 +131,7 @@ class Address(models.Model):
 
     class Meta:
         db_table = 'address'
+        ordering = ['-id']
 
 
 class Box(SafeDeleteModel):
@@ -142,6 +159,7 @@ class Box(SafeDeleteModel):
 
     class Meta:
         db_table = 'box'
+        ordering = ['-id']
 
 
 class Media(SafeDeleteModel):
@@ -175,6 +193,7 @@ class Media(SafeDeleteModel):
 
     class Meta:
         db_table = 'media'
+        ordering = ['-id']
 
 
 class Category(SafeDeleteModel):
@@ -205,6 +224,8 @@ class Category(SafeDeleteModel):
 
     class Meta:
         db_table = 'category'
+        ordering = ['-id']
+        indexes = [GinIndex(fields=['name'])]
 
 
 class Feature(models.Model):
@@ -226,6 +247,7 @@ class Feature(models.Model):
 
     class Meta:
         db_table = 'feature'
+        ordering = ['-id']
 
 
 class Tag(SafeDeleteModel):
@@ -251,6 +273,8 @@ class Tag(SafeDeleteModel):
 
     class Meta:
         db_table = 'tag'
+        ordering = ['-id']
+        indexes = [GinIndex(fields=['name'])]
 
 
 class Product(SafeDeleteModel):
@@ -299,6 +323,7 @@ class Product(SafeDeleteModel):
     class Meta:
         db_table = 'product'
         indexes = [GinIndex(fields=['name'])]
+        ordering = ['-id']
 
 
 class Storage(SafeDeleteModel):
@@ -340,6 +365,7 @@ class Storage(SafeDeleteModel):
 
     class Meta:
         db_table = 'storage'
+        ordering = ['-id']
 
 
 class Basket(SafeDeleteModel):
@@ -363,11 +389,11 @@ class Basket(SafeDeleteModel):
     deleted_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Deleted by',
                                    related_name='basket_deleted_by')
     description = models.TextField(blank=True, null=True)
-    status = models.CharField(default='active', choices=((0, 'active'), (1, 'rejected'), (2, 'paid')),
-                              max_length=100)
+    status = models.IntegerField(default=0, choices=((0, 'active'), (1, 'rejected'), (2, 'paid')))
 
     class Meta:
         db_table = 'basket'
+        ordering = ['-id']
 
 
 class BasketProduct(models.Model):
@@ -382,6 +408,7 @@ class BasketProduct(models.Model):
 
     class Meta:
         db_table = 'basket_product'
+        ordering = ['-id']
 
 
 class Blog(SafeDeleteModel):
@@ -407,6 +434,7 @@ class Blog(SafeDeleteModel):
 
     class Meta:
         db_table = 'blog'
+        ordering = ['-id']
 
 
 class BlogPost(SafeDeleteModel):
@@ -432,6 +460,7 @@ class BlogPost(SafeDeleteModel):
 
     class Meta:
         db_table = 'blog_post'
+        ordering = ['-id']
 
 
 class Comment(SafeDeleteModel):
@@ -459,6 +488,7 @@ class Comment(SafeDeleteModel):
 
     class Meta:
         db_table = 'comments'
+        ordering = ['-id']
 
 
 class Factor(models.Model):
@@ -498,6 +528,7 @@ class Factor(models.Model):
 
     class Meta:
         db_table = 'factor'
+        ordering = ['-id']
 
 
 class FactorProduct(models.Model):
@@ -517,6 +548,7 @@ class FactorProduct(models.Model):
 
     class Meta:
         db_table = 'factor_product'
+        ordering = ['-id']
 
 
 class Menu(SafeDeleteModel):
@@ -545,6 +577,7 @@ class Menu(SafeDeleteModel):
 
     class Meta:
         db_table = 'menu'
+        ordering = ['-id']
 
 
 class Rate(models.Model):
@@ -562,6 +595,7 @@ class Rate(models.Model):
 
     class Meta:
         db_table = 'rate'
+        ordering = ['-id']
 
 
 class Slider(SafeDeleteModel):
@@ -588,6 +622,7 @@ class Slider(SafeDeleteModel):
 
     class Meta:
         db_table = 'slider'
+        ordering = ['-id']
 
 
 class SpecialOffer(SafeDeleteModel):
@@ -633,6 +668,7 @@ class SpecialOffer(SafeDeleteModel):
 
     class Meta:
         db_table = 'special_offer'
+        ordering = ['-id']
 
 
 class SpecialProduct(SafeDeleteModel):
@@ -663,6 +699,7 @@ class SpecialProduct(SafeDeleteModel):
 
     class Meta:
         db_table = 'special_products'
+        ordering = ['-id']
 
 
 class WalletDetail(models.Model):
@@ -683,6 +720,7 @@ class WalletDetail(models.Model):
 
     class Meta:
         db_table = 'wallet_detail'
+        ordering = ['-id']
 
 
 class WishList(SafeDeleteModel):
@@ -708,6 +746,7 @@ class WishList(SafeDeleteModel):
 
     class Meta:
         db_table = 'wishList'
+        ordering = ['-id']
 
 
 class NotifyUser(models.Model):
@@ -723,6 +762,7 @@ class NotifyUser(models.Model):
 
     class Meta:
         db_table = 'notify_user'
+        ordering = ['-id']
 
 
 class Ad(models.Model):
@@ -739,9 +779,10 @@ class Ad(models.Model):
 
     class Meta:
         db_table = 'ad'
+        ordering = ['-id']
 
 
-########### Boom-gardi ###########
+# ---------- Boom-gardi ---------- #
 
 
 class RoomOwner(SafeDeleteModel):
@@ -760,6 +801,7 @@ class RoomOwner(SafeDeleteModel):
 
     class Meta:
         db_table = 'room_owner'
+        ordering = ['-id']
 
 
 class RoomPrice(SafeDeleteModel):
@@ -780,6 +822,7 @@ class RoomPrice(SafeDeleteModel):
 
     class meta:
         db_table = 'room_price'
+        ordering = ['-id']
 
 
 class ReserveProduct(SafeDeleteModel):
@@ -790,6 +833,7 @@ class ReserveProduct(SafeDeleteModel):
 
     class Meta:
         db_table = 'reserve_product'
+        ordering = ['-id']
 
 
 class Booking(SafeDeleteModel):
@@ -814,6 +858,7 @@ class Booking(SafeDeleteModel):
 
     class meta:
         db_table = 'booking'
+        ordering = ['-id']
     
 
 @receiver(post_delete, sender=Media)

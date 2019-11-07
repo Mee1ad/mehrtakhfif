@@ -10,6 +10,7 @@ import pysnooper
 from django.views.decorators.cache import cache_page
 from django.db.models import Max, Min
 from server.serialize import *
+import math
 
 
 class GetSpecialOffer(View):
@@ -20,33 +21,41 @@ class GetSpecialOffer(View):
 
 
 class BoxDetail(View):
-    def get(self, request, pk):
-        max_price = Storage.objects.filter(box_id=pk).aggregate(Max('discount_price'))['discount_price__max']
-        min_price = Storage.objects.filter(box_id=pk).aggregate(Min('discount_price'))['discount_price__min']
-        box = Box.objects.filter(pk=pk).first()
-        categories = Category.objects.select_related('media', 'parent').filter(
-            box_id=pk, disable=False).order_by('-priority')
-        return JsonResponse({'box': BoxSchema(request.lang).dump(box), 'max_price': max_price, 'min_price': min_price,
-                             'categories': CategorySchema(request.lang).dump(categories, many=True)})
+    def get(self, request, key):
+        try:
+            box = Box.objects.filter(meta_key=key).first()
+            max_price = Storage.objects.filter(box=box).aggregate(Max('discount_price'))['discount_price__max']
+            min_price = Storage.objects.filter(box=box).aggregate(Min('discount_price'))['discount_price__min']
+            categories = get_categories(box)
+            return JsonResponse({'box': BoxSchema(request.lang).dump(box), 'max_price': max_price, 'min_price': min_price,
+                                 'categories': categories})
+        except Exception:
+            return JsonResponse({}, status=400)
 
 
 class BoxView(View):
-    def get(self, request, name):
-        step = int(request.GET.get('s', self.step))
-        page = int(request.GET.get('p', self.page))
-        params = self.filter_params(request.GET)
-        box = Box.objects.filter(meta_key=name).first()
-        latest = Storage.objects.filter(box=box, **params['filter']).select_related(
-            'product', 'product__thumbnail').order_by(*params['order'])[(page-1)*step:step*page]
-        return JsonResponse({'latest': StorageSchema(request.lang).dump(latest, many=True)})
+    def get(self, request, name='all'):
+        params = filter_params(request.GET)
+        step = int(request.GET.get('s', default_step))
+        page = int(request.GET.get('p', default_page))
+        try:
+            box = Box.objects.get(meta_key=name)
+            query = {'box': box}
+        except Box.DoesNotExist:
+            box = Box.objects.all()
+            query = {'box__in': box}
+        query = Storage.objects.filter(**query, **params['filter'])
+        latest = query.select_related('product', 'product__thumbnail').order_by(
+            *params['order'])[(page-1)*step:step*page]
+        return JsonResponse({'data': StorageSchema(request.lang).dump(latest, many=True),
+                             'current_page': page, 'last_page': last_page(query, step)})
 
 
 class BoxCategory(View):
     def get(self, request, box, category):
-        step = int(request.GET.get('s', self.step))
-        page = int(request.GET.get('e', self.page))
+        step = int(request.GET.get('s', default_step))
+        page = int(request.GET.get('e', default_page))
         cat = Category.objects.filter(meta_key=category).first()
-        print(CategorySchema(request.lang).dump(cat))
         storage = Storage.objects.filter(box__meta_key=box, category__meta_key=category).select_related(
                 'product', 'product__thumbnail').order_by('-updated_at')[(page-1)*step:step*page]
         # special_products = SpecialProduct.objects.filter(category_id=pk).select_related('storage')
@@ -57,16 +66,17 @@ class BoxCategory(View):
 
 class TagView(View):
     def get(self, request, pk):
-        step = int(request.GET.get('s', self.step))
-        page = int(request.GET.get('p', self.page))
+        step = int(request.GET.get('s', default_step))
+        page = int(request.GET.get('e', default_page))
         tag = Tag.objects.filter(pk=pk).first()
         products = tag.product.all().order_by('created_at')[(page-1)*step:step*page]
-        return JsonResponse({'products': serialize.product(products)})
+        return JsonResponse({'products': TagSchema().dump(products, many=True)})
 
 
 class Filter(View):
     def get(self, request):
         params = filter_params(request.GET)
+        print(params)
         try:
             products = Storage.objects.filter(**params['filter']).order_by(*params['order'])
         except Exception:

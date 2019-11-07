@@ -46,7 +46,7 @@ class BoxAdmin(SafeDeleteAdmin):
     list_filter = ('name',) + SafeDeleteAdmin.list_filter
     search_fields = ['name']
     list_per_page = 10
-    ordering = ('-created_at',)
+    # ordering = ('-created_at',)
 
     def persian(self, obj):
         return obj.name['persian']
