@@ -1,15 +1,9 @@
-from django.contrib.auth import authenticate, login
-from server.models import *
-import pysnooper
-from django.apps import apps
-import jwt
+from mehr_takhfif.settings import TOKEN_SALT
+from server.views.utils import *
 import json
-from django.http import JsonResponse, HttpResponse, HttpRequest
-from mehr_takhfif.settings import TOKEN_SECRET
-from server.views.utils import View
 from django.urls import resolve
-import hashlib
-
+import pysnooper
+import time
 
 class AuthMiddleware:
     def __init__(self, get_response):
@@ -17,9 +11,15 @@ class AuthMiddleware:
         self.get_response = get_response
         # One-time configuration and initialization.
 
+    @pysnooper.snoop()
     def __call__(self, request):
         # print(request.headers)
         # print(json.loads(request.body))
+        path = request.path_info
+        route = resolve(path).route
+        app_name = resolve(path).app_name
+        if route == 'favicon.ico':
+            return HttpResponse('ok')
         try:
             if request.headers['admin'] == 'True':
                 print('this is admin')
@@ -28,10 +28,24 @@ class AuthMiddleware:
         except Exception:
             request.lang = 'persian'
         try:
-            request.params = View.filter_params(request)
+            request.params = filter_params(request)
         except Exception:
             request.params = {}
-        # try:
+        new_basket_count = None
+        try:
+            basket = Basket.objects.filter(user=request.user, status=0)
+            if basket.exists():
+                db_basket_count = basket.first().products.all().count()
+                user_basket_count = request.get_signed_cookie('basket_count', False, salt=TOKEN_SALT)
+                assert db_basket_count == int(user_basket_count)
+        except AssertionError:
+            new_basket_count = db_basket_count
+        except Exception as e:
+            print(e)
+
+
+        try:
+            pass
             # app_name = resolve(request.path_info).app_name
             # route = resolve(request.path_info).route
             # if app_name == 'mehrpeyk':
@@ -65,9 +79,9 @@ class AuthMiddleware:
             #         except Exception:
             #             pass
                     # return JsonResponse({}, status=401)
+            time.sleep(3)
             delay = request.GET.get('delay', None)
             if delay:
-                import time
                 print(delay)
                 time.sleep(float(delay))
             error = request.GET.get('error', None)
@@ -78,7 +92,9 @@ class AuthMiddleware:
         except json.decoder.JSONDecodeError:
             return HttpResponse('')
         response = self.get_response(request)
-        # sleep(.5)
-        # Code to be executed for each request/response after
-        # the view is called.
+        if new_basket_count and app_name == 'server':
+            res = json.loads(response.content)
+            res['new_basket_count'] = new_basket_count
+            response.content = json.dumps(res)
+            response.set_signed_cookie('basket_count', new_basket_count, salt=TOKEN_SALT)
         return response

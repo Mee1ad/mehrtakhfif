@@ -3,6 +3,7 @@ from django.http import HttpResponse
 from django.template.loader import render_to_string
 # from weasyprint import HTML
 import tempfile
+from mehr_takhfif.settings import TOKEN_SALT
 
 
 class Buy(View):
@@ -26,7 +27,9 @@ class Buy(View):
         except AssertionError:
             return JsonResponse({}, status=401)
         basket_count = self.add_to_basket(basket, data['products'])
-        return JsonResponse({'basket_count': basket_count})
+        res = JsonResponse({'basket_count': basket_count})
+        res.set_signed_cookie('basket_count', basket_count, TOKEN_SALT)
+        return res
 
     def delete(self, request):
         storage_id = request.GET.get('product_id', None)
