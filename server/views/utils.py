@@ -28,7 +28,7 @@ from  django.http import JsonResponse, HttpResponse
 
 default_step = 12
 default_page = 1
-response = {'ok': {'message': 'ok'}, 'bad': {'message': 'bad request'}}
+default_response = {'ok': {'message': 'ok'}, 'bad': {'message': 'bad request'}}
 
 
 def safe_delete(obj, user):

@@ -22,19 +22,17 @@ from django.core.cache.backends.base import DEFAULT_TIMEOUT
 from django.views.decorators.cache import cache_page
 import time
 from django.core.cache import cache
-from mehr_takhfif.settings import CACHE_TTL
+from mehr_takhfif.settings import CACHE_TTL, TOKEN_SALT
 from secrets import token_hex
 from django.contrib.auth import get_user_model
 from django.contrib.auth import logout
-
-token_salt = 'nkU^&*()JH*757H*&^)_IJIO7JI874434%^&OHdfgdG457HIO44'
 
 
 class Backend(ModelBackend):
     @staticmethod
     def get_user_from_cookie(request):
         try:
-            client_token = request.get_signed_cookie('token', False, salt=token_salt)
+            client_token = request.get_signed_cookie('token', False, salt=TOKEN_SALT)
             return User.objects.get(token=client_token, is_ban=False)
         except Exception:
             return None
@@ -92,7 +90,7 @@ class Login(Validation):
         try:
             user.token = token_hex(100)
             user.save()
-            response.set_signed_cookie('token', user.token, token_salt, max_age=7200, expires=7200)
+            response.set_signed_cookie('token', user.token, TOKEN_SALT, max_age=7200, expires=7200)
             return response
         except Exception:
             return JsonResponse({}, status=401)
@@ -120,7 +118,7 @@ class PrivacyPolicy(View):
 
     @staticmethod
     def get_user(request):
-        client_token = request.get_signed_cookie('token', False, salt=token_salt)
+        client_token = request.get_signed_cookie('token', False, salt=TOKEN_SALT)
         return User.objects.get(token=client_token)
 
 
@@ -159,7 +157,7 @@ class Activate(View):
         data = json.loads(request.body)
         # TODO: get csrf code
         try:
-            client_token = request.get_signed_cookie('token', False, salt=token_salt)
+            client_token = request.get_signed_cookie('token', False, salt=TOKEN_SALT)
             code = data['code']
             user = User.objects.get(activation_code=code, token=client_token, is_ban=False,
                                     activation_expire__gte=timezone.now())
