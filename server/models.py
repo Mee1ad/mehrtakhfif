@@ -28,12 +28,12 @@ def feature_value():
 
 
 def upload_to(instance, filename):
-        date = timezone.now().strftime("%Y-%m-%d")
-        time = timezone.now().strftime("%H-%M-%S-%f")[:-4]
-        # file_type = re.search('\\w+', instance.type)[0]
-        file_format = os.path.splitext(instance.file.name)[-1]
-        return f'boxes/{instance.box_id}/{date}/{instance.type}/{time}{file_format}'
-        
+    date = timezone.now().strftime("%Y-%m-%d")
+    time = timezone.now().strftime("%H-%M-%S-%f")[:-4]
+    # file_type = re.search('\\w+', instance.type)[0]
+    file_format = os.path.splitext(instance.file.name)[-1]
+    return f'boxes/{instance.box_id}/{date}/{instance.type}/{time}{file_format}'
+
 
 class MyManager(models.Manager):
     def safe_delete(self, user_id, **kwargs):
@@ -46,8 +46,11 @@ class MyManager(models.Manager):
 class User(AbstractUser):
     def __str__(self):
         return self.username
-    first_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='First name', validators=[validate_slug])
-    last_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='Last name', validators=[validate_slug])
+
+    first_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='First name',
+                                  validators=[validate_slug])
+    last_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='Last name',
+                                 validators=[validate_slug])
     # full_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='full name', validators=[validate_slug])
     username = models.CharField(max_length=150, unique=True)
     language = models.CharField(max_length=7, default='fa')
@@ -115,6 +118,7 @@ class City(models.Model):
 class Address(models.Model):
     def __str__(self):
         return self.city
+
     id = models.BigAutoField(
         auto_created=True, primary_key=True)
     state = models.ForeignKey(State, on_delete=PROTECT)
@@ -174,8 +178,8 @@ class Media(SafeDeleteModel):
         path = self.file.path
         new_path = self.file.path.replace(format[0], '')
         for size in sizes:
-            Image.open(path).resize((sizes[size][0], sizes[size][1]))\
-                    .save(new_path + f'_{size}' + format[0], 'JPEG')
+            Image.open(path).resize((sizes[size][0], sizes[size][1])) \
+                .save(new_path + f'_{size}' + format[0], 'JPEG')
 
     _safedelete_policy = SOFT_DELETE_CASCADE
     id = models.BigAutoField(auto_created=True, primary_key=True)
@@ -183,8 +187,8 @@ class Media(SafeDeleteModel):
     img = ImageField(upload_to='test')
     title = JSONField(default=multilanguage)
     type = models.CharField(max_length=255, choices=[('video', 'video'), ('image', 'image'), ('audio', 'audio'),
-                                     ('slider', 'slider')])
-    box = models.ForeignKey( Box, on_delete=models.CASCADE, null=True, blank=True)
+                                                     ('slider', 'slider')])
+    box = models.ForeignKey(Box, on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Created by',
                                    related_name='media_created_by')
@@ -336,25 +340,19 @@ class Storage(SafeDeleteModel):
     product = models.ForeignKey(Product, on_delete=CASCADE)
     box = models.ForeignKey(Box, on_delete=PROTECT)
     category = models.ForeignKey(Category, on_delete=CASCADE)
-    available_count = models.BigIntegerField(
-        default=0, verbose_name='Available count')
-    available_count_for_sale = models.BigIntegerField(
-        default=0, verbose_name='Available count for sale')
-    count = models.BigIntegerField(default=0)
+    available_count = models.BigIntegerField(default=0, verbose_name='Available count')
+    available_count_for_sale = models.IntegerField(default=0, verbose_name='Available count for sale')
+    count = models.IntegerField(default=0)
+    max_count_for_sale = models.IntegerField(default=0)
     final_price = models.BigIntegerField(default=0, verbose_name='Final price')
     start_price = models.BigIntegerField(default=0, verbose_name='Start price')
     transportation_price = models.IntegerField(default=0)
-    discount_price = models.BigIntegerField(
-        default=0, verbose_name='Discount price')
-    discount_vip_price = models.BigIntegerField(
-        default=0, verbose_name='Discount vip price')
-    discount_price_percent = models.PositiveSmallIntegerField(
-        default=0, verbose_name='Discount price percent')
-    discount_vip_price_percent = models.PositiveSmallIntegerField(
-        default=0, verbose_name='Discount vip price percent')
+    discount_price = models.BigIntegerField(default=0, verbose_name='Discount price')
+    discount_vip_price = models.BigIntegerField(default=0, verbose_name='Discount vip price')
+    discount_price_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount price percent')
+    discount_vip_price_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount vip price percent')
     default = models.BooleanField(default=False)
-    created_at = models.DateTimeField(
-        auto_now_add=True, verbose_name='Created at')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
     created_by = models.ForeignKey(User, on_delete=CASCADE, verbose_name='Created by',
                                    related_name='storage_created_by')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
@@ -389,7 +387,7 @@ class Basket(SafeDeleteModel):
     deleted_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Deleted by',
                                    related_name='basket_deleted_by')
     description = models.TextField(blank=True, null=True)
-    status = models.IntegerField(default=0, choices=((0, 'active'), (1, 'rejected'), (2, 'paid')))
+    active = models.BooleanField(default=True)
 
     class Meta:
         db_table = 'basket'
@@ -491,7 +489,7 @@ class Comment(SafeDeleteModel):
         ordering = ['-id']
 
 
-class Factor(models.Model):
+class Invoice(models.Model):
     def __str__(self):
         return f"{self.user}"
 
@@ -500,17 +498,17 @@ class Factor(models.Model):
     created_at = models.DateTimeField(
         auto_now_add=True, verbose_name='Created at')
     created_by = models.ForeignKey(to=User, on_delete=models.CASCADE, verbose_name='Created by',
-                                   related_name='factor_created_by')
+                                   related_name='invoice_created_by')
     suspended_at = models.DateTimeField(
         blank=True, null=True, verbose_name='Suspended at')
     suspended_by = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True, verbose_name='Suspended by',
-                                     related_name='factor_suspended_by')
+                                     related_name='invoice_suspended_by')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
     updated_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Updated by',
-                                   related_name='factor_product_updated_by')
+                                   related_name='invoice_product_updated_by')
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     price = models.BigIntegerField()
-    products = models.ManyToManyField(Product, through='FactorProduct')
+    products = models.ManyToManyField(Product, through='InvoiceProduct')
     payed_at = models.DateTimeField(
         blank=True, null=True, verbose_name='Payed at')
     successful = models.BooleanField(default=False)
@@ -525,20 +523,23 @@ class Factor(models.Model):
     count = models.SmallIntegerField()
     tax = models.IntegerField()
     start_price = models.BigIntegerField(verbose_name='Start price')
+    status = models.CharField(max_length=255, default='pending', choices=[('pending', 'pending'), ('payed', 'payed'),
+                                                                          ('canceled', 'canceled'),
+                                                                          ('rejected', 'rejected')])
 
     class Meta:
-        db_table = 'factor'
+        db_table = 'invoice'
         ordering = ['-id']
 
 
-class FactorProduct(models.Model):
+class InvoiceProduct(models.Model):
     def __str__(self):
         return f"{self.product}"
 
     id = models.BigAutoField(
         auto_created=True, primary_key=True)
     product = models.ForeignKey(Product, on_delete=PROTECT)
-    factor = models.ForeignKey(Factor, on_delete=PROTECT)
+    invoice = models.ForeignKey(Invoice, on_delete=PROTECT)
     count = models.SmallIntegerField(default=1)
     tax = models.IntegerField(default=0)
     price = models.BigIntegerField()
@@ -547,7 +548,7 @@ class FactorProduct(models.Model):
         verbose_name='Discount price', default=0)
 
     class Meta:
-        db_table = 'factor_product'
+        db_table = 'invoice_product'
         ordering = ['-id']
 
 
@@ -788,9 +789,11 @@ class Ad(models.Model):
 class RoomOwner(SafeDeleteModel):
     id = models.BigAutoField(auto_created=True, primary_key=True)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
-    created_by = models.ForeignKey(User, on_delete=PROTECT, verbose_name='Created by', related_name='room_owner_created_by')
+    created_by = models.ForeignKey(User, on_delete=PROTECT, verbose_name='Created by',
+                                   related_name='room_owner_created_by')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
-    updated_by = models.ForeignKey(User, on_delete=PROTECT, verbose_name='Updated by', related_name='room_owner_updated_by')
+    updated_by = models.ForeignKey(User, on_delete=PROTECT, verbose_name='Updated by',
+                                   related_name='room_owner_updated_by')
     deleted_by = models.ForeignKey(User, on_delete=PROTECT, null=True, blank=True, verbose_name='Deleted by',
                                    related_name='room_owner_deleted_by')
     user = models.ForeignKey(User, on_delete=PROTECT, related_name='room_owner_user')
@@ -807,9 +810,11 @@ class RoomOwner(SafeDeleteModel):
 class RoomPrice(SafeDeleteModel):
     id = models.BigAutoField(auto_created=True, primary_key=True)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
-    created_by = models.ForeignKey(User, on_delete=PROTECT, verbose_name='Created by', related_name='room_price_created_by')
+    created_by = models.ForeignKey(User, on_delete=PROTECT, verbose_name='Created by',
+                                   related_name='room_price_created_by')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
-    updated_by = models.ForeignKey(User, on_delete=PROTECT, verbose_name='Updated by', related_name='room_price_updated_by')
+    updated_by = models.ForeignKey(User, on_delete=PROTECT, verbose_name='Updated by',
+                                   related_name='room_price_updated_by')
     deleted_by = models.ForeignKey(User, on_delete=PROTECT, null=True, blank=True, verbose_name='Deleted by',
                                    related_name='room_price_deleted_by')
     base = models.IntegerField(default=0)
@@ -839,17 +844,20 @@ class ReserveProduct(SafeDeleteModel):
 class Booking(SafeDeleteModel):
     id = models.BigAutoField(auto_created=True, primary_key=True)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
-    created_by = models.ForeignKey(User, on_delete=PROTECT, verbose_name='Created by', related_name='booking_created_by')
+    created_by = models.ForeignKey(User, on_delete=PROTECT, verbose_name='Created by',
+                                   related_name='booking_created_by')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
-    updated_by = models.ForeignKey(User, on_delete=PROTECT, verbose_name='Updated by', related_name='booking_updated_by')
+    updated_by = models.ForeignKey(User, on_delete=PROTECT, verbose_name='Updated by',
+                                   related_name='booking_updated_by')
     deleted_by = models.ForeignKey(User, on_delete=PROTECT, null=True, blank=True, verbose_name='Deleted by',
                                    related_name='booking_deleted_by')
     user = models.ForeignKey(User, on_delete=PROTECT, related_name='booking_user')
     reserve_product = models.ForeignKey(ReserveProduct, on_delete=PROTECT)
-    factor = models.ForeignKey(Factor, on_delete=PROTECT)
+    invoice = models.ForeignKey(Invoice, on_delete=PROTECT)
     confirmation_date = models.DateTimeField(null=True, blank=True)
-    confirmation_by = models.ForeignKey(User, on_delete=PROTECT, null=True, blank=True, related_name='booking_confirmation')
-    start_date = models.DateTimeField(null=True, blank=True) 
+    confirmation_by = models.ForeignKey(User, on_delete=PROTECT, null=True, blank=True,
+                                        related_name='booking_confirmation')
+    start_date = models.DateTimeField(null=True, blank=True)
     end_date = models.DateTimeField(null=True, blank=True)
     cancel_at = models.DateTimeField(null=True, blank=True)
     cancel_by = models.ForeignKey(User, on_delete=PROTECT, null=True, blank=True, related_name='booking_cancel_by')
@@ -859,7 +867,7 @@ class Booking(SafeDeleteModel):
     class meta:
         db_table = 'booking'
         ordering = ['-id']
-    
+
 
 @receiver(post_delete, sender=Media)
 def submission_delete(sender, instance, **kwargs):

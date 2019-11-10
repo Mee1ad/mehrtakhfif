@@ -5,7 +5,6 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-
 SECRET_KEY = '#)@^eytrqed7)ka1qa0gcg$vx9&0ocru_xwqjlq%9e7baob_bn'
 SALT = 'we\w[34=-otl34e[rl][qwe;w328474/*2342+-325(*^&%><>.'
 TOKEN_SECRET = 'NRJu&@D-sqQa@2xEu6^yt8yjfd!*K4TawDD?v&LxChs2uJ7=9YvXF6pGEXNJHnPZ-gbHmnJf&D-9?y2g78YgKC?AX-FbHR6fgws_' \
@@ -36,7 +35,6 @@ INSTALLED_APPS = [
     'safedelete',
     'corsheaders',
     'debug_toolbar',
-    'mehrpeyk',
     'push_notifications'
 ]
 
@@ -88,7 +86,6 @@ CORS_ALLOW_HEADERS = [
 ]
 
 MESSAGE_STORAGE = 'django.contrib.messages.storage.cookie.CookieStorage'
-
 
 ROOT_URLCONF = 'mehr_takhfif.urls'
 
@@ -164,9 +161,8 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://github.com/jazzband/django-push-notifications
 
 PUSH_NOTIFICATIONS_SETTINGS = {
-        "FCM_API_KEY": "[your api key]",
+    "FCM_API_KEY": "[your api key]",
 }
-
 
 # Internationalization
 # https://docs.djangoproject.com/en/2.2/topics/i18n/
@@ -182,7 +178,6 @@ USE_L10N = True
 USE_TZ = False
 
 activate(TIME_ZONE)
-
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
@@ -208,8 +203,8 @@ LOGGING = {
             'style': '{'
         },
         'simple': {
-             'format': '{levelname} {message}',
-             'style': '{'
+            'format': '{levelname} {message}',
+            'style': '{'
         },
     },
     'handlers': {
@@ -254,7 +249,4 @@ LOGGING = {
 }
 
 if DEBUG and os.environ.get('RUN_MAIN', None) != 'true':
-    LOGGING = {}
-
-if DEBUG == True:
     LOGGING = {}

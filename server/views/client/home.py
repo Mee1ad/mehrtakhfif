@@ -103,6 +103,18 @@ class GetAds(View):
             Ad.objects.select_related('media', 'storage').all(), many=True)})
 
 
+class GetProducts(View):
+    def post(self, request):
+        try:
+            assert not request.user.is_authenticated  # must be guest
+            products_id = json.loads(request.body)['products']
+            products = Storage.objects.filter(id__in=products_id) \
+                .select_related('product', 'category', 'product__box', 'product__thumbnail').prefetch_related('product__media')
+            return JsonResponse({'products': StorageSchema().dump(products, many=True)})
+        except AssertionError:
+            return JsonResponse({}, status=400)
+
+
 class Search(View):
     def get(self, request):
         q = request.GET.get('q', '')

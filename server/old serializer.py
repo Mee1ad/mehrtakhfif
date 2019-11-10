@@ -136,7 +136,7 @@ def comment(obj, array=False):
     return serialize(obj, fields, array=array)
 
 
-def factor(obj, array=False):
+def invoice(obj, array=False):
     fields = ('id', 'price', 'product', 'user', 'payed_at', 'successful', 'type', 'special_offer_id', 'address',
               'description', 'final_price', 'discount_price', 'count', 'tax', 'start_price')
     return serialize(obj, fields, array=array)

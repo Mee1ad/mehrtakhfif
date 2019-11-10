@@ -18,7 +18,9 @@ home = [path('test', home.Test.as_view(), name='test'),
         path('category', home.AllCategory.as_view(), name='category'),
         path('menu', home.GetMenu.as_view(), name='menu'),
         path('search', home.Search.as_view(), name='search'),
-        path('ads', home.GetAds.as_view(), name='ads')]
+        path('ads', home.GetAds.as_view(), name='ads'),
+        path('get_products', home.GetProducts.as_view(), name='get_products'),
+        ]
 
 box = [
         path('box/<str:name>', box.BoxView.as_view(), name='box'),
@@ -34,7 +36,7 @@ single = [path('single/<int:pk>', single.Single.as_view(), name='single'),
           path('comment', single.CommentView.as_view(), name='comment')]
 
 shopping = [
-        path('basket', shopping.Buy.as_view(), name='basket'),
+        path('basket', shopping.BasketView.as_view(), name='basket'),
         path('show_codes', shopping.ShowCodes.as_view(), name='show_codes'),
 ]
 
