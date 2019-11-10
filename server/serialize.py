@@ -192,7 +192,7 @@ class ProductSchema(BaseSchema):
         additional = ('id', 'permalink', 'gender', 'location', 'type')
     name = fields.Method("get_name")
     box = fields.Function(lambda o: o.box_id)
-    category = fields.Function(lambda o: o.category_id)
+    # category = fields.Function(lambda o: o.category_id)
     tag = TagField()
     media = MediaField()
     thumbnail = fields.Function(lambda o: HOST + o.thumbnail.file.url)
@@ -225,7 +225,7 @@ class SliderSchema(BaseSchema):
 
 class StorageSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'final_price', 'transportation_price',
+        additional = ('id', 'final_price', 'transportation_price', 'max_count_for_sale',
                       'discount_price', 'discount_vip_price', 'discount_price_percent', 'discount_vip_price_percent')
 
     product = fields.Method("get_product")
