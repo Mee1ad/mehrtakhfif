@@ -349,8 +349,8 @@ class Storage(SafeDeleteModel):
     transportation_price = models.IntegerField(default=0)
     discount_price = models.BigIntegerField(default=0, verbose_name='Discount price')
     discount_vip_price = models.BigIntegerField(default=0, verbose_name='Discount vip price')
-    discount_price_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount price percent')
-    discount_vip_price_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount vip price percent')
+    discount_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount price percent')
+    discount_vip_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount vip price percent')
     default = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
     created_by = models.ForeignKey(User, on_delete=CASCADE, verbose_name='Created by',
@@ -517,7 +517,7 @@ class Invoice(models.Model):
         blank=True, null=True, verbose_name='Special offer id')
     address = models.TextField(blank=True, null=True)
     description = models.TextField(max_length=255, blank=True, null=True)
-    final_price = models.BigIntegerField(verbose_name='Final price')
+    amount = models.IntegerField()
     discount_price = models.BigIntegerField(
         verbose_name='Discount price', default=0)
     count = models.SmallIntegerField()

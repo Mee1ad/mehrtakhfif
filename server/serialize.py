@@ -226,7 +226,7 @@ class SliderSchema(BaseSchema):
 class StorageSchema(BaseSchema):
     class Meta:
         additional = ('id', 'final_price', 'transportation_price', 'max_count_for_sale',
-                      'discount_price', 'discount_vip_price', 'discount_price_percent', 'discount_vip_price_percent')
+                      'discount_price', 'discount_vip_price', 'discount_percent', 'discount_vip_percent')
 
     product = fields.Method("get_product")
     category = fields.Function(lambda o: o.category_id)
@@ -242,8 +242,6 @@ class BasketProductSchema(BaseSchema):
 class BasketSchema(BaseSchema):
     class Meta:
         additional = ('id', 'description')
-
-    products = ProductField()
 
 
 class BlogSchema(BaseSchema):

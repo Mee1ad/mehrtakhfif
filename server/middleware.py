@@ -6,6 +6,7 @@ import pysnooper
 import time
 
 class AuthMiddleware:
+
     def __init__(self, get_response):
         super().__init__()
         self.get_response = get_response
@@ -33,7 +34,7 @@ class AuthMiddleware:
         new_basket_count = None
         if request.user.is_authenticated:
             try:
-                basket = Basket.objects.filter(user=request.user, status=0)
+                basket = Basket.objects.filter(user=request.user, active=True)
                 if basket.exists():
                     db_basket_count = basket.first().products.all().count()
                     user_basket_count = request.get_signed_cookie('basket_count', False, salt=TOKEN_SALT)
@@ -78,7 +79,6 @@ class AuthMiddleware:
             #         except Exception:
             #             pass
                     # return JsonResponse({}, status=401)
-            time.sleep(3)
             delay = request.GET.get('delay', None)
             if delay:
                 print(delay)
@@ -91,9 +91,9 @@ class AuthMiddleware:
         except json.decoder.JSONDecodeError:
             return HttpResponse('')
         response = self.get_response(request)
-        if new_basket_count and app_name == 'server':
-            res = json.loads(response.content)
-            res['new_basket_count'] = new_basket_count
-            response.content = json.dumps(res)
-            response.set_signed_cookie('basket_count', new_basket_count, salt=TOKEN_SALT)
+        # if new_basket_count and app_name == 'server':
+        #     res = json.loads(response.content)
+        #     res['new_basket_count'] = new_basket_count
+        #     response.content = json.dumps(res)
+        #     response.set_signed_cookie('basket_count', new_basket_count, salt=TOKEN_SALT)
         return response

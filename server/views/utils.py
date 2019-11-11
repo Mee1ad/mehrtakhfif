@@ -25,6 +25,10 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter, inch
 from  django.http import JsonResponse, HttpResponse
+import os
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives import padding
+from cryptography.hazmat.backends import default_backend
 
 default_step = 12
 default_page = 1
@@ -124,7 +128,7 @@ def move(obj, folder):
 
 
 def filter_params(params):
-    filters = ('discount_price', 'discount_vip_price', 'discount_price_percent', 'discount_vip_price_percent',
+    filters = ('discount_price', 'discount_vip_price', 'discount_percent', 'discount_vip_percent',
                'product__sold_count', 'created_at')
     filters_op = ('__gt', '__gte', '__lt', '__lte')
     valid_filters = [x + y for y in filters_op for x in filters]
@@ -226,6 +230,33 @@ def print_pdf():
     elements.append(table)
     doc.build(elements)
     return response
+
+
+def calculate_profit(products):
+    total_price = sum([product.storage.final_price * product.count for product in products])
+    discount_price = sum([product.storage.discount_price * product.count for product in products])
+    profit = total_price - discount_price
+    return {'total_price': total_price, 'discount_price': discount_price, 'profit': profit, 'shopping_cost': 0}
+
+
+def des_encrypt(data=b'test', key=os.urandom(16)):
+    backend = default_backend()
+    text = data
+    padder = padding.PKCS7(algorithms.TripleDES.block_size).padder()
+    cipher = Cipher(algorithms.TripleDES(key), modes.ECB(), backend=backend)
+    encryptor = cipher.encryptor()
+    encrypted_text = encryptor.update(padder.update(text) + padder.finalize()) + encryptor.finalize()
+    decrypted_text = des_decrypt(encrypted_text, key)
+    assert text == decrypted_text
+    return encrypted_text
+
+
+def des_decrypt(encrypted_text, key):
+    backend = default_backend()
+    unpadder = padding.PKCS7(algorithms.TripleDES.block_size).unpadder()
+    cipher = Cipher(algorithms.TripleDES(key), modes.ECB(), backend=backend)
+    decryptor = cipher.decryptor()
+    return unpadder.update(decryptor.update(encrypted_text) + decryptor.finalize()) + unpadder.finalize()
 
 
 class LoginRequired(LoginRequiredMixin, View):

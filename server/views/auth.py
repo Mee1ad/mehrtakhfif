@@ -60,7 +60,7 @@ class Login(Validation):
             assert user.check_password(password)
             login(request, user)
             res = {'user': UserSchema().dump(user)}
-            basket = Basket.objects.filter(user=user, status=0)
+            basket = Basket.objects.filter(user=user, active=True)
             if basket.exists():
                 res['basket_count'] = basket.first().products.all().count()
             return JsonResponse(res)
