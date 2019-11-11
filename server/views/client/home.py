@@ -104,13 +104,24 @@ class GetAds(View):
 
 
 class GetProducts(View):
+    @pysnooper.snoop()
     def post(self, request):
         try:
             assert not request.user.is_authenticated  # must be guest
-            products_id = json.loads(request.body)['products']
+            data = json.loads(request.body)
+            products_id = [product['id'] for product in data['products']]
             products = Storage.objects.filter(id__in=products_id) \
-                .select_related('product', 'category', 'product__box', 'product__thumbnail').prefetch_related('product__media')
-            return JsonResponse({'products': StorageSchema().dump(products, many=True)})
+                .select_related('product', 'category', 'product__box', 'product__thumbnail')\
+                .prefetch_related('product__media')
+            basket_products = []
+            for product in products:
+                item = next(item for item in data['products'] if item["id"] == product.pk)
+                count = item['count']
+                obj = BasketProduct(storage=product, count=count)
+                basket_products.append(obj)
+            profit = calculate_profit(basket_products)
+            return JsonResponse({'basket': {'products': BasketProductSchema().dump(basket_products, many=True)},
+                                 'summary': profit})
         except AssertionError:
             return JsonResponse({}, status=400)
 

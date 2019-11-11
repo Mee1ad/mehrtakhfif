@@ -10,14 +10,14 @@ from django.db.models import F
 
 
 class BasketView(View):
-    @pysnooper.snoop()
     def get(self, request):
         try:
             assert request.user.is_authenticated  # must be logged in
             products = BasketProduct.objects.select_related('storage', 'basket').filter(basket__user=request.user)
+            profit = calculate_profit(products)
             basket = BasketSchema(request.lang).dump(products[0].basket)
             basket['products'] = BasketProductSchema(request.lang).dump(products, many=True)
-            return JsonResponse({'basket': basket})
+            return JsonResponse({'basket': basket, 'summary': profit})
         except AssertionError:
             return JsonResponse({}, status=401)
 
@@ -25,9 +25,9 @@ class BasketView(View):
         data = json.loads(request.body)
         try:
             assert request.user.is_authenticated
-            basket = Basket.objects.get(user=request.user, status=0)
+            basket = Basket.objects.get(user=request.user, active=True)
         except Basket.DoesNotExist:
-            basket = Basket(user=request.user, created_by=request.user, updated_by=request.user, status=0)
+            basket = Basket(user=request.user, created_by=request.user, updated_by=request.user, active=True)
             basket.save()
         except AssertionError:
             return JsonResponse({}, status=401)
@@ -39,7 +39,7 @@ class BasketView(View):
     def delete(self, request):
         storage_id = request.GET.get('product_id', None)
         try:
-            basket = Basket.objects.get(user=request.user, status=0)
+            basket = Basket.objects.get(user=request.user, active=True)
             assert BasketProduct.objects.filter(basket__user=request.user, basket_id=basket.id,
                                                 storage_id=storage_id).exists()
             BasketProduct.objects.filter(basket_id=basket.id, storage_id=storage_id).delete()
@@ -74,7 +74,7 @@ class BasketView(View):
         return basket.count
 
     def get_basket_count(self, basket_id, user):
-        basket = Basket.objects.filter(pk=basket_id, user=user, status=0).prefetch_related('product')
+        basket = Basket.objects.filter(pk=basket_id, user=user, active=True).prefetch_related('product')
         products = basket.product.all()
         count = 0
         for product in products:
