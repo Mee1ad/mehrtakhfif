@@ -37,7 +37,7 @@ single = [path('single/<int:pk>', single.Single.as_view(), name='single'),
 
 shopping = [
         path('basket', shopping.BasketView.as_view(), name='basket'),
-        path('show_codes', shopping.ShowCodes.as_view(), name='show_codes'),
+        # path('show_codes', shopping.ShowCodes.as_view(), name='show_codes'),
 ]
 
 user = [path('profile', user.Profile.as_view(), name='profile'),

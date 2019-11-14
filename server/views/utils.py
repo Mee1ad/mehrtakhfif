@@ -24,7 +24,7 @@ from reportlab.pdfgen import canvas
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter, inch
-from  django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse
 import os
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives import padding
@@ -153,10 +153,12 @@ def filter_params(params):
         pass
     return {'filter': filter_by, 'order': orderby}
 
-
+@pysnooper.snoop()
 def get_categories(box):
+    print(box)
     try:
         category = [Category.objects.get(box=box)]
+        print(category)
     except Exception:
         category = Category.objects.all()
     new_cats = [*category]
@@ -164,8 +166,7 @@ def get_categories(box):
     for cat, index in zip(category, range(len(category))):
         if cat.parent is None:
             continue
-        parent_index = new_cats.index(
-            category.filter(pk=cat.parent_id).first())
+        parent_index = new_cats.index(category.filter(pk=cat.parent_id).first())
         if not hasattr(new_cats[parent_index], 'child'):
             new_cats[parent_index].child = []
         new_cats[parent_index].child.append(cat)
@@ -175,7 +176,7 @@ def get_categories(box):
 
 
 def last_page(query, step):
-    return math.ceil(query.count()/step)
+    return math.ceil(query.count() / step)
 
 
 def make_pdf(data='<h1>hello world</h1>'):
@@ -225,7 +226,7 @@ def print_pdf():
 
     doc = SimpleDocTemplate(response, rightMargin=0, leftMargin=6.5 * cm, topMargin=0.3 * cm, bottomMargin=0)
 
-    data=[(1,2),(3,4)]
+    data = [(1, 2), (3, 4)]
     table = Table(data, colWidths=270, rowHeights=79)
     elements.append(table)
     doc.build(elements)

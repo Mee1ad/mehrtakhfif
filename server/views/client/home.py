@@ -19,17 +19,8 @@ from mehr_takhfif.settings import HOST, MEDIA_ROOT
 class Test(View):
     @pysnooper.snoop()
     def get(self, request):
-        from PIL import Image
-        media = Media.objects.get(pk=1)
-        # url = HOST + media.file.url
-        img = Image.open(media.file.path)
-        img2 = img.resize((500, 500))
-        img2.save(MEDIA_ROOT + '/test.jpg', 'JPEG')
-        w = request.GET.get('w', 300)
-        h = request.GET.get('h', 300)
-        from sorl.thumbnail import get_thumbnail
-        im = get_thumbnail(media.file.path, f'{w}x{h}', quality=100)
-        return HttpResponse(im.read(), content_type="image/jpeg")
+        from django.http import HttpResponseRedirect
+        return HttpResponseRedirect('https://google.com')
         # return HttpResponse(img2)
 
 

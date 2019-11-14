@@ -518,6 +518,7 @@ class Invoice(models.Model):
     address = models.TextField(blank=True, null=True)
     description = models.TextField(max_length=255, blank=True, null=True)
     amount = models.IntegerField()
+    invoice_request = models.BooleanField(default=False)
     discount_price = models.BigIntegerField(
         verbose_name='Discount price', default=0)
     count = models.SmallIntegerField()
