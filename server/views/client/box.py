@@ -27,8 +27,8 @@ class BoxDetail(View):
             max_price = Storage.objects.filter(box=box).aggregate(Max('discount_price'))['discount_price__max']
             min_price = Storage.objects.filter(box=box).aggregate(Min('discount_price'))['discount_price__min']
             categories = get_categories(box)
-            return JsonResponse({'box': BoxSchema(request.lang).dump(box), 'max_price': max_price, 'min_price': min_price,
-                                 'categories': categories})
+            return JsonResponse({'box': BoxSchema(request.lang).dump(box), 'max_price': max_price,
+                                 'min_price': min_price, 'categories': categories})
         except Exception:
             return JsonResponse({}, status=400)
 

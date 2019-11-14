@@ -13,11 +13,7 @@ class BasketView(View):
     def get(self, request):
         try:
             assert request.user.is_authenticated  # must be logged in
-            products = BasketProduct.objects.select_related('storage', 'basket').filter(basket__user=request.user)
-            profit = calculate_profit(products)
-            basket = BasketSchema(request.lang).dump(products[0].basket)
-            basket['products'] = BasketProductSchema(request.lang).dump(products, many=True)
-            return JsonResponse({'basket': basket, 'summary': profit})
+            return JsonResponse(self.get_basket(request.user, request.lang))
         except AssertionError:
             return JsonResponse({}, status=401)
 
@@ -32,22 +28,35 @@ class BasketView(View):
         except AssertionError:
             return JsonResponse({}, status=401)
         basket_count = self.add_to_basket(basket, data['products'], data['override'], data['add'])
-        res = JsonResponse({'basket_count': basket_count})
-        res.set_signed_cookie('basket_count', basket_count, TOKEN_SALT)
+        res = {'new_basket_count': basket_count}
+        if data['summary']:
+            res = {**res, **self.get_basket(request.user, request.lang)}
+        res = JsonResponse(res)
+        res.set_signed_cookie('new_basket_count', basket_count, TOKEN_SALT)
         return res
 
     def delete(self, request):
         storage_id = request.GET.get('product_id', None)
+        summary = request.GET.get('summary', None)
         try:
             basket = Basket.objects.get(user=request.user, active=True)
             assert BasketProduct.objects.filter(basket__user=request.user, basket_id=basket.id,
                                                 storage_id=storage_id).exists()
             BasketProduct.objects.filter(basket_id=basket.id, storage_id=storage_id).delete()
-            return JsonResponse(default_response['ok'])
+            res = {}
+            if summary:
+                res = self.get_basket(request.user, request.lang)
+            return JsonResponse(res)
         except (AssertionError, Basket.DoesNotExist):
             return JsonResponse(default_response['bad'], status=400)
 
-    @pysnooper.snoop()
+    def get_basket(self, user, lang):
+        products = BasketProduct.objects.select_related('storage', 'basket').filter(basket__user=user)
+        profit = calculate_profit(products)
+        basket = BasketSchema(lang).dump(products[0].basket)
+        basket['products'] = BasketProductSchema(lang).dump(products, many=True)
+        return {'basket': basket, 'summary': profit}
+
     def add_to_basket(self, basket, products, override, add):
         for product in products:
             pk = int(product['id'])
@@ -82,9 +91,11 @@ class BasketView(View):
         return count
 
 
-class ShowCodes(View):
+class InvoiceView(View):
     @pysnooper.snoop()
     def get(self, request):
 
         # email.attach_file('/images/weather_map.png')
         return JsonResponse(default_response['ok'])
+
+
