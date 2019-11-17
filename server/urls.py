@@ -1,5 +1,5 @@
 from django.urls import path
-from server.views import auth
+from server.views import auth, payment
 from django.views.decorators.cache import cache_page
 from server.views.client import home
 from server.views.client import box
@@ -40,6 +40,11 @@ shopping = [
         # path('show_codes', shopping.ShowCodes.as_view(), name='show_codes'),
 ]
 
+pay = [
+        path('check_basket', payment.CheckBasket.as_view(), name='check_basket'),
+        # path('show_codes', shopping.ShowCodes.as_view(), name='show_codes'),
+]
+
 user = [path('profile', user.Profile.as_view(), name='profile'),
         path('get_states', user.GetState.as_view(), name='get_states'),
         path('get_cities/<int:state_id>', user.GetCity.as_view(), name='get_cities'),
@@ -54,4 +59,4 @@ auth = [path('login', auth.Login.as_view(), name='login'),
         path('privacy_policy', auth.PrivacyPolicy.as_view(), name='privacy_policy'),
         ]
 
-urlpatterns = [*home, *box, *user, *shopping, *single, *auth]
+urlpatterns = [*home, *box, *user, *shopping, *single, *auth, *pay]

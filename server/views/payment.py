@@ -6,6 +6,14 @@ from django.utils import timezone
 from mehr_takhfif.settings import HOST
 from server.views.utils import des_encrypt
 from django.http import JsonResponse, HttpResponseRedirect
+from server.views.client.shopping import BasketView
+from server.serialize import *
+
+psp = [{'id': 1, 'name': 'Mellat', 'hide': False, 'disable': True},
+       {'id': 2, 'name': 'Melli', 'hide': False, 'disable': False},
+       {'id': 3, 'name': 'Saman', 'hide': False, 'disable': False},
+       {'id': 4, 'name': 'Refah', 'hide': True, 'disable': True},
+       {'id': 5, 'name': 'Pasargad', 'hide': True, 'disable': False}]
 
 # allowed_ip = 0.0.0.0
 merchant_id = None
@@ -13,9 +21,15 @@ terminal_id = None
 terminal_key = None
 
 
+class CheckBasket(View):
+    def get(self, request):
+        basket = BasketView.get_basket(request.user, request.lang)
+        basket['psp'] = psp
+        return JsonResponse(basket)
+
+
 class PaymentRequest(View):
     def post(self, request):
-        data = json.loads(request.body)
         invoice_id = data['order_id']
         amount = Invoice.objects.get(pk=invoice_id).amount
         datetime = timezone.now()
@@ -34,8 +48,7 @@ class PaymentRequest(View):
                              'redirect_url': 'https://sadad.shaparak.ir/VPG/Purchase'})
 
     def check_price(self, basket):
-        pass
-
+        invoice = Invoice()
 
 
 class CallBack(View):

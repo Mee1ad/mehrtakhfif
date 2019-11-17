@@ -282,6 +282,9 @@ class Tag(SafeDeleteModel):
 
 
 class Product(SafeDeleteModel):
+    related = ['category', 'box', 'thumbnail']
+    prefetch = ['tag', 'media', 'feature']
+
     def __str__(self):
         return f"{self.name['persian']}"
 
@@ -290,10 +293,8 @@ class Product(SafeDeleteModel):
         return self.name['persian']
 
     _safedelete_policy = SOFT_DELETE_CASCADE
-    id = models.BigAutoField(
-        auto_created=True, primary_key=True)
-    created_at = models.DateTimeField(
-        auto_now_add=True, verbose_name='Created at')
+    id = models.BigAutoField(auto_created=True, primary_key=True)
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
     created_by = models.ForeignKey(User, on_delete=CASCADE, verbose_name='Created by',
                                    related_name='product_created_by')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
@@ -331,6 +332,8 @@ class Product(SafeDeleteModel):
 
 
 class Storage(SafeDeleteModel):
+    related = ['category', 'box', 'product']
+
     def __str__(self):
         return f"{self.product}"
 

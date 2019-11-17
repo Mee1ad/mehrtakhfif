@@ -43,9 +43,9 @@ class Login(Validation):
     def post(self, request):
         data = json.loads(request.body)
         cookie_age = 30 * 60
+        username = data['username']
+        password = data['password']
         try:  # Login
-            username = data['username']
-            password = data['password']
             user = User.objects.get(username=username)
             if user.is_ban:
                 return JsonResponse({'message': 'user is banned'}, status=403)
@@ -66,6 +66,7 @@ class Login(Validation):
             return JsonResponse(res)
         except User.DoesNotExist:  # Signup
             if 'user' in locals():
+                # noinspection PyUnboundLocalVariable
                 user.delete()
             user = User.objects.create_user(username=username, password=password)
             res = JsonResponse({}, status=251)  # please agree privacy policy
@@ -78,6 +79,7 @@ class Login(Validation):
     def send_activation(user):
         resend_timeout = 0.5
         activation_expire = 2
+        assert timezone.now() > add_minutes(resend_timeout - activation_expire, time=user.activation_expire)
         user.activation_code = random.randint(10000, 99999)
         user.activation_expire = add_minutes(activation_expire)
         user.save()
@@ -138,15 +140,11 @@ class SetPassword(View):
 class ResendCode(View):
     @pysnooper.snoop()
     def post(self, request):
-        resend_timeout = Login.resend_timeout
-        activation_expire = Login.activation_expire
         try:
             user = Backend.get_user_from_cookie(request)
-            user.activation_code = random.randint(10000, 99999)
-            assert timezone.now() > add_minutes(resend_timeout - activation_expire, time=user.activation_expire)
-            user.activation_expire = add_minutes(activation_expire)
-            user.save()
-            return JsonResponse({'code': user.activation_code, 'timeout': resend_timeout}, status=204)
+            res = Login.send_activation(user)
+            res.status_code = 204
+            return res
         except Exception:
             return JsonResponse({'message': 'token not found'}, status=400)
 
