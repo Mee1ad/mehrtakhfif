@@ -12,6 +12,7 @@ class AuthMiddleware:
         self.get_response = get_response
         # One-time configuration and initialization.
 
+    @pysnooper.snoop()
     def __call__(self, request):
         # print(request.headers)
         # print(json.loads(request.body))
@@ -39,6 +40,7 @@ class AuthMiddleware:
                     db_basket_count = basket.first().products.all().count()
                     user_basket_count = request.get_signed_cookie('basket_count', False, salt=TOKEN_SALT)
                     assert db_basket_count == int(user_basket_count)
+                    request.basket = basket
             except AssertionError:
                 new_basket_count = db_basket_count
             except Exception as e:

@@ -13,14 +13,17 @@ from server.serialize import *
 
 
 class Single(View):
+    @pysnooper.snoop()
     def get(self, request, pk):
-        storage = Storage.objects.filter(pk=pk).select_related('product').first()
-        feature = storage.product.feature.all()
-        related_product = Storage.objects.filter(product__tag__in=storage.product.tag.all())
         lang = request.lang
-        return JsonResponse({'storage': StorageSchema(lang).dump(storage),
-                             'feature': FeatureSchema(lang).dump(feature, many=True),
-                             'related_product': StorageSchema(lang).dump(related_product, many=True)})
+        storage = Storage.objects.filter(pk=pk).first()
+        features = storage.product.feature.all()
+        tags = storage.product.tag.all()
+        storage = StorageSchema(lang).dump(storage)
+        storage['product']['features'] = FeatureSchema(lang).dump(features, many=True)
+        related_product = Storage.objects.filter(product__tag__in=tags)
+        related_product = StorageSchema(lang).dump(related_product, many=True)
+        return JsonResponse({'storage': storage, 'related_product': related_product})
 
 
 class CommentView(View):
@@ -44,11 +47,11 @@ class CommentView(View):
                 assert not comment.reply
             Comment(text=data['text'], user=request.user, reply_id=data['reply'], type=data['type'],
                     product_id=data['product_id']).save()
-            return JsonResponse(self.response['ok'], status=201)
+            return JsonResponse({}, status=201)
         except Exception:
-            return JsonResponse(self.response['bad'], status=400)
+            return JsonResponse({}, status=400)
 
     def delete(self, request):
         pk = request.GET.get('id', None)
         Comment.objects.filter(pk=pk, user=request.user).delete()
-        return JsonResponse(self.response['ok'])
+        return JsonResponse({})

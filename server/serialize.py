@@ -14,8 +14,8 @@ class MediaField(fields.Field):
 
 class TagField(fields.Field):
     def _serialize(self, value, attr, obj, **kwargs):
-        tag = value.all()
-        return TagSchema().dump(tag, many=True)
+        tags = value.all()
+        return TagSchema().dump(tags, many=True)
 
 
 class ProductField(fields.Field):
@@ -47,7 +47,6 @@ class BaseSchema(Schema):
         if obj.parent is not None:
             return CategorySchema(self.lang).dump(obj.parent)
         return None
-
 
     def get_category(self, obj):
         if obj.category is not None:

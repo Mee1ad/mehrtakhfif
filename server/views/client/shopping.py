@@ -50,12 +50,21 @@ class BasketView(View):
         except (AssertionError, Basket.DoesNotExist):
             return JsonResponse(default_response['bad'], status=400)
 
-    def get_basket(self, user, lang):
+    @staticmethod
+    def get_basket(user, lang):
         products = BasketProduct.objects.select_related('storage', 'basket').filter(basket__user=user)
-        profit = calculate_profit(products)
-        basket = BasketSchema(lang).dump(products[0].basket)
-        basket['products'] = BasketProductSchema(lang).dump(products, many=True)
-        return {'basket': basket, 'summary': profit}
+        address_required = False
+        basket = {'products': []}
+        profit = {}
+        if len(products) > 0:
+            profit = calculate_profit(products)
+            basket = BasketSchema(lang).dump(products.first().basket)
+            basket['products'] = BasketProductSchema(lang).dump(products, many=True)
+            for product in basket['products']:
+                if product['product']['product']['type'] == 'product':
+                    address_required = True
+                    break
+        return {'basket': basket, 'summary': profit, 'address_required': address_required}
 
     def add_to_basket(self, basket, products, override, add):
         for product in products:
@@ -89,6 +98,12 @@ class BasketView(View):
         for product in products:
             count += product.count
         return count
+
+
+class Buy(View):
+    def get(self, request):
+        basket = BasketView.get_basket(request.user, request.lang)
+        return 'ok'
 
 
 class InvoiceView(View):
