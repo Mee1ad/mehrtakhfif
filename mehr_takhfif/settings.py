@@ -248,5 +248,5 @@ LOGGING = {
     },
 }
 
-if DEBUG and os.environ.get('RUN_MAIN', None) != 'true':
+if DEBUG:
     LOGGING = {}

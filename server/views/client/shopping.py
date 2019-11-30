@@ -13,9 +13,9 @@ class BasketView(View):
     def get(self, request):
         try:
             assert request.user.is_authenticated  # must be logged in
-            return JsonResponse(self.get_basket(request.user, request.lang))
+            return JsonResponse(get_basket(request.user, request.lang))
         except AssertionError:
-            return JsonResponse({}, status=401)
+            return JsonResponse({}, status=403)
 
     def post(self, request):
         data = json.loads(request.body)
@@ -50,22 +50,6 @@ class BasketView(View):
         except (AssertionError, Basket.DoesNotExist):
             return JsonResponse(default_response['bad'], status=400)
 
-    @staticmethod
-    def get_basket(user, lang):
-        products = BasketProduct.objects.select_related('storage', 'basket').filter(basket__user=user)
-        address_required = False
-        basket = {'products': []}
-        profit = {}
-        if len(products) > 0:
-            profit = calculate_profit(products)
-            basket = BasketSchema(lang).dump(products.first().basket)
-            basket['products'] = BasketProductSchema(lang).dump(products, many=True)
-            for product in basket['products']:
-                if product['product']['product']['type'] == 'product':
-                    address_required = True
-                    break
-        return {'basket': basket, 'summary': profit, 'address_required': address_required}
-
     def add_to_basket(self, basket, products, override, add):
         for product in products:
             pk = int(product['id'])
@@ -91,12 +75,15 @@ class BasketView(View):
         basket.save()
         return basket.count
 
-    def get_basket_count(self, basket_id, user):
-        basket = Basket.objects.filter(pk=basket_id, user=user, active=True).prefetch_related('product')
+    @staticmethod
+    def check_basket(user, basket):
         products = basket.product.all()
+        print(products)
         count = 0
+        amount = 0
         for product in products:
             count += product.count
+            amount += product.discount_price * product.count
         return count
 
 

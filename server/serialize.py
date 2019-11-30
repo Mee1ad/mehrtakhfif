@@ -2,6 +2,7 @@ from marshmallow import Schema, fields
 from mehr_takhfif.settings import HOST, MEDIA_URL
 import pysnooper
 from secrets import token_hex
+from server.models import BasketProduct
 
 # ManyToMany Relations
 
@@ -22,6 +23,12 @@ class ProductField(fields.Field):
     def _serialize(self, value, attr, obj, **kwargs):
         product = value.all()
         return StorageSchema().dump(product, many=True)
+
+
+class BasketProductField(fields.Field):
+    def _serialize(self, value, attr, obj, **kwargs):
+        basket_product = BasketProduct.objects.filter(basket_id=obj.pk).select_related(*BasketProduct.related)
+        return BasketProductSchema().dump(basket_product, many=True)
 
 # Serializer
 
@@ -104,9 +111,7 @@ class BaseSchema(Schema):
 
 class UserSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'email', 'gender', 'username', 'meli_code', 'wallet_money', 'vip', 'active_address')
-
-    full_name = fields.Function(lambda o: o.get_full_name())
+        additional = ('id', 'email', 'full_name', 'gender', 'username', 'meli_code', 'wallet_money', 'vip', 'active_address')
 
 
 class AddressSchema(BaseSchema):
@@ -235,12 +240,14 @@ class BasketProductSchema(BaseSchema):
     class Meta:
         additional = ('count',)
 
-    product = fields.Method("get_storage")
+    storage = fields.Method("get_storage")
 
 
 class BasketSchema(BaseSchema):
     class Meta:
         additional = ('id', 'description')
+
+    products = BasketProductField()
 
 
 class BlogSchema(BaseSchema):

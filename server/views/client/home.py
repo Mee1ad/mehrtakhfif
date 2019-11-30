@@ -19,9 +19,7 @@ from mehr_takhfif.settings import HOST, MEDIA_ROOT
 class Test(View):
     @pysnooper.snoop()
     def get(self, request):
-        from django.http import HttpResponseRedirect
-        return HttpResponseRedirect('https://google.com')
-        # return HttpResponse(img2)
+        l = {}
 
 
 class GetSlider(View):
@@ -95,7 +93,6 @@ class GetAds(View):
 
 
 class GetProducts(View):
-    @pysnooper.snoop()
     def post(self, request):
         try:
             assert not request.user.is_authenticated  # must be guest
@@ -105,14 +102,21 @@ class GetProducts(View):
                 .select_related('product', 'category', 'product__box', 'product__thumbnail')\
                 .prefetch_related('product__media')
             basket_products = []
+            address_required = False
+
             for product in products:
                 item = next(item for item in data['products'] if item["id"] == product.pk)
                 count = item['count']
                 obj = BasketProduct(storage=product, count=count)
                 basket_products.append(obj)
+            products = BasketProductSchema().dump(basket_products, many=True)
+            for product in products:
+                if product['product']['product']['type'] == 'product':
+                    address_required = True
+                    break
             profit = calculate_profit(basket_products)
-            return JsonResponse({'basket': {'products': BasketProductSchema().dump(basket_products, many=True)},
-                                 'summary': profit})
+            return JsonResponse({'basket': {'products': products}, 'summary': profit,
+                                 'address_required': address_required})
         except AssertionError:
             return JsonResponse({}, status=400)
 
@@ -122,5 +126,8 @@ class Search(View):
         q = request.GET.get('q', '')
         sv = SearchVector(KeyTextTransform('persian', 'product__name'), KeyTextTransform('persian', 'product__category__name'))
         sq = SearchQuery(q)
-        product = Storage.objects.select_related('product').annotate(rank=SearchRank(sv, sq)).order_by('rank')[(page-1)*step:step*page]
-        return JsonResponse({'products': StorageSchema(request.lang).dump(product, many=True)})
+        print(sq)
+        product = Storage.objects.select_related('product').annotate(rank=SearchRank(sv, sq)).order_by('-rank').filter(rank__gte=0.01)
+        print(product)
+        product = StorageSchema(request.lang).dump(product, many=True)
+        return JsonResponse({'products': product})

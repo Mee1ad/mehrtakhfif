@@ -1,7 +1,7 @@
 from django.db import models
 from sorl.thumbnail import ImageField
 from django.contrib.postgres.fields import JSONField, DateRangeField, DateTimeRangeField, ArrayField
-from django.db.models import CASCADE, PROTECT
+from django.db.models import CASCADE, PROTECT, SET_NULL
 from django.contrib.auth.models import AbstractUser
 from safedelete.models import SafeDeleteModel, SOFT_DELETE_CASCADE
 from django.utils.translation import gettext_lazy as _
@@ -51,7 +51,8 @@ class User(AbstractUser):
                                   validators=[validate_slug])
     last_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='Last name',
                                  validators=[validate_slug])
-    # full_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='full name', validators=[validate_slug])
+    full_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='full name',
+                                 validators=[validate_slug])
     username = models.CharField(max_length=150, unique=True)
     language = models.CharField(max_length=7, default='fa')
     email = models.CharField(max_length=255, blank=True, null=True, validators=[validate_email])
@@ -64,7 +65,8 @@ class User(AbstractUser):
     is_staff = models.BooleanField(default=False, verbose_name='Staff')
     is_vip = models.BooleanField(default=False)
     privacy_agreement = models.BooleanField(default=False)
-    default_address = models.IntegerField(null=True, blank=True)
+    default_address = models.ForeignKey(to="Address", on_delete=SET_NULL, null=True, blank=True,
+                                        related_name="user_default_address")
     email_verified = models.BooleanField(default=False, verbose_name='Email verified')
     avatar_id = models.BigIntegerField(blank=True, null=True)
     meli_code = models.CharField(max_length=15, blank=True, null=True, verbose_name='National code', unique=True)
@@ -117,7 +119,7 @@ class City(models.Model):
 
 class Address(models.Model):
     def __str__(self):
-        return self.city
+        return self.city.name
 
     id = models.BigAutoField(
         auto_created=True, primary_key=True)
@@ -129,8 +131,7 @@ class Address(models.Model):
     address = models.TextField()
     location = ArrayField(models.CharField(
         max_length=100, blank=True), size=2, null=True, blank=True)
-    user = models.ForeignKey(
-        User, blank=True, null=True, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, blank=True, null=True, on_delete=models.CASCADE)
     active = models.BooleanField(default=False)
 
     class Meta:
@@ -325,6 +326,8 @@ class Product(SafeDeleteModel):
         'service', 'service'), ('product', 'product')])
     feature = models.ManyToManyField(Feature)
 
+    # home_buissiness =
+    # support_description =
     class Meta:
         db_table = 'product'
         indexes = [GinIndex(fields=['name'])]
@@ -346,6 +349,7 @@ class Storage(SafeDeleteModel):
     available_count = models.BigIntegerField(default=0, verbose_name='Available count')
     available_count_for_sale = models.IntegerField(default=0, verbose_name='Available count for sale')
     count = models.IntegerField(default=0)
+    tax = models.IntegerField(default=0)
     max_count_for_sale = models.IntegerField(default=0)
     final_price = models.BigIntegerField(default=0, verbose_name='Final price')
     start_price = models.BigIntegerField(default=0, verbose_name='Start price')
@@ -370,6 +374,7 @@ class Storage(SafeDeleteModel):
 
 
 class Basket(SafeDeleteModel):
+    prefetch = ['products']
     def __str__(self):
         return f"{self.user}"
 
@@ -391,6 +396,7 @@ class Basket(SafeDeleteModel):
                                    related_name='basket_deleted_by')
     description = models.TextField(blank=True, null=True)
     active = models.BooleanField(default=True)
+    sync = models.BooleanField(default=False)
 
     class Meta:
         db_table = 'basket'
@@ -398,6 +404,8 @@ class Basket(SafeDeleteModel):
 
 
 class BasketProduct(models.Model):
+    related = ['storage']
+
     def __str__(self):
         return f"{self.id}"
 
@@ -493,6 +501,7 @@ class Comment(SafeDeleteModel):
 
 
 class Invoice(models.Model):
+    related = ['basket']
     def __str__(self):
         return f"{self.user}"
 
@@ -510,23 +519,19 @@ class Invoice(models.Model):
     updated_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Updated by',
                                    related_name='invoice_product_updated_by')
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    price = models.BigIntegerField()
+    basket = models.OneToOneField(to=Basket, on_delete=PROTECT, related_name='invoice_to_basket')
     products = models.ManyToManyField(Product, through='InvoiceProduct')
     payed_at = models.DateTimeField(
         blank=True, null=True, verbose_name='Payed at')
-    successful = models.BooleanField(default=False)
     type = models.CharField(max_length=255, blank=True, null=True)
     special_offer_id = models.BigIntegerField(
         blank=True, null=True, verbose_name='Special offer id')
-    address = models.TextField(blank=True, null=True)
+    address = models.ForeignKey(to=Address, null=True, blank=True, on_delete=PROTECT)
     description = models.TextField(max_length=255, blank=True, null=True)
     amount = models.IntegerField()
     invoice_request = models.BooleanField(default=False)
-    discount_price = models.BigIntegerField(
-        verbose_name='Discount price', default=0)
-    count = models.SmallIntegerField()
     tax = models.IntegerField()
-    start_price = models.BigIntegerField(verbose_name='Start price')
+    psp = models.SmallIntegerField(default=1)
     status = models.CharField(max_length=255, default='pending', choices=[('pending', 'pending'), ('payed', 'payed'),
                                                                           ('canceled', 'canceled'),
                                                                           ('rejected', 'rejected')])
@@ -546,10 +551,8 @@ class InvoiceProduct(models.Model):
     invoice = models.ForeignKey(Invoice, on_delete=PROTECT)
     count = models.SmallIntegerField(default=1)
     tax = models.IntegerField(default=0)
-    price = models.BigIntegerField()
     final_price = models.BigIntegerField(verbose_name='Final price')
-    discount_price = models.BigIntegerField(
-        verbose_name='Discount price', default=0)
+    discount_price = models.BigIntegerField(verbose_name='Discount price', default=0)
 
     class Meta:
         db_table = 'invoice_product'

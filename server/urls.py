@@ -41,8 +41,9 @@ shopping = [
 ]
 
 pay = [
-        path('check_basket', payment.CheckBasket.as_view(), name='check_basket'),
-        # path('show_codes', shopping.ShowCodes.as_view(), name='show_codes'),
+        path('psp', payment.PSP.as_view(), name='psp'),
+        path('payment', payment.PaymentRequest.as_view(), name='payment'),
+        path('callback', payment.CallBack.as_view(), name='callback'),
 ]
 
 user = [path('profile', user.Profile.as_view(), name='profile'),

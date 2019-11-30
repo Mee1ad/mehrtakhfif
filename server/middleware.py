@@ -12,7 +12,6 @@ class AuthMiddleware:
         self.get_response = get_response
         # One-time configuration and initialization.
 
-    @pysnooper.snoop()
     def __call__(self, request):
         # print(request.headers)
         # print(json.loads(request.body))
