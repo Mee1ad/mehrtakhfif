@@ -287,51 +287,11 @@ def validation(data, *args):
         raise HttpResponseBadRequest
 
 
-def to_obj(dic):
-    return Struct(**dic)
-
-
-def to_obj2(dic):
-    return bunchify(dic)
-
-
-def to_obj3(dic):
-    return munchify(dic)
-
-
-
-def to_obj4(dic):
-    return Mock(**dic)
-
-
-
-def to_obj5(dic):
-    return json.loads(json.dumps(dic), object_hook=obj)
-
-def to_obj6(dic):
-    dobj = DObj()
-    dobj.__dict__ = dic
-    return dobj
-
-
-@pysnooper.snoop()
-def to_obj7(dic):
-    d2o = partial(type, "d2o", ())
-    return d2o(dic)
-
-
-class DObj(object):
-    pass
-
-
-class obj(object):
-    def __init__(self, dict_):
-        self.__dict__.update(dict_)
-
-
-class Struct:
-    def __init__(self, **entries):
-        self.__dict__.update(entries)
+def to_obj(body):
+    dic = json.loads(body)
+    obj = type('test', (object,), {})()
+    obj.__dict__ = dic
+    return obj
 
 
 class LoginRequired(LoginRequiredMixin, View):

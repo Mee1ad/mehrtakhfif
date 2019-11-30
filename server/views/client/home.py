@@ -17,24 +17,30 @@ from mehr_takhfif.settings import HOST, MEDIA_ROOT
 
 
 class Test(View):
-    @pysnooper.snoop()
+    # @pysnooper.snoop()
     def get(self, request):
+        l = self.cl()
+        a = to_obj(l)
+        return HttpResponse('ok')
+
+    def cl(self):
         l = {}
+        for i in range(100000):
+            l[f'bb{i}'] = i + 5
+        return l
 
 
 class GetSlider(View):
     def get(self, request):
-        slider = Slider.objects.select_related('media').all()
-        res = {'slider': SliderSchema(
-            language='english').dump(slider, many=True)}
+        slider = Slider.objects.select_related(Slider.select).all()
+        res = {'slider': SliderSchema().dump(slider, many=True)}
         return JsonResponse(res)
 
 
 class GetSpecialOffer(View):
     def get(self, request):
-        special_offer = SpecialOffer.objects.select_related('media').all()
-        res = {'special_offer': SpecialOfferSchema().dump(
-            special_offer, many=True)}
+        special_offer = SpecialOffer.objects.select_related(*SpecialOffer.select).all()
+        res = {'special_offer': SpecialOfferSchema().dump(special_offer, many=True)}
         return JsonResponse(res)
 
 
@@ -42,10 +48,10 @@ class GetSpecialProduct(View):
     def get(self, request):
         step = int(request.GET.get('s', default_step))
         page = int(request.GET.get('e', default_page))
-        special_product = SpecialProduct.objects.select_related(
-            'storage', 'storage__product', 'media').all().order_by('-id')[(page - 1) * step:step * page]
-        best_sell_storage = Storage.objects.select_related('product', 'product__thumbnail').filter(
-            default=True).order_by('-product__sold_count')[(page - 1) * step:step * page]
+        special_product = SpecialProduct.objects.select_related(*SpecialProduct.select).all()\
+            [(page - 1) * step:step * page]
+        best_sell_storage = Storage.objects.select_related(*Storage.select)\
+                            .filter(default=True).order_by('-product__sold_count')[(page - 1) * step:step * page]
         res = {'special_product': SpecialProductSchema(language=request.lang).dump(special_product, many=True),
                'best_sell_product': StorageSchema().dump(best_sell_storage, many=True)}
         return JsonResponse(res)
@@ -58,17 +64,17 @@ class AllSpecialProduct(View):
         all_box = Box.objects.all()
         products = []
         for box, index in zip(all_box, range(len(all_box))):
-            box_special_product = SpecialProduct.objects.select_related('storage', 'media').filter(
-                box=box).order_by('-created_by')[(page - 1) * step:step * page]
+            box_special_product = SpecialProduct.objects.select_related(*SpecialProduct.select)\
+                                    .filter( box=box)[(page - 1) * step:step * page]
             product = {}
             product['id'] = box.pk
             product['name'] = box.name[request.lang]
             product['key'] = box.meta_key
             # product['special_product'] = SpecialProductSchema(request.lang).dump(box_special_product, many=True)
-            best_seller_storage = Storage.objects.select_related('product', 'product__thumbnail').filter(
-                default=True, box=box).order_by('-product__sold_count')[(page - 1) * step:step * page]
-            product['best_seller'] = StorageSchema(
-                request.lang).dump(best_seller_storage, many=True)
+            best_seller_storage = Storage.objects.select_related(*Storage.select)\
+                                      .filter(default=True, box=box).order_by('-product__sold_count')\
+                                        [(page - 1) * step:step * page]
+            product['best_seller'] = StorageSchema(request.lang).dump(best_seller_storage, many=True)
             products.append(product)
         res = {'products': products}
         return JsonResponse(res)
@@ -83,13 +89,13 @@ class AllCategory(View):
 class GetMenu(View):
     def get(self, request):
         return JsonResponse(json.dumps({'menu': MenuSchema(request.lang).dump(
-            Menu.objects.select_related('media', 'parent').all(), many=True)}))
+            Menu.objects.select_related(*Menu.select).all(), many=True)}))
 
 
 class GetAds(View):
     def get(self, request):
         return JsonResponse({'ads': AdSchema(request.lang).dump(
-            Ad.objects.select_related('media', 'storage').all(), many=True)})
+            Ad.objects.select_related(*Ad.select).all(), many=True)})
 
 
 class GetProducts(View):
@@ -98,9 +104,8 @@ class GetProducts(View):
             assert not request.user.is_authenticated  # must be guest
             data = json.loads(request.body)
             products_id = [product['id'] for product in data['products']]
-            products = Storage.objects.filter(id__in=products_id) \
-                .select_related('product', 'category', 'product__box', 'product__thumbnail')\
-                .prefetch_related('product__media')
+            products = Storage.objects.filter(id__in=products_id).select_related(*Storage.select)\
+                .prefetch_related(*Storage.prefetch)
             basket_products = []
             address_required = False
 
@@ -124,10 +129,10 @@ class GetProducts(View):
 class Search(View):
     def get(self, request):
         q = request.GET.get('q', '')
-        sv = SearchVector(KeyTextTransform('persian', 'product__name'), KeyTextTransform('persian', 'product__category__name'))
+        sv = SearchVector(KeyTextTransform('persian', 'product__name'),
+                          KeyTextTransform('persian', 'product__category__name'))
         sq = SearchQuery(q)
-        print(sq)
-        product = Storage.objects.select_related('product').annotate(rank=SearchRank(sv, sq)).order_by('-rank').filter(rank__gte=0.01)
-        print(product)
+        product = Storage.objects.select_related(*Storage.select).annotate(rank=SearchRank(sv, sq))\
+            .order_by('-rank').filter(rank__gte=0.01)
         product = StorageSchema(request.lang).dump(product, many=True)
         return JsonResponse({'products': product})

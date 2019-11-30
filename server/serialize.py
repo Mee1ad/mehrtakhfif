@@ -271,6 +271,7 @@ class CommentSchema(BaseSchema):
     user = fields.Function(lambda obj: obj.user_id)
     reply = fields.Method("get_comment")
 
+
 # todo
 class FactorSchema(BaseSchema):
     class Meta:
@@ -327,6 +328,7 @@ class AdSchema(BaseSchema):
 class WalletDetailSchema(Schema):
     class Meta:
         additional = ('id', 'credit', 'user')
+
 
 # todo user view
 class WishListSchema(BaseSchema):
