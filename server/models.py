@@ -335,7 +335,8 @@ class Product(SafeDeleteModel):
 
 
 class Storage(SafeDeleteModel):
-    related = ['category', 'box', 'product']
+    select = ['category', 'box', 'product', 'product__thumbnail']
+    prefetch = ['product__media']
 
     def __str__(self):
         return f"{self.product}"
@@ -375,6 +376,7 @@ class Storage(SafeDeleteModel):
 
 class Basket(SafeDeleteModel):
     prefetch = ['products']
+
     def __str__(self):
         return f"{self.user}"
 
@@ -502,6 +504,7 @@ class Comment(SafeDeleteModel):
 
 class Invoice(models.Model):
     related = ['basket']
+
     def __str__(self):
         return f"{self.user}"
 
@@ -560,14 +563,14 @@ class InvoiceProduct(models.Model):
 
 
 class Menu(SafeDeleteModel):
+    select = ['media', 'parent']
+
     def __str__(self):
         return f"{self.name['persian']}"
 
     _safedelete_policy = SOFT_DELETE_CASCADE
-    id = models.BigAutoField(
-        auto_created=True, primary_key=True)
-    created_at = models.DateTimeField(
-        auto_now_add=True, verbose_name='Created at')
+    id = models.BigAutoField(auto_created=True, primary_key=True)
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Created by',
                                    related_name='menu_created_by')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
@@ -579,8 +582,7 @@ class Menu(SafeDeleteModel):
     name = JSONField(default=multilanguage)
     media = models.ForeignKey(Media, on_delete=PROTECT, blank=True, null=True)
     url = models.CharField(max_length=25, null=True, blank=True)
-    parent = models.ForeignKey(
-        "self", on_delete=CASCADE, null=True, blank=True)
+    parent = models.ForeignKey("self", on_delete=CASCADE, null=True, blank=True)
     priority = models.SmallIntegerField(default=0)
 
     class Meta:
@@ -607,20 +609,18 @@ class Rate(models.Model):
 
 
 class Slider(SafeDeleteModel):
+    select = ['media']
     def __str__(self):
         return f"{self.title['persian']}"
 
     _safedelete_policy = SOFT_DELETE_CASCADE
-    id = models.BigAutoField(
-        auto_created=True, primary_key=True)
+    id = models.BigAutoField(auto_created=True, primary_key=True)
     title = JSONField(default=multilanguage)
-    product = models.ForeignKey(
-        Product, on_delete=CASCADE, blank=True, null=True)
+    product = models.ForeignKey(Product, on_delete=CASCADE, blank=True, null=True)
     media = models.ForeignKey(Media, on_delete=CASCADE)
     type = models.CharField(max_length=255)
     link = models.URLField(null=True, blank=True)
-    created_at = models.DateTimeField(
-        auto_now_add=True, verbose_name='Created at')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Created by',
                                    related_name='slider_created_by')
     updated_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Updated by',
@@ -634,35 +634,28 @@ class Slider(SafeDeleteModel):
 
 
 class SpecialOffer(SafeDeleteModel):
+    select = ['media']
     def __str__(self):
         return f"{self.name['persian']}"
 
     _safedelete_policy = SOFT_DELETE_CASCADE
-    id = models.BigAutoField(
-        auto_created=True, primary_key=True)
+    id = models.BigAutoField(auto_created=True, primary_key=True)
     name = JSONField(default=multilanguage)
     code = models.CharField(max_length=65)
     user = models.ManyToManyField(User, blank=True)
-    product = models.ManyToManyField(
-        Storage, related_name="special_offer_products", blank=True)
+    product = models.ManyToManyField(Storage, related_name="special_offer_products", blank=True)
     not_accepted_products = models.ManyToManyField(Storage, related_name="special_offer_not_accepted_products",
                                                    blank=True)
     box = models.ForeignKey(Box, on_delete=CASCADE, null=True, blank=True)
-    category = models.ForeignKey(
-        Category, on_delete=CASCADE, null=True, blank=True)
-    discount_price = models.IntegerField(
-        default=0, verbose_name='Discount price')
-    discount_percent = models.SmallIntegerField(
-        default=0, verbose_name='Discount percent')
-    vip_discount_price = models.IntegerField(
-        default=0, verbose_name='Vip discount price')
-    vip_discount_percent = models.SmallIntegerField(
-        default=0, verbose_name='Vip discount percent')
+    category = models.ForeignKey(Category, on_delete=CASCADE, null=True, blank=True)
+    discount_price = models.IntegerField(default=0, verbose_name='Discount price')
+    discount_percent = models.SmallIntegerField(default=0, verbose_name='Discount percent')
+    vip_discount_price = models.IntegerField(default=0, verbose_name='Vip discount price')
+    vip_discount_percent = models.SmallIntegerField(default=0, verbose_name='Vip discount percent')
     start_date = models.DateTimeField(verbose_name='Start date')
     end_date = models.DateTimeField(verbose_name='End date')
     media = models.ForeignKey(Media, on_delete=CASCADE)
-    created_at = models.DateTimeField(
-        auto_now_add=True, verbose_name='Created at')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Created by',
                                    related_name='special_offer_created_by')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
@@ -671,7 +664,6 @@ class SpecialOffer(SafeDeleteModel):
     deleted_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Deleted by',
                                    related_name='special_offer_deleted_by')
     least_count = models.IntegerField(default=1)
-
     peak_price = models.BigIntegerField(verbose_name='Peak price')
 
     class Meta:
@@ -680,6 +672,8 @@ class SpecialOffer(SafeDeleteModel):
 
 
 class SpecialProduct(SafeDeleteModel):
+    select = ['storage', 'storage__product', 'media']
+
     def __str__(self):
         return f"{self.storage}"
 
@@ -774,16 +768,16 @@ class NotifyUser(models.Model):
 
 
 class Ad(models.Model):
+    select = ['media', 'storage']
+
     def __str__(self):
         return self.title['persian']
 
-    id = models.BigAutoField(
-        auto_created=True, primary_key=True)
+    id = models.BigAutoField(auto_created=True, primary_key=True)
     title = JSONField(default=multilanguage)
     url = models.CharField(max_length=255, null=True, blank=True)
     media = models.ForeignKey(Media, on_delete=PROTECT)
-    storage = models.ForeignKey(
-        Storage, on_delete=PROTECT, blank=True, null=True)
+    storage = models.ForeignKey(Storage, on_delete=PROTECT, blank=True, null=True)
 
     class Meta:
         db_table = 'ad'
