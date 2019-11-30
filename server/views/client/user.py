@@ -1,7 +1,7 @@
 from server.models import *
 from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.mixins import PermissionRequiredMixin
-from server.views.utils import View
+from server.views.utils import *
 from server.views.admin_panel.read import ReadAdminView
 import json
 import time
@@ -14,19 +14,24 @@ from server.views.utils import LoginRequired
 
 class Profile(View):
     def get(self, request):
-        print('this is user profile')
-        return JsonResponse({'user': serialize.user(request.user)})
+        return JsonResponse({'user': UserSchema().dump(request.user)})
 
     def put(self, request):
         data = json.loads(request.body)
-        request.user.update(first_name=data['first_name'], last_name=data['last_name'], gender=data['gender'],
-                            language=data['language'], email=data['email'], meli_code=data['meli_code'])
-        return HttpResponse('ok', status=200)
+        # validation(data, 'full_name')
+        user = request.user
+        user.full_name = data.get('full_name') or user.full_name
+        user.gender = data.get('gender') or user.gender
+        user.language = data.get('language') or user.language
+        user.email = data.get('email') or user.email
+        user.meli_code = data.get('meli_code') or user.meli_code
+        user.save()
+        return JsonResponse({'user': UserSchema().dump(user)})
 
 
 class ShoppingList(View):
     def get(self, request):
-        shopping_list = Factor.objects.filter(user=request.user).order_by('created_at')
+        shopping_list = Invoice.objects.filter(user=request.user).order_by('created_at')
         return JsonResponse({'shopping_list': FactorSchema().dump(shopping_list, many=True)})
 
 
@@ -36,15 +41,18 @@ class UserComment(View):
         return JsonResponse({'comments': CommentSchema().dump(comments, many=True)})
 
 
-class AddressView(View):
+class AddressView(LoginRequired):
     def get(self, request):
         addresses = Address.objects.filter(user=request.user)
-        return JsonResponse({'addresses': AddressSchema().dump(addresses, many=True),
-                             'default_address': request.user.default_address})
+        addresses = AddressSchema().dump(addresses, many=True)
+        default_address = AddressSchema().dump(request.user.default_address)
+        return JsonResponse({'addresses': addresses, 'default_address': default_address})
 
+    # add address
     @pysnooper.snoop()
     def post(self, request):
         data = json.loads(request.body)
+        print(data)
         try:
             assert City.objects.filter(pk=data['city_id'], state_id=data['state_id'])
             address_count = Address.objects.filter(user=request.user).count()
@@ -53,21 +61,24 @@ class AddressView(View):
                               name=data['name'], phone=data['phone'])
             address.save()
             if address_count < 2 or data['set_default']:
-                request.user.default_address = address.pk
+                request.user.default_address_id = address.pk
                 request.user.save()
             return JsonResponse(AddressSchema().dump(address))
         except AssertionError:
             return JsonResponse({}, status=400)
 
+    # set default
+    @pysnooper.snoop()
     def patch(self, request):
         data = json.loads(request.body)
         try:
-            request.user.default_address = data['id']
+            request.user.default_address_id = data['id']
             request.user.save()
             return JsonResponse({'message': 'ok'})
         except Exception:
             return JsonResponse({}, status=400)
 
+    # edit address
     @pysnooper.snoop()
     def put(self, request):
         data = json.loads(request.body)
@@ -115,7 +126,7 @@ class WishlistView(View):
                      created_by=request.user, updated_by=request.user).save()
             return HttpResponse('ok', status=201)
         except AssertionError:
-            WishList.objects.filter(user=request.user, product_id=data['product_id'])\
+            WishList.objects.filter(user=request.user, product_id=data['product_id']) \
                 .update(type=data['type'])
             return HttpResponse('updated', status=204)
 
@@ -133,7 +144,7 @@ class WishlistView(View):
 class NotifyView(View):
     def get(self, request):
         notify = WishList.objects.filter(user_id=request.user)
-        return JsonResponse({'wishlists': serialize.notify(notify)})
+        return JsonResponse({'wishlists': WishListSchema().dump(notify(notify))})
 
     def post(self, request):
         data = json.loads(request.body)

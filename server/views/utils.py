@@ -1,38 +1,40 @@
-from django.views import View
-from django.core import serializers
-import json
-from server.models import *
-from secrets import token_hex
-from server.serialize import *
-from mehr_takhfif import settings
-import os
-import jwt
-from mehr_takhfif.settings import TOKEN_SECRET, SECRET_KEY
-import pysnooper
-import magic
 import difflib
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.utils import timezone
-from datetime import datetime
-from PIL import Image
-from mehr_takhfif.settings import MEDIA_ROOT
-import math
-import reportlab
 import io
+import json
+import math
+import pysnooper
+from datetime import datetime
+from bunch import bunchify
+from munch import munchify
+from mock import Mock
+from functools import partial
+
+import jwt
+import magic
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import padding
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core import serializers
 from django.http import FileResponse
-from reportlab.pdfgen import canvas
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
+from django.http import HttpResponse, HttpResponseBadRequest
+from django.views import View
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter, inch
-from django.http import JsonResponse, HttpResponse
-import os
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.primitives import padding
-from cryptography.hazmat.backends import default_backend
+from reportlab.pdfgen import canvas
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
+
+from mehr_takhfif import settings
+from mehr_takhfif.settings import TOKEN_SECRET, SECRET_KEY
+from server.models import *
+from server.serialize import *
 
 default_step = 12
 default_page = 1
 default_response = {'ok': {'message': 'ok'}, 'bad': {'message': 'bad request'}}
+pattern = {'phone': r'^(09[0-9]{9})$', 'email': r'^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\
+           [[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$',
+           'postal_code': r'^\d{5}[ -]?\d{5}$', 'full_name': r'^[آ-یA-z]{2,}( [آ-یA-z]{2,})+([آ-یA-z]|[ ]?)$'}
 
 
 def safe_delete(obj, user):
@@ -60,7 +62,6 @@ def timestamp_to_date(timestamp):
     return datetime.fromtimestamp(timestamp)
 
 
-@pysnooper.snoop()
 def generate_token(user):
     expire = add_days(30).timestamp()
     data = {'username': user.phone, 'expire': expire}
@@ -153,7 +154,7 @@ def filter_params(params):
         pass
     return {'filter': filter_by, 'order': orderby}
 
-@pysnooper.snoop()
+
 def get_categories(box):
     print(box)
     try:
@@ -234,15 +235,15 @@ def print_pdf():
 
 
 def calculate_profit(products):
-    total_price = sum([product.storage.final_price * product.count for product in products])
-    discount_price = sum([product.storage.discount_price * product.count for product in products])
+    total_price = sum([product['storage']['final_price'] * product['count'] for product in products])
+    discount_price = sum([product['storage']['discount_price'] * product['count'] for product in products])
     profit = total_price - discount_price
     return {'total_price': total_price, 'discount_price': discount_price, 'profit': profit, 'shopping_cost': 0}
 
 
-def des_encrypt(data=b'test', key=os.urandom(16)):
+def des_encrypt(data='test', key=os.urandom(16)):
     backend = default_backend()
-    text = data
+    text = data.encode()
     padder = padding.PKCS7(algorithms.TripleDES.block_size).padder()
     cipher = Cipher(algorithms.TripleDES(key), modes.ECB(), backend=backend)
     encryptor = cipher.encryptor()
@@ -258,6 +259,79 @@ def des_decrypt(encrypted_text, key):
     cipher = Cipher(algorithms.TripleDES(key), modes.ECB(), backend=backend)
     decryptor = cipher.decryptor()
     return unpadder.update(decryptor.update(encrypted_text) + decryptor.finalize()) + unpadder.finalize()
+
+
+def get_basket(user, lang, basket=None):
+    basket = basket or Basket.objects.filter(user=user, active=True).first()
+    # products = BasketProduct.objects.filter(basket=basket).select_related(*BasketProduct.related)
+    address_required = False
+    profit = {}
+    if basket.products.all().count() > 0:
+        basket_dict = BasketSchema(lang).dump(basket)
+        profit = calculate_profit(basket_dict['products'])
+        # basket['products'] = BasketProductSchema(lang).dump(products, many=True)
+        for product in basket_dict['products']:
+            if product['storage']['product']['type'] == 'product':
+                address_required = True
+                break
+    else:
+        basket_dict = {}
+    return {'basket': basket_dict, 'summary': profit, 'address_required': address_required}
+
+
+def validation(data, *args):
+    try:
+        for key in args:
+            assert re.search(pattern[key], data[key])
+    except AssertionError:
+        raise HttpResponseBadRequest
+
+
+def to_obj(dic):
+    return Struct(**dic)
+
+
+def to_obj2(dic):
+    return bunchify(dic)
+
+
+def to_obj3(dic):
+    return munchify(dic)
+
+
+
+def to_obj4(dic):
+    return Mock(**dic)
+
+
+
+def to_obj5(dic):
+    return json.loads(json.dumps(dic), object_hook=obj)
+
+def to_obj6(dic):
+    dobj = DObj()
+    dobj.__dict__ = dic
+    return dobj
+
+
+@pysnooper.snoop()
+def to_obj7(dic):
+    d2o = partial(type, "d2o", ())
+    return d2o(dic)
+
+
+class DObj(object):
+    pass
+
+
+class obj(object):
+    def __init__(self, dict_):
+        self.__dict__.update(dict_)
+
+
+class Struct:
+    def __init__(self, **entries):
+        self.__dict__.update(entries)
 
 
 class LoginRequired(LoginRequiredMixin, View):

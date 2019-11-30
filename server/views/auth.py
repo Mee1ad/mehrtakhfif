@@ -48,7 +48,7 @@ class Login(Validation):
         try:  # Login
             user = User.objects.get(username=username)
             if user.is_ban:
-                return JsonResponse({'message': 'user is banned'}, status=403)
+                return JsonResponse({'message': 'user is banned'}, status=493)
             if password is None:  # otp
                 if user.privacy_agreement:  # 202 need activation code (login)
                     return self.set_token(user, self.send_activation(user))
@@ -172,11 +172,10 @@ class Activate(View):
             return JsonResponse({'message': 'code not found'}, status=406)
 
 
-class LogoutView(LoginRequired):
-    @pysnooper.snoop()
+class LogoutView(View):
     def post(self, request):
         try:
             logout(request)
             return JsonResponse({})
         except Exception:
-            return JsonResponse({}, status=401)
+            return JsonResponse({}, status=403)
