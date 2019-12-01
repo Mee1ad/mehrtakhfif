@@ -31,8 +31,8 @@ class Profile(View):
 
 class ShoppingList(View):
     def get(self, request):
-        shopping_list = Invoice.objects.filter(user=request.user).order_by('created_at')
-        return JsonResponse({'shopping_list': FactorSchema().dump(shopping_list, many=True)})
+        shopping_list = Invoice.objects.filter(user=request.user)
+        return JsonResponse({'shopping_list': InvoiceSchema().dump(shopping_list, many=True)})
 
 
 class UserComment(View):

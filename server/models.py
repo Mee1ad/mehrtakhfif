@@ -15,6 +15,7 @@ import os
 import re
 from PIL import Image
 from push_notifications.models import GCMDevice
+from mehr_takhfif.settings import HOST
 
 
 def multilanguage():
@@ -293,6 +294,31 @@ class Product(SafeDeleteModel):
     def test(self):
         return self.name['persian']
 
+    def get_name_fa(self):
+        return self.name['persian']
+
+    def get_name_en(self):
+        return self.name['english']
+
+    def get_name_ar(self):
+        return self.name['arabic']
+
+    def get_category_fa(self):
+        return self.category.name['persian']
+
+    def get_category_en(self):
+        return self.category.name['english']
+
+    def get_category_ar(self):
+        return self.category.name['arabic']
+
+    def get_thumbnail(self):
+        return HOST + self.thumbnail.img.url
+
+    # def save(self):
+    #     self.slug = slugify(self.title)
+    #     super(Post, self).save()
+
     _safedelete_policy = SOFT_DELETE_CASCADE
     id = models.BigAutoField(auto_created=True, primary_key=True)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
@@ -508,14 +534,11 @@ class Invoice(models.Model):
     def __str__(self):
         return f"{self.user}"
 
-    id = models.BigAutoField(
-        auto_created=True, primary_key=True)
-    created_at = models.DateTimeField(
-        auto_now_add=True, verbose_name='Created at')
+    id = models.BigAutoField(auto_created=True, primary_key=True)
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
     created_by = models.ForeignKey(to=User, on_delete=models.CASCADE, verbose_name='Created by',
                                    related_name='invoice_created_by')
-    suspended_at = models.DateTimeField(
-        blank=True, null=True, verbose_name='Suspended at')
+    suspended_at = models.DateTimeField(blank=True, null=True, verbose_name='Suspended at')
     suspended_by = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True, verbose_name='Suspended by',
                                      related_name='invoice_suspended_by')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
@@ -524,11 +547,9 @@ class Invoice(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     basket = models.OneToOneField(to=Basket, on_delete=PROTECT, related_name='invoice_to_basket')
     products = models.ManyToManyField(Product, through='InvoiceProduct')
-    payed_at = models.DateTimeField(
-        blank=True, null=True, verbose_name='Payed at')
+    payed_at = models.DateTimeField(blank=True, null=True, verbose_name='Payed at')
     type = models.CharField(max_length=255, blank=True, null=True)
-    special_offer_id = models.BigIntegerField(
-        blank=True, null=True, verbose_name='Special offer id')
+    special_offer_id = models.BigIntegerField(blank=True, null=True, verbose_name='Special offer id')
     address = models.ForeignKey(to=Address, null=True, blank=True, on_delete=PROTECT)
     description = models.TextField(max_length=255, blank=True, null=True)
     amount = models.IntegerField()
@@ -610,6 +631,7 @@ class Rate(models.Model):
 
 class Slider(SafeDeleteModel):
     select = ['media']
+
     def __str__(self):
         return f"{self.title['persian']}"
 
@@ -635,6 +657,7 @@ class Slider(SafeDeleteModel):
 
 class SpecialOffer(SafeDeleteModel):
     select = ['media']
+
     def __str__(self):
         return f"{self.name['persian']}"
 
@@ -873,3 +896,14 @@ class Booking(SafeDeleteModel):
 @receiver(post_delete, sender=Media)
 def submission_delete(sender, instance, **kwargs):
     instance.file.delete(False)
+
+
+class Car(models.Model):
+    name = models.CharField(max_length=255)
+    color = models.CharField(max_length=255)
+    description = models.TextField(max_length=255)
+    type = models.IntegerField(choices=[
+        (1, "Sedan"),
+        (2, "Truck"),
+        (4, "SUV"),
+    ])

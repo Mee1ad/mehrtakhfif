@@ -15,7 +15,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
-HOST = 'http://192.168.1.95'
+# HOST = 'http://192.168.1.95'
+HOST = 'http://localhost'
 # HOST = 'http://192.168.137.95'
 # HOST = 'http://192.168.137.1'
 # HOST = 'http://mehrtakhfif.com'
@@ -35,7 +36,8 @@ INSTALLED_APPS = [
     'safedelete',
     'corsheaders',
     'debug_toolbar',
-    'push_notifications'
+    'push_notifications',
+    'django_elasticsearch_dsl'
 ]
 
 MIDDLEWARE = [
@@ -62,6 +64,7 @@ CORS_ORIGIN_WHITELIST = [
     "http://192.168.1.95",
     "http://mt.com",
     "http://mt.com:3000",
+    "http://localhost:8080",
 ]
 # CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_CREDENTIALS = True
@@ -141,6 +144,14 @@ CACHES = {
 }
 CACHE_TTL = 60 * 15
 SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+
+ELASTICSEARCH_DSL={
+    'default': {
+        'hosts': 'localhost:9200'
+    },
+}
+
+
 # Password validation
 # https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators
 

@@ -37,8 +37,8 @@ pattern = {'phone': r'^(09[0-9]{9})$', 'email': r'^(([^<>()\[\]\\.,;:\s@"]+(\.[^
            'postal_code': r'^\d{5}[ -]?\d{5}$', 'full_name': r'^[آ-یA-z]{2,}( [آ-یA-z]{2,})+([آ-یA-z]|[ ]?)$'}
 
 
-def safe_delete(obj, user):
-    obj.deleted_by_id = user
+def safe_delete(obj, user_id):
+    obj.deleted_by_id = user_id
     obj.delete()
 
 
