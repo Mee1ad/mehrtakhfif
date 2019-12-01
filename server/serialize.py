@@ -273,7 +273,7 @@ class CommentSchema(BaseSchema):
 
 
 # todo
-class FactorSchema(BaseSchema):
+class InvoiceSchema(BaseSchema):
     class Meta:
         additional = ('id', 'price', 'product', 'user', 'payed_at', 'successful', 'type', 'special_offer_id', 'address',
                       'description', 'final_price', 'discount_price', 'count', 'tax')

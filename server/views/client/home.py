@@ -10,17 +10,19 @@ import pysnooper
 from django.views.decorators.cache import cache_page
 from django.db.models import Max, Min
 from server.serialize import *
-from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
+from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank, TrigramSimilarity, TrigramDistance
 from django.contrib.postgres.fields.jsonb import KeyTextTransform
-from django.contrib.postgres.search import TrigramSimilarity
 from mehr_takhfif.settings import HOST, MEDIA_ROOT
+from server.documents import *
 
 
 class Test(View):
     # @pysnooper.snoop()
     def get(self, request):
-        l = self.cl()
-        a = to_obj(l)
+
+        # a = ProductDocument.search().query("match", name="gym")
+        # print(a)
+
         return HttpResponse('ok')
 
     def cl(self):
@@ -32,7 +34,7 @@ class Test(View):
 
 class GetSlider(View):
     def get(self, request):
-        slider = Slider.objects.select_related(Slider.select).all()
+        slider = Slider.objects.select_related(*Slider.select).all()
         res = {'slider': SliderSchema().dump(slider, many=True)}
         return JsonResponse(res)
 
@@ -129,10 +131,44 @@ class GetProducts(View):
 class Search(View):
     def get(self, request):
         q = request.GET.get('q', '')
-        sv = SearchVector(KeyTextTransform('persian', 'product__name'),
-                          KeyTextTransform('persian', 'product__category__name'))
+        sv = SearchVector(KeyTextTransform('persian', 'product__name'), weight='A') # + \
+             # SearchVector(KeyTextTransform('persian', 'product__category__name'), weight='B')
         sq = SearchQuery(q)
-        product = Storage.objects.select_related(*Storage.select).annotate(rank=SearchRank(sv, sq))\
-            .order_by('-rank').filter(rank__gte=0.01)
+        rank = SearchRank(sv, sq, weights=[0.2, 0.4, 0.6, 0.8])
+        product = Storage.objects.select_related(*Storage.select).annotate(rank=rank)\
+            .filter(rank__gt=0).order_by('-rank')
+        for p in product:
+            print(p.rank)
         product = StorageSchema(request.lang).dump(product, many=True)
         return JsonResponse({'products': product})
+
+
+class SimilaritySearch(View):
+    def get(self, request):
+        q = request.GET.get('q', '')
+        product = Storage.objects.annotate(
+            similarity = TrigramSimilarity(KeyTextTransform('persian', 'product__name'), q),)\
+            .filter(similarity__gt=0.05).order_by('-similarity')
+        for p in product:
+            try:
+                print(p.similarity)
+            except Exception:
+                pass
+        product = StorageSchema(request.lang).dump(product, many=True)
+        return JsonResponse({'products': product})
+
+
+from elasticsearch_dsl.query import Q
+
+class DistanceSearch(View):
+    def get(self, request):
+        q = request.GET.get('q', '')
+        lang = request.lang
+        s = ProductDocument.search()
+        # s = s.suggest('my_suggestion', q, term={'field': 'name_fa'})
+        s = s.query("multi_match", query='*' + q + '*', fields=['name_fa^3', 'category_fa^1'])
+        a = '<ol>'
+        for hit in s:
+            a += '<li>' + hit.name_fa + '</li>'
+        a += '</ol>'
+        return HttpResponse(a)
