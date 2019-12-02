@@ -13,17 +13,21 @@ from server.serialize import *
 
 
 class Single(View):
-    @pysnooper.snoop()
-    def get(self, request, pk):
+    def get(self, request, permalink):
         lang = request.lang
-        storage = Storage.objects.filter(pk=pk).first()
-        features = storage.product.feature.all()
-        tags = storage.product.tag.all()
-        storage = StorageSchema(lang).dump(storage)
-        storage['product']['features'] = FeatureSchema(lang).dump(features, many=True)
-        related_product = Storage.objects.filter(product__tag__in=tags)
-        related_product = StorageSchema(lang).dump(related_product, many=True)
-        return JsonResponse({'storage': storage, 'related_product': related_product})
+        try:
+            product = Product.objects.filter(permalink=permalink).first()
+            features = product.feature.all()
+            tags = product.tag.all()
+            storages = Storage.objects.filter(product=product)
+            product = ProductSchema(lang).dump(product)
+            product['storages'] = StorageSchema(lang).dump(storages, many=True)
+            product['features'] = FeatureSchema(lang).dump(features, many=True)
+            related_products = Product.objects.filter(tag__in=tags)[:5]
+            related_products = MinProductSchema(lang).dump(related_products, many=True)
+            return JsonResponse({'product': product, 'related_products': related_products})
+        except Product.DoesNotExist:
+            return JsonResponse({}, status=404)
 
 
 class CommentView(View):

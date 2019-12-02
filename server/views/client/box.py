@@ -1,16 +1,8 @@
-from server.models import *
-from django.http import JsonResponse, HttpResponse
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.mixins import PermissionRequiredMixin
-from server.views.utils import *
-from server.views.admin_panel.read import ReadAdminView
-import json
-import time
-import pysnooper
-from django.views.decorators.cache import cache_page
 from django.db.models import Max, Min
+from django.http import JsonResponse
+
 from server.serialize import *
-import math
+from server.views.utils import *
 
 
 class GetSpecialOffer(View):
@@ -44,11 +36,13 @@ class BoxView(View):
         except Box.DoesNotExist:
             box = Box.objects.all()
             query = {'box__in': box}
-        query = Storage.objects.filter(**query, **params['filter'])
-        latest = query.select_related('product', 'product__thumbnail').order_by(
-            *params['order'])[(page-1)*step:step*page]
-        return JsonResponse({'data': StorageSchema(request.lang).dump(latest, many=True),
-                             'current_page': page, 'last_page': last_page(query, step)})
+
+        products = Product.objects.filter(verify=True, **query, **params['filter'])
+        last_page_number = last_page(products, step)
+        products = products.select_related('default_storage').order_by(*params['order'])[(page - 1) * step:step * page]
+        serialized_products = MinProductSchema(request.lang).dump(products, many=True)
+        return JsonResponse({'data': serialized_products,
+                             'current_page': page, 'last_page': last_page_number})
 
 
 class BoxCategory(View):

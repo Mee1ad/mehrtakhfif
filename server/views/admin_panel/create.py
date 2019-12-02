@@ -148,7 +148,7 @@ class NewSpecialOffer(AdminView):
 
 class NewSpecialProducts(AdminView):
     permission_required = 'add_specialproducts'
-
+    # todo if thumbnail==None use product thumbnail
     def post(self, request):
         data = json.loads(request.body)
         SpecialProducts(title=data['title'], link=data['link'], product_id=data['product_id'], media=data['media'],
