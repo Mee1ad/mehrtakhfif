@@ -15,8 +15,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
-# HOST = 'http://192.168.1.95'
-HOST = 'http://localhost'
+HOST = 'http://192.168.1.95'
+# HOST = 'http://localhost'
 # HOST = 'http://192.168.137.95'
 # HOST = 'http://192.168.137.1'
 # HOST = 'http://mehrtakhfif.com'

@@ -65,9 +65,24 @@ class BaseSchema(Schema):
             return ProductSchema(self.lang).dump(obj.product)
         return None
 
+    def get_permalink(self, obj):
+        if obj.product is not None:
+            return obj.product.permalink
+        return None
+
+    def get_min_product(self, obj):
+        if obj.product is not None:
+            return MinProductSchema(self.lang).dump(obj.product)
+        return None
+
     def get_storage(self, obj):
         if obj.storage is not None:
             return StorageSchema(self.lang).dump(obj.storage)
+        return None
+
+    def get_min_storage(self, obj):
+        if obj.default_storage is not None:
+            return MinStorageSchema(self.lang).dump(obj.default_storage)
         return None
 
     def get_comment(self, obj):
@@ -205,25 +220,19 @@ class ProductSchema(BaseSchema):
     usage_condition = fields.Method("get_usage_condition")
 
 
-class ProductBoxSchema(BaseSchema):
+class MinProductSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'permalink', 'gender', 'location', 'type')
+        additional = ('id', 'permalink', )
     name = fields.Method("get_name")
-    box = fields.Function(lambda o: o.box_id)
-    category = fields.Function(lambda o: o.category_id)
-    tag = TagField()
-    media = MediaField()
     thumbnail = fields.Function(lambda o: HOST + o.thumbnail.file.url)
-    short_description = fields.Method("get_short_description")
-    description = fields.Method("get_description")
-    usage_condition = fields.Method("get_usage_condition")
+    default_storage = fields.Method("get_min_storage")
 
 
 class SliderSchema(BaseSchema):
     class Meta:
         additional = ('id', 'type', 'link')
     title = fields.Method('get_title')
-    product = fields.Method("get_product")
+    product = fields.Method("get_permalink")
     media = fields.Method("get_media")
 
 
@@ -232,8 +241,13 @@ class StorageSchema(BaseSchema):
         additional = ('id', 'final_price', 'transportation_price', 'max_count_for_sale',
                       'discount_price', 'discount_vip_price', 'discount_percent', 'discount_vip_percent')
 
-    product = fields.Method("get_product")
-    category = fields.Function(lambda o: o.category_id)
+    # product = fields.Method("get_product")
+    # category = fields.Function(lambda o: o.category_id)
+
+
+class MinStorageSchema(BaseSchema):
+    class Meta:
+        additional = ('id', 'final_price', 'discount_price', 'discount_percent')
 
 
 class BasketProductSchema(BaseSchema):
@@ -312,9 +326,18 @@ class SpecialProductSchema(BaseSchema):
     class Meta:
         additional = ('id', 'type', 'link', 'url')
     title = fields.Method('get_title')
+    thumbnail = fields.Function(lambda o: HOST + o.thumbnail.file.url)
     description = fields.Method('get_description')
     storage = fields.Method("get_storage")
     media = fields.Method('get_media')
+
+
+class MinSpecialProductSchema(BaseSchema):
+
+    class Meta:
+        additional = ('id', 'url', )
+    title = fields.Method('get_title')
+    thumbnail = fields.Function(lambda o: HOST + o.thumbnail.file.url)
 
 
 class AdSchema(BaseSchema):
@@ -360,3 +383,5 @@ class CitySchema(Schema):
         additional = ('id', 'name')
 
     state = fields.Function(lambda o: o.state_id)
+
+

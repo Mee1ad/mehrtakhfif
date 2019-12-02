@@ -50,12 +50,20 @@ class GetSpecialProduct(View):
     def get(self, request):
         step = int(request.GET.get('s', default_step))
         page = int(request.GET.get('e', default_page))
-        special_product = SpecialProduct.objects.select_related(*SpecialProduct.select).all()\
+
+        special_products = SpecialProduct.objects.select_related(*SpecialProduct.min_select).all()\
             [(page - 1) * step:step * page]
-        best_sell_storage = Storage.objects.select_related(*Storage.select)\
-                            .filter(default=True).order_by('-product__sold_count')[(page - 1) * step:step * page]
-        res = {'special_product': SpecialProductSchema(language=request.lang).dump(special_product, many=True),
-               'best_sell_product': StorageSchema().dump(best_sell_storage, many=True)}
+        serialized_products = MinSpecialProductSchema(language=request.lang).dump(special_products, many=True)
+        for product, serialized_product in zip(special_products, serialized_products):
+            if product.product: # else has link
+                serialized_product['permalink'] = product.product.permalink
+                serialized_product['default_storage'] = MinStorageSchema().dump(product.product.default_storage)
+
+        # best_seller = Product.objects.select_related(*Product.select) \
+        #                   .filter(verify=True).order_by('-sold_count')[(page - 1) * step:step * page]
+
+        res = {'special_product': serialized_products}
+               # 'best_sell_product': MinProductSchema().dump(best_seller, many=True)}
         return JsonResponse(res)
 
 
@@ -73,10 +81,13 @@ class AllSpecialProduct(View):
             product['name'] = box.name[request.lang]
             product['key'] = box.meta_key
             # product['special_product'] = SpecialProductSchema(request.lang).dump(box_special_product, many=True)
-            best_seller_storage = Storage.objects.select_related(*Storage.select)\
-                                      .filter(default=True, box=box).order_by('-product__sold_count')\
-                                        [(page - 1) * step:step * page]
-            product['best_seller'] = StorageSchema(request.lang).dump(best_seller_storage, many=True)
+            # best_seller_storage = Storage.objects.select_related(*Storage.select)\
+            #                           .filter(default=True, box=box).order_by('-product__sold_count')\
+            #                             [(page - 1) * step:step * page]
+
+            best_seller = Product.objects.select_related(*Product.select) \
+                              .filter(verify=True, box=box).order_by('-sold_count')[(page - 1) * step:step * page]
+            product['best_seller'] = MinProductSchema(request.lang).dump(best_seller, many=True)
             products.append(product)
         res = {'products': products}
         return JsonResponse(res)
@@ -143,32 +154,14 @@ class Search(View):
         return JsonResponse({'products': product})
 
 
-class SimilaritySearch(View):
-    def get(self, request):
-        q = request.GET.get('q', '')
-        product = Storage.objects.annotate(
-            similarity = TrigramSimilarity(KeyTextTransform('persian', 'product__name'), q),)\
-            .filter(similarity__gt=0.05).order_by('-similarity')
-        for p in product:
-            try:
-                print(p.similarity)
-            except Exception:
-                pass
-        product = StorageSchema(request.lang).dump(product, many=True)
-        return JsonResponse({'products': product})
-
-
-from elasticsearch_dsl.query import Q
-
-class DistanceSearch(View):
+class ElasticSearch(View):
     def get(self, request):
         q = request.GET.get('q', '')
         lang = request.lang
         s = ProductDocument.search()
-        # s = s.suggest('my_suggestion', q, term={'field': 'name_fa'})
-        s = s.query("multi_match", query='*' + q + '*', fields=['name_fa^3', 'category_fa^1'])
-        a = '<ol>'
-        for hit in s:
-            a += '<li>' + hit.name_fa + '</li>'
-        a += '</ol>'
-        return HttpResponse(a)
+        s = s.query("multi_match", query=q, fields=['name_fa^3', 'category_fa^1'])
+        products = []
+        for hit in s.scan():
+            product = {'name': hit.name_fa, 'thumbnail': hit.thumbnail}
+            products.append(product)
+        return JsonResponse({'products': products})

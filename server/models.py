@@ -174,22 +174,26 @@ class Media(SafeDeleteModel):
 
     def save(self, *args, **kwargs):
         sizes = {'small': (200, 200), 'medium': (500, 500), 'large': (800, 800)}
+        qualities = {'small': 30, 'medium': 50, 'large': 80}
         super().save(*args, **kwargs)
         name = self.file.name
         format = re.search(r'\.[a-z]+', name)
         path = self.file.path
         new_path = self.file.path.replace(format[0], '')
-        for size in sizes:
-            Image.open(path).resize((sizes[size][0], sizes[size][1])) \
-                .save(new_path + f'_{size}' + format[0], 'JPEG')
+        for quality in qualities:
+            # Image.open(path).resize((sizes[size][0], sizes[size][1])) \
+            #     .save(new_path + f'_{size}' + format[0], 'JPEG')
+
+            Image.open(path).save(new_path + f'_{quality}' + format[0], 'JPEG',
+                                  quality=qualities[quality])
+
 
     _safedelete_policy = SOFT_DELETE_CASCADE
     id = models.BigAutoField(auto_created=True, primary_key=True)
     file = models.FileField(upload_to=upload_to)
-    img = ImageField(upload_to='test')
     title = JSONField(default=multilanguage)
     type = models.CharField(max_length=255, choices=[('video', 'video'), ('image', 'image'), ('audio', 'audio'),
-                                                     ('slider', 'slider')])
+                                                     ('slider', 'slider'), ('ads', 'ads'), ('thumbnail', 'thumbnail')])
     box = models.ForeignKey(Box, on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Created by',
@@ -284,7 +288,7 @@ class Tag(SafeDeleteModel):
 
 
 class Product(SafeDeleteModel):
-    related = ['category', 'box', 'thumbnail']
+    select = ['category', 'box', 'thumbnail']
     prefetch = ['tag', 'media', 'feature']
 
     def __str__(self):
@@ -313,7 +317,7 @@ class Product(SafeDeleteModel):
         return self.category.name['arabic']
 
     def get_thumbnail(self):
-        return HOST + self.thumbnail.img.url
+        return HOST + self.thumbnail.file.url
 
     # def save(self):
     #     self.slug = slugify(self.title)
@@ -334,15 +338,14 @@ class Product(SafeDeleteModel):
     name = JSONField(default=multilanguage)
     # name = pg_search.SearchVectorField(null=True)
     tag = models.ManyToManyField(Tag)
-    permalink = models.URLField(blank=True, null=True)
+    permalink = models.CharField(max_length=255, blank=True, null=True, db_index=True)
     gender = models.BooleanField(blank=True, null=True)
     short_description = JSONField(default=multilanguage)
     description = JSONField(default=multilanguage)
     location = models.CharField(max_length=65, null=True, blank=True)
     usage_condition = JSONField(default=multilanguage)
     media = models.ManyToManyField(Media)
-    thumbnail = models.ForeignKey(
-        Media, on_delete=PROTECT, related_name='product_thumbnail')
+    thumbnail = models.ForeignKey(Media, on_delete=PROTECT, related_name='product_thumbnail')
     sold_count = models.BigIntegerField(default=0, verbose_name='Sold count')
     income = models.BigIntegerField(default=0)
     profit = models.BigIntegerField(default=0)
@@ -351,6 +354,8 @@ class Product(SafeDeleteModel):
     type = models.CharField(max_length=255, choices=[(
         'service', 'service'), ('product', 'product')])
     feature = models.ManyToManyField(Feature)
+    #todo not null
+    default_storage = models.OneToOneField(null=True, to="Storage", on_delete=CASCADE, related_name='product_default_storage')
 
     # home_buissiness =
     # support_description =
@@ -695,24 +700,24 @@ class SpecialOffer(SafeDeleteModel):
 
 
 class SpecialProduct(SafeDeleteModel):
-    select = ['storage', 'storage__product', 'media']
+    select = ['product', 'storage__product', 'media', 'thumbnail']
+    min_select = ['thumbnail']
 
     def __str__(self):
-        return f"{self.storage}"
+        return f"{self.product}"
 
     _safedelete_policy = SOFT_DELETE_CASCADE
     id = models.BigAutoField(
         auto_created=True, primary_key=True)
     title = JSONField(default=multilanguage, null=True, blank=True)
     url = models.URLField(null=True, blank=True)
-    storage = models.ForeignKey(
-        Storage, on_delete=CASCADE, null=True, blank=True)
+    product = models.ForeignKey(Product, on_delete=CASCADE, null=True, blank=True)
+    thumbnail = models.ForeignKey(Media, on_delete=PROTECT, related_name='special_product_thumbnail')
     box = models.ForeignKey(Box, on_delete=PROTECT)
     category = models.ForeignKey(Category, on_delete=CASCADE)
     media = models.ForeignKey(Media, on_delete=CASCADE, null=True, blank=True)
     type = models.CharField(max_length=255, )
-    created_at = models.DateTimeField(
-        auto_now_add=True, verbose_name='Created at')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Created by',
                                    related_name='special_product_created_by')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')

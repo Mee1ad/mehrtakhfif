@@ -17,9 +17,8 @@ home = [path('test', home.Test.as_view(), name='test'),
         path('all_special_product', home.AllSpecialProduct.as_view(), name='all_special_product'),
         path('category', home.AllCategory.as_view(), name='category'),
         path('menu', home.GetMenu.as_view(), name='menu'),
-        path('search', home.Search.as_view(), name='search'),
-        path('search2', home.SimilaritySearch.as_view(), name='search2'),
-        path('search3', home.DistanceSearch.as_view(), name='search3'),
+        path('search', home.ElasticSearch.as_view(), name='search'),
+        path('search2', home.Search.as_view(), name='search2'),
         path('ads', home.GetAds.as_view(), name='ads'),
         path('get_products', home.GetProducts.as_view(), name='get_products'),
         ]
@@ -34,7 +33,7 @@ box = [
         # path('box/<str:name>', box.Filter.as_view(), name='box')
 ]
 
-single = [path('single/<int:pk>', single.Single.as_view(), name='single'),
+single = [path('single/<str:permalink>', single.Single.as_view(), name='single'),
           path('comment', single.CommentView.as_view(), name='comment')]
 
 shopping = [
