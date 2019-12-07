@@ -2,22 +2,18 @@ import difflib
 import io
 import json
 import math
-import pysnooper
 from datetime import datetime
-from bunch import bunchify
-from munch import munchify
-from mock import Mock
-from functools import partial
 
 import jwt
 import magic
+import pysnooper
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core import serializers
 from django.http import FileResponse
-from django.http import HttpResponse, HttpResponseBadRequest
+from django.http import HttpResponse
 from django.views import View
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter, inch
@@ -34,7 +30,45 @@ default_page = 1
 default_response = {'ok': {'message': 'ok'}, 'bad': {'message': 'bad request'}}
 pattern = {'phone': r'^(09[0-9]{9})$', 'email': r'^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\
            [[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$',
-           'postal_code': r'^\d{5}[ -]?\d{5}$', 'full_name': r'^[آ-یA-z]{2,}( [آ-یA-z]{2,})+([آ-یA-z]|[ ]?)$'}
+           'postal_code': r'^\d{5}[ -]?\d{5}$', 'fullname': r'^[آ-یA-z]{2,}( [آ-یA-z]{2,})+([آ-یA-z]|[ ]?)$',
+           'address': r'(([^ -_]+)[\n -]+){2}.+', 'location': '', 'bool': r'^(true|false)$', 'name': r'^[ آ-یA-z]+$',
+           'id': r'^\d+$', 'language': r'^\w{2}$', 'type': r'^[A-z]+$'}
+ids = ['id', 'city_id', 'state_id', 'product_id']
+bools = ['gender', 'set_default', 'notify']
+
+
+def validation(data):
+    try:
+        for key in data:
+            if key in ids:
+                assert re.search(pattern['id'], data[key])
+                continue
+            if key in bools:
+                assert type(data[key]) == bool
+                continue
+            assert re.search(pattern[key], data[key])
+    except (AssertionError, KeyError):
+        raise ValidationError(message='validation error')
+
+
+def load_data(request):
+    data = json.loads(request.body)
+    validation(data)
+    return data
+
+# def validation_old(data, allow_null=False):
+#     try:
+#         for key in args:
+#             if key in ids:
+#                 assert re.search(pattern['id'], data[key])
+#                 continue
+#             assert re.search(pattern[key], data[key])
+#     except AssertionError:
+#         raise ValidationError(message='validation error')
+#     except KeyError:
+#         if not allow_null:
+#             raise ValidationError(message='validation error')
+#         pass
 
 
 def safe_delete(obj, user_id):
@@ -154,14 +188,14 @@ def filter_params(params):
         pass
     return {'filter': filter_by, 'order': orderby}
 
-
-def get_categories(box):
-    print(box)
-    try:
-        category = [Category.objects.get(box=box)]
-        print(category)
-    except Exception:
-        category = Category.objects.all()
+@pysnooper.snoop()
+def get_categories(box_id=None, category=None):
+    if category is None:
+        try:
+            category = [Category.objects.get(box_id=box_id)]
+            print(category)
+        except Exception:
+            category = Category.objects.all()
     new_cats = [*category]
     remove_index = []
     for cat, index in zip(category, range(len(category))):
@@ -173,7 +207,7 @@ def get_categories(box):
         new_cats[parent_index].child.append(cat)
         remove_index.append(cat)
     new_cats = [x for x in new_cats if x not in remove_index]
-    return CategoryMinSchema().dump(new_cats, many=True)
+    return BoxCategoriesSchema().dump(new_cats, many=True)
 
 
 def last_page(query, step):
@@ -278,13 +312,6 @@ def get_basket(user, lang, basket=None):
         basket_dict = {}
     return {'basket': basket_dict, 'summary': profit, 'address_required': address_required}
 
-
-def validation(data, *args):
-    try:
-        for key in args:
-            assert re.search(pattern[key], data[key])
-    except AssertionError:
-        raise HttpResponseBadRequest
 
 
 def to_obj(body):

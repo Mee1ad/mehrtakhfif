@@ -135,7 +135,7 @@ class SpecialProductAdmin(SafeDeleteAdmin):
     ordering = ('-created_at',)
 
     def title_persian(self, obj):
-        return obj.storage
+        return obj.product
     title_persian.short_description = 'name'
 
 

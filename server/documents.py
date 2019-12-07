@@ -12,12 +12,12 @@ ngram = analyzer('ngram', tokenizer=tokenizer('trigram', 'nGram', min_gram=3, ma
 class ProductDocument(Document):
 
     name_fa = fields.TextField(analyzer=ngram, attr='get_name_fa')
-    name_en = fields.TextField(attr='get_name_en')
-    name_ar = fields.TextField(attr='get_name_ar')
+    # name_en = fields.TextField(attr='get_name_en')
+    # name_ar = fields.TextField(attr='get_name_ar')
 
     category_fa = fields.TextField(attr='get_category_fa')
-    category_en = fields.TextField(attr='get_category_en')
-    category_ar = fields.TextField(attr='get_category_ar')
+    # category_en = fields.TextField(attr='get_category_en')
+    # category_ar = fields.TextField(attr='get_category_ar')
 
     thumbnail = fields.TextField(attr='get_thumbnail')
 

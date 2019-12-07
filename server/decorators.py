@@ -1,11 +1,12 @@
 import functools
-import traceback
-import sys
-import os
-from django.http import JsonResponse, HttpResponse
-from server.models import *
 import json
+import sys
+import traceback
+
 from django.core.exceptions import ObjectDoesNotExist
+from django.http import JsonResponse, HttpResponse
+
+from server.models import *
 
 
 def try_except(func):
@@ -18,17 +19,10 @@ def try_except(func):
             print("Error: Can't find object")
             return JsonResponse({'message': 'Error: 1001'}, status=295)
         except ValidationError:
-            exc_type, exc_obj, exc_tb = sys.exc_info()
-            error = f'{exc_type.__name__}: {exc_obj}'
-            print(error)
-            return HttpResponse(error)
+            return JsonResponse({}, status=400)
         except json.decoder.JSONDecodeError:
             print('Json Decode Error')
             traceback.print_exc()
-        except AttributeError:
-            traceback.print_exc()
-            print("Error: Can't find attribute")
-            return JsonResponse({'message': 'Error: 1002'}, status=295)
 
         except Exception:
             traceback.print_exc()

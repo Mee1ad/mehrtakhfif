@@ -1,25 +1,23 @@
-from server.models import *
-from django.http import JsonResponse, HttpResponse
-from django.contrib.auth.mixins import PermissionRequiredMixin
-from server.views.utils import *
-from server.views.admin_panel.read import ReadAdminView
 import json
-import time
-import pysnooper
-from django.views.decorators.cache import cache_page
-from django.db.models import Max, Min
+
+from django.http import JsonResponse
+
 from server.serialize import *
+from server.views.utils import *
 from server.views.utils import LoginRequired
+from server.decorators import try_except
 
 
 class Profile(View):
     def get(self, request):
         return JsonResponse({'user': UserSchema().dump(request.user)})
 
+    @try_except
     def put(self, request):
         data = json.loads(request.body)
-        # validation(data, 'full_name')
+        validation(data)
         user = request.user
+        user = User.objects.get(username='09015518441')
         user.full_name = data.get('full_name') or user.full_name
         user.gender = data.get('gender') or user.gender
         user.language = data.get('language') or user.language
@@ -52,13 +50,13 @@ class AddressView(LoginRequired):
     @pysnooper.snoop()
     def post(self, request):
         data = json.loads(request.body)
-        print(data)
+        validation(data)
         try:
             assert City.objects.filter(pk=data['city_id'], state_id=data['state_id'])
             address_count = Address.objects.filter(user=request.user).count()
             address = Address(state_id=data['state_id'], city_id=data['city_id'], postal_code=data['postal_code'],
                               address=data['address'], location=data['location'], user=request.user,
-                              name=data['name'], phone=data['phone'])
+                              name=data['fullname'], phone=data['phone'])
             address.save()
             if address_count < 2 or data['set_default']:
                 request.user.default_address_id = address.pk
