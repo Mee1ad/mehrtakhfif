@@ -13,9 +13,9 @@ class GetSpecialOffer(View):
 
 
 class BoxDetail(View):
-    def get(self, request, key):
+    def get(self, request, permalink):
         try:
-            box = Box.objects.filter(meta_key=key).first()
+            box = Box.objects.filter(permalink=permalink).first()
             max_price = Storage.objects.filter(box=box).aggregate(Max('discount_price'))['discount_price__max']
             min_price = Storage.objects.filter(box=box).aggregate(Min('discount_price'))['discount_price__min']
             categories = get_categories(box)
@@ -26,12 +26,12 @@ class BoxDetail(View):
 
 
 class BoxView(View):
-    def get(self, request, name='all'):
+    def get(self, request, permalink='all'):
         params = filter_params(request.GET)
         step = int(request.GET.get('s', default_step))
         page = int(request.GET.get('p', default_page))
         try:
-            box = Box.objects.get(meta_key=name)
+            box = Box.objects.get(permalink=permalink)
             query = {'box': box}
         except Box.DoesNotExist:
             box = Box.objects.all()
@@ -49,9 +49,13 @@ class BoxCategory(View):
     def get(self, request, box, category):
         step = int(request.GET.get('s', default_step))
         page = int(request.GET.get('e', default_page))
-        cat = Category.objects.filter(meta_key=category).first()
-        storage = Storage.objects.filter(box__meta_key=box, category__meta_key=category).select_related(
-                'product', 'product__thumbnail').order_by('-updated_at')[(page-1)*step:step*page]
+        cat = Category.objects.filter(permalink=category).first()
+        products = Product.objects.filter(box__permalink=box, category__permalink=category)\
+            .select_related(*Product.permalink).order_by('-updated_at')[(page - 1) * step:step * page]
+
+        # storage = Storage.objects.filter(box__meta_key=box, category__meta_key=category).select_related(
+        #     'product', 'product__thumbnail').order_by('-updated_at')[(page - 1) * step:step * page]
+
         # special_products = SpecialProduct.objects.filter(category_id=pk).select_related('storage')
         # return JsonResponse({'products': serialize.storage(storage, True)})
         return JsonResponse({'category': CategorySchema(request.lang).dump(cat)})
@@ -63,7 +67,7 @@ class TagView(View):
         step = int(request.GET.get('s', default_step))
         page = int(request.GET.get('e', default_page))
         tag = Tag.objects.filter(pk=pk).first()
-        products = tag.product.all().order_by('created_at')[(page-1)*step:step*page]
+        products = tag.product.all().order_by('created_at')[(page - 1) * step:step * page]
         return JsonResponse({'products': TagSchema().dump(products, many=True)})
 
 

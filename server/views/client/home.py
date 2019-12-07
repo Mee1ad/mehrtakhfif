@@ -17,11 +17,7 @@ from server.documents import *
 
 
 class Test(View):
-    # @pysnooper.snoop()
     def get(self, request):
-
-        # a = ProductDocument.search().query("match", name="gym")
-        # print(a)
 
         return HttpResponse('ok')
 
@@ -79,7 +75,7 @@ class AllSpecialProduct(View):
             product = {}
             product['id'] = box.pk
             product['name'] = box.name[request.lang]
-            product['key'] = box.meta_key
+            product['key'] = box.permalink
             # product['special_product'] = SpecialProductSchema(request.lang).dump(box_special_product, many=True)
             # best_seller_storage = Storage.objects.select_related(*Storage.select)\
             #                           .filter(default=True, box=box).order_by('-product__sold_count')\
@@ -95,14 +91,18 @@ class AllSpecialProduct(View):
 
 class AllCategory(View):
     def get(self, request):
-        categories = get_categories()
-        return JsonResponse(categories)
+        box_id = request.GET.get('box_id', None)
+        if box_id is None:
+            box_permalink = request.GET.get('box_permalink', None)
+            box_id = Box.objects.filter(permalink=box_permalink).first().pk
+        categories = get_categories(box_id)
+        return JsonResponse({'categories': categories})
 
 
 class GetMenu(View):
     def get(self, request):
-        return JsonResponse(json.dumps({'menu': MenuSchema(request.lang).dump(
-            Menu.objects.select_related(*Menu.select).all(), many=True)}))
+        menu = Menu.objects.select_related(*Menu.select).all()
+        return JsonResponse({'menu': MenuSchema(request.lang).dump(menu, many=True)})
 
 
 class GetAds(View):
@@ -140,6 +140,7 @@ class GetProducts(View):
 
 
 class Search(View):
+    #  py manage.py search_index --rebuild
     def get(self, request):
         q = request.GET.get('q', '')
         sv = SearchVector(KeyTextTransform('persian', 'product__name'), weight='A') # + \
@@ -159,9 +160,9 @@ class ElasticSearch(View):
         q = request.GET.get('q', '')
         lang = request.lang
         s = ProductDocument.search()
-        s = s.query("multi_match", query=q, fields=['name_fa^3', 'category_fa^1'])
+        s = s.query("multi_match", query=q, fields=['name_fa', 'category_fa'])
         products = []
-        for hit in s.scan():
+        for hit in s:
             product = {'name': hit.name_fa, 'thumbnail': hit.thumbnail}
             products.append(product)
         return JsonResponse({'products': products})

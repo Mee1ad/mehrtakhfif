@@ -2,7 +2,7 @@ from server.models import *
 from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.mixins import PermissionRequiredMixin
-from server.views.utils import View
+from server.views.utils import View, get_categories
 from server.views.admin_panel.read import ReadAdminView
 import json
 import time
@@ -21,6 +21,7 @@ class Single(View):
             tags = product.tag.all()
             storages = Storage.objects.filter(product=product)
             product = ProductSchema(lang).dump(product)
+            product['category'] = self.get_category(product['category'])
             product['storages'] = StorageSchema(lang).dump(storages, many=True)
             product['features'] = FeatureSchema(lang).dump(features, many=True)
             related_products = Product.objects.filter(tag__in=tags)[:5]
@@ -28,6 +29,19 @@ class Single(View):
             return JsonResponse({'product': product, 'related_products': related_products})
         except Product.DoesNotExist:
             return JsonResponse({}, status=404)
+
+    def get_category(self, category):
+        try:
+            category['parent']['child'] = category
+            if category['parent'] is not None:
+                category['parent']['child']['parent_id'] = category['parent']['id']
+            category = category['parent']
+            del category['child']['parent']
+            return self.get_category(category)
+        except TypeError:
+            category['parent_id'] = None
+            del category['parent']
+            return category
 
 
 class CommentView(View):

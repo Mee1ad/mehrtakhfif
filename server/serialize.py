@@ -111,8 +111,8 @@ class BaseSchema(Schema):
     def get_description(self, obj):
         return obj.description[self.lang]
 
-    def get_usage_condition(self, obj):
-        return obj.usage_condition[self.lang]
+    def get_properties(self, obj):
+        return obj.properties[self.lang]
 
     def get_value(self, obj):
         new_value = {}
@@ -142,6 +142,8 @@ class AddressSchema(BaseSchema):
 
 
 class BoxSchema(BaseSchema):
+    class Meta:
+        additional = ('id', 'permalink')
     id = fields.Int()
     name = fields.Method("get_name")
 
@@ -166,17 +168,16 @@ class MediaSchema(Schema):
 
 class CategorySchema(BaseSchema):
     class Meta:
-        additional = ('parent_id',)
+        additional = ('id', 'permalink')
 
-    id = fields.Int()
     name = fields.Method('get_name')
     parent = fields.Method('get_parent')
-    box = fields.Function(lambda o: o.box_id)
 
 
-class CategoryMinSchema(BaseSchema):
+class BoxCategoriesSchema(BaseSchema):
+    class Meta:
+        additional = ('id', 'permalink')
 
-    id = fields.Int()
     name = fields.Method('get_name')
     child = fields.Method('get_child')
 
@@ -184,7 +185,7 @@ class CategoryMinSchema(BaseSchema):
         if hasattr(obj, 'child'):
             childes = []
             for child in obj.child:
-                childes.append(CategoryMinSchema().dump(child))
+                childes.append(BoxCategoriesSchema().dump(child))
             return childes
         return None
 
@@ -208,16 +209,17 @@ class TagSchema(BaseSchema):
 
 class ProductSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'permalink', 'gender', 'location', 'type')
+        additional = ('id', 'permalink', 'gender', 'location', 'type', 'address', 'short_address')
     name = fields.Method("get_name")
-    box = fields.Function(lambda o: o.box_id)
-    # category = fields.Function(lambda o: o.category_id)
+    box = fields.Method("get_box")
+    category = fields.Method("get_category")
     tag = TagField()
     media = MediaField()
     thumbnail = fields.Function(lambda o: HOST + o.thumbnail.file.url)
+    deadline = fields.Function(lambda o: o.deadline.timestamp())
     short_description = fields.Method("get_short_description")
     description = fields.Method("get_description")
-    usage_condition = fields.Method("get_usage_condition")
+    properties = fields.Method("get_properties")
 
 
 class MinProductSchema(BaseSchema):
@@ -238,11 +240,11 @@ class SliderSchema(BaseSchema):
 
 class StorageSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'final_price', 'transportation_price', 'max_count_for_sale',
+        additional = ('id', 'final_price', 'transportation_price', 'max_count_for_sale', 'default',
                       'discount_price', 'discount_vip_price', 'discount_percent', 'discount_vip_percent')
 
-    # product = fields.Method("get_product")
-    # category = fields.Function(lambda o: o.category_id)
+    # deadline = fields.Function(lambda o: o.timestamp())
+    # start_time = fields.Function(lambda o: o.timestamp())
 
 
 class MinStorageSchema(BaseSchema):

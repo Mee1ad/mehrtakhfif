@@ -1,20 +1,19 @@
-from django.db import models
-from sorl.thumbnail import ImageField
-from django.contrib.postgres.fields import JSONField, DateRangeField, DateTimeRangeField, ArrayField
-from django.db.models import CASCADE, PROTECT, SET_NULL
-from django.contrib.auth.models import AbstractUser
-from safedelete.models import SafeDeleteModel, SOFT_DELETE_CASCADE
-from django.utils.translation import gettext_lazy as _
-from django.core.validators import *
-from django.utils import timezone
-from django.db.models.signals import post_delete
-from django.dispatch import receiver
-from django.contrib.postgres.indexes import GinIndex
-import django.contrib.postgres.search as pg_search
 import os
 import re
+
 from PIL import Image
+from django.contrib.auth.models import AbstractUser
+from django.contrib.postgres.fields import JSONField, ArrayField
+from django.contrib.postgres.indexes import GinIndex
+from django.core.validators import *
+from django.db import models
+from django.db.models import CASCADE, PROTECT, SET_NULL
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
+from django.utils import timezone
 from push_notifications.models import GCMDevice
+from safedelete.models import SafeDeleteModel, SOFT_DELETE_CASCADE
+
 from mehr_takhfif.settings import HOST
 
 
@@ -26,6 +25,18 @@ def multilanguage():
 
 def feature_value():
     return {"persian": "", "english": "", "arabic": "", "price": 0}
+
+
+def product_properties():
+    lorem = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor" \
+            " incididunt ut labore et dolore magna aliqua."
+    data = [{"type": "default", "priority": "high", "text": lorem},
+            {"type": "default", "priority": "high", "text": lorem},
+            {"type": "default", "priority": "medium", "text": lorem},
+            {"type": "default", "priority": "medium", "text": lorem},
+            {"type": "default", "priority": "low", "text": lorem},
+            {"type": "default", "priority": "low", "text": lorem}]
+    return {"persian": {"usage_condition": data, "property": data}}
 
 
 def upload_to(instance, filename):
@@ -58,7 +69,7 @@ class User(AbstractUser):
     language = models.CharField(max_length=7, default='fa')
     email = models.CharField(max_length=255, blank=True, null=True, validators=[validate_email])
     password = models.CharField(max_length=255, blank=True, null=True)
-    gender = models.BooleanField(blank=True, null=True)
+    gender = models.BooleanField(blank=True, null=True)  # True: man, False: woman
     updated_at = models.DateTimeField(blank=True, auto_now=True, verbose_name='Updated at')
     is_ban = models.BooleanField(default=False)
     is_active = models.BooleanField(default=False, verbose_name='Phone verified')
@@ -151,7 +162,7 @@ class Box(SafeDeleteModel):
     objects = MyManager()
     id = models.AutoField(auto_created=True, primary_key=True)
     name = JSONField(default=multilanguage)
-    meta_key = models.CharField(max_length=255, unique=True, null=True)
+    permalink = models.CharField(max_length=255, unique=True, null=True)
     admin = models.OneToOneField(User, on_delete=PROTECT)
     created_at = models.DateTimeField(
         auto_now_add=True, verbose_name='Created at')
@@ -187,7 +198,6 @@ class Media(SafeDeleteModel):
             Image.open(path).save(new_path + f'_{quality}' + format[0], 'JPEG',
                                   quality=qualities[quality])
 
-
     _safedelete_policy = SOFT_DELETE_CASCADE
     id = models.BigAutoField(auto_created=True, primary_key=True)
     file = models.FileField(upload_to=upload_to)
@@ -211,14 +221,12 @@ class Category(SafeDeleteModel):
         return f"{self.name['persian']}"
 
     _safedelete_policy = SOFT_DELETE_CASCADE
-    id = models.BigAutoField(
-        auto_created=True, primary_key=True)
-    parent = models.ForeignKey(
-        "self", on_delete=models.CASCADE, null=True, blank=True)
+    id = models.BigAutoField(auto_created=True, primary_key=True)
+    parent = models.ForeignKey("self", on_delete=models.CASCADE, null=True, blank=True)
     # child = models.CharField(max_length=null=True, blank=True)
     box = models.ForeignKey(Box, on_delete=CASCADE)
     name = JSONField(default=multilanguage)
-    meta_key = models.CharField(max_length=255, unique=True, null=True)
+    permalink = models.CharField(max_length=255, unique=True, null=True)
     priority = models.SmallIntegerField(default=0)
     created_at = models.DateTimeField(
         auto_now_add=True, verbose_name='Created at')
@@ -338,12 +346,14 @@ class Product(SafeDeleteModel):
     name = JSONField(default=multilanguage)
     # name = pg_search.SearchVectorField(null=True)
     tag = models.ManyToManyField(Tag)
-    permalink = models.CharField(max_length=255, blank=True, null=True, db_index=True)
+    permalink = models.CharField(max_length=255, blank=True, null=True, db_index=True, unique=True)
     gender = models.BooleanField(blank=True, null=True)
     short_description = JSONField(default=multilanguage)
     description = JSONField(default=multilanguage)
     location = models.CharField(max_length=65, null=True, blank=True)
-    usage_condition = JSONField(default=multilanguage)
+    address = models.CharField(max_length=255, null=True, blank=True)
+    short_address = models.CharField(max_length=255, null=True, blank=True)
+    properties = JSONField(default=product_properties)
     media = models.ManyToManyField(Media)
     thumbnail = models.ForeignKey(Media, on_delete=PROTECT, related_name='product_thumbnail')
     sold_count = models.BigIntegerField(default=0, verbose_name='Sold count')
@@ -351,18 +361,20 @@ class Product(SafeDeleteModel):
     profit = models.BigIntegerField(default=0)
     disable = models.BooleanField(default=True)
     verify = models.BooleanField(default=False)
+    deadline = models.DateTimeField(default=timezone.now() + timezone.timedelta(days=30), null=True)
     type = models.CharField(max_length=255, choices=[(
         'service', 'service'), ('product', 'product')])
     feature = models.ManyToManyField(Feature)
-    #todo not null
-    default_storage = models.OneToOneField(null=True, to="Storage", on_delete=CASCADE, related_name='product_default_storage')
+    # todo not null
+    default_storage = models.OneToOneField(null=True, to="Storage", on_delete=CASCADE,
+                                           related_name='product_default_storage')
 
     # home_buissiness =
     # support_description =
     class Meta:
         db_table = 'product'
-        indexes = [GinIndex(fields=['name'])]
-        ordering = ['-id']
+        # indexes = [GinIndex(fields=['name'])]
+        ordering = ['-updated_at']
 
 
 class Storage(SafeDeleteModel):
@@ -373,8 +385,7 @@ class Storage(SafeDeleteModel):
         return f"{self.product}"
 
     _safedelete_policy = SOFT_DELETE_CASCADE
-    id = models.BigAutoField(
-        auto_created=True, primary_key=True)
+    id = models.BigAutoField(auto_created=True, primary_key=True)
     product = models.ForeignKey(Product, on_delete=CASCADE)
     box = models.ForeignKey(Box, on_delete=PROTECT)
     category = models.ForeignKey(Category, on_delete=CASCADE)
@@ -382,6 +393,8 @@ class Storage(SafeDeleteModel):
     available_count_for_sale = models.IntegerField(default=0, verbose_name='Available count for sale')
     count = models.IntegerField(default=0)
     tax = models.IntegerField(default=0)
+    deadline = models.DateTimeField(null=True, blank=True)
+    start_time = models.DateTimeField(auto_now_add=True)
     max_count_for_sale = models.IntegerField(default=0)
     final_price = models.BigIntegerField(default=0, verbose_name='Final price')
     start_price = models.BigIntegerField(default=0, verbose_name='Start price')
