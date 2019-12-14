@@ -1,5 +1,5 @@
 from server.views.utils import *
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.template.loader import render_to_string
 import tempfile
 from mehr_takhfif.settings import TOKEN_SALT
@@ -30,7 +30,7 @@ class BasketView(View):
         basket_count = self.add_to_basket(basket, data['products'], data['override'], data['add'])
         res = {'new_basket_count': basket_count}
         if data['summary']:
-            res = {**res, **self.get_basket(request.user, request.lang)}
+            res = {**res, **get_basket(request.user, request.lang)}
         res = JsonResponse(res)
         res.set_signed_cookie('new_basket_count', basket_count, TOKEN_SALT)
         return res
@@ -45,7 +45,7 @@ class BasketView(View):
             BasketProduct.objects.filter(basket_id=basket.id, storage_id=storage_id).delete()
             res = {}
             if summary:
-                res = self.get_basket(request.user, request.lang)
+                res = get_basket(request.user, request.lang)
             return JsonResponse(res)
         except (AssertionError, Basket.DoesNotExist):
             return JsonResponse(default_response['bad'], status=400)
@@ -78,7 +78,6 @@ class BasketView(View):
     @staticmethod
     def check_basket(user, basket):
         products = basket.product.all()
-        print(products)
         count = 0
         amount = 0
         for product in products:
@@ -89,7 +88,7 @@ class BasketView(View):
 
 class Buy(View):
     def get(self, request):
-        basket = BasketView.get_basket(request.user, request.lang)
+        basket = get_basket(request.user, request.lang)
         return 'ok'
 
 

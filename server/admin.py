@@ -1,5 +1,4 @@
 from django.contrib import admin
-from reversion.admin import VersionAdmin
 from django.contrib.auth.admin import UserAdmin
 from .models import *
 from safedelete.admin import SafeDeleteAdmin, highlight_deleted

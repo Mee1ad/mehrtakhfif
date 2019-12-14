@@ -1,31 +1,20 @@
-from server.models import *
-from django.http import JsonResponse, HttpResponse
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.mixins import PermissionRequiredMixin
-from server.views.utils import *
-from server.views.admin_panel.read import ReadAdminView
 import json
-import time
-import pysnooper
-from django.views.decorators.cache import cache_page
-from django.db.models import Max, Min
-from server.serialize import *
-from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank, TrigramSimilarity, TrigramDistance
+
 from django.contrib.postgres.fields.jsonb import KeyTextTransform
-from mehr_takhfif.settings import HOST, MEDIA_ROOT
+from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
+from django.http import JsonResponse
+import pysnooper
+
 from server.documents import *
 
 
 class Test(View):
     def get(self, request):
-
-        return HttpResponse('ok')
-
-    def cl(self):
-        l = {}
-        for i in range(100000):
-            l[f'bb{i}'] = i + 5
-        return l
+        # django_rq.enqueue(func)   
+        # scheduler = django_rq.get_scheduler('schedule')
+        # job2 = scheduler.enqueue_in(timedelta(minutes=5), fuckingtest, 12)
+        # scheduler.enqueue_in(timedelta(minutes=2), func)
+        return JsonResponse({})
 
 
 class GetSlider(View):
@@ -46,47 +35,42 @@ class GetSpecialProduct(View):
     def get(self, request):
         step = int(request.GET.get('s', default_step))
         page = int(request.GET.get('e', default_page))
-
-        special_products = SpecialProduct.objects.select_related(*SpecialProduct.min_select).all()\
-            [(page - 1) * step:step * page]
-        serialized_products = MinSpecialProductSchema(language=request.lang).dump(special_products, many=True)
-        for product, serialized_product in zip(special_products, serialized_products):
-            if product.product: # else has link
-                serialized_product['permalink'] = product.product.permalink
-                serialized_product['default_storage'] = MinStorageSchema().dump(product.product.default_storage)
-
-        # best_seller = Product.objects.select_related(*Product.select) \
-        #                   .filter(verify=True).order_by('-sold_count')[(page - 1) * step:step * page]
-
-        res = {'special_product': serialized_products}
-               # 'best_sell_product': MinProductSchema().dump(best_seller, many=True)}
-        return JsonResponse(res)
-
-
-class AllSpecialProduct(View):
-    def get(self, request):
-        step = int(request.GET.get('s', default_step))
-        page = int(request.GET.get('e', default_page))
         all_box = Box.objects.all()
+        language = request.lang
         products = []
+
         for box, index in zip(all_box, range(len(all_box))):
-            box_special_product = SpecialProduct.objects.select_related(*SpecialProduct.select)\
-                                    .filter( box=box)[(page - 1) * step:step * page]
+            box_special_product = SpecialProduct.objects.select_related(*SpecialProduct.select) \
+                                      .filter(box=box)[(page - 1) * step:step * page]
             product = {}
             product['id'] = box.pk
-            product['name'] = box.name[request.lang]
+            product['name'] = box.name[language]
             product['key'] = box.permalink
             # product['special_product'] = SpecialProductSchema(request.lang).dump(box_special_product, many=True)
             # best_seller_storage = Storage.objects.select_related(*Storage.select)\
             #                           .filter(default=True, box=box).order_by('-product__sold_count')\
             #                             [(page - 1) * step:step * page]
 
-            best_seller = Product.objects.select_related(*Product.select) \
-                              .filter(verify=True, box=box).order_by('-sold_count')[(page - 1) * step:step * page]
-            product['best_seller'] = MinProductSchema(request.lang).dump(best_seller, many=True)
             products.append(product)
         res = {'products': products}
         return JsonResponse(res)
+
+
+class BestSeller(View):
+    def get(self, request):
+        all_box = Box.objects.all()
+        last_week = add_days(-7)
+        boxes = []
+        language = request.lang
+        basket_ids = Invoice.objects.filter(created_at__gte=last_week, status='payed').values('basket')
+        for box, index in zip(all_box, range(len(all_box))):
+            item = {}
+            item['id'] = box.pk
+            item['name'] = box.name[language]
+            item['key'] = box.permalink
+            item['best_seller'] = get_best_seller(box, basket_ids, language)
+            boxes.append(item)
+        return JsonResponse({'box': boxes})
 
 
 class AllCategory(View):
@@ -112,28 +96,29 @@ class GetAds(View):
 
 
 class GetProducts(View):
+    @pysnooper.snoop()
     def post(self, request):
         try:
             assert not request.user.is_authenticated  # must be guest
             data = json.loads(request.body)
-            products_id = [product['id'] for product in data['products']]
-            products = Storage.objects.filter(id__in=products_id).select_related(*Storage.select)\
+            products_id = data['products']
+            products = Storage.objects.filter(id__in=products_id).select_related(*Storage.select) \
                 .prefetch_related(*Storage.prefetch)
             basket_products = []
             address_required = False
 
             for product in products:
-                item = next(item for item in data['products'] if item["id"] == product.pk)
-                count = item['count']
+                item = next(item for item in products if item.id == product.pk)
+                count = item.count
                 obj = BasketProduct(storage=product, count=count)
                 basket_products.append(obj)
             products = BasketProductSchema().dump(basket_products, many=True)
             for product in products:
-                if product['product']['product']['type'] == 'product':
+                if product['storage']['product']['type'] == 'product':
                     address_required = True
                     break
-            profit = calculate_profit(basket_products)
-            return JsonResponse({'basket': {'products': products}, 'summary': profit,
+            # profit = calculate_profit(basket_products)
+            return JsonResponse({'basket': {'products': products},
                                  'address_required': address_required})
         except AssertionError:
             return JsonResponse({}, status=400)
@@ -143,11 +128,11 @@ class Search(View):
     #  py manage.py search_index --rebuild
     def get(self, request):
         q = request.GET.get('q', '')
-        sv = SearchVector(KeyTextTransform('persian', 'product__name'), weight='A') # + \
-             # SearchVector(KeyTextTransform('persian', 'product__category__name'), weight='B')
+        sv = SearchVector(KeyTextTransform('persian', 'product__name'), weight='A')  # + \
+        # SearchVector(KeyTextTransform('persian', 'product__category__name'), weight='B')
         sq = SearchQuery(q)
         rank = SearchRank(sv, sq, weights=[0.2, 0.4, 0.6, 0.8])
-        product = Storage.objects.select_related(*Storage.select).annotate(rank=rank)\
+        product = Storage.objects.select_related(*Storage.select).annotate(rank=rank) \
             .filter(rank__gt=0).order_by('-rank')
         for p in product:
             print(p.rank)

@@ -87,6 +87,7 @@ class NewFeature(AdminView):
 
 class NewProduct(AdminView):
     permission_required = 'add_product'
+    # first storage is default
 
     def post(self, request):
         data = json.loads(request.body)

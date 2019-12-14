@@ -13,8 +13,8 @@ home = [
     path('test', home.Test.as_view(), name='test'),
     path('slider', home.GetSlider.as_view(), name='slider'),
     path('special_offer', home.GetSpecialOffer.as_view(), name='special_offer'),
-    path('special_product', home.GetSpecialProduct.as_view(), name='special_product'),
-    path('all_special_product', home.AllSpecialProduct.as_view(), name='all_special_product'),
+    path('special_product', home.GetSpecialProduct.as_view(), name='all_special_product'),
+    path('best_seller', home.BestSeller.as_view(), name='best_seller'),
     path('category', home.AllCategory.as_view(), name='category'),
     path('menu', home.GetMenu.as_view(), name='menu'),
     path('search', home.ElasticSearch.as_view(), name='search'),
@@ -26,6 +26,8 @@ home = [
 box = [
     path('box/<str:permalink>', box.BoxView.as_view(), name='box'),
     path('special_offer/<str:name>', box.GetSpecialOffer.as_view(), name='special_offer'),
+    path('special_product/<str:permalink>', box.GetSpecialProduct.as_view(), name='special_product'),
+    path('best_seller/<str:permalink>', box.BestSeller.as_view(), name='best_seller'),
     path('box_detail/<str:permalink>', box.BoxDetail.as_view(), name='box_detail'),
     path('filter', box.Filter.as_view(), name='filter'),
     # path('tag/<int:pk>', box.TagView.as_view(), name='tag'),
@@ -35,7 +37,9 @@ box = [
 
 single = [
     path('product/<str:permalink>', single.Single.as_view(), name='single'),
-    path('comment', single.CommentView.as_view(), name='comment')]
+    path('comment', single.CommentView.as_view(), name='comment'),
+    path('related_products', single.RelatedProduct.as_view(), name='related_products'),
+]
 
 shopping = [
     path('basket', shopping.BasketView.as_view(), name='basket'),

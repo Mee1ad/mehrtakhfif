@@ -1,22 +1,21 @@
-from server.models import *
-from django.http import JsonResponse, HttpResponse
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.mixins import PermissionRequiredMixin
-from server.views.utils import View, get_categories
-from server.views.admin_panel.read import ReadAdminView
 import json
-import time
-import pysnooper
-from django.views.decorators.cache import cache_page
-from django.db.models import Max, Min
+
+from django.http import JsonResponse
+
+from server.models import *
 from server.serialize import *
+from server.views.utils import View
+
 
 
 class Single(View):
+
     def get(self, request, permalink):
         lang = request.lang
+        user = request.user
         try:
-            product = Product.objects.filter(permalink=permalink).first()
+            product = Product.objects.filter(permalink=permalink).prefetch_related(*Product.prefetch).first()
+            # product = Product.objects.filter(permalink=permalink).first()
             features = product.feature.all()
             tags = product.tag.all()
             storages = Storage.objects.filter(product=product)
@@ -24,6 +23,9 @@ class Single(View):
             product['category'] = self.get_category(product['category'])
             product['storages'] = StorageSchema(lang).dump(storages, many=True)
             product['features'] = FeatureSchema(lang).dump(features, many=True)
+            purchased = False
+            if user.is_authenticated:
+                purchased = self.purchase_status(user, storages)
             related_products = Product.objects.filter(tag__in=tags)[:5]
             related_products = MinProductSchema(lang).dump(related_products, many=True)
             return JsonResponse({'product': product, 'related_products': related_products})
@@ -42,6 +44,25 @@ class Single(View):
             category['parent_id'] = None
             del category['parent']
             return category
+
+    def purchase_status(self, user, storages):
+        invoices = Invoice.objects.filter(user=user, status='payed').select_related(*Invoice.select)
+        for invoice in invoices:
+            purchased = BasketProduct.objects.filter(basket=invoice.basket, storage__in=storages)
+            if purchased:
+                return True
+        return False
+
+
+def hello():
+    print('hello')
+    return 'ok'
+
+
+class RelatedProduct(View):
+    def get(self, request):
+        hello()
+        return JsonResponse({})
 
 
 class CommentView(View):

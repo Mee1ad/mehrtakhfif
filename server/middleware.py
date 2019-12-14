@@ -1,5 +1,6 @@
 from mehr_takhfif.settings import TOKEN_SALT
 from server.views.utils import *
+from django.http import JsonResponse
 import json
 from django.urls import resolve
 import pysnooper
@@ -18,8 +19,9 @@ class AuthMiddleware:
         path = request.path_info
         route = resolve(path).route
         app_name = resolve(path).app_name
+        # request.user = User.objects.get(pk=1)
         if route == 'favicon.ico':
-            return HttpResponse('ok')
+            return JsonResponse({})
         try:
             if request.headers['admin'] == 'True':
                 print('this is admin')
@@ -81,6 +83,7 @@ class AuthMiddleware:
             #             pass
                     # return JsonResponse({}, status=401)
             delay = request.GET.get('delay', None)
+            # print(request.GET)
             if delay:
                 print(delay)
                 time.sleep(float(delay))

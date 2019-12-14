@@ -1,24 +1,16 @@
 import difflib
-import io
 import json
 import math
 from datetime import datetime
 
 import jwt
 import magic
-import pysnooper
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core import serializers
-from django.http import FileResponse
-from django.http import HttpResponse
 from django.views import View
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter, inch
-from reportlab.pdfgen import canvas
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 
 from mehr_takhfif import settings
 from mehr_takhfif.settings import TOKEN_SECRET, SECRET_KEY
@@ -55,6 +47,7 @@ def load_data(request):
     data = json.loads(request.body)
     validation(data)
     return data
+
 
 # def validation_old(data, allow_null=False):
 #     try:
@@ -188,7 +181,7 @@ def filter_params(params):
         pass
     return {'filter': filter_by, 'order': orderby}
 
-@pysnooper.snoop()
+
 def get_categories(box_id=None, category=None):
     if category is None:
         try:
@@ -212,60 +205,6 @@ def get_categories(box_id=None, category=None):
 
 def last_page(query, step):
     return math.ceil(query.count() / step)
-
-
-def make_pdf(data='<h1>hello world</h1>'):
-    # https://docs.djangoproject.com/en/2.2/howto/outputting-pdf/
-    buffer = io.BytesIO()
-    p = canvas.Canvas(buffer)
-    p.drawString(50, 750, data)
-    p.showPage()
-    p.save()
-    buffer.seek(0)
-    return FileResponse(buffer, as_attachment=False, filename='hello.pdf')
-
-
-def make_table():
-    doc = SimpleDocTemplate("simple_table_grid.pdf", pagesize=letter)
-    # container for the 'Flowable' objects
-    elements = []
-
-    data = [['00', '01', '02', '03', '04'],
-            ['10', '11', '12', '13', '14'],
-            ['20', '21', '22', '23', '24'],
-            ['30', '31', '32', '33', '34']]
-    t = Table(data, 5 * [0.4 * inch], 4 * [0.4 * inch])
-    t.setStyle(TableStyle([('ALIGN', (1, 1), (-2, -2), 'RIGHT'),
-                           ('TEXTCOLOR', (1, 1), (-2, -2), colors.red),
-                           ('VALIGN', (0, 0), (0, -1), 'TOP'),
-                           ('TEXTCOLOR', (0, 0), (0, -1), colors.blue),
-                           ('ALIGN', (0, -1), (-1, -1), 'CENTER'),
-                           ('VALIGN', (0, -1), (-1, -1), 'MIDDLE'),
-                           ('TEXTCOLOR', (0, -1), (-1, -1), colors.green),
-                           ('INNERGRID', (0, 0), (-1, -1), 0.25, colors.black),
-                           ('BOX', (0, 0), (-1, -1), 0.25, colors.black),
-                           ]))
-
-    elements.append(t)
-    # write the document to disk
-    doc.build(elements)
-    return FileResponse(doc, as_attachment=False, filename='hello.pdf')
-
-
-def print_pdf():
-    cm = 2.54
-    response = HttpResponse()
-    response['Content-Disposition'] = 'attachment; filename=somefilename.pdf'
-
-    elements = []
-
-    doc = SimpleDocTemplate(response, rightMargin=0, leftMargin=6.5 * cm, topMargin=0.3 * cm, bottomMargin=0)
-
-    data = [(1, 2), (3, 4)]
-    table = Table(data, colWidths=270, rowHeights=79)
-    elements.append(table)
-    doc.build(elements)
-    return response
 
 
 def calculate_profit(products):
@@ -313,12 +252,56 @@ def get_basket(user, lang, basket=None):
     return {'basket': basket_dict, 'summary': profit, 'address_required': address_required}
 
 
+def get_best_seller(box, basket_ids, language):
+    # from invoices
+    basket_products = BasketProduct.objects.filter(basket_id__in=basket_ids, box=box).values('storage', 'count')
+    storage_count = {}
+    for product in basket_products:
+        if product['storage'] in storage_count.keys():
+            storage_count[product['storage']] += product['count']
+            continue
+        storage_count[product['storage']] = product['count']
+    storage_count = {k: v for k, v in sorted(storage_count.items(), key=lambda item: item[1], reverse=True)}
+    storage_ids = storage_count.keys()
+    storages = Storage.objects.filter(pk__in=storage_ids)
+    products = Product.objects.filter(storage__in=storages)
+
+    for storage, product in zip(storages, products):
+        if product.default_storage == storage:
+            continue
+        product.default_storage = storage
+    return MinProductSchema(language=language).dump(products, many=True)
+
 
 def to_obj(body):
     dic = json.loads(body)
     obj = type('test', (object,), {})()
     obj.__dict__ = dic
     return obj
+
+
+# def products_availability_check(products, step, page):
+#     count = 0
+#     available_products = []
+#     for product in products:
+#         storages = Storage.objects.filter(available_count_for_sale__gt=0, product=product).exists()
+#         if storages:
+#             count += 1
+#             available_products.append(product)
+#             if count == step:
+#                 break
+#             continue
+#     return available_products
+
+
+# def available_products2(products):
+#     storages = Storage.objects.filter(available_count_for_sale__gt=0, product__in=products)
+#     for storage in storages:
+#
+#     if storages:
+#         continue
+#     products.remove(product)
+#     return products
 
 
 class LoginRequired(LoginRequiredMixin, View):
