@@ -1,15 +1,14 @@
-from django.views import View
-import requests
 import json
-from server.models import Invoice, InvoiceProduct, Basket
+
+import requests
 from django.db.models import F
+from django.http import JsonResponse
 from django.utils import timezone
-from mehr_takhfif.settings import HOST
-from server.views.utils import des_encrypt, get_basket
-from django.http import JsonResponse, HttpResponseRedirect
-from server.views.client.shopping import BasketView
+from django.views import View
+
+from server.models import Invoice, InvoiceProduct, Basket
 from server.serialize import *
-import pysnooper
+from server.views.utils import des_encrypt, get_basket
 
 psp = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'disable': True},
        {'id': 2, 'key': 'melli', 'name': 'ملی', 'hide': False, 'disable': False},
@@ -70,14 +69,15 @@ class PaymentRequest(View):
         if not basket.sync:
             products = BasketProduct.objects.filter(basket=basket).select_related(*BasketProduct.related)
             for product in products:
-                product.storage.available_count_for_sale -= product.count
+                product.storage.available_count = F('storage__available_count') + product.count
+                product.storage.available_count_for_sale = F('storage__available_count_for_sale') + product.count
+                product.storage.sold_count = F('storage__sold_count') + product.count
                 product.storage.save()
             basket.sync = True
             basket.save()
 
 
 class CallBack(View):
-    @pysnooper.snoop()
     def post(self, request):
         data = json.loads(request.body)
         invoice_id = data['OrderId']
@@ -90,7 +90,6 @@ class CallBack(View):
         except AssertionError:
             print('error')
         return JsonResponse({})
-        return JsonResponse(details)
 
     def verify(self, token):
         url = 'https://sadad.shaparak.ir/VPG/api/v0/Advice/Verify'
@@ -101,9 +100,8 @@ class CallBack(View):
                 'retrival_ref_no': res['RetrivalRefNo'], 'system_trace_no': res['SystemTraceNo'],
                 'invoice_id': res['OrderId']}
 
-    @pysnooper.snoop()
     def submit_invoice_products(self, invoice_id):
-        invoice = Invoice.objects.filter(pk=invoice_id).select_related(Invoice.related).first()
+        invoice = Invoice.objects.filter(pk=invoice_id).select_related(*Invoice.select).first()
         basket = invoice.basket
         basket_products = BasketProduct.objects.filter(basket=basket)
         invoice_products = []

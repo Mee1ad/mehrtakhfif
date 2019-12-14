@@ -1,7 +1,6 @@
 from django.db.models import Max, Min
 from django.http import JsonResponse
-
-from server.serialize import *
+import pysnooper
 from server.views.utils import *
 
 
@@ -10,6 +9,16 @@ class GetSpecialOffer(View):
         special_offer = SpecialOffer.objects.select_related('media').filter(box__meta_key=name).order_by('-id')
         res = {'special_product': SpecialProductSchema(language=request.lang).dump(special_offer, many=True)}
         return JsonResponse(res)
+
+
+class GetSpecialProduct(View):
+    def get(self, request, permalink):
+        step = int(request.GET.get('s', default_step))
+        page = int(request.GET.get('e', default_page))
+        special_products = SpecialProduct.objects.filter(box__permalink=permalink)\
+            .select_related(*SpecialProduct.min_select)[(page - 1) * step:step * page]
+        special_products = MinSpecialProductSchema(language=request.lang).dump(special_products, many=True)
+        return JsonResponse({'special_product': special_products})
 
 
 class BoxDetail(View):
@@ -39,10 +48,21 @@ class BoxView(View):
 
         products = Product.objects.filter(verify=True, **query, **params['filter'])
         last_page_number = last_page(products, step)
-        products = products.select_related('default_storage').order_by(*params['order'])[(page - 1) * step:step * page]
+        products = products.select_related(*Product.select).order_by(*params['order'])
+        # products = available_products(products, step, page)
         serialized_products = MinProductSchema(request.lang).dump(products, many=True)
         return JsonResponse({'data': serialized_products,
                              'current_page': page, 'last_page': last_page_number})
+
+
+class BestSeller(View):
+    def get(self, request, permalink):
+        box = Box.objects.get(permalink=permalink)
+        last_week = add_days(-7)
+        language = request.lang
+        basket_ids = Invoice.objects.filter(created_at__gte=last_week, status='payed').values('basket')
+        best_seller = get_best_seller(box, basket_ids, language)
+        return JsonResponse({'best_seller': best_seller})
 
 
 class BoxCategory(View):

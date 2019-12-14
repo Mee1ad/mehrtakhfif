@@ -37,7 +37,8 @@ INSTALLED_APPS = [
     'corsheaders',
     'debug_toolbar',
     'push_notifications',
-    # 'django_elasticsearch_dsl'
+    'django_rq',
+    # 'django_elasticsearch_dsl'    
 ]
 
 MIDDLEWARE = [
@@ -123,7 +124,8 @@ DATABASES = {
         # 'ENGINE': 'django.contrib.gis.db.backends.postgis',
         'NAME': 'mehr_takhfif',
         # 'NAME': 'mehrtak1_db',
-        'HOST': 'localhost',
+        # 'HOST': 'localhost',
+        'HOST': '192.168.1.95',
         'USER': 'postgres',
         # 'USER': 'mehrtak1_admeen',
         'PASSWORD': 'admin',
@@ -135,7 +137,8 @@ DATABASES = {
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1",
+        # "LOCATION": "redis://127.0.0.1:6379/1",
+        "LOCATION": "redis://192.168.1.95:6379/1",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient"
         },
@@ -145,6 +148,17 @@ CACHES = {
 CACHE_TTL = 60 * 15
 SESSION_ENGINE = "django.contrib.sessions.backends.cache"
 
+RQ_QUEUES = {
+    'default': {
+        'USE_REDIS_CACHE': 'default',
+    },
+    'schedule': {
+        'HOST': '192.168.1.95',
+        'PORT': 6379,
+        'DB': 1,
+    },
+}
+
 # ELASTICSEARCH_DSL = {
 #     'default': {
 #         'hosts': 'localhost:9200'
@@ -153,6 +167,8 @@ SESSION_ENGINE = "django.contrib.sessions.backends.cache"
 
 # Password validation
 # https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators
+
+
 
 PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.Argon2PasswordHasher',

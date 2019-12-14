@@ -16,27 +16,71 @@ from safedelete.models import SafeDeleteModel, SOFT_DELETE_CASCADE
 
 from mehr_takhfif.settings import HOST
 
+# todo permalink in not null
 
 def multilanguage():
-    return {"persian": "",
-            "english": "",
-            "arabic": ""}
+    return {"fa": "",
+            "en": "",
+            "ar": ""}
 
 
 def feature_value():
-    return {"persian": "", "english": "", "arabic": "", "price": 0}
+    return {"fa": "", "en": "", "ar": "", "price": 0}
 
 
 def product_properties():
-    lorem = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor" \
-            " incididunt ut labore et dolore magna aliqua."
-    data = [{"type": "default", "priority": "high", "text": lorem},
-            {"type": "default", "priority": "high", "text": lorem},
-            {"type": "default", "priority": "medium", "text": lorem},
-            {"type": "default", "priority": "medium", "text": lorem},
-            {"type": "default", "priority": "low", "text": lorem},
-            {"type": "default", "priority": "low", "text": lorem}]
-    return {"persian": {"usage_condition": data, "property": data}}
+    lorem = "محصول اول این مجموعه میباشد."
+    data = [
+        {"type": "default", "priority": "high", "text": {'fa': lorem}},
+        {"type": "date", "priority": "high", "text": {'fa': lorem}},
+        {"type": "phone", "priority": "high", "text": {'fa': lorem}},
+        {"type": "default", "priority": "medium", "text": {'fa': lorem}},
+        {"type": "default", "priority": "medium", "text": {'fa': lorem}},
+        {"type": "phone", "priority": "medium", "text": {'fa': lorem}},
+        {"type": "default", "priority": "low", "text": {'fa': lorem}},
+        {"type": "default", "priority": "low", "text": {'fa': lorem}},
+        {"type": "date", "priority": "low", "text": {'fa': lorem}}
+    ]
+    return {"usage_condition": data, "property": data}
+
+
+def product_details():
+    return {
+        "persian": {
+            "text": "سلام",
+            "phone": [
+                {
+                    "value": "0911138056",
+                    "type": "mobile"
+                },
+                {
+                    "value": "0133356255",
+                    "type": "phone"
+                }
+            ],
+            "serving_hours": "با هماهنگی",
+            "serving_days": "با هماهنگی"
+        },
+        "english": {
+            "text": "salam",
+            "phone": [
+                {
+                    "value": "0911138056",
+                    "type": "mobile"
+                },
+                {
+                    "value": "0133356255",
+                    "type": "phone"
+                }
+            ],
+            "serving_hours": "ba hamahangi",
+            "serving_days": "ba hamahangi"
+        }
+    }
+
+
+def next_month():
+    return timezone.now() + timezone.timedelta(days=30)
 
 
 def upload_to(instance, filename):
@@ -298,6 +342,7 @@ class Tag(SafeDeleteModel):
 class Product(SafeDeleteModel):
     select = ['category', 'box', 'thumbnail']
     prefetch = ['tag', 'media', 'feature']
+    filter = []
 
     def __str__(self):
         return f"{self.name['persian']}"
@@ -350,21 +395,21 @@ class Product(SafeDeleteModel):
     gender = models.BooleanField(blank=True, null=True)
     short_description = JSONField(default=multilanguage)
     description = JSONField(default=multilanguage)
-    location = models.CharField(max_length=65, null=True, blank=True)
+    location = JSONField(null=True)
     address = models.CharField(max_length=255, null=True, blank=True)
     short_address = models.CharField(max_length=255, null=True, blank=True)
     properties = JSONField(default=product_properties)
     media = models.ManyToManyField(Media)
     thumbnail = models.ForeignKey(Media, on_delete=PROTECT, related_name='product_thumbnail')
-    sold_count = models.BigIntegerField(default=0, verbose_name='Sold count')
     income = models.BigIntegerField(default=0)
     profit = models.BigIntegerField(default=0)
     disable = models.BooleanField(default=True)
     verify = models.BooleanField(default=False)
-    deadline = models.DateTimeField(default=timezone.now() + timezone.timedelta(days=30), null=True)
+    deadline = models.DateTimeField(default=next_month, null=True)
     type = models.CharField(max_length=255, choices=[(
         'service', 'service'), ('product', 'product')])
     feature = models.ManyToManyField(Feature)
+    details = JSONField(default=product_details)
     # todo not null
     default_storage = models.OneToOneField(null=True, to="Storage", on_delete=CASCADE,
                                            related_name='product_default_storage')
@@ -378,7 +423,7 @@ class Product(SafeDeleteModel):
 
 
 class Storage(SafeDeleteModel):
-    select = ['category', 'box', 'product', 'product__thumbnail']
+    select = ['product', 'product__thumbnail']
     prefetch = ['product__media']
 
     def __str__(self):
@@ -387,13 +432,15 @@ class Storage(SafeDeleteModel):
     _safedelete_policy = SOFT_DELETE_CASCADE
     id = models.BigAutoField(auto_created=True, primary_key=True)
     product = models.ForeignKey(Product, on_delete=CASCADE)
-    box = models.ForeignKey(Box, on_delete=PROTECT)
-    category = models.ForeignKey(Category, on_delete=CASCADE)
+    title = JSONField(default=multilanguage)
+    # box = models.ForeignKey(Box, on_delete=PROTECT)
+    # category = models.ForeignKey(Category, on_delete=CASCADE)
     available_count = models.BigIntegerField(default=0, verbose_name='Available count')
     available_count_for_sale = models.IntegerField(default=0, verbose_name='Available count for sale')
     count = models.IntegerField(default=0)
+    sold_count = models.BigIntegerField(default=0, verbose_name='Sold count')
     tax = models.IntegerField(default=0)
-    deadline = models.DateTimeField(null=True, blank=True)
+    deadline = models.DateTimeField(default=next_month)
     start_time = models.DateTimeField(auto_now_add=True)
     max_count_for_sale = models.IntegerField(default=0)
     final_price = models.BigIntegerField(default=0, verbose_name='Final price')
@@ -403,7 +450,7 @@ class Storage(SafeDeleteModel):
     discount_vip_price = models.BigIntegerField(default=0, verbose_name='Discount vip price')
     discount_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount price percent')
     discount_vip_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount vip price percent')
-    default = models.BooleanField(default=False)
+    # default = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
     created_by = models.ForeignKey(User, on_delete=CASCADE, verbose_name='Created by',
                                    related_name='storage_created_by')
@@ -457,9 +504,10 @@ class BasketProduct(models.Model):
 
     id = models.BigAutoField(
         auto_created=True, primary_key=True)
-    storage = models.ForeignKey(Storage, on_delete=models.CASCADE)
+    storage = models.ForeignKey(Storage, on_delete=PROTECT)
     basket = models.ForeignKey(Basket, on_delete=PROTECT)
     count = models.IntegerField(default=1)
+    box = models.ForeignKey(Box, on_delete=PROTECT)
 
     class Meta:
         db_table = 'basket_product'
@@ -547,7 +595,7 @@ class Comment(SafeDeleteModel):
 
 
 class Invoice(models.Model):
-    related = ['basket']
+    select = ['basket']
 
     def __str__(self):
         return f"{self.user}"

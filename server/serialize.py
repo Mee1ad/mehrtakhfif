@@ -123,6 +123,11 @@ class BaseSchema(Schema):
             new_values.append(new_value)
         return new_values
 
+    def get_details(self, obj):
+        if obj.details is not None:
+            return obj.details[self.lang]
+        return None
+
 
 class UserSchema(BaseSchema):
     class Meta:
@@ -209,7 +214,7 @@ class TagSchema(BaseSchema):
 
 class ProductSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'permalink', 'gender', 'location', 'type', 'address', 'short_address')
+        additional = ('id', 'permalink', 'gender', 'type', 'address', 'short_address')
     name = fields.Method("get_name")
     box = fields.Method("get_box")
     category = fields.Method("get_category")
@@ -220,6 +225,8 @@ class ProductSchema(BaseSchema):
     short_description = fields.Method("get_short_description")
     description = fields.Method("get_description")
     properties = fields.Method("get_properties")
+    details = fields.Method("get_details")
+    location = fields.Function(lambda o: {"lat": o.location['lat'], 'lng': o.location['lng']} if o.location else {})
 
 
 class MinProductSchema(BaseSchema):
@@ -239,12 +246,14 @@ class SliderSchema(BaseSchema):
 
 
 class StorageSchema(BaseSchema):
+
     class Meta:
         additional = ('id', 'final_price', 'transportation_price', 'max_count_for_sale', 'default',
                       'discount_price', 'discount_vip_price', 'discount_percent', 'discount_vip_percent')
 
-    # deadline = fields.Function(lambda o: o.timestamp())
-    # start_time = fields.Function(lambda o: o.timestamp())
+    title = fields.Method('get_title')
+    deadline = fields.Function(lambda o: o.deadline.timestamp())
+    product = fields.Method('get_product')
 
 
 class MinStorageSchema(BaseSchema):
@@ -337,8 +346,9 @@ class SpecialProductSchema(BaseSchema):
 class MinSpecialProductSchema(BaseSchema):
 
     class Meta:
-        additional = ('id', 'url', )
+        additional = ('id', 'url')
     title = fields.Method('get_title')
+    product = fields.Function(lambda o: o.product.permalink)
     thumbnail = fields.Function(lambda o: HOST + o.thumbnail.file.url)
 
 
