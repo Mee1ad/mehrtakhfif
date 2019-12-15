@@ -18,30 +18,31 @@ from mehr_takhfif.settings import HOST
 
 # todo permalink in not null
 
+
 def multilanguage():
-    return {"fa": "",
-            "en": "",
-            "ar": ""}
+    return {"persian": "",
+            "english": "",
+            "arabic": ""}
 
 
 def feature_value():
-    return {"fa": "", "en": "", "ar": "", "price": 0}
+    return {"persian": "", "english": "", "arabic": "", "price": 0}
 
 
 def product_properties():
     lorem = "محصول اول این مجموعه میباشد."
     data = [
-        {"type": "default", "priority": "high", "text": {'fa': lorem}},
-        {"type": "date", "priority": "high", "text": {'fa': lorem}},
-        {"type": "phone", "priority": "high", "text": {'fa': lorem}},
-        {"type": "default", "priority": "medium", "text": {'fa': lorem}},
-        {"type": "default", "priority": "medium", "text": {'fa': lorem}},
-        {"type": "phone", "priority": "medium", "text": {'fa': lorem}},
-        {"type": "default", "priority": "low", "text": {'fa': lorem}},
-        {"type": "default", "priority": "low", "text": {'fa': lorem}},
-        {"type": "date", "priority": "low", "text": {'fa': lorem}}
+        {"type": "default", "priority": "high", "text": lorem},
+        {"type": "date", "priority": "high", "text": lorem},
+        {"type": "phone", "priority": "high", "text": lorem},
+        {"type": "default", "priority": "medium", "text": lorem},
+        {"type": "default", "priority": "medium", "text": lorem},
+        {"type": "phone", "priority": "medium", "text": lorem},
+        {"type": "default", "priority": "low", "text": lorem},
+        {"type": "default", "priority": "low", "text": lorem},
+        {"type": "date", "priority": "low", "text": lorem}
     ]
-    return {"usage_condition": data, "property": data}
+    return {'persian': {"usage_condition": data, "property": data}}
 
 
 def product_details():
@@ -185,8 +186,7 @@ class Address(models.Model):
     phone = models.CharField(max_length=15)
     postal_code = models.CharField(max_length=15, verbose_name='Postal code')
     address = models.TextField()
-    location = ArrayField(models.CharField(
-        max_length=100, blank=True), size=2, null=True, blank=True)
+    location = JSONField(null=True)
     user = models.ForeignKey(User, blank=True, null=True, on_delete=models.CASCADE)
     active = models.BooleanField(default=False)
 
@@ -306,6 +306,8 @@ class Feature(models.Model):
     name = JSONField(default=multilanguage)
     value = JSONField(default=feature_value)
     category = models.ManyToManyField(Category)
+    box = models.ForeignKey(Box, on_delete=models.CASCADE, blank=True, null=True)
+    icon = models.CharField(default='default', max_length=255)
 
     class Meta:
         db_table = 'feature'
@@ -341,7 +343,7 @@ class Tag(SafeDeleteModel):
 
 class Product(SafeDeleteModel):
     select = ['category', 'box', 'thumbnail']
-    prefetch = ['tag', 'media', 'feature']
+    prefetch = ['tag', 'media']
     filter = []
 
     def __str__(self):
@@ -395,7 +397,7 @@ class Product(SafeDeleteModel):
     gender = models.BooleanField(blank=True, null=True)
     short_description = JSONField(default=multilanguage)
     description = JSONField(default=multilanguage)
-    location = JSONField(null=True)
+    location = JSONField(null=True, blank=True)
     address = models.CharField(max_length=255, null=True, blank=True)
     short_address = models.CharField(max_length=255, null=True, blank=True)
     properties = JSONField(default=product_properties)
@@ -408,10 +410,9 @@ class Product(SafeDeleteModel):
     deadline = models.DateTimeField(default=next_month, null=True)
     type = models.CharField(max_length=255, choices=[(
         'service', 'service'), ('product', 'product')])
-    feature = models.ManyToManyField(Feature)
     details = JSONField(default=product_details)
     # todo not null
-    default_storage = models.OneToOneField(null=True, to="Storage", on_delete=CASCADE,
+    default_storage = models.OneToOneField(null=True, blank=True, to="Storage", on_delete=CASCADE,
                                            related_name='product_default_storage')
 
     # home_buissiness =
@@ -424,7 +425,7 @@ class Product(SafeDeleteModel):
 
 class Storage(SafeDeleteModel):
     select = ['product', 'product__thumbnail']
-    prefetch = ['product__media']
+    prefetch = ['product__media', 'feature']
 
     def __str__(self):
         return f"{self.product}"
@@ -440,6 +441,7 @@ class Storage(SafeDeleteModel):
     count = models.IntegerField(default=0)
     sold_count = models.BigIntegerField(default=0, verbose_name='Sold count')
     tax = models.IntegerField(default=0)
+    feature = models.ManyToManyField(Feature, blank=True)
     deadline = models.DateTimeField(default=next_month)
     start_time = models.DateTimeField(auto_now_add=True)
     max_count_for_sale = models.IntegerField(default=0)

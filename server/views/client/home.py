@@ -6,6 +6,13 @@ from django.http import JsonResponse
 import pysnooper
 
 from server.documents import *
+from server.serialize import *
+from server.views.utils import *
+
+
+def func():
+    State(id=34, name='fuuuuuuuuuuuuuuunc').save()
+    return 'fuck yeah'
 
 
 class Test(View):
@@ -78,8 +85,10 @@ class AllCategory(View):
         box_id = request.GET.get('box_id', None)
         if box_id is None:
             box_permalink = request.GET.get('box_permalink', None)
-            box_id = Box.objects.filter(permalink=box_permalink).first().pk
-        categories = get_categories(box_id)
+            box_id = None
+            if box_permalink:
+                box_id = Box.objects.filter(permalink=box_permalink).first().pk
+        categories = get_categories(request.lang, box_id)
         return JsonResponse({'categories': categories})
 
 
@@ -96,32 +105,27 @@ class GetAds(View):
 
 
 class GetProducts(View):
-    @pysnooper.snoop()
     def post(self, request):
-        try:
-            assert not request.user.is_authenticated  # must be guest
-            data = json.loads(request.body)
-            products_id = data['products']
-            products = Storage.objects.filter(id__in=products_id).select_related(*Storage.select) \
-                .prefetch_related(*Storage.prefetch)
-            basket_products = []
-            address_required = False
+        data = json.loads(request.body)
+        storage_ids = [item['id'] for item in data['basket']]
+        basket = data['basket']
+        assert not request.user.is_authenticated
+        storages = Storage.objects.filter(id__in=storage_ids).select_related('product')
+        basket_products = []
+        address_required = False
+        for storage, item in zip(storages, basket):
+            item = next(item for item in basket if item['id'] == storage.pk)  # search in dictionary
+            obj = type('Basket', (object,), {})()
+            obj.count = item['count']
+            obj.product = storage.product
+            if obj.product.type == 'product' and not address_required:
+                address_required = True
+            obj.product.default_storage = storage
+            basket_products.append(obj)
 
-            for product in products:
-                item = next(item for item in products if item.id == product.pk)
-                count = item.count
-                obj = BasketProduct(storage=product, count=count)
-                basket_products.append(obj)
-            products = BasketProductSchema().dump(basket_products, many=True)
-            for product in products:
-                if product['storage']['product']['type'] == 'product':
-                    address_required = True
-                    break
-            # profit = calculate_profit(basket_products)
-            return JsonResponse({'basket': {'products': products},
-                                 'address_required': address_required})
-        except AssertionError:
-            return JsonResponse({}, status=400)
+        products = BasketProductSchema(language=request.lang).dump(basket_products, many=True)
+        profit = calculate_profit(products)
+        return JsonResponse({'products': products, 'profit': profit, 'address_required': address_required})
 
 
 class Search(View):

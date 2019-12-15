@@ -11,6 +11,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core import serializers
 from django.views import View
+import pysnooper
 
 from mehr_takhfif import settings
 from mehr_takhfif.settings import TOKEN_SECRET, SECRET_KEY
@@ -182,7 +183,7 @@ def filter_params(params):
     return {'filter': filter_by, 'order': orderby}
 
 
-def get_categories(box_id=None, category=None):
+def get_categories(language, box_id=None, category=None):
     if category is None:
         try:
             category = [Category.objects.get(box_id=box_id)]
@@ -200,7 +201,7 @@ def get_categories(box_id=None, category=None):
         new_cats[parent_index].child.append(cat)
         remove_index.append(cat)
     new_cats = [x for x in new_cats if x not in remove_index]
-    return BoxCategoriesSchema().dump(new_cats, many=True)
+    return BoxCategoriesSchema(language=language).dump(new_cats, many=True)
 
 
 def last_page(query, step):
@@ -208,8 +209,8 @@ def last_page(query, step):
 
 
 def calculate_profit(products):
-    total_price = sum([product['storage']['final_price'] * product['count'] for product in products])
-    discount_price = sum([product['storage']['discount_price'] * product['count'] for product in products])
+    total_price = sum([product['product']['default_storage']['final_price'] * product['count'] for product in products])
+    discount_price = sum([product['product']['default_storage']['discount_price'] * product['count'] for product in products])
     profit = total_price - discount_price
     return {'total_price': total_price, 'discount_price': discount_price, 'profit': profit, 'shopping_cost': 0}
 
@@ -236,17 +237,18 @@ def des_decrypt(encrypted_text, key):
 
 def get_basket(user, lang, basket=None):
     basket = basket or Basket.objects.filter(user=user, active=True).first()
-    # products = BasketProduct.objects.filter(basket=basket).select_related(*BasketProduct.related)
+    basket_products = BasketProduct.objects.filter(basket=basket).select_related(*BasketProduct.related)
     address_required = False
     profit = {}
     if basket.products.all().count() > 0:
-        basket_dict = BasketSchema(lang).dump(basket)
-        profit = calculate_profit(basket_dict['products'])
-        # basket['products'] = BasketProductSchema(lang).dump(products, many=True)
-        for product in basket_dict['products']:
-            if product['storage']['product']['type'] == 'product':
+        for basket_product in basket_products:
+            basket_product.product = basket_product.storage.product
+            basket_product.product.default_storage = basket_product.storage
+            if basket_product.product.type == 'product' and not address_required:
                 address_required = True
-                break
+        basket_dict = BasketSchema(lang).dump(basket)
+        basket_dict['products'] = BasketProductSchema().dump(basket_products, many=True)
+        profit = calculate_profit(basket_dict['products'])
     else:
         basket_dict = {}
     return {'basket': basket_dict, 'summary': profit, 'address_required': address_required}
@@ -265,12 +267,15 @@ def get_best_seller(box, basket_ids, language):
     storage_ids = storage_count.keys()
     storages = Storage.objects.filter(pk__in=storage_ids)
     products = Product.objects.filter(storage__in=storages)
+    sync_default_storage(storages, products)
+    return MinProductSchema(language=language).dump(products, many=True)
 
+
+def sync_default_storage(storages, products):
     for storage, product in zip(storages, products):
         if product.default_storage == storage:
             continue
         product.default_storage = storage
-    return MinProductSchema(language=language).dump(products, many=True)
 
 
 def to_obj(body):
@@ -279,6 +284,9 @@ def to_obj(body):
     obj.__dict__ = dic
     return obj
 
+
+def load_location(location):
+    return {"lat": location[0], "lng": location[1]}
 
 # def products_availability_check(products, step, page):
 #     count = 0

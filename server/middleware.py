@@ -23,7 +23,7 @@ class AuthMiddleware:
         if route == 'favicon.ico':
             return JsonResponse({})
         try:
-            if request.headers['admin'] == 'True':
+            if request.headers.get('admin', None) == 'True':
                 print('this is admin')
                 request.user = User.objects.get(pk=1)
             request.lang = request.headers['language']

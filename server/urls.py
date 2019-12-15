@@ -38,7 +38,7 @@ box = [
 single = [
     path('product/<str:permalink>', single.Single.as_view(), name='single'),
     path('comment', single.CommentView.as_view(), name='comment'),
-    path('related_products', single.RelatedProduct.as_view(), name='related_products'),
+    path('related-products/<str:permalink>', single.RelatedProduct.as_view(), name='related_products'),
 ]
 
 shopping = [

@@ -7,22 +7,18 @@ from server.serialize import *
 from server.views.utils import View
 
 
-
 class Single(View):
-
     def get(self, request, permalink):
         lang = request.lang
         user = request.user
         try:
             product = Product.objects.filter(permalink=permalink).prefetch_related(*Product.prefetch).first()
-            # product = Product.objects.filter(permalink=permalink).first()
-            features = product.feature.all()
             tags = product.tag.all()
             storages = Storage.objects.filter(product=product)
             product = ProductSchema(lang).dump(product)
             product['category'] = self.get_category(product['category'])
             product['storages'] = StorageSchema(lang).dump(storages, many=True)
-            product['features'] = FeatureSchema(lang).dump(features, many=True)
+            # product['features'] = FeatureSchema(lang).dump(features, many=True)
             purchased = False
             if user.is_authenticated:
                 purchased = self.purchase_status(user, storages)
@@ -54,15 +50,11 @@ class Single(View):
         return False
 
 
-def hello():
-    print('hello')
-    return 'ok'
-
 
 class RelatedProduct(View):
-    def get(self, request):
-        hello()
-        return JsonResponse({})
+    def get(self, request, permalink):
+        products = Product.objects.filter(id__lt=5)
+        return JsonResponse({'products': MinProductSchema().dump(products, many=True)})
 
 
 class CommentView(View):

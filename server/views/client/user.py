@@ -55,7 +55,7 @@ class AddressView(LoginRequired):
             assert City.objects.filter(pk=data['city_id'], state_id=data['state_id'])
             address_count = Address.objects.filter(user=request.user).count()
             address = Address(state_id=data['state_id'], city_id=data['city_id'], postal_code=data['postal_code'],
-                              address=data['address'], location=data['location'], user=request.user,
+                              address=data['address'], location=load_location(data['location']), user=request.user,
                               name=data['fullname'], phone=data['phone'])
             address.save()
             if address_count < 2 or data['set_default']:
@@ -84,7 +84,7 @@ class AddressView(LoginRequired):
             address = Address.objects.filter(pk=data['id'], user=request.user)
             assert address.exists()
             address.update(state_id=data['state_id'], city_id=data['city_id'], postal_code=data['postal_code'],
-                           address=data['address'], location=data['location'], user=request.user,
+                           address=data['address'], location=load_location(data['location']), user=request.user,
                            name=data['name'], phone=data['phone'])
             if data['set_default']:
                 request.user.default_address = address.first().id
@@ -96,7 +96,7 @@ class AddressView(LoginRequired):
     def delete(self, request):
         address_id = request.GET.get('id', None)
         Address.objects.filter(pk=address_id, user=request.user).delete()
-        return HttpResponse('ok')
+        return JsonResponse({})
 
 
 class GetState(LoginRequired):
@@ -122,11 +122,11 @@ class WishlistView(View):
             assert WishList.objects.filter(user=request.user, product_id=data['product_id']).exists()
             WishList(type=data['type'], notify=data['notify'], product_id=data['product_id'], user=request.user,
                      created_by=request.user, updated_by=request.user).save()
-            return HttpResponse('ok', status=201)
+            return JsonResponse({'message': 'ok'}, status=201)
         except AssertionError:
             WishList.objects.filter(user=request.user, product_id=data['product_id']) \
                 .update(type=data['type'])
-            return HttpResponse('updated', status=204)
+            return JSONField({'message': 'updated'}, status=204)
 
     def delete(self, request):
         product_id = request.GET.get('product_id', None)
@@ -134,9 +134,9 @@ class WishlistView(View):
             assert not WishList.objects.filter(user=request.user, product_id=product_id).exists()
             address = WishList.objects.filter(pk=product_id, user_id=request.user).first()
             address.delete()
-            return HttpResponse('ok')
+            return JsonResponse({'message': 'ok'})
         except AssertionError:
-            return HttpResponse('product does not exist', status=406)
+            return JsonResponse({'message': 'product does not exist'}, status=406)
 
 
 class NotifyView(View):
@@ -147,13 +147,13 @@ class NotifyView(View):
     def post(self, request):
         data = json.loads(request.body)
         NotifyUser(type=data['type'], notify=data['notify'], product_id=data['product_id'], user_id=request.user).save()
-        return HttpResponse(status=201)
+        return JsonResponse({}, status=201)
 
     def delete(self, request):
         notify_id = request.GET.get('product_id', None)
         address = WishList.objects.filter(pk=notify_id, user_id=request.user).first()
         address.delete()
-        return HttpResponse('ok')
+        return JsonResponse({'message': 'ok'})
 
 
 class MyTransactions(View):
