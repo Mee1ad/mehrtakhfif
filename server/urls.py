@@ -1,5 +1,5 @@
 from django.urls import path
-
+from server import tests
 from server.views import auth, payment
 from server.views.client import box
 from server.views.client import home
@@ -16,6 +16,7 @@ home = [
     path('special_product', home.GetSpecialProduct.as_view(), name='all_special_product'),
     path('best_seller', home.BestSeller.as_view(), name='best_seller'),
     path('category', home.AllCategory.as_view(), name='category'),
+    path('box', home.AllBoxWithCategories.as_view(), name='box'),
     path('menu', home.GetMenu.as_view(), name='menu'),
     path('search', home.ElasticSearch.as_view(), name='search'),
     path('search2', home.Search.as_view(), name='search2'),
@@ -29,6 +30,7 @@ box = [
     path('special_product/<str:permalink>', box.GetSpecialProduct.as_view(), name='special_product'),
     path('best_seller/<str:permalink>', box.BestSeller.as_view(), name='best_seller'),
     path('box_detail/<str:permalink>', box.BoxDetail.as_view(), name='box_detail'),
+    path('features', box.GetFeature.as_view(), name='features'),
     path('filter', box.Filter.as_view(), name='filter'),
     # path('tag/<int:pk>', box.TagView.as_view(), name='tag'),
     path('box/<str:box>/category/<str:category>', box.BoxCategory.as_view(), name='category'),
@@ -68,4 +70,10 @@ auth = [
     path('privacy_policy', auth.PrivacyPolicy.as_view(), name='privacy_policy'),
 ]
 
-urlpatterns = [*home, *box, *user, *shopping, *single, *auth, *pay]
+test = [
+    path('add', tests.Add.as_view(), name='add'),
+    path('get', tests.Get.as_view(), name='get'),
+    path('delete', tests.Delete.as_view(), name='delete'),
+]
+
+urlpatterns = [*home, *box, *user, *shopping, *single, *auth, *pay, *test]

@@ -80,6 +80,18 @@ class BestSeller(View):
         return JsonResponse({'box': boxes})
 
 
+class AllBoxWithCategories(View):
+    def get(self, request):
+        boxes = Box.objects.all()
+        box_list = []
+        for box in boxes:
+            categories = get_categories(request.lang, box.id)
+            box = BoxSchema(language=request.lang).dump(box)
+            box['categories'] = categories
+            box_list.append(box)
+        return JsonResponse({'boxes': box_list})
+
+
 class AllCategory(View):
     def get(self, request):
         box_id = request.GET.get('box_id', None)

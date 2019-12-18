@@ -16,6 +16,7 @@ from safedelete.models import SafeDeleteModel, SOFT_DELETE_CASCADE
 
 from mehr_takhfif.settings import HOST
 
+
 # todo permalink in not null
 
 
@@ -26,7 +27,11 @@ def multilanguage():
 
 
 def feature_value():
-    return {"persian": "", "english": "", "arabic": "", "price": 0}
+    return [{"id": 0, "persian": "", "english": "", "arabic": ""}]
+
+
+def feature_value_storage():
+    return {"bool": {"fid": 1, "sid": 1, "value": [{"fvid": 1, "price": 5000}]}}
 
 
 def product_properties():
@@ -261,6 +266,8 @@ class Media(SafeDeleteModel):
 
 
 class Category(SafeDeleteModel):
+    prefetch = ['feature_set']
+
     def __str__(self):
         return f"{self.name['persian']}"
 
@@ -292,7 +299,7 @@ class Category(SafeDeleteModel):
 
 class Feature(models.Model):
     def __str__(self):
-        return f"{self.name['persian']}"
+        return f"{self.id}"
 
     id = models.BigAutoField(
         auto_created=True, primary_key=True)
@@ -304,6 +311,7 @@ class Feature(models.Model):
     updated_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Updated by',
                                    related_name='feature_updated_by')
     name = JSONField(default=multilanguage)
+    type = models.CharField(max_length=255, default='bool')
     value = JSONField(default=feature_value)
     category = models.ManyToManyField(Category)
     box = models.ForeignKey(Box, on_delete=models.CASCADE, blank=True, null=True)
@@ -407,7 +415,6 @@ class Product(SafeDeleteModel):
     profit = models.BigIntegerField(default=0)
     disable = models.BooleanField(default=True)
     verify = models.BooleanField(default=False)
-    deadline = models.DateTimeField(default=next_month, null=True)
     type = models.CharField(max_length=255, choices=[(
         'service', 'service'), ('product', 'product')])
     details = JSONField(default=product_details)
@@ -441,7 +448,7 @@ class Storage(SafeDeleteModel):
     count = models.IntegerField(default=0)
     sold_count = models.BigIntegerField(default=0, verbose_name='Sold count')
     tax = models.IntegerField(default=0)
-    feature = models.ManyToManyField(Feature, blank=True)
+    feature = models.ManyToManyField(Feature, blank=True, through='FeatureStorage')
     deadline = models.DateTimeField(default=next_month)
     start_time = models.DateTimeField(auto_now_add=True)
     max_count_for_sale = models.IntegerField(default=0)
@@ -452,7 +459,7 @@ class Storage(SafeDeleteModel):
     discount_vip_price = models.BigIntegerField(default=0, verbose_name='Discount vip price')
     discount_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount price percent')
     discount_vip_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount vip price percent')
-    # default = models.BooleanField(default=False)
+    default = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
     created_by = models.ForeignKey(User, on_delete=CASCADE, verbose_name='Created by',
                                    related_name='storage_created_by')
@@ -467,6 +474,22 @@ class Storage(SafeDeleteModel):
         ordering = ['-id']
 
 
+class FeatureStorage(models.Model):
+    related = ['storage']
+
+    def __str__(self):
+        return f"{self.id}"
+
+    id = models.BigAutoField(auto_created=True, primary_key=True)
+    feature = models.ForeignKey(Feature, on_delete=PROTECT)
+    storage = models.ForeignKey(Storage, on_delete=PROTECT)
+    value = JSONField(default=feature_value_storage)
+
+    class Meta:
+        db_table = 'feature_storage'
+        ordering = ['-id']
+
+
 class Basket(SafeDeleteModel):
     prefetch = ['products']
 
@@ -474,12 +497,9 @@ class Basket(SafeDeleteModel):
         return f"{self.user}"
 
     _safedelete_policy = SOFT_DELETE_CASCADE
-    id = models.BigAutoField(
-        auto_created=True, primary_key=True)
-    user = models.ForeignKey(
-        User, on_delete=models.CASCADE, null=True, blank=True)
-    created_at = models.DateTimeField(
-        auto_now_add=True, verbose_name='Created at')
+    id = models.BigAutoField(auto_created=True, primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
     count = models.IntegerField(default=0)
     products = models.ManyToManyField(Storage, through='BasketProduct')
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Created by',
@@ -491,7 +511,9 @@ class Basket(SafeDeleteModel):
                                    related_name='basket_deleted_by')
     description = models.TextField(blank=True, null=True)
     active = models.BooleanField(default=True)
-    sync = models.BooleanField(default=False)
+    sync = models.CharField(max_length=255, choices=[('false', 0), ('reserved', 1),
+                                                     ('canceled', 2), ('done', 3)], default='false')
+    job = models.CharField(max_length=255, null=True, blank=True)
 
     class Meta:
         db_table = 'basket'

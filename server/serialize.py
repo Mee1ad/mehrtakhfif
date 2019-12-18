@@ -2,7 +2,7 @@ from marshmallow import Schema, fields
 from mehr_takhfif.settings import HOST, MEDIA_URL
 import pysnooper
 from secrets import token_hex
-from server.models import BasketProduct
+from server.models import BasketProduct, FeatureStorage
 
 
 # ManyToMany Relations
@@ -16,8 +16,8 @@ class MediaField(fields.Field):
 
 class FeatureField(fields.Field):
     def _serialize(self, value, attr, obj, **kwargs):
-        feature = value.all()
-        return FeatureSchema().dump(feature, many=True)
+        features = FeatureStorage.objects.filter(storage=obj)
+        return FeatureSchema().dump(features, many=True)
 
 
 class TagField(fields.Field):
@@ -55,6 +55,9 @@ class BaseSchema(Schema):
 
     def get_name(self, obj):
         return self.get(obj.name)
+
+    def get_feature_name(self, obj):
+        return obj.feature.name[self.lang]
 
     def get_title(self, obj):
         return self.get(obj.title)
@@ -108,7 +111,7 @@ class BaseSchema(Schema):
 
     def get_min_storage(self, obj):
         if obj.default_storage is not None:
-            return MinStorageSchema(self.lang).dump(obj.default_storage)
+            return [MinStorageSchema(self.lang).dump(obj.default_storage)]
         return None
 
     def get_comment(self, obj):
@@ -131,20 +134,16 @@ class BaseSchema(Schema):
             return {'lat': float(obj.location[0]), 'lng': float(obj.location[1])}
         return None
 
-    def get_value(self, obj):
-        new_value = {}
-        new_values = []
-        for item in obj.value:
-            new_value['price'] = item['price']
-            new_value['name'] = item[self.lang]
-            new_values.append(new_value)
-        return new_values
+    def get_feature_value(self, obj):
+        for item, name in zip(obj.value, obj.feature.value):
+            item['name'] = name[self.lang]
+        return obj.value
 
 
 class UserSchema(BaseSchema):
     class Meta:
         additional = (
-        'id', 'email', 'full_name', 'gender', 'username', 'meli_code', 'wallet_money', 'vip', 'active_address')
+            'id', 'email', 'full_name', 'gender', 'username', 'meli_code', 'wallet_money', 'vip', 'active_address')
 
 
 class AddressSchema(BaseSchema):
@@ -216,8 +215,9 @@ class ParentSchema(BaseSchema):
 
 class FeatureSchema(BaseSchema):
     id = fields.Int()
-    name = fields.Method('get_name')
-    value = fields.Method('get_value')
+    name = fields.Method('get_feature_name')
+    type = fields.Function(lambda o: o.feature.type)
+    value = fields.Method('get_feature_value')
 
 
 class TagSchema(BaseSchema):
@@ -231,13 +231,13 @@ class ProductSchema(BaseSchema):
         additional = ('id', 'permalink', 'gender', 'type', 'address', 'short_address')
 
     name = fields.Method("get_name")
-    box = fields.Method("get_box")
+    # box = fields.Method("get_box")
+    box = fields.Nested(BoxSchema())
     # category = fields.Method("get_category")
     category = fields.Nested(CategorySchema())
     tag = TagField()
     media = MediaField()
     thumbnail = fields.Function(lambda o: HOST + o.thumbnail.file.url)
-    deadline = fields.Function(lambda o: o.deadline.timestamp())
     short_description = fields.Method("get_short_description")
     description = fields.Method("get_description")
     properties = fields.Method("get_properties")
@@ -265,18 +265,20 @@ class SliderSchema(BaseSchema):
 
 class StorageSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'final_price', 'transportation_price', 'max_count_for_sale', 'default',
+        additional = ('id', 'final_price', 'transportation_price', 'max_count_for_sale',
                       'discount_price', 'discount_vip_price', 'discount_percent', 'discount_vip_percent')
 
     title = fields.Method('get_title')
     deadline = fields.Function(lambda o: o.deadline.timestamp())
-    # product = fields.Method('get_product')
+    default = fields.Function(lambda o: o == o.product.default_storage)
     feature = FeatureField()
 
 
 class MinStorageSchema(BaseSchema):
     class Meta:
         additional = ('id', 'final_price', 'discount_price', 'discount_percent')
+
+    title = fields.Method('get_title')
 
 
 class BasketProductSchemaOld(BaseSchema):

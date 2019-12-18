@@ -1,14 +1,16 @@
 import json
 
 import requests
+import django_rq
 from django.db.models import F
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views import View
-
+from datetime import timedelta
+import operator
 from server.models import Invoice, InvoiceProduct, Basket
 from server.serialize import *
-from server.views.utils import des_encrypt, get_basket
+from server.views.utils import des_encrypt, get_basket, cancel_reservation, sync_storage
 
 psp = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'disable': True},
        {'id': 2, 'key': 'melli', 'name': 'ملی', 'hide': False, 'disable': False},
@@ -31,7 +33,7 @@ class PSP(View):
 class PaymentRequest(View):
     def post(self, request):
         basket = Basket.objects.filter(user=request.user, active=True).first()
-        self.sync_storage(basket)
+        self.reserve_storage(basket)
         # basket = get_basket(request.user, request.lang)
         invoice = self.create_invoice(request)
         amount = invoice.amount
@@ -65,16 +67,15 @@ class PaymentRequest(View):
         invoice.save()
         return invoice
 
-    def sync_storage(self, basket):
+    def reserve_storage(self, basket):
         if not basket.sync:
-            products = BasketProduct.objects.filter(basket=basket).select_related(*BasketProduct.related)
-            for product in products:
-                product.storage.available_count = F('storage__available_count') + product.count
-                product.storage.available_count_for_sale = F('storage__available_count_for_sale') + product.count
-                product.storage.sold_count = F('storage__sold_count') + product.count
-                product.storage.save()
-            basket.sync = True
+            sync_storage(basket, operator.sub)
+            scheduler = django_rq.get_scheduler('basket_sync')
+            job = scheduler.enqueue_at(timedelta(minutes=30), cancel_reservation, basket=basket)
+            basket.job = job
+            basket.sync = 'reserved'
             basket.save()
+            # python manage.py rqscheduler
 
 
 class CallBack(View):

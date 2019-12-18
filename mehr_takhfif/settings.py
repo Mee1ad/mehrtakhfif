@@ -15,8 +15,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
-HOST = 'http://67948730.ngrok.io'
-# HOST = 'http://192.168.1.95:8000'
+# HOST = 'http://67948730.ngrok.io'
+HOST = 'http://192.168.1.95'
 # HOST = 'http://localhost'
 # HOST = 'http://192.168.137.95'
 # HOST = 'http://192.168.137.1'
@@ -68,7 +68,6 @@ CORS_ORIGIN_WHITELIST = [
     "http://mt.com:3000",
     "http://localhost:8080",
     "http://localhost",
-    "http://67948730.ngrok.io"
 ]
 # CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_CREDENTIALS = True
@@ -155,10 +154,10 @@ RQ_QUEUES = {
     'default': {
         'USE_REDIS_CACHE': 'default',
     },
-    'schedule': {
+    'basket_sync': {
         'HOST': '192.168.1.95',
         'PORT': 6379,
-        'DB': 1,
+        'DB': 0,
     },
 }
 
@@ -279,3 +278,5 @@ LOGGING = {
 
 if DEBUG:
     LOGGING = {}
+    for queueConfig in RQ_QUEUES.values():
+        queueConfig['ASYNC'] = False

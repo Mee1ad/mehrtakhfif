@@ -24,7 +24,7 @@ class Single(View):
                 purchased = self.purchase_status(user, storages)
             related_products = Product.objects.filter(tag__in=tags)[:5]
             related_products = MinProductSchema(lang).dump(related_products, many=True)
-            return JsonResponse({'product': product, 'related_products': related_products})
+            return JsonResponse({'product': product, 'related_products': related_products, 'purchased': purchased})
         except Product.DoesNotExist:
             return JsonResponse({}, status=404)
 
@@ -48,7 +48,6 @@ class Single(View):
             if purchased:
                 return True
         return False
-
 
 
 class RelatedProduct(View):

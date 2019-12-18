@@ -2,7 +2,7 @@ import difflib
 import json
 import math
 from datetime import datetime
-
+from django.db.models import F
 import jwt
 import magic
 from cryptography.hazmat.backends import default_backend
@@ -12,6 +12,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core import serializers
 from django.views import View
 import pysnooper
+import operator
 
 from mehr_takhfif import settings
 from mehr_takhfif.settings import TOKEN_SECRET, SECRET_KEY
@@ -186,9 +187,8 @@ def filter_params(params):
 def get_categories(language, box_id=None, category=None):
     if category is None:
         try:
-            category = [Category.objects.get(box_id=box_id)]
-            print(category)
-        except Exception:
+            category = Category.objects.filter(box_id=box_id)
+        except Exception as e:
             category = Category.objects.all()
     new_cats = [*category]
     remove_index = []
@@ -210,7 +210,8 @@ def last_page(query, step):
 
 def calculate_profit(products):
     total_price = sum([product['product']['default_storage']['final_price'] * product['count'] for product in products])
-    discount_price = sum([product['product']['default_storage']['discount_price'] * product['count'] for product in products])
+    discount_price = sum(
+        [product['product']['default_storage']['discount_price'] * product['count'] for product in products])
     profit = total_price - discount_price
     return {'total_price': total_price, 'discount_price': discount_price, 'profit': profit, 'shopping_cost': 0}
 
@@ -275,7 +276,27 @@ def sync_default_storage(storages, products):
     for storage, product in zip(storages, products):
         if product.default_storage == storage:
             continue
-        product.default_storage = storage
+        if storage.product == product:
+            product.default_storage = storage
+
+
+def sync_storage(basket, op):
+    products = BasketProduct.objects.filter(basket=basket).select_related(*BasketProduct.related)
+    for product in products:
+        product.storage.available_count = op(F('storage__available_count'), product.count)
+        product.storage.available_count_for_sale = op(F('storage__available_count_for_sale'), product.count)
+        product.storage.sold_count = op(F('storage__sold_count'), product.count)
+        product.storage.save()
+
+
+def cancel_reservation(basket):
+    invoice = Invoice.objects.filter(basket=basket).first()
+    if invoice.status != 'payed':
+        invoice.status = 'canceled'
+        invoice.save()
+        basket.active = False
+        basket.save()
+        sync_storage(basket, operator.add)
 
 
 def to_obj(body):
@@ -287,6 +308,7 @@ def to_obj(body):
 
 def load_location(location):
     return {"lat": location[0], "lng": location[1]}
+
 
 # def products_availability_check(products, step, page):
 #     count = 0
