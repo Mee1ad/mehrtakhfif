@@ -6,6 +6,7 @@ from django.urls import resolve
 import pysnooper
 import time
 
+
 class AuthMiddleware:
 
     def __init__(self, get_response):
@@ -19,7 +20,7 @@ class AuthMiddleware:
         path = request.path_info
         route = resolve(path).route
         app_name = resolve(path).app_name
-        # request.user = User.objects.get(pk=1)
+        request.user = User.objects.get(pk=1)
         if route == 'favicon.ico':
             return JsonResponse({})
         try:
@@ -81,7 +82,7 @@ class AuthMiddleware:
             #             assert request.headers['Postman-Token']
             #         except Exception:
             #             pass
-                    # return JsonResponse({}, status=401)
+            # return JsonResponse({}, status=401)
             delay = request.GET.get('delay', None)
             # print(request.GET)
             if delay:

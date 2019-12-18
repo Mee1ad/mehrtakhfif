@@ -55,6 +55,23 @@ class BoxView(View):
                              'current_page': page, 'last_page': last_page_number})
 
 
+class GetFeature(View):
+    def get(self, request):
+        box_permalink = request.GET.get('box', None)
+        category_permalink = request.GET.get('category', None)
+        try:
+            if box_permalink:
+                box = Box.objects.filter(permalink=box_permalink).first()
+                features = Feature.objects.filter(box=box)
+            else:
+                category = Category.objects.filter(permalink=category_permalink).prefetch_related(*Category.prefetch).first()
+                features = category.feature_set.all()
+            features = FeatureSchema(language=request.lang).dump(features, many=True)
+            return JsonResponse({'feature': features})
+        except Exception:
+            return JsonResponse({}, status=400)
+
+
 class BestSeller(View):
     def get(self, request, permalink):
         box = Box.objects.get(permalink=permalink)
