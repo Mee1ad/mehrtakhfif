@@ -4,7 +4,7 @@ from server.views import auth, payment
 from server.views.client import box
 from server.views.client import home
 from server.views.client import shopping
-from server.views.client import single
+from server.views.client import product
 from server.views.client import user
 
 app_name = 'server'
@@ -38,9 +38,9 @@ box = [
 ]
 
 single = [
-    path('product/<str:permalink>', single.Single.as_view(), name='single'),
-    path('comment', single.CommentView.as_view(), name='comment'),
-    path('related-products/<str:permalink>', single.RelatedProduct.as_view(), name='related_products'),
+    path('product/<str:permalink>', product.Single.as_view(), name='single'),
+    path('comment', product.CommentView.as_view(), name='comment'),
+    path('related-products/<str:permalink>', product.RelatedProduct.as_view(), name='related_products'),
 ]
 
 shopping = [
@@ -49,7 +49,7 @@ shopping = [
 ]
 
 pay = [
-    path('psp', payment.PSP.as_view(), name='psp'),
+    path('psp', payment.IPG.as_view(), name='psp'),
     path('payment', payment.PaymentRequest.as_view(), name='payment'),
     path('callback', payment.CallBack.as_view(), name='callback'),
 ]
@@ -58,7 +58,9 @@ user = [
     path('profile', user.Profile.as_view(), name='profile'),
     path('get_states', user.GetState.as_view(), name='get_states'),
     path('get_cities/<int:state_id>', user.GetCity.as_view(), name='get_cities'),
+    path('shopping_list', user.ShoppingList.as_view(), name='shopping_list'),
     path('wishlist', user.WishlistView.as_view(), name='wishlist'),
+    path('user_comments', user.UserComment.as_view(), name='user_comments'),
     path('address', user.AddressView.as_view(), name='address')]
 
 auth = [
@@ -73,7 +75,7 @@ auth = [
 test = [
     path('add', tests.Add.as_view(), name='add'),
     path('get', tests.Get.as_view(), name='get'),
-    path('delete', tests.Delete.as_view(), name='delete'),
+    path('delete/<str:job>', tests.Delete.as_view(), name='delete'),
 ]
 
 urlpatterns = [*home, *box, *user, *shopping, *single, *auth, *pay, *test]

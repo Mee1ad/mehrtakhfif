@@ -126,8 +126,8 @@ class SpecialOfferAdmin(SafeDeleteAdmin):
 
 
 class SpecialProductAdmin(SafeDeleteAdmin):
-    list_display = ('title_persian', 'url', 'product', 'box', 'category', 'media', 'type') + SafeDeleteAdmin.list_display
-    list_filter = ('title', 'product', 'box', 'category') + SafeDeleteAdmin.list_filter
+    list_display = ('title_persian', 'url', 'storage', 'box', 'category', 'media', 'type') + SafeDeleteAdmin.list_display
+    list_filter = ('title', 'storage', 'box', 'category') + SafeDeleteAdmin.list_filter
     # list_display_links = ('name',)
     search_fields = ['title']
     list_per_page = 10

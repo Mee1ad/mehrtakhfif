@@ -186,7 +186,8 @@ def filter_params(params):
 
 def get_categories(language, box_id=None, category=None):
     if category is None:
-        try:
+        try:  # todo delete assert
+            assert True is False
             category = Category.objects.filter(box_id=box_id)
         except Exception as e:
             category = Category.objects.all()
@@ -209,9 +210,11 @@ def last_page(query, step):
 
 
 def calculate_profit(products):
-    total_price = sum([product['product']['default_storage']['final_price'] * product['count'] for product in products])
+    # TypeError: default storage is list but have one member
+    total_price = sum([product['product']['default_storage'][0]['final_price'] * product['count']
+                       for product in products])
     discount_price = sum(
-        [product['product']['default_storage']['discount_price'] * product['count'] for product in products])
+        [product['product']['default_storage'][0]['discount_price'] * product['count'] for product in products])
     profit = total_price - discount_price
     return {'total_price': total_price, 'discount_price': discount_price, 'profit': profit, 'shopping_cost': 0}
 

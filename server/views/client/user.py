@@ -1,4 +1,5 @@
 import json
+import pysnooper
 
 from django.http import JsonResponse
 
@@ -17,8 +18,7 @@ class Profile(View):
         data = json.loads(request.body)
         validation(data)
         user = request.user
-        user = User.objects.get(username='09015518441')
-        user.full_name = data.get('full_name') or user.full_name
+        user.fullname = data.get('fullname') or user.fullname
         user.gender = data.get('gender') or user.gender
         user.language = data.get('language') or user.language
         user.email = data.get('email') or user.email
@@ -30,10 +30,12 @@ class Profile(View):
 class ShoppingList(View):
     def get(self, request):
         shopping_list = Invoice.objects.filter(user=request.user)
-        return JsonResponse({'shopping_list': InvoiceSchema().dump(shopping_list, many=True)})
+        shopping_list = InvoiceSchema().dump(shopping_list, many=True)
+        return JsonResponse({'shopping_list': shopping_list})
 
 
 class UserComment(View):
+
     def get(self, request):
         comments = Comment.objects.filter(user=request.user).order_by('created_at')
         return JsonResponse({'comments': CommentSchema().dump(comments, many=True)})

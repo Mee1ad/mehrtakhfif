@@ -4,22 +4,22 @@ from django.contrib.postgres.fields.jsonb import KeyTextTransform
 from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
 from django.http import JsonResponse
 import pysnooper
+import django_rq
 
 from server.documents import *
 from server.serialize import *
 from server.views.utils import *
-
-
-def func():
-    State(id=34, name='fuuuuuuuuuuuuuuunc').save()
-    return 'fuck yeah'
-
+from django.utils.timezone import timedelta
+from mehr_takhfif.celery import app
+from server.tasks import fuck
 
 class Test(View):
     def get(self, request):
+        fuck.delay(2, 4)
+        app.add_periodic_task(3.0, fuck.s(4, 5), name='add every 10')
         # django_rq.enqueue(func)   
-        # scheduler = django_rq.get_scheduler('schedule')
-        # job2 = scheduler.enqueue_in(timedelta(minutes=5), fuckingtest, 12)
+        # scheduler = django_rq.get_scheduler('basket_sync')
+        # job2 = scheduler.enqueue_in(timedelta(minutes=5), func)
         # scheduler.enqueue_in(timedelta(minutes=2), func)
         return JsonResponse({})
 
@@ -47,18 +47,11 @@ class GetSpecialProduct(View):
         products = []
 
         for box, index in zip(all_box, range(len(all_box))):
-            box_special_product = SpecialProduct.objects.select_related(*SpecialProduct.select) \
-                                      .filter(box=box)[(page - 1) * step:step * page]
-            product = {}
-            product['id'] = box.pk
-            product['name'] = box.name[language]
-            product['key'] = box.permalink
-            # product['special_product'] = SpecialProductSchema(request.lang).dump(box_special_product, many=True)
-            # best_seller_storage = Storage.objects.select_related(*Storage.select)\
-            #                           .filter(default=True, box=box).order_by('-product__sold_count')\
-            #                             [(page - 1) * step:step * page]
-
-            products.append(product)
+            box_special_product = SpecialProduct.objects.select_related(*SpecialProduct.select).filter(box=box) \
+                [(page - 1) * step:step * page]
+            box = {'id': box.pk, 'name': box.name[language], 'key': box.permalink}
+            box['special_products'] = MinSpecialProductSchema(request.lang).dump(box_special_product, many=True)
+            products.append(box)
         res = {'products': products}
         return JsonResponse(res)
 
