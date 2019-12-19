@@ -1,5 +1,5 @@
 import json
-
+import pysnooper
 import requests
 import django_rq
 from django.db.models import F
@@ -12,7 +12,7 @@ from server.models import Invoice, InvoiceProduct, Basket
 from server.serialize import *
 from server.views.utils import des_encrypt, get_basket, cancel_reservation, sync_storage
 
-psp = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'disable': True},
+ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'disable': True},
        {'id': 2, 'key': 'melli', 'name': 'ملی', 'hide': False, 'disable': False},
        {'id': 3, 'key': 'saman', 'name': 'سامان', 'hide': False, 'disable': False},
        {'id': 4, 'key': 'refah', 'name': 'رفاه', 'hide': True, 'disable': True},
@@ -20,18 +20,22 @@ psp = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'dis
        'default': 2}
 
 # allowed_ip = 0.0.0.0
-merchant_id = None
-terminal_id = None
-terminal_key = None
+saddad = {'merchant_id': None, 'terminal_id': None, 'terminal_key': None,
+          'payment_request': 'https://sadad.shaparak.ir/VPG/api/v0/Request/PaymentRequest',
+          'redirect_url': 'https://sadad.shaparak.ir/VPG/Purchase'}  # mellat
+
+pecco = {'pin': '4MuVGr1FaB6P7S43Ggh5', 'terminal_id': '44481453',
+         'payment_request': 'https://pec.shaparak.ir/NewIPGServices/Sale/SaleService.asmx'}  # parsian
 
 
-class PSP(View):
+class IPG(View):
     def get(self, request):
-        return JsonResponse({'psp': psp})
+        return JsonResponse({'psp': ipg})
 
 
 class PaymentRequest(View):
-    def post(self, request):
+    @pysnooper.snoop()
+    def get(self, request):
         basket = Basket.objects.filter(user=request.user, active=True).first()
         self.reserve_storage(basket)
         # basket = get_basket(request.user, request.lang)
@@ -39,13 +43,15 @@ class PaymentRequest(View):
         amount = invoice.amount
         datetime = timezone.now()
         return_url = HOST + '/payment_callback'
-        sign_data = des_encrypt(f'{terminal_id};{invoice.pk};{amount}')  # encrypt (PKCS7,ECB(TripleDes) => base64
+
+        # encrypt (PKCS7,ECB(TripleDes) => base64
+        # sign_data = des_encrypt(f'{saddad["terminal_id"]};{invoice.pk};{amount}')
         additional_data = None  # json
         # Type = [Amount, Percentage]
-        multiplexing_data = {'Type': 'Percentage', 'MultiplexingRows': [{'IbanNumber': 1, 'Value': 50}]}
-        url = 'https://sadad.shaparak.ir/VPG/api/v0/Request/PaymentRequest'
-        return JsonResponse({'token': 'test token', 'description': 'test description',
-                             'redirect_url': 'https://sadad.shaparak.ir/VPG/Purchase'})
+        # multiplexing_data = {'Type': 'Percentage', 'MultiplexingRows': [{'IbanNumber': 1, 'Value': 50}]}
+        # return JsonResponse({'token': 'test token', 'description': 'test description',
+        #                      'redirect_url': })
+
 
         # r = requests.post(url, data={'MerchantId': merchant_id, 'TerminalId': terminal_id, 'Amount': amount,
         #                              'OrderId': invoice_id, 'LocalDateTime': datetime, 'ReturnUrl': return_url,
@@ -54,6 +60,14 @@ class PaymentRequest(View):
         # res = r.json()
         # return JsonResponse({'res_code': res['ResCode'], 'token': res['Token'], 'description': res['Description'],
         #                      'redirect_url': 'https://sadad.shaparak.ir/VPG/Purchase'})
+
+        url = pecco['payment_request']
+        request_data = {'LoginAccount': pecco['pin'], 'Amount': amount, 'OrderId': invoice.id,
+                        'CallBackUrl': 'http://localhost/callback', 'AdditionalData': None}
+        r = requests.post(url=pecco['payment_request'], data=request_data)
+        print(r.status_code)
+        print(r.content)
+        return JsonResponse({})
 
     def create_invoice(self, request, basket=None):
         user = request.user

@@ -110,8 +110,10 @@ class BaseSchema(Schema):
         return None
 
     def get_min_storage(self, obj):
-        if obj.default_storage is not None:
+        if hasattr(obj, 'default_storage'):
             return [MinStorageSchema(self.lang).dump(obj.default_storage)]
+        elif hasattr(obj, 'storage'):
+            return [MinStorageSchema(self.lang).dump(obj.storage)]
         return None
 
     def get_comment(self, obj):
@@ -122,6 +124,11 @@ class BaseSchema(Schema):
     def get_media(self, obj):
         if obj.media is not None:
             return MediaSchema(self.lang).dump(obj.media)
+        return None
+
+    def get_media_link(self, obj):
+        if obj.media is not None:
+            return HOST + obj.media.file.url
         return None
 
     def get_thumbnail(self, obj):
@@ -139,11 +146,14 @@ class BaseSchema(Schema):
             item['name'] = name[self.lang]
         return obj.value
 
+    def get_created_at(self, obj):
+        return obj.created_at.timestamp()
+
 
 class UserSchema(BaseSchema):
     class Meta:
         additional = (
-            'id', 'email', 'full_name', 'gender', 'username', 'meli_code', 'wallet_money', 'vip', 'active_address')
+            'id', 'email', 'fullname', 'gender', 'username', 'meli_code', 'wallet_money', 'vip', 'active_address')
 
 
 class AddressSchema(BaseSchema):
@@ -198,6 +208,7 @@ class BoxCategoriesSchema(BaseSchema):
 
     name = fields.Method('get_name')
     child = fields.Method('get_child')
+    media = fields.Method("get_media_link")
 
     def get_child(self, obj):
         if hasattr(obj, 'child'):
@@ -317,19 +328,20 @@ class BlogPostSchema(BaseSchema):
 
 class CommentSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'text', 'reply_id', 'type', 'created_at')
+        additional = ('id', 'text', 'reply_id', 'type')
 
     user = fields.Function(lambda obj: obj.user_id)
     reply = fields.Method("get_comment")
+    created_at = fields.Method("get_created_at")
 
 
 # todo
 class InvoiceSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'price', 'product', 'user', 'payed_at', 'successful', 'type', 'special_offer_id', 'address',
+        additional = ('id', 'price', 'product', 'payed_at', 'successful', 'type', 'special_offer_id',
                       'description', 'final_price', 'discount_price', 'count', 'tax')
 
-    product = fields.Int()
+    created_at = fields.Method("get_created_at")
 
 
 class MenuSchema(BasketSchema):
@@ -379,8 +391,9 @@ class MinSpecialProductSchema(BaseSchema):
         additional = ('id', 'url')
 
     title = fields.Method('get_title')
-    product = fields.Function(lambda o: o.product.permalink)
+    storage = fields.Method('get_min_storage')
     thumbnail = fields.Function(lambda o: HOST + o.thumbnail.file.url)
+    permalink = fields.Function(lambda o: o.storage.product.permalink)
 
 
 class AdSchema(BaseSchema):

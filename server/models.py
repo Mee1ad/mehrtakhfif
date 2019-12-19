@@ -113,8 +113,8 @@ class User(AbstractUser):
                                   validators=[validate_slug])
     last_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='Last name',
                                  validators=[validate_slug])
-    full_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='full name',
-                                 validators=[validate_slug])
+    fullname = models.CharField(max_length=255, blank=True, null=True, verbose_name='full name',
+                                validators=[validate_slug])
     username = models.CharField(max_length=150, unique=True)
     language = models.CharField(max_length=7, default='fa')
     email = models.CharField(max_length=255, blank=True, null=True, validators=[validate_email])
@@ -446,6 +446,7 @@ class Storage(SafeDeleteModel):
     available_count = models.BigIntegerField(default=0, verbose_name='Available count')
     available_count_for_sale = models.IntegerField(default=0, verbose_name='Available count for sale')
     count = models.IntegerField(default=0)
+    priority = models.IntegerField(default=0)
     sold_count = models.BigIntegerField(default=0, verbose_name='Sold count')
     tax = models.IntegerField(default=0)
     feature = models.ManyToManyField(Feature, blank=True, through='FeatureStorage')
@@ -785,18 +786,19 @@ class SpecialOffer(SafeDeleteModel):
 
 
 class SpecialProduct(SafeDeleteModel):
-    select = ['product', 'storage__product', 'media', 'thumbnail']
+    select = ['storage', 'media', 'thumbnail']
     min_select = ['thumbnail']
 
     def __str__(self):
-        return f"{self.product}"
+        return f"{self.storage}"
 
     _safedelete_policy = SOFT_DELETE_CASCADE
     id = models.BigAutoField(
         auto_created=True, primary_key=True)
     title = JSONField(default=multilanguage, null=True, blank=True)
     url = models.URLField(null=True, blank=True)
-    product = models.ForeignKey(Product, on_delete=CASCADE, null=True, blank=True)
+    # product = models.ForeignKey(Product, on_delete=CASCADE, null=True, blank=True)
+    storage = models.ForeignKey(Storage, on_delete=CASCADE, null=True, blank=True)
     thumbnail = models.ForeignKey(Media, on_delete=PROTECT, related_name='special_product_thumbnail')
     box = models.ForeignKey(Box, on_delete=PROTECT)
     category = models.ForeignKey(Category, on_delete=CASCADE)

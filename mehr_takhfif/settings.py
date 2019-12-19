@@ -38,7 +38,8 @@ INSTALLED_APPS = [
     'corsheaders',
     'debug_toolbar',
     'push_notifications',
-    'django_rq',
+    'django_celery_results',
+    'django_celery_beat',
     # 'django_elasticsearch_dsl'    
 ]
 
@@ -157,7 +158,7 @@ RQ_QUEUES = {
     'basket_sync': {
         'HOST': '192.168.1.95',
         'PORT': 6379,
-        'DB': 0,
+        'DB': 5,
     },
 }
 
@@ -197,13 +198,14 @@ PUSH_NOTIFICATIONS_SETTINGS = {
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'Iran'
+# TIME_ZONE = 'Iran'
+TIME_ZONE = 'UTC'
 
 USE_I18N = True
 
 USE_L10N = True
 
-USE_TZ = False
+USE_TZ = True
 
 activate(TIME_ZONE)
 
@@ -278,5 +280,5 @@ LOGGING = {
 
 if DEBUG:
     LOGGING = {}
-    for queueConfig in RQ_QUEUES.values():
-        queueConfig['ASYNC'] = False
+    # for queueConfig in RQ_QUEUES.values():
+    #     queueConfig['ASYNC'] = False
