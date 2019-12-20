@@ -1,14 +1,11 @@
-# from datetime import timedelta
 # from django.utils.timezone import timedelta
 from datetime import timedelta, datetime
-import django_rq
 import pysnooper
 from django.http import JsonResponse
 from django.views import View
+from django_celery_beat.models import PeriodicTask, IntervalSchedule
+import json
 
-
-#  python manage.py rqscheduler
-#  python manage.py rqworker high
 
 def add(a, b):
     return a + b
@@ -17,15 +14,11 @@ def add(a, b):
 class Add(View):
     @pysnooper.snoop()
     def get(self, request):
-        # scheduler = django_rq.get_scheduler('basket_sync')
-        scheduler = django_rq.get_scheduler()
-        job = scheduler.enqueue_in(timedelta(minutes=1), add, 2, 3)
-        # job = scheduler.enqueue_at(datetime(2019, 12, 18, 16, 30), add, 2, 3)
-        added = False
-        if job in scheduler:
-            added = True
-        print(job)
-        return JsonResponse({'added': added, 'job': job.id})
+        t = IntervalSchedule.objects.get(pk=1)
+        schedule, created = IntervalSchedule.objects.get_or_create(every=5, period=IntervalSchedule.SECONDS)
+        PeriodicTask.objects.create(interval=schedule, name='Importing contacts', task='server.tasks.hello',
+                                    args=json.dumps(['arg1', 'arg2']), one_off=True)
+        return JsonResponse({})
 
 
 class Get(View):
@@ -44,6 +37,7 @@ class Get(View):
 class Delete(View):
     @pysnooper.snoop()
     def get(self, request, job):
-        scheduler = django_rq.get_scheduler('basket_sync')
-        scheduler.cancel(job)
+        task = None
+        task.enabled = False
+        task.save()
         return JsonResponse({'message': 'remove successfully'})

@@ -276,7 +276,7 @@ class SliderSchema(BaseSchema):
 
 class StorageSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'final_price', 'transportation_price', 'max_count_for_sale',
+        additional = ('id', 'final_price', 'transportation_price', 'max_count_for_sale', 'priority',
                       'discount_price', 'discount_vip_price', 'discount_percent', 'discount_vip_percent')
 
     title = fields.Method('get_title')
