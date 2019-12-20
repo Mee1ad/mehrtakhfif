@@ -13,7 +13,7 @@ from django.dispatch import receiver
 from django.utils import timezone
 from push_notifications.models import GCMDevice
 from safedelete.models import SafeDeleteModel, SOFT_DELETE_CASCADE
-
+from django_celery_beat.models import PeriodicTask
 from mehr_takhfif.settings import HOST
 
 
@@ -514,7 +514,6 @@ class Basket(SafeDeleteModel):
     active = models.BooleanField(default=True)
     sync = models.CharField(max_length=255, choices=[('false', 0), ('reserved', 1),
                                                      ('canceled', 2), ('done', 3)], default='false')
-    job = models.CharField(max_length=255, null=True, blank=True)
 
     class Meta:
         db_table = 'basket'
@@ -636,6 +635,7 @@ class Invoice(models.Model):
     updated_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Updated by',
                                    related_name='invoice_product_updated_by')
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    task = models.OneToOneField(PeriodicTask, on_delete=CASCADE, null=True, blank=True)
     basket = models.OneToOneField(to=Basket, on_delete=PROTECT, related_name='invoice_to_basket')
     products = models.ManyToManyField(Product, through='InvoiceProduct')
     payed_at = models.DateTimeField(blank=True, null=True, verbose_name='Payed at')
@@ -644,9 +644,8 @@ class Invoice(models.Model):
     address = models.ForeignKey(to=Address, null=True, blank=True, on_delete=PROTECT)
     description = models.TextField(max_length=255, blank=True, null=True)
     amount = models.IntegerField()
-    invoice_request = models.BooleanField(default=False)
     tax = models.IntegerField()
-    psp = models.SmallIntegerField(default=1)
+    ipg = models.SmallIntegerField(default=1)
     status = models.CharField(max_length=255, default='pending', choices=[('pending', 'pending'), ('payed', 'payed'),
                                                                           ('canceled', 'canceled'),
                                                                           ('rejected', 'rejected')])

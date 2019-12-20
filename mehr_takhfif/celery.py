@@ -37,7 +37,3 @@ def debug_task(self):
 #         crontab(hour=7, minute=30, day_of_week=1),
 #         test.s('Happy Mondays!'),
     # )
-
-@app.task
-def test(arg):
-    print(arg)

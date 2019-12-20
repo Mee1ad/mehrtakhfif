@@ -49,7 +49,7 @@ shopping = [
 ]
 
 pay = [
-    path('psp', payment.IPG.as_view(), name='psp'),
+    path('ipg', payment.IPG.as_view(), name='ipg'),
     path('payment', payment.PaymentRequest.as_view(), name='payment'),
     path('callback', payment.CallBack.as_view(), name='callback'),
 ]

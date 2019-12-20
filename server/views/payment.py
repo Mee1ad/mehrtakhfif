@@ -10,13 +10,13 @@ from datetime import timedelta
 import operator
 from server.models import Invoice, InvoiceProduct, Basket
 from server.serialize import *
-from server.views.utils import des_encrypt, get_basket, cancel_reservation, sync_storage
+from server.views.utils import des_encrypt, get_basket, add_one_off_job, sync_storage
 
 ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'disable': True},
-       {'id': 2, 'key': 'melli', 'name': 'ملی', 'hide': False, 'disable': False},
-       {'id': 3, 'key': 'saman', 'name': 'سامان', 'hide': False, 'disable': False},
-       {'id': 4, 'key': 'refah', 'name': 'رفاه', 'hide': True, 'disable': True},
-       {'id': 5, 'key': 'pasargad', 'name': 'پاسارگاد', 'hide': True, 'disable': False}],
+                {'id': 2, 'key': 'melli', 'name': 'ملی', 'hide': False, 'disable': False},
+                {'id': 3, 'key': 'saman', 'name': 'سامان', 'hide': False, 'disable': False},
+                {'id': 4, 'key': 'refah', 'name': 'رفاه', 'hide': True, 'disable': True},
+                {'id': 5, 'key': 'pasargad', 'name': 'پاسارگاد', 'hide': True, 'disable': False}],
        'default': 2}
 
 # allowed_ip = 0.0.0.0
@@ -30,16 +30,15 @@ pecco = {'pin': '4MuVGr1FaB6P7S43Ggh5', 'terminal_id': '44481453',
 
 class IPG(View):
     def get(self, request):
-        return JsonResponse({'psp': ipg})
+        return JsonResponse({'ipg': ipg})
 
 
 class PaymentRequest(View):
-    @pysnooper.snoop()
     def get(self, request):
         basket = Basket.objects.filter(user=request.user, active=True).first()
-        self.reserve_storage(basket)
         # basket = get_basket(request.user, request.lang)
         invoice = self.create_invoice(request)
+        self.reserve_storage(basket, invoice)
         amount = invoice.amount
         datetime = timezone.now()
         return_url = HOST + '/payment_callback'
@@ -52,7 +51,6 @@ class PaymentRequest(View):
         # return JsonResponse({'token': 'test token', 'description': 'test description',
         #                      'redirect_url': })
 
-
         # r = requests.post(url, data={'MerchantId': merchant_id, 'TerminalId': terminal_id, 'Amount': amount,
         #                              'OrderId': invoice_id, 'LocalDateTime': datetime, 'ReturnUrl': return_url,
         #                              'SignData': sign_data, 'AdditionalData': additional_data,
@@ -61,12 +59,13 @@ class PaymentRequest(View):
         # return JsonResponse({'res_code': res['ResCode'], 'token': res['Token'], 'description': res['Description'],
         #                      'redirect_url': 'https://sadad.shaparak.ir/VPG/Purchase'})
 
-        url = pecco['payment_request']
-        request_data = {'LoginAccount': pecco['pin'], 'Amount': amount, 'OrderId': invoice.id,
-                        'CallBackUrl': 'http://localhost/callback', 'AdditionalData': None}
-        r = requests.post(url=pecco['payment_request'], data=request_data)
-        print(r.status_code)
-        print(r.content)
+        # url = pecco['payment_request']
+        # request_data = {'LoginAccount': pecco['pin'], 'Amount': amount, 'OrderId': invoice.id,
+        #                 'CallBackUrl': 'http://localhost/callback', 'AdditionalData': None}
+        # r = requests.post(url=pecco['payment_request'], data=request_data)
+        # print(r.status_code)
+        # print(r.content)
+
         return JsonResponse({})
 
     def create_invoice(self, request, basket=None):
@@ -75,18 +74,26 @@ class PaymentRequest(View):
         basket = basket or get_basket(user, request.lang)
         if basket['address_required']:
             address = user.default_address
-        Invoice.objects.filter(basket_id=basket['basket']['id'], status='pending').delete()
-        invoice = Invoice(created_by=user, updated_by=user, user=user, amount=basket['summary']['discount_price'],
-                          type="unknown", address=address, tax=20, basket_id=basket['basket']['id'])
-        invoice.save()
+
+        invoice, created = Invoice.objects.get_or_create(created_by=user, updated_by=user, user=user,
+                                                         amount=basket['summary']['discount_price'],
+                                                         type="unknown", address=address, tax=20,
+                                                         basket_id=basket['basket']['id'])
+
+        # Invoice.objects.filter(basket_id=basket['basket']['id'], status='pending').delete()
+
+        # invoice = Invoice(created_by=user, updated_by=user, user=user, amount=basket['summary']['discount_price'],
+        #                   type="unknown", address=address, tax=20, basket_id=basket['basket']['id'])
+        # invoice.save()
         return invoice
 
-    def reserve_storage(self, basket):
-        if not basket.sync:
+    @pysnooper.snoop()
+    def reserve_storage(self, basket, invoice):
+        if basket.sync == 'false':
             sync_storage(basket, operator.sub)
-            scheduler = django_rq.get_scheduler('basket_sync')
-            job = scheduler.enqueue_at(timedelta(minutes=30), cancel_reservation, basket=basket)
-            basket.job = job
+            invoice.job = add_one_off_job(name=f'{invoice.id}: cancel reservation', args=[invoice.id, ], interval=3,
+                                          task='server.tasks.cancel_reservation')
+            basket.active = False
             basket.sync = 'reserved'
             basket.save()
             # python manage.py rqscheduler

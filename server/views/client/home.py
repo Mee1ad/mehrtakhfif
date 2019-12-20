@@ -11,12 +11,10 @@ from server.serialize import *
 from server.views.utils import *
 from django.utils.timezone import timedelta
 from mehr_takhfif.celery import app
-from server.tasks import fuck
+
 
 class Test(View):
     def get(self, request):
-        fuck.delay(2, 4)
-        app.add_periodic_task(3.0, fuck.s(4, 5), name='add every 10')
         # django_rq.enqueue(func)   
         # scheduler = django_rq.get_scheduler('basket_sync')
         # job2 = scheduler.enqueue_in(timedelta(minutes=5), func)

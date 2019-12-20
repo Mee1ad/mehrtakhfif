@@ -18,6 +18,8 @@ from mehr_takhfif import settings
 from mehr_takhfif.settings import TOKEN_SECRET, SECRET_KEY
 from server.models import *
 from server.serialize import *
+from django_celery_beat.models import PeriodicTask, IntervalSchedule
+import json
 
 default_step = 12
 default_page = 1
@@ -282,24 +284,16 @@ def sync_default_storage(storages, products):
         if storage.product == product:
             product.default_storage = storage
 
-
-def sync_storage(basket, op):
-    products = BasketProduct.objects.filter(basket=basket).select_related(*BasketProduct.related)
-    for product in products:
-        product.storage.available_count = op(F('storage__available_count'), product.count)
-        product.storage.available_count_for_sale = op(F('storage__available_count_for_sale'), product.count)
-        product.storage.sold_count = op(F('storage__sold_count'), product.count)
-        product.storage.save()
-
-
-def cancel_reservation(basket):
-    invoice = Invoice.objects.filter(basket=basket).first()
-    if invoice.status != 'payed':
-        invoice.status = 'canceled'
-        invoice.save()
-        basket.active = False
-        basket.save()
-        sync_storage(basket, operator.add)
+@pysnooper.snoop()
+def sync_storage(basket_id, op):
+    basket_products = BasketProduct.objects.filter(basket_id=basket_id)
+    for basket_product in basket_products:
+        storage = basket_product.storage
+        count = basket_product.count
+        storage.available_count = op(F('available_count'), count)
+        storage.available_count_for_sale = op(F('available_count_for_sale'), count)
+        # storage.sold_count = op(F('sold_count'), count)
+        storage.save()
 
 
 def to_obj(body):
@@ -311,6 +305,13 @@ def to_obj(body):
 
 def load_location(location):
     return {"lat": location[0], "lng": location[1]}
+
+
+def add_one_off_job(name, args, task='server.tasks.hello', interval=30, period=IntervalSchedule.MINUTES):
+    schedule, created = IntervalSchedule.objects.get_or_create(every=interval, period=period)
+    task, created = PeriodicTask.objects.get_or_create(interval=schedule, name=name, task=task,
+                                                       args=args, one_off=True)
+    return task
 
 
 # def products_availability_check(products, step, page):
