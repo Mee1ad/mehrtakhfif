@@ -111,9 +111,9 @@ class BaseSchema(Schema):
 
     def get_min_storage(self, obj):
         if hasattr(obj, 'default_storage'):
-            return [MinStorageSchema(self.lang).dump(obj.default_storage)]
+            return MinStorageSchema(self.lang).dump(obj.default_storage)
         elif hasattr(obj, 'storage'):
-            return [MinStorageSchema(self.lang).dump(obj.storage)]
+            return MinStorageSchema(self.lang).dump(obj.storage)
         return None
 
     def get_comment(self, obj):
@@ -331,7 +331,7 @@ class CommentSchema(BaseSchema):
         additional = ('id', 'text', 'reply_id', 'type')
 
     user = fields.Function(lambda obj: obj.user_id)
-    reply = fields.Method("get_comment")
+    reply_to = fields.Method("get_comment")
     created_at = fields.Method("get_created_at")
 
 
@@ -382,7 +382,7 @@ class SpecialProductSchema(BaseSchema):
     title = fields.Method('get_title')
     thumbnail = fields.Function(lambda o: HOST + o.thumbnail.file.url)
     description = fields.Method('get_description')
-    storage = fields.Method("get_storage")
+    storages = fields.Method("get_storage")
     media = fields.Method('get_media')
 
 
@@ -391,7 +391,7 @@ class MinSpecialProductSchema(BaseSchema):
         additional = ('id', 'url')
 
     title = fields.Method('get_title')
-    storage = fields.Method('get_min_storage')
+    storages = fields.Method('get_min_storage')
     thumbnail = fields.Function(lambda o: HOST + o.thumbnail.file.url)
     permalink = fields.Function(lambda o: o.storage.product.permalink)
 
