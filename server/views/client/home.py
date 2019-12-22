@@ -38,6 +38,13 @@ class GetSpecialOffer(View):
 
 class GetSpecialProduct(View):
     def get(self, request):
+        special_product = SpecialProduct.objects.select_related(*SpecialProduct.select).filter(special=True)
+        res = {'special_product': MinSpecialProductSchema(language=request.lang).dump(special_product, many=True)}
+        return JsonResponse(res)
+
+
+class BoxesGetSpecialProduct(View):
+    def get(self, request):
         step = int(request.GET.get('s', default_step))
         page = int(request.GET.get('e', default_page))
         all_box = Box.objects.all()

@@ -211,16 +211,6 @@ def last_page(query, step):
     return math.ceil(query.count() / step)
 
 
-def calculate_profit(products):
-    # TypeError: default storage is list but have one member
-    total_price = sum([product['product']['default_storage'][0]['final_price'] * product['count']
-                       for product in products])
-    discount_price = sum(
-        [product['product']['default_storage'][0]['discount_price'] * product['count'] for product in products])
-    profit = total_price - discount_price
-    return {'total_price': total_price, 'discount_price': discount_price, 'profit': profit, 'shopping_cost': 0}
-
-
 def des_encrypt(data='test', key=os.urandom(16)):
     backend = default_backend()
     text = data.encode()
@@ -239,6 +229,16 @@ def des_decrypt(encrypted_text, key):
     cipher = Cipher(algorithms.TripleDES(key), modes.ECB(), backend=backend)
     decryptor = cipher.decryptor()
     return unpadder.update(decryptor.update(encrypted_text) + decryptor.finalize()) + unpadder.finalize()
+
+
+def calculate_profit(products):
+    # TypeError: default storage is list but have one member
+    total_price = sum([product['product']['default_storage']['final_price'] * product['count']
+                       for product in products])
+    discount_price = sum(
+        [product['product']['default_storage']['discount_price'] * product['count'] for product in products])
+    profit = total_price - discount_price
+    return {'total_price': total_price, 'discount_price': discount_price, 'profit': profit, 'shopping_cost': 0}
 
 
 def get_basket(user, lang, basket=None):
@@ -284,6 +284,7 @@ def sync_default_storage(storages, products):
         if storage.product == product:
             product.default_storage = storage
 
+
 @pysnooper.snoop()
 def sync_storage(basket_id, op):
     basket_products = BasketProduct.objects.filter(basket_id=basket_id)
@@ -307,10 +308,10 @@ def load_location(location):
     return {"lat": location[0], "lng": location[1]}
 
 
-def add_one_off_job(name, args, task='server.tasks.hello', interval=30, period=IntervalSchedule.MINUTES):
+def add_one_off_job(name, args=None, kwargs=None, task='server.tasks.hello', interval=30, period=IntervalSchedule.SECONDS):
     schedule, created = IntervalSchedule.objects.get_or_create(every=interval, period=period)
-    task, created = PeriodicTask.objects.get_or_create(interval=schedule, name=name, task=task,
-                                                       args=args, one_off=True)
+    task, created = PeriodicTask.objects.get_or_create(interval=schedule, name=name, task=task, one_off=True,
+                                                       args=json.dumps(args), kwargs=json.dumps(kwargs))
     return task
 
 

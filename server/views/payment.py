@@ -34,11 +34,25 @@ class IPG(View):
 
 
 class PaymentRequest(View):
-    def get(self, request):
-        basket = Basket.objects.filter(user=request.user, active=True).first()
-        # basket = get_basket(request.user, request.lang)
-        invoice = self.create_invoice(request)
-        self.reserve_storage(basket, invoice)
+    @pysnooper.snoop()
+    def get(self, request, basket_id):
+        user = request.user
+        assert Basket.objects.filter(pk=basket_id, user=user).exists()
+        invoice = Invoice.objects.filter(user=user, basket_id=basket_id)
+        if not invoice.exists():
+            basket = Basket.objects.filter(user=request.user, active=True).first()
+            invoice = self.create_invoice(request)
+            self.reserve_storage(basket, invoice)
+        else:
+            invoice = invoice.first()
+            assert invoice.status == 'pending'
+            invoice.status = 'canceled'
+            invoice.task.enabled = False
+            invoice.task.description = 'Canceled by system'
+            invoice.task.save()
+            new_invoice = self.create_invoice(request)
+            self.reserve_storage(basket, new_invoice)
+
         amount = invoice.amount
         datetime = timezone.now()
         return_url = HOST + '/payment_callback'
@@ -75,27 +89,22 @@ class PaymentRequest(View):
         if basket['address_required']:
             address = user.default_address
 
-        invoice, created = Invoice.objects.get_or_create(created_by=user, updated_by=user, user=user,
-                                                         amount=basket['summary']['discount_price'],
-                                                         type="unknown", address=address, tax=20,
-                                                         basket_id=basket['basket']['id'])
-
-        # Invoice.objects.filter(basket_id=basket['basket']['id'], status='pending').delete()
-
-        # invoice = Invoice(created_by=user, updated_by=user, user=user, amount=basket['summary']['discount_price'],
-        #                   type="unknown", address=address, tax=20, basket_id=basket['basket']['id'])
-        # invoice.save()
+        invoice = Invoice(created_by=user, updated_by=user, user=user, amount=basket['summary']['discount_price'],
+                          type="unknown", address=address, tax=5, basket_id=basket['basket']['id'])
+        invoice.save()
         return invoice
 
-    @pysnooper.snoop()
     def reserve_storage(self, basket, invoice):
         if basket.sync == 'false':
             sync_storage(basket, operator.sub)
-            invoice.job = add_one_off_job(name=f'{invoice.id}: cancel reservation', args=[invoice.id, ], interval=3,
+            task_name = f"{invoice.id}: cancel reservation"
+            # args = []
+            kwargs = {"invoice_id": invoice.id, "task_name": task_name}
+            invoice.job = add_one_off_job(name=task_name, kwargs=kwargs, interval=3,
                                           task='server.tasks.cancel_reservation')
-            basket.active = False
-            basket.sync = 'reserved'
-            basket.save()
+            # basket.active = False
+            # basket.sync = 'reserved'
+            # basket.save()
             # python manage.py rqscheduler
 
 

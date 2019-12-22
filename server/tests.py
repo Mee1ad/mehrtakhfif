@@ -21,6 +21,13 @@ class Add(View):
         return JsonResponse({})
 
 
+class Update(View):
+    @pysnooper.snoop()
+    def get(self, request, id):
+        PeriodicTask.objects.filter(pk=id).update()
+        return JsonResponse({'worker': worker.name, 'jobs': job_list})
+
+
 class Get(View):
     @pysnooper.snoop()
     def get(self, request):

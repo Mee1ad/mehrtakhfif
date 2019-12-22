@@ -14,6 +14,7 @@ from django.utils import timezone
 from push_notifications.models import GCMDevice
 from safedelete.models import SafeDeleteModel, SOFT_DELETE_CASCADE
 from django_celery_beat.models import PeriodicTask
+from django_celery_results.models import TaskResult
 from mehr_takhfif.settings import HOST
 
 
@@ -603,11 +604,12 @@ class Comment(SafeDeleteModel):
     deleted_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Deleted by',
                                    related_name='comment_deleted_by')
     text = models.TextField(null=True, blank=True)
+    rate = models.PositiveSmallIntegerField(default=0, null=True)
     approved = models.BooleanField(default=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     reply = models.ForeignKey('self', on_delete=CASCADE, blank=True, null=True)
     suspend = models.BooleanField(default=False)
-    type = models.CharField(max_length=255, )
+    type = models.CharField(max_length=255, choices=[('q-a', 1), ('rate', 2)])
     product = models.ForeignKey(
         Product, on_delete=CASCADE, null=True, blank=True)
     blog_post = models.ForeignKey(
@@ -648,7 +650,9 @@ class Invoice(models.Model):
     ipg = models.SmallIntegerField(default=1)
     status = models.CharField(max_length=255, default='pending', choices=[('pending', 'pending'), ('payed', 'payed'),
                                                                           ('canceled', 'canceled'),
-                                                                          ('rejected', 'rejected')])
+                                                                          ('rejected', 'rejected'),
+                                                                          ('new_invoice', 'new_invoice'),
+                                                                          ])
 
     class Meta:
         db_table = 'invoice'
@@ -794,6 +798,7 @@ class SpecialProduct(SafeDeleteModel):
     _safedelete_policy = SOFT_DELETE_CASCADE
     id = models.BigAutoField(
         auto_created=True, primary_key=True)
+    special = models.BooleanField(default=False, null=True, blank=True)
     title = JSONField(default=multilanguage, null=True, blank=True)
     url = models.URLField(null=True, blank=True)
     # product = models.ForeignKey(Product, on_delete=CASCADE, null=True, blank=True)
@@ -979,7 +984,7 @@ class Booking(SafeDeleteModel):
     reject_at = models.DateTimeField(null=True, blank=True)
     reject_by = models.ForeignKey(User, on_delete=PROTECT, null=True, blank=True, related_name='booking_reject_by')
 
-    class meta:
+    class Meta:
         db_table = 'booking'
         ordering = ['-id']
 
@@ -987,14 +992,3 @@ class Booking(SafeDeleteModel):
 @receiver(post_delete, sender=Media)
 def submission_delete(sender, instance, **kwargs):
     instance.file.delete(False)
-
-
-class Car(models.Model):
-    name = models.CharField(max_length=255)
-    color = models.CharField(max_length=255)
-    description = models.TextField(max_length=255)
-    type = models.IntegerField(choices=[
-        (1, "Sedan"),
-        (2, "Truck"),
-        (4, "SUV"),
-    ])

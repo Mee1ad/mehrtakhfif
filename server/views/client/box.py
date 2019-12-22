@@ -22,15 +22,17 @@ class GetSpecialProduct(View):
 
 
 class BoxDetail(View):
+    @pysnooper.snoop()
     def get(self, request, permalink):
         try:
             box = Box.objects.filter(permalink=permalink).first()
-            max_price = Storage.objects.filter(box=box).aggregate(Max('discount_price'))['discount_price__max']
-            min_price = Storage.objects.filter(box=box).aggregate(Min('discount_price'))['discount_price__min']
-            categories = get_categories(box)
+            max_price = Storage.objects.filter(product__box=box).aggregate(Max('discount_price'))['discount_price__max']
+            min_price = Storage.objects.filter(product__box=box).aggregate(Min('discount_price'))['discount_price__min']
+            categories = get_categories(request.lang, box_id=box.id)
             return JsonResponse({'box': BoxSchema(request.lang).dump(box), 'max_price': max_price,
                                  'min_price': min_price, 'categories': categories})
-        except Exception:
+        except Exception as e:
+            print(e)
             return JsonResponse({}, status=400)
 
 

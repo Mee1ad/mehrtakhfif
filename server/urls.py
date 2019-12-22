@@ -13,7 +13,8 @@ home = [
     path('test', home.Test.as_view(), name='test'),
     path('slider', home.GetSlider.as_view(), name='slider'),
     path('special_offer', home.GetSpecialOffer.as_view(), name='special_offer'),
-    path('special_product', home.GetSpecialProduct.as_view(), name='all_special_product'),
+    path('box_special_product', home.BoxesGetSpecialProduct.as_view(), name='box_special_product'),
+    path('special_product', home.GetSpecialProduct.as_view(), name='special_product'),
     path('best_seller', home.BestSeller.as_view(), name='best_seller'),
     path('category', home.AllCategory.as_view(), name='category'),
     path('box', home.AllBoxWithCategories.as_view(), name='box'),
@@ -37,7 +38,7 @@ box = [
     # path('box/<str:name>', box.Filter.as_view(), name='box')
 ]
 
-single = [
+product = [
     path('product/<str:permalink>', product.Single.as_view(), name='single'),
     path('comment', product.CommentView.as_view(), name='comment'),
     path('related-products/<str:permalink>', product.RelatedProduct.as_view(), name='related_products'),
@@ -50,7 +51,7 @@ shopping = [
 
 pay = [
     path('ipg', payment.IPG.as_view(), name='ipg'),
-    path('payment', payment.PaymentRequest.as_view(), name='payment'),
+    path('payment/<int:basket_id>', payment.PaymentRequest.as_view(), name='payment'),
     path('callback', payment.CallBack.as_view(), name='callback'),
 ]
 
@@ -78,4 +79,4 @@ test = [
     path('delete/<str:job>', tests.Delete.as_view(), name='delete'),
 ]
 
-urlpatterns = [*home, *box, *user, *shopping, *single, *auth, *pay, *test]
+urlpatterns = [*home, *box, *user, *shopping, *product, *auth, *pay, *test]
