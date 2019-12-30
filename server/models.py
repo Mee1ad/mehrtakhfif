@@ -145,6 +145,21 @@ class User(AbstractUser):
         ordering = ['-id']
 
 
+class Base(SafeDeleteModel):
+    # related_query_name = "%(app_label)s_%(class)ss" for many to many
+    class Meta:
+        abstract = True
+
+    _safedelete_policy = SOFT_DELETE_CASCADE
+    id = models.BigAutoField(auto_created=True, primary_key=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(User, on_delete=PROTECT, related_name="%(app_label)s_%(class)s_created_by")
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(User, on_delete=PROTECT, related_name="%(app_label)s_%(class)s_updated_by")
+    deleted_by = models.ForeignKey(User, on_delete=PROTECT, null=True, blank=True,
+                                   related_name="%(app_label)s_%(class)s_deleted_by")
+
+
 class Client(models.Model):
     id = models.BigAutoField(auto_created=True, primary_key=True)
     device_id = models.CharField(max_length=255)
@@ -159,8 +174,7 @@ class State(models.Model):
     def __str__(self):
         return self.name
 
-    id = models.IntegerField(
-        auto_created=True, primary_key=True)
+    id = models.IntegerField(auto_created=True, primary_key=True)
     name = models.CharField(max_length=255)
 
     class Meta:
@@ -184,8 +198,7 @@ class Address(models.Model):
     def __str__(self):
         return self.city.name
 
-    id = models.BigAutoField(
-        auto_created=True, primary_key=True)
+    id = models.BigAutoField(auto_created=True, primary_key=True)
     state = models.ForeignKey(State, on_delete=PROTECT)
     city = models.ForeignKey(City, on_delete=PROTECT)
     name = models.CharField(max_length=255)
@@ -201,35 +214,24 @@ class Address(models.Model):
         ordering = ['-id']
 
 
-class Box(SafeDeleteModel):
+class Box(Base):
     def __str__(self):
         try:
             return self.name['persian']
         except Exception:
             return self.name
 
-    _safedelete_policy = SOFT_DELETE_CASCADE
     objects = MyManager()
-    id = models.AutoField(auto_created=True, primary_key=True)
     name = JSONField(default=multilanguage)
     permalink = models.CharField(max_length=255, unique=True, null=True)
     admin = models.OneToOneField(User, on_delete=PROTECT)
-    created_at = models.DateTimeField(
-        auto_now_add=True, verbose_name='Created at')
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Created by',
-                                   related_name='box_created_by')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
-    updated_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Updated by',
-                                   related_name='box_updated_by')
-    deleted_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Deleted by',
-                                   related_name='box_deleted_by', null=True, blank=True)
 
     class Meta:
         db_table = 'box'
         ordering = ['-id']
 
 
-class Media(SafeDeleteModel):
+class Media(Base):
     def __str__(self):
         return self.title['persian']
 
@@ -248,47 +250,29 @@ class Media(SafeDeleteModel):
             Image.open(path).save(new_path + f'_{quality}' + format[0], 'JPEG',
                                   quality=qualities[quality])
 
-    _safedelete_policy = SOFT_DELETE_CASCADE
-    id = models.BigAutoField(auto_created=True, primary_key=True)
     file = models.FileField(upload_to=upload_to)
     title = JSONField(default=multilanguage)
     type = models.CharField(max_length=255, choices=[('video', 'video'), ('image', 'image'), ('audio', 'audio'),
                                                      ('slider', 'slider'), ('ads', 'ads'), ('thumbnail', 'thumbnail')])
     box = models.ForeignKey(Box, on_delete=models.CASCADE, null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Created by',
-                                   related_name='media_created_by')
-    deleted_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Deleted by',
-                                   related_name='media_deleted_by')
 
     class Meta:
         db_table = 'media'
         ordering = ['-id']
 
 
-class Category(SafeDeleteModel):
+class Category(Base):
     prefetch = ['feature_set']
 
     def __str__(self):
         return f"{self.name['persian']}"
 
-    _safedelete_policy = SOFT_DELETE_CASCADE
-    id = models.BigAutoField(auto_created=True, primary_key=True)
     parent = models.ForeignKey("self", on_delete=models.CASCADE, null=True, blank=True)
     # child = models.CharField(max_length=null=True, blank=True)
     box = models.ForeignKey(Box, on_delete=CASCADE)
     name = JSONField(default=multilanguage)
     permalink = models.CharField(max_length=255, unique=True, null=True)
     priority = models.SmallIntegerField(default=0)
-    created_at = models.DateTimeField(
-        auto_now_add=True, verbose_name='Created at')
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Created by',
-                                   related_name='category_created_by')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
-    updated_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Updated by',
-                                   related_name='category_updated_by')
-    deleted_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Deleted by',
-                                   related_name='category_deleted_by')
     disable = models.BooleanField(default=False)
     media = models.ForeignKey(Media, on_delete=CASCADE, null=True, blank=True)
 
@@ -298,19 +282,10 @@ class Category(SafeDeleteModel):
         indexes = [GinIndex(fields=['name'])]
 
 
-class Feature(models.Model):
+class Feature(Base):
     def __str__(self):
         return f"{self.id}"
 
-    id = models.BigAutoField(
-        auto_created=True, primary_key=True)
-    created_at = models.DateTimeField(
-        auto_now_add=True, verbose_name='Created at')
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Created by',
-                                   related_name='feature_created_by')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
-    updated_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Updated by',
-                                   related_name='feature_updated_by')
     name = JSONField(default=multilanguage)
     type = models.CharField(max_length=255, default='bool')
     value = JSONField(default=feature_value)
@@ -323,26 +298,14 @@ class Feature(models.Model):
         ordering = ['-id']
 
 
-class Tag(SafeDeleteModel):
+class Tag(Base):
     def __str__(self):
         return f"{self.name['persian']}"
 
-    _safedelete_policy = SOFT_DELETE_CASCADE
-    id = models.BigAutoField(
-        auto_created=True, primary_key=True)
     name = JSONField(default=multilanguage)
     meta_key = models.CharField(max_length=255, unique=True, null=True)
     box = models.ForeignKey(
         Box, on_delete=models.CASCADE, blank=True, null=True)
-    created_at = models.DateTimeField(
-        auto_now_add=True, verbose_name='Created at')
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Created by',
-                                   related_name='tag_created_by')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
-    updated_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Updated by',
-                                   related_name='tag_updated_by')
-    deleted_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Deleted by',
-                                   related_name='tag_deleted_by')
 
     class Meta:
         db_table = 'tag'
@@ -350,7 +313,7 @@ class Tag(SafeDeleteModel):
         indexes = [GinIndex(fields=['name'])]
 
 
-class Product(SafeDeleteModel):
+class Product(Base):
     select = ['category', 'box', 'thumbnail']
     prefetch = ['tag', 'media']
     filter = []
@@ -387,16 +350,6 @@ class Product(SafeDeleteModel):
     #     self.slug = slugify(self.title)
     #     super(Post, self).save()
 
-    _safedelete_policy = SOFT_DELETE_CASCADE
-    id = models.BigAutoField(auto_created=True, primary_key=True)
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
-    created_by = models.ForeignKey(User, on_delete=CASCADE, verbose_name='Created by',
-                                   related_name='product_created_by')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
-    updated_by = models.ForeignKey(User, on_delete=CASCADE, verbose_name='Updated by',
-                                   related_name='product_updated_by')
-    deleted_by = models.ForeignKey(User, on_delete=CASCADE, null=True, blank=True, verbose_name='Deleted by',
-                                   related_name='product_deleted_by')
     category = models.ForeignKey(Category, on_delete=CASCADE)
     box = models.ForeignKey(Box, on_delete=PROTECT)
     name = JSONField(default=multilanguage)
@@ -419,6 +372,7 @@ class Product(SafeDeleteModel):
     type = models.CharField(max_length=255, choices=[(
         'service', 'service'), ('product', 'product')])
     details = JSONField(default=product_details)
+    rate = models.PositiveSmallIntegerField(default=0)
     # todo not null
     default_storage = models.OneToOneField(null=True, blank=True, to="Storage", on_delete=CASCADE,
                                            related_name='product_default_storage')
@@ -431,15 +385,13 @@ class Product(SafeDeleteModel):
         ordering = ['-updated_at']
 
 
-class Storage(SafeDeleteModel):
+class Storage(Base):
     select = ['product', 'product__thumbnail']
     prefetch = ['product__media', 'feature']
 
     def __str__(self):
         return f"{self.product}"
 
-    _safedelete_policy = SOFT_DELETE_CASCADE
-    id = models.BigAutoField(auto_created=True, primary_key=True)
     product = models.ForeignKey(Product, on_delete=CASCADE)
     title = JSONField(default=multilanguage)
     # box = models.ForeignKey(Box, on_delete=PROTECT)
@@ -462,14 +414,6 @@ class Storage(SafeDeleteModel):
     discount_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount price percent')
     discount_vip_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount vip price percent')
     default = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
-    created_by = models.ForeignKey(User, on_delete=CASCADE, verbose_name='Created by',
-                                   related_name='storage_created_by')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
-    updated_by = models.ForeignKey(User, on_delete=CASCADE, verbose_name='Updated by',
-                                   related_name='storage_updated_by')
-    deleted_by = models.ForeignKey(User, on_delete=CASCADE, null=True, blank=True, verbose_name='Deleted by',
-                                   related_name='storage_deleted_by')
 
     class Meta:
         db_table = 'storage'
@@ -492,25 +436,16 @@ class FeatureStorage(models.Model):
         ordering = ['-id']
 
 
-class Basket(SafeDeleteModel):
+class Basket(Base):
     prefetch = ['products']
 
     def __str__(self):
         return f"{self.user}"
 
-    _safedelete_policy = SOFT_DELETE_CASCADE
-    id = models.BigAutoField(auto_created=True, primary_key=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
     count = models.IntegerField(default=0)
     products = models.ManyToManyField(Storage, through='BasketProduct')
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Created by',
-                                   related_name='basket_created_by')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
-    updated_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Updated by',
-                                   related_name='basket_updated_by')
-    deleted_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Deleted by',
-                                   related_name='basket_deleted_by')
     description = models.TextField(blank=True, null=True)
     active = models.BooleanField(default=True)
     sync = models.CharField(max_length=255, choices=[('false', 0), ('reserved', 1),
@@ -527,8 +462,7 @@ class BasketProduct(models.Model):
     def __str__(self):
         return f"{self.id}"
 
-    id = models.BigAutoField(
-        auto_created=True, primary_key=True)
+    id = models.BigAutoField(auto_created=True, primary_key=True)
     storage = models.ForeignKey(Storage, on_delete=PROTECT)
     basket = models.ForeignKey(Basket, on_delete=PROTECT)
     count = models.IntegerField(default=1)
@@ -539,22 +473,10 @@ class BasketProduct(models.Model):
         ordering = ['-id']
 
 
-class Blog(SafeDeleteModel):
+class Blog(Base):
     def __str__(self):
         return self.title
 
-    _safedelete_policy = SOFT_DELETE_CASCADE
-    id = models.BigAutoField(
-        auto_created=True, primary_key=True)
-    created_at = models.DateTimeField(
-        auto_now_add=True, verbose_name='Created at')
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Created by',
-                                   related_name='blog_created_by')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
-    updated_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Updated by',
-                                   related_name='blog_updated_by')
-    deleted_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Deleted by',
-                                   related_name='blog_deleted_by')
     box = models.ForeignKey(Box, on_delete=models.CASCADE)
     title = JSONField(default=multilanguage)
     description = JSONField(null=True, blank=True)
@@ -565,22 +487,10 @@ class Blog(SafeDeleteModel):
         ordering = ['-id']
 
 
-class BlogPost(SafeDeleteModel):
+class BlogPost(Base):
     def __str__(self):
         return self.permalink
 
-    _safedelete_policy = SOFT_DELETE_CASCADE
-    id = models.BigAutoField(
-        auto_created=True, primary_key=True)
-    created_at = models.DateTimeField(
-        auto_now_add=True, verbose_name='Created at')
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Created by',
-                                   related_name='blog_post_created_by')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
-    updated_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Updated by',
-                                   related_name='blog_post_updated_by')
-    deleted_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Deleted by',
-                                   related_name='blog_post_deleted_by')
     blog = models.ForeignKey(Blog, on_delete=CASCADE, blank=True, null=True)
     body = JSONField(blank=True, null=True)
     permalink = models.URLField(blank=True, null=True)
@@ -596,10 +506,8 @@ class Comment(SafeDeleteModel):
         return f"{self.user}"
 
     _safedelete_policy = SOFT_DELETE_CASCADE
-    id = models.BigAutoField(
-        auto_created=True, primary_key=True)
-    created_at = models.DateTimeField(
-        auto_now_add=True, verbose_name='Created at')
+    id = models.BigAutoField(auto_created=True, primary_key=True)
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
     deleted_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Deleted by',
                                    related_name='comment_deleted_by')
@@ -610,32 +518,23 @@ class Comment(SafeDeleteModel):
     reply = models.ForeignKey('self', on_delete=CASCADE, blank=True, null=True)
     suspend = models.BooleanField(default=False)
     type = models.CharField(max_length=255, choices=[('q-a', 1), ('rate', 2)])
-    product = models.ForeignKey(
-        Product, on_delete=CASCADE, null=True, blank=True)
-    blog_post = models.ForeignKey(
-        BlogPost, on_delete=CASCADE, null=True, blank=True)
+    product = models.ForeignKey(Product, on_delete=CASCADE, null=True, blank=True)
+    blog_post = models.ForeignKey(BlogPost, on_delete=CASCADE, null=True, blank=True)
 
     class Meta:
         db_table = 'comments'
         ordering = ['-id']
 
 
-class Invoice(models.Model):
+class Invoice(Base):
     select = ['basket']
 
     def __str__(self):
         return f"{self.user}"
 
-    id = models.BigAutoField(auto_created=True, primary_key=True)
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
-    created_by = models.ForeignKey(to=User, on_delete=models.CASCADE, verbose_name='Created by',
-                                   related_name='invoice_created_by')
     suspended_at = models.DateTimeField(blank=True, null=True, verbose_name='Suspended at')
     suspended_by = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True, verbose_name='Suspended by',
                                      related_name='invoice_suspended_by')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
-    updated_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Updated by',
-                                   related_name='invoice_product_updated_by')
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     task = models.OneToOneField(PeriodicTask, on_delete=CASCADE, null=True, blank=True)
     basket = models.OneToOneField(to=Basket, on_delete=PROTECT, related_name='invoice_to_basket')
@@ -663,8 +562,7 @@ class InvoiceProduct(models.Model):
     def __str__(self):
         return f"{self.product}"
 
-    id = models.BigAutoField(
-        auto_created=True, primary_key=True)
+    id = models.BigAutoField(auto_created=True, primary_key=True)
     product = models.ForeignKey(Product, on_delete=PROTECT)
     invoice = models.ForeignKey(Invoice, on_delete=PROTECT)
     count = models.SmallIntegerField(default=1)
@@ -677,22 +575,12 @@ class InvoiceProduct(models.Model):
         ordering = ['-id']
 
 
-class Menu(SafeDeleteModel):
+class Menu(Base):
     select = ['media', 'parent']
 
     def __str__(self):
         return f"{self.name['persian']}"
 
-    _safedelete_policy = SOFT_DELETE_CASCADE
-    id = models.BigAutoField(auto_created=True, primary_key=True)
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Created by',
-                                   related_name='menu_created_by')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
-    updated_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Updated by',
-                                   related_name='menu_updated_by')
-    deleted_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Deleted by',
-                                   related_name='menu_deleted_by')
     type = models.CharField(max_length=255, blank=True, null=True)
     name = JSONField(default=multilanguage)
     media = models.ForeignKey(Media, on_delete=PROTECT, blank=True, null=True)
@@ -709,54 +597,40 @@ class Rate(models.Model):
     def __str__(self):
         return f"{self.rate}"
 
-    id = models.BigAutoField(
-        auto_created=True, primary_key=True)
-    created_at = models.DateTimeField(
-        auto_now_add=True, verbose_name='Created at')
+    id = models.BigAutoField(auto_created=True, primary_key=True)
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     rate = models.FloatField()
-    storage = models.ForeignKey(
-        Storage, on_delete=models.CASCADE, null=True, blank=True)
+    storage = models.ForeignKey(Storage, on_delete=models.CASCADE, null=True, blank=True)
 
     class Meta:
         db_table = 'rate'
         ordering = ['-id']
 
 
-class Slider(SafeDeleteModel):
+class Slider(Base):
     select = ['media']
 
     def __str__(self):
         return f"{self.title['persian']}"
 
-    _safedelete_policy = SOFT_DELETE_CASCADE
-    id = models.BigAutoField(auto_created=True, primary_key=True)
     title = JSONField(default=multilanguage)
     product = models.ForeignKey(Product, on_delete=CASCADE, blank=True, null=True)
     media = models.ForeignKey(Media, on_delete=CASCADE)
     type = models.CharField(max_length=255)
     link = models.URLField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Created by',
-                                   related_name='slider_created_by')
-    updated_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Updated by',
-                                   related_name='slider_updated_by')
-    deleted_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Deleted by',
-                                   related_name='slider_deleted_by')
 
     class Meta:
         db_table = 'slider'
         ordering = ['-id']
 
 
-class SpecialOffer(SafeDeleteModel):
+class SpecialOffer(Base):
     select = ['media']
 
     def __str__(self):
         return f"{self.name['persian']}"
 
-    _safedelete_policy = SOFT_DELETE_CASCADE
-    id = models.BigAutoField(auto_created=True, primary_key=True)
     name = JSONField(default=multilanguage)
     code = models.CharField(max_length=65)
     user = models.ManyToManyField(User, blank=True)
@@ -772,14 +646,6 @@ class SpecialOffer(SafeDeleteModel):
     start_date = models.DateTimeField(verbose_name='Start date')
     end_date = models.DateTimeField(verbose_name='End date')
     media = models.ForeignKey(Media, on_delete=CASCADE)
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Created by',
-                                   related_name='special_offer_created_by')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
-    updated_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Updated by',
-                                   related_name='special_offer_updated_by')
-    deleted_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Deleted by',
-                                   related_name='special_offer_deleted_by')
     least_count = models.IntegerField(default=1)
     peak_price = models.BigIntegerField(verbose_name='Peak price')
 
@@ -788,18 +654,15 @@ class SpecialOffer(SafeDeleteModel):
         ordering = ['-id']
 
 
-class SpecialProduct(SafeDeleteModel):
+class SpecialProduct(Base):
     select = ['storage', 'media', 'thumbnail']
     min_select = ['thumbnail']
 
     def __str__(self):
         return f"{self.storage}"
 
-    _safedelete_policy = SOFT_DELETE_CASCADE
-    id = models.BigAutoField(
-        auto_created=True, primary_key=True)
     special = models.BooleanField(default=False, null=True, blank=True)
-    title = JSONField(default=multilanguage, null=True, blank=True)
+    name = JSONField(default=multilanguage, null=True, blank=True)
     url = models.URLField(null=True, blank=True)
     # product = models.ForeignKey(Product, on_delete=CASCADE, null=True, blank=True)
     storage = models.ForeignKey(Storage, on_delete=CASCADE, null=True, blank=True)
@@ -808,14 +671,6 @@ class SpecialProduct(SafeDeleteModel):
     category = models.ForeignKey(Category, on_delete=CASCADE)
     media = models.ForeignKey(Media, on_delete=CASCADE, null=True, blank=True)
     type = models.CharField(max_length=255, )
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Created by',
-                                   related_name='special_product_created_by')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
-    updated_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Updated by',
-                                   related_name='special_product_updated_by')
-    deleted_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Deleted by',
-                                   related_name='special_product_deleted_by')
     description = JSONField(default=multilanguage)
 
     class Meta:
@@ -827,16 +682,7 @@ class WalletDetail(models.Model):
     def __str__(self):
         return f"{self.user}"
 
-    id = models.BigAutoField(
-        auto_created=True, primary_key=True)
     credit = models.IntegerField(default=0)
-    created_at = models.DateTimeField(
-        auto_now_add=True, verbose_name='Created at')
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Created by',
-                                   related_name='wallet_detail_created_by')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
-    updated_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Updated by',
-                                   related_name='wallet_detail_updated_by')
     user = models.ForeignKey(User, on_delete=CASCADE)
 
     class Meta:
@@ -844,22 +690,10 @@ class WalletDetail(models.Model):
         ordering = ['-id']
 
 
-class WishList(SafeDeleteModel):
+class WishList(Base):
     def __str__(self):
         return f"{self.user}"
 
-    _safedelete_policy = SOFT_DELETE_CASCADE
-    id = models.BigAutoField(
-        auto_created=True, primary_key=True)
-    created_at = models.DateTimeField(
-        auto_now_add=True, verbose_name='Created at')
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Created by',
-                                   related_name='wish_list_created_by')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
-    updated_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Updated by',
-                                   related_name='wish_list_updated_by')
-    deleted_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Deleted by',
-                                   related_name='wish_list_deleted_by')
     user = models.ForeignKey(User, on_delete=CASCADE)
     type = models.CharField(max_length=255, )
     notify = models.BooleanField(default=False)
@@ -874,8 +708,7 @@ class NotifyUser(models.Model):
     def __str__(self):
         return f"{self.user}"
 
-    id = models.BigAutoField(
-        auto_created=True, primary_key=True)
+    id = models.BigAutoField(auto_created=True, primary_key=True)
     user = models.ForeignKey(User, on_delete=CASCADE)
     type = models.CharField(max_length=255)
     category = models.ForeignKey(Category, on_delete=CASCADE)
@@ -903,76 +736,87 @@ class Ad(models.Model):
         ordering = ['-id']
 
 
-# ---------- Boom-gardi ---------- #
+# ---------- Tourism ---------- #
 
 
-class RoomOwner(SafeDeleteModel):
-    id = models.BigAutoField(auto_created=True, primary_key=True)
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
-    created_by = models.ForeignKey(User, on_delete=PROTECT, verbose_name='Created by',
-                                   related_name='room_owner_created_by')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
-    updated_by = models.ForeignKey(User, on_delete=PROTECT, verbose_name='Updated by',
-                                   related_name='room_owner_updated_by')
-    deleted_by = models.ForeignKey(User, on_delete=PROTECT, null=True, blank=True, verbose_name='Deleted by',
-                                   related_name='room_owner_deleted_by')
+class RoomOwner(Base):
+    def __str__(self):
+        return f"{self.user}"
+
     user = models.ForeignKey(User, on_delete=PROTECT, related_name='room_owner_user')
     account_number = models.CharField(max_length=255)
     account_name = models.CharField(max_length=255)
     account_card = models.CharField(max_length=255)
     account_shaba = models.CharField(max_length=255)
+    bank_name = models.CharField(max_length=255)
 
     class Meta:
         db_table = 'room_owner'
         ordering = ['-id']
 
 
-class RoomPrice(SafeDeleteModel):
-    id = models.BigAutoField(auto_created=True, primary_key=True)
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
-    created_by = models.ForeignKey(User, on_delete=PROTECT, verbose_name='Created by',
-                                   related_name='room_price_created_by')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
-    updated_by = models.ForeignKey(User, on_delete=PROTECT, verbose_name='Updated by',
-                                   related_name='room_price_updated_by')
-    deleted_by = models.ForeignKey(User, on_delete=PROTECT, null=True, blank=True, verbose_name='Deleted by',
-                                   related_name='room_price_deleted_by')
+class RentType(Base):
+    class Meta:
+        db_table = 'rent_type'
+        ordering = ['-id']
+
+    def __str__(self):
+        return self.name['persian']
+
+    name = JSONField(default=multilanguage)
+
+
+class RoomPrice(Base):
+    def __str__(self):
+        return f'{self.base}'
+
     base = models.IntegerField(default=0)
+    person_price = models.IntegerField(default=0)
     year_price = JSONField(default=dict)
     season_price = JSONField(default=dict)
     month_price = JSONField(default=dict)
     holiday_price = JSONField(default=dict)
     week_price = JSONField(default=dict)
     day_price = JSONField(default=dict)
+    weekly_discount_percent = models.IntegerField(default=0)
+    monthly_discount_percent = models.IntegerField(default=0)
 
-    class meta:
+    class Meta:
         db_table = 'room_price'
         ordering = ['-id']
 
 
-class ReserveProduct(SafeDeleteModel):
-    owner = models.ForeignKey(RoomOwner, on_delete=PROTECT)
+class Room(Base):
+    def __str__(self):
+        return f"{self.product}"
+
+    cancel_rules = JSONField(default=multilanguage, blank=True)
+    rules = JSONField(default=multilanguage, blank=True)
+    owner = models.ForeignKey(RoomOwner, on_delete=CASCADE)
+    state = models.ForeignKey(State, on_delete=PROTECT)
+    city = models.ForeignKey(City, on_delete=PROTECT)
     price = models.ForeignKey(RoomPrice, on_delete=PROTECT)
     product = models.OneToOneField(Product, on_delete=PROTECT)
-    type = models.CharField(max_length=255)
+    room_feature = JSONField(blank=True)
+    capacity = JSONField(blank=True)
+    residence_type = models.ManyToManyField(RentType)
+    rent_type = JSONField(default=multilanguage, blank=True)
+    residence_area = JSONField(default=multilanguage, blank=True)
+    bedroom = JSONField(blank=True)
+    safety = JSONField(blank=True)
+    calender = JSONField(blank=True)
 
     class Meta:
-        db_table = 'reserve_product'
+        db_table = 'room'
         ordering = ['-id']
 
 
-class Booking(SafeDeleteModel):
-    id = models.BigAutoField(auto_created=True, primary_key=True)
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
-    created_by = models.ForeignKey(User, on_delete=PROTECT, verbose_name='Created by',
-                                   related_name='booking_created_by')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
-    updated_by = models.ForeignKey(User, on_delete=PROTECT, verbose_name='Updated by',
-                                   related_name='booking_updated_by')
-    deleted_by = models.ForeignKey(User, on_delete=PROTECT, null=True, blank=True, verbose_name='Deleted by',
-                                   related_name='booking_deleted_by')
+class Booking(Base):
+    def __str__(self):
+        return self.invoice
+
     user = models.ForeignKey(User, on_delete=PROTECT, related_name='booking_user')
-    reserve_product = models.ForeignKey(ReserveProduct, on_delete=PROTECT)
+    room = models.ForeignKey(Room, on_delete=PROTECT)
     invoice = models.ForeignKey(Invoice, on_delete=PROTECT)
     confirmation_date = models.DateTimeField(null=True, blank=True)
     confirmation_by = models.ForeignKey(User, on_delete=PROTECT, null=True, blank=True,

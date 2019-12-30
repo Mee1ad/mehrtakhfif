@@ -45,6 +45,7 @@ class BoxAdmin(SafeDeleteAdmin):
     list_filter = ('name',) + SafeDeleteAdmin.list_filter
     search_fields = ['name']
     list_per_page = 10
+
     # ordering = ('-created_at',)
 
     def persian(self, obj):
@@ -73,6 +74,7 @@ class MenuAdmin(SafeDeleteAdmin):
 
     def menu_name(self, obj):
         return obj.name['persian']
+
     menu_name.short_description = 'name'
 
 
@@ -92,6 +94,7 @@ class CommentAdmin(SafeDeleteAdmin):
 
     def get_post(self, obj):
         return Base.get_post(obj)
+
     get_user.short_description = 'user'
 
 
@@ -105,10 +108,12 @@ class SliderAdmin(SafeDeleteAdmin):
 
     def slider_title(self, obj):
         return obj.title['persian']
+
     slider_title.short_description = 'name'
 
     def url(self, obj):
         return mark_safe(f'<a href="{HOST + obj.media.file.url}">{escape(obj.media.title["persian"])}</a>')
+
     url.short_description = 'url'
 
 
@@ -122,17 +127,17 @@ class SpecialOfferAdmin(SafeDeleteAdmin):
 
     def menu_name(self, obj):
         return obj.name['persian']
+
     menu_name.short_description = 'name'
 
 
 class SpecialProductAdmin(SafeDeleteAdmin):
     list_display = ('url', 'storage', 'box', 'category', 'media', 'type') + SafeDeleteAdmin.list_display
-    list_filter = ('title', 'storage', 'box', 'category') + SafeDeleteAdmin.list_filter
+    list_filter = ('name', 'storage', 'box', 'category') + SafeDeleteAdmin.list_filter
     # list_display_links = ('name',)
-    search_fields = ['title']
+    search_fields = ['name']
     list_per_page = 10
     ordering = ('-created_at',)
-
 
 
 class ProductAdmin(SafeDeleteAdmin):
@@ -145,7 +150,38 @@ class ProductAdmin(SafeDeleteAdmin):
 
     def product_name(self, obj):
         return obj.name['persian']
+
     product_name.short_description = 'name'
+
+
+class RoomAdmin(SafeDeleteAdmin):
+    list_display = ('id', 'owner', 'state', 'city', 'price') + SafeDeleteAdmin.list_display
+    # list_display_links = ('name',)
+    search_fields = ['city']
+    list_per_page = 10
+    ordering = ('-created_at',)
+
+
+class RoomOwnerAdmin(SafeDeleteAdmin):
+    list_display = ('id', 'user', 'bank_name') + SafeDeleteAdmin.list_display
+    list_filter = ('bank_name',) + SafeDeleteAdmin.list_filter
+    # list_display_links = ('name',)
+    list_per_page = 10
+    ordering = ('-created_at',)
+
+
+class RoomPriceAdmin(SafeDeleteAdmin):
+    list_display = ('id', 'base') + SafeDeleteAdmin.list_display
+    # list_display_links = ('name',)
+    list_per_page = 10
+    ordering = ('-created_at',)
+
+
+class RentTypeAdmin(SafeDeleteAdmin):
+    list_display = ('id', 'name') + SafeDeleteAdmin.list_display
+    list_display_links = ('name',)
+    list_per_page = 10
+    ordering = ('-created_at',)
 
 
 class StorageAdmin(SafeDeleteAdmin):
@@ -158,6 +194,7 @@ class StorageAdmin(SafeDeleteAdmin):
 
     def product_name(self, obj):
         return obj.name['persian']
+
     product_name.short_description = 'name'
 
 
@@ -166,6 +203,7 @@ class MediaAdmin(admin.ModelAdmin):
     search_fields = ['name', 'box', 'type']
     list_per_page = 10
     ordering = ('-id',)
+
     # fields = ('name', 'type',)
 
     def url(self, obj):
@@ -176,7 +214,7 @@ class MediaAdmin(admin.ModelAdmin):
 
 class StateAdmin(admin.ModelAdmin):
     list_display = ('id', 'name',)
-    search_fields = ['name',]
+    search_fields = ['name', ]
     list_per_page = 10
     ordering = ('-id',)
 
@@ -200,6 +238,10 @@ admin.site.register(Feature)
 admin.site.register(Address)
 admin.site.register(Media, MediaAdmin)
 admin.site.register(Product, ProductAdmin)
+admin.site.register(Room, RoomAdmin)
+admin.site.register(RoomOwner, RoomOwnerAdmin)
+admin.site.register(RoomPrice, RoomPriceAdmin)
+admin.site.register(RentType, RentTypeAdmin)
 admin.site.register(Storage)
 admin.site.register(Basket)
 admin.site.register(Comment, CommentAdmin)
@@ -210,7 +252,7 @@ admin.site.register(Rate)
 admin.site.register(Slider, SliderAdmin)
 admin.site.register(SpecialOffer, SpecialOfferAdmin)
 admin.site.register(SpecialProduct, SpecialProductAdmin)
-admin.site.register(WalletDetail)
+# admin.site.register(WalletDetail)
 admin.site.register(Blog)
 admin.site.register(BlogPost)
 admin.site.register(WishList)
