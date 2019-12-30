@@ -4,7 +4,7 @@ from django.http import JsonResponse
 
 from server.models import *
 from server.serialize import *
-from server.views.utils import View
+from server.views.utils import View, default_page, default_step
 
 
 class Single(View):
@@ -18,7 +18,6 @@ class Single(View):
             product = ProductSchema(lang).dump(product)
             product['category'] = self.get_category(product['category'])
             product['storages'] = StorageSchema(lang).dump(storages, many=True)
-            # product['features'] = FeatureSchema(lang).dump(features, many=True)
             purchased = False
             if user.is_authenticated:
                 purchased = self.purchase_status(user, storages)
@@ -52,7 +51,11 @@ class Single(View):
 
 class RelatedProduct(View):
     def get(self, request, permalink):
-        products = Product.objects.filter(id__lt=5)
+        step = int(request.GET.get('s', default_step))
+        page = int(request.GET.get('e', default_page))
+        product = Product.objects.get(permalink=permalink)
+        tags = product.tag.all()
+        products = Product.objects.exclude(permalink=permalink).filter(tag__in=tags)[(page - 1) * step:step * page]
         return JsonResponse({'products': MinProductSchema().dump(products, many=True)})
 
 
@@ -60,11 +63,12 @@ class CommentView(View):
     def get(self, request):
         product_id = request.GET.get('product_id', None)
         blog_id = request.GET.get('blog_id', None)
+        comment_type = request.GET.get('type', None)
         if product_id:
-            comments = Comment.objects.filter(product_id=product_id).order_by('-created_at')
+            comments = Comment.objects.filter(product_id=product_id, type=comment_type).order_by('-created_at')
             return JsonResponse({'comments': CommentSchema().dump(comments, many=True)})
         if blog_id:
-            comments = Comment.objects.filter(blog_post_id=blog_id).order_by('-created_at')
+            comments = Comment.objects.filter(blog_post_id=blog_id, type=comment_type).order_by('-created_at')
             return JsonResponse({'comments': CommentSchema().dump(comments, many=True)})
         comments = Comment.objects.filter(user=request.user).order_by('-created_at')
         return JsonResponse({'comments': CommentSchema().dump(comments, many=True)})

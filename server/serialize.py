@@ -209,6 +209,7 @@ class BoxCategoriesSchema(BaseSchema):
     name = fields.Method('get_name')
     child = fields.Method('get_child')
     media = fields.Method("get_media_link")
+    parent = fields.Function(lambda o: o.parent_id)
 
     def get_child(self, obj):
         if hasattr(obj, 'child'):
@@ -242,10 +243,9 @@ class ProductSchema(BaseSchema):
         additional = ('id', 'permalink', 'gender', 'type', 'address', 'short_address')
 
     name = fields.Method("get_name")
-    # box = fields.Method("get_box")
-    box = fields.Nested(BoxSchema())
-    # category = fields.Method("get_category")
-    category = fields.Nested(CategorySchema())
+    box = fields.Method("get_box")
+    category = fields.Method("get_category")
+    room = fields.Method("get_room")
     tag = TagField()
     media = MediaField()
     thumbnail = fields.Function(lambda o: HOST + o.thumbnail.file.url)
@@ -379,7 +379,7 @@ class SpecialProductSchema(BaseSchema):
     class Meta:
         additional = ('id', 'type', 'link', 'url')
 
-    title = fields.Method('get_title')
+    name = fields.Method('get_name')
     thumbnail = fields.Function(lambda o: HOST + o.thumbnail.file.url)
     description = fields.Method('get_description')
     storages = fields.Method("get_storage")
@@ -390,8 +390,8 @@ class MinSpecialProductSchema(BaseSchema):
     class Meta:
         additional = ('id', 'url')
 
-    title = fields.Method('get_title')
-    storages = fields.Method('get_min_storage')
+    name = fields.Method('get_name')
+    default_storage = fields.Method('get_min_storage')
     thumbnail = fields.Function(lambda o: HOST + o.thumbnail.file.url)
     permalink = fields.Function(lambda o: o.storage.product.permalink)
 
@@ -427,11 +427,6 @@ class NotifyUserSchema(Schema):
     box = fields.Method("get_box")
 
 
-class TourismSchema(Schema):
-    class Meta:
-        additional = ('id', 'date', 'price')
-
-
 class StateSchema(Schema):
     class Meta:
         additional = ('id', 'name')
@@ -442,3 +437,31 @@ class CitySchema(Schema):
         additional = ('id', 'name')
 
     state = fields.Function(lambda o: o.state_id)
+
+
+class PriceSchema(BaseSchema):
+    class Meta:
+        additional = ('base', 'person_price', 'weekly_discount_percent', 'monthly_discount_percent')
+
+    year_price = fields.Method("get_year_price")
+    season_price = fields.Method("get_season_price")
+    month_price = fields.Method("get_month_price")
+    holiday_price = fields.Method("get_holiday_price")
+    week_price = fields.Method("get_week_price")
+    day_price = fields.Method("get_day_price")
+
+
+class RoomSchema(BaseSchema):
+    cancel_rules = fields.Method("get_cancel_rules")
+    rules = fields.Method("rules")
+    state = fields.Function(lambda o: o.state.name)
+    city = fields.Function(lambda o: o.city.name)
+    price = fields.Nested(PriceSchema())
+    room_feature = fields.Method('get_room_feature')
+    capacity = fields.Method('get_capacity')
+    rent_type = fields.Method('get_rent_type')
+    residence_area = fields.Method('get_residence_area')
+    bedroom = fields.Method('get_bedroom')
+    safety = fields.Method('get_safety')
+    calender = fields.Method('get_calender')
+    # residence_type

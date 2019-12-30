@@ -22,7 +22,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('server.urls')),
     path('box_admin/', include('server.admin_urls')),
-    path('django-rq/', include('django_rq.urls')),
 ]
 
 

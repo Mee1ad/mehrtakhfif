@@ -151,17 +151,6 @@ CACHES = {
 CACHE_TTL = 60 * 15
 SESSION_ENGINE = "django.contrib.sessions.backends.cache"
 
-RQ_QUEUES = {
-    'default': {
-        'USE_REDIS_CACHE': 'default',
-    },
-    'basket_sync': {
-        'HOST': '192.168.1.95',
-        'PORT': 6379,
-        'DB': 5,
-    },
-}
-
 # ELASTICSEARCH_DSL = {
 #     'default': {
 #         'hosts': 'localhost:9200'
