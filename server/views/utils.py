@@ -160,21 +160,26 @@ def move(obj, folder):
 
 
 def filter_params(params):
-    filters = ('discount_price', 'discount_vip_price', 'discount_percent', 'discount_vip_percent',
-               'product__sold_count', 'created_at')
+    if not params:
+        return {'filter': {}, 'order': {}}
+    ds = 'default_storage__'
+    dis = 'discount'
+    filters = (f'{ds}{dis}_price', f'{ds}{dis}_vip_price', f'{ds}{dis}_percent', f'{ds}{dis}_vip_percent',
+               'product__sold_count')
+    valid_orders = {'cheap': f'-{ds}{dis}_price', 'expensive': f'{ds}{dis}_price',
+                    'best_seller': f'{ds}sold_count', 'popular': '-created_at', 'discount': f'-{ds}{dis}discount_percent'}
     filters_op = ('__gt', '__gte', '__lt', '__lte')
     valid_filters = [x + y for y in filters_op for x in filters]
     filter_by = {}
-    orderby = ['-created_at']
-    try:
-        orderby = params.getlist('orderby') + orderby
-    except KeyError:
-        pass
+    orderby = '-created_at'
     try:
         keys = params.keys()
         for key in keys:
-            if key == 'orderby' or len(key) < 3:
+            if len(key) < 3:
                 continue
+            if key == 'orderby':
+                valid_key = valid_orders[f'{params[key]}']
+                orderby = valid_key
             value = params.getlist(key)
             if len(value) == 1:
                 valid_key = difflib.get_close_matches(key, valid_filters)[0]
@@ -243,6 +248,8 @@ def calculate_profit(products):
 
 def get_basket(user, lang, basket=None):
     basket = basket or Basket.objects.filter(user=user, active=True).first()
+    if basket is None:
+        return {}
     basket_products = BasketProduct.objects.filter(basket=basket).select_related(*BasketProduct.related)
     address_required = False
     profit = {}
@@ -285,7 +292,6 @@ def sync_default_storage(storages, products):
             product.default_storage = storage
 
 
-@pysnooper.snoop()
 def sync_storage(basket_id, op):
     basket_products = BasketProduct.objects.filter(basket_id=basket_id)
     for basket_product in basket_products:
@@ -308,7 +314,8 @@ def load_location(location):
     return {"lat": location[0], "lng": location[1]}
 
 
-def add_one_off_job(name, args=None, kwargs=None, task='server.tasks.hello', interval=30, period=IntervalSchedule.SECONDS):
+def add_one_off_job(name, args=None, kwargs=None, task='server.tasks.hello', interval=30,
+                    period=IntervalSchedule.MINUTES):
     schedule, created = IntervalSchedule.objects.get_or_create(every=interval, period=period)
     task, created = PeriodicTask.objects.get_or_create(interval=schedule, name=name, task=task, one_off=True,
                                                        args=json.dumps(args), kwargs=json.dumps(kwargs))

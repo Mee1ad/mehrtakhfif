@@ -114,8 +114,8 @@ class User(AbstractUser):
                                   validators=[validate_slug])
     last_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='Last name',
                                  validators=[validate_slug])
-    fullname = models.CharField(max_length=255, blank=True, null=True, verbose_name='full name',
-                                validators=[validate_slug])
+    # fullname = models.CharField(max_length=255, blank=True, null=True, verbose_name='full name',
+    #                             validators=[validate_slug])
     username = models.CharField(max_length=150, unique=True)
     language = models.CharField(max_length=7, default='fa')
     email = models.CharField(max_length=255, blank=True, null=True, validators=[validate_email])
@@ -123,6 +123,8 @@ class User(AbstractUser):
     gender = models.BooleanField(blank=True, null=True)  # True: man, False: woman
     updated_at = models.DateTimeField(blank=True, auto_now=True, verbose_name='Updated at')
     is_ban = models.BooleanField(default=False)
+    shaba = models.CharField(max_length=255, null=True, blank=True)
+    birthday = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(default=False, verbose_name='Phone verified')
     is_superuser = models.BooleanField(default=False, verbose_name='Superuser')
     is_staff = models.BooleanField(default=False, verbose_name='Staff')
@@ -538,13 +540,14 @@ class Invoice(Base):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     task = models.OneToOneField(PeriodicTask, on_delete=CASCADE, null=True, blank=True)
     basket = models.OneToOneField(to=Basket, on_delete=PROTECT, related_name='invoice_to_basket')
-    products = models.ManyToManyField(Product, through='InvoiceProduct')
+    storages = models.ManyToManyField(Storage, through='InvoiceStorage')
     payed_at = models.DateTimeField(blank=True, null=True, verbose_name='Payed at')
     type = models.CharField(max_length=255, blank=True, null=True)
     special_offer_id = models.BigIntegerField(blank=True, null=True, verbose_name='Special offer id')
     address = models.ForeignKey(to=Address, null=True, blank=True, on_delete=PROTECT)
     description = models.TextField(max_length=255, blank=True, null=True)
     amount = models.IntegerField()
+    final_price = models.IntegerField()
     tax = models.IntegerField()
     ipg = models.SmallIntegerField(default=1)
     status = models.CharField(max_length=255, default='pending', choices=[('pending', 'pending'), ('payed', 'payed'),
@@ -558,17 +561,20 @@ class Invoice(Base):
         ordering = ['-id']
 
 
-class InvoiceProduct(models.Model):
+class InvoiceStorage(models.Model):
     def __str__(self):
-        return f"{self.product}"
+        return f"{self.storage}"
 
     id = models.BigAutoField(auto_created=True, primary_key=True)
-    product = models.ForeignKey(Product, on_delete=PROTECT)
+    storage = models.ForeignKey(Storage, on_delete=PROTECT)
     invoice = models.ForeignKey(Invoice, on_delete=PROTECT)
     count = models.SmallIntegerField(default=1)
     tax = models.IntegerField(default=0)
     final_price = models.BigIntegerField(verbose_name='Final price')
     discount_price = models.BigIntegerField(verbose_name='Discount price', default=0)
+    discount_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount price percent')
+    vip_discount_price = models.BigIntegerField(verbose_name='Discount price', default=0)
+    vip_discount_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount price percent')
 
     class Meta:
         db_table = 'invoice_product'
@@ -663,6 +669,7 @@ class SpecialProduct(Base):
 
     special = models.BooleanField(default=False, null=True, blank=True)
     name = JSONField(default=multilanguage, null=True, blank=True)
+    label_name = JSONField(default=multilanguage, null=True, blank=True)
     url = models.URLField(null=True, blank=True)
     # product = models.ForeignKey(Product, on_delete=CASCADE, null=True, blank=True)
     storage = models.ForeignKey(Storage, on_delete=CASCADE, null=True, blank=True)
@@ -739,11 +746,11 @@ class Ad(models.Model):
 # ---------- Tourism ---------- #
 
 
-class RoomOwner(Base):
+class HouseOwner(Base):
     def __str__(self):
         return f"{self.user}"
 
-    user = models.ForeignKey(User, on_delete=PROTECT, related_name='room_owner_user')
+    user = models.ForeignKey(User, on_delete=PROTECT, related_name='house_owner_user')
     account_number = models.CharField(max_length=255)
     account_name = models.CharField(max_length=255)
     account_card = models.CharField(max_length=255)
@@ -751,7 +758,7 @@ class RoomOwner(Base):
     bank_name = models.CharField(max_length=255)
 
     class Meta:
-        db_table = 'room_owner'
+        db_table = 'house_owner'
         ordering = ['-id']
 
 
@@ -766,7 +773,7 @@ class RentType(Base):
     name = JSONField(default=multilanguage)
 
 
-class RoomPrice(Base):
+class HousePrice(Base):
     def __str__(self):
         return f'{self.base}'
 
@@ -782,32 +789,34 @@ class RoomPrice(Base):
     monthly_discount_percent = models.IntegerField(default=0)
 
     class Meta:
-        db_table = 'room_price'
+        db_table = 'house_price'
         ordering = ['-id']
 
 
-class Room(Base):
+class House(Base):
     def __str__(self):
         return f"{self.product}"
 
     cancel_rules = JSONField(default=multilanguage, blank=True)
     rules = JSONField(default=multilanguage, blank=True)
-    owner = models.ForeignKey(RoomOwner, on_delete=CASCADE)
+    owner = models.ForeignKey(HouseOwner, on_delete=CASCADE)
     state = models.ForeignKey(State, on_delete=PROTECT)
     city = models.ForeignKey(City, on_delete=PROTECT)
-    price = models.ForeignKey(RoomPrice, on_delete=PROTECT)
+    price = models.ForeignKey(HousePrice, on_delete=PROTECT)
     product = models.OneToOneField(Product, on_delete=PROTECT)
-    room_feature = JSONField(blank=True)
-    capacity = JSONField(blank=True)
+    house_feature = JSONField(blank=True)
+    inf_area = models.IntegerField()  # Infrastructure area
+    area = models.IntegerField()  # Infrastructure area
+    capacity = models.IntegerField(default=0)
     residence_type = models.ManyToManyField(RentType)
     rent_type = JSONField(default=multilanguage, blank=True)
     residence_area = JSONField(default=multilanguage, blank=True)
-    bedroom = JSONField(blank=True)
+    bedroom = JSONField(blank=True) # rooms, shared space, rakhte khab, description, ...
     safety = JSONField(blank=True)
     calender = JSONField(blank=True)
 
     class Meta:
-        db_table = 'room'
+        db_table = 'house'
         ordering = ['-id']
 
 
@@ -816,7 +825,7 @@ class Booking(Base):
         return self.invoice
 
     user = models.ForeignKey(User, on_delete=PROTECT, related_name='booking_user')
-    room = models.ForeignKey(Room, on_delete=PROTECT)
+    house = models.ForeignKey(House, on_delete=PROTECT)
     invoice = models.ForeignKey(Invoice, on_delete=PROTECT)
     confirmation_date = models.DateTimeField(null=True, blank=True)
     confirmation_by = models.ForeignKey(User, on_delete=PROTECT, null=True, blank=True,

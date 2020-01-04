@@ -8,6 +8,7 @@ from server.views.utils import sync_storage
 from django.utils import timezone
 from django_celery_beat.models import PeriodicTask
 from django_celery_results.models import TaskResult
+import pysnooper
 
 
 @shared_task
@@ -23,8 +24,10 @@ def cancel_reservation(invoice_id, **kwargs):
 
 @task_postrun.connect
 def task_postrun_handler(task_id=None, **kwargs):
-    task_name = kwargs.get('kwargs')['task_name']
-    task_result = TaskResult.objects.filter(task_id=task_id).first()
-    description = f'{task_result.date_done}:, {task_result.result}, {task_result.traceback or ""}'
-    task = PeriodicTask.objects.filter(name=task_name).update(description=description)
-    return f'Return {task_id}'
+    task = kwargs.get('kwargs', None)
+    if task:
+        task_name = task['task_name']
+        task_result = TaskResult.objects.filter(task_id=task_id).first()
+        description = f'{task_result.date_done}:, {task_result.result}, {task_result.traceback or ""}'
+        PeriodicTask.objects.filter(name=task_name).update(description=description)
+        return f'Return {task_id}'
