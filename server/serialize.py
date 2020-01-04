@@ -48,10 +48,13 @@ class BaseSchema(Schema):
         self.lang = language
         self.default_lang = 'persian'
 
-    def get(self, obj):
-        if obj[self.lang] != "":
-            return obj[self.lang]
-        return obj[self.default_lang]
+    def get(self, name):
+        try:
+            if name[self.lang] != "":
+                return name[self.lang]
+            return name[self.default_lang]
+        except ValueError:
+            return ""
 
     def get_name(self, obj):
         return self.get(obj.name)
@@ -92,6 +95,11 @@ class BaseSchema(Schema):
     def get_product(self, obj):
         if obj.product is not None:
             return ProductSchema(self.lang).dump(obj.product)
+        return None
+
+    def get_house(self, obj):
+        if hasattr(obj, 'house'):
+            return HouseSchema(self.lang).dump(obj.house)
         return None
 
     def get_permalink(self, obj):
@@ -153,7 +161,8 @@ class BaseSchema(Schema):
 class UserSchema(BaseSchema):
     class Meta:
         additional = (
-            'id', 'email', 'fullname', 'gender', 'username', 'meli_code', 'wallet_money', 'vip', 'active_address')
+            'id', 'email', 'first_name', 'last_name', 'gender', 'username', 'meli_code', 'wallet_money', 'vip', 'active_address')
+
 
 
 class AddressSchema(BaseSchema):
@@ -245,7 +254,7 @@ class ProductSchema(BaseSchema):
     name = fields.Method("get_name")
     box = fields.Method("get_box")
     category = fields.Method("get_category")
-    room = fields.Method("get_room")
+    house = fields.Method("get_house")
     tag = TagField()
     media = MediaField()
     thumbnail = fields.Function(lambda o: HOST + o.thumbnail.file.url)
@@ -338,8 +347,7 @@ class CommentSchema(BaseSchema):
 # todo
 class InvoiceSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'price', 'product', 'payed_at', 'successful', 'type', 'special_offer_id',
-                      'description', 'final_price', 'discount_price', 'count', 'tax')
+        additional = ('id', 'amount', 'status', 'discount_price', 'created_at', 'final_price')
 
     created_at = fields.Method("get_created_at")
 
@@ -391,9 +399,17 @@ class MinSpecialProductSchema(BaseSchema):
         additional = ('id', 'url')
 
     name = fields.Method('get_name')
+    label_name = fields.Method('get_label_name')
+    product_name = fields.Method('get_product_name')
     default_storage = fields.Method('get_min_storage')
     thumbnail = fields.Function(lambda o: HOST + o.thumbnail.file.url)
     permalink = fields.Function(lambda o: o.storage.product.permalink)
+
+    def get_label_name(self, obj):
+        return self.get(obj.label_name)
+
+    def get_product_name(self, obj):
+        return self.get(obj.storage.product.name)
 
 
 class AdSchema(BaseSchema):
@@ -415,7 +431,7 @@ class WishListSchema(BaseSchema):
     class Meta:
         additional = ('id', 'type', 'notify')
 
-    product = fields.Method("get_product")
+    product = fields.Method("get_min_product")
 
 
 class NotifyUserSchema(Schema):
@@ -451,13 +467,13 @@ class PriceSchema(BaseSchema):
     day_price = fields.Method("get_day_price")
 
 
-class RoomSchema(BaseSchema):
+class HouseSchema(BaseSchema):
     cancel_rules = fields.Method("get_cancel_rules")
     rules = fields.Method("rules")
     state = fields.Function(lambda o: o.state.name)
     city = fields.Function(lambda o: o.city.name)
     price = fields.Nested(PriceSchema())
-    room_feature = fields.Method('get_room_feature')
+    house_feature = fields.Method('get_house_feature')
     capacity = fields.Method('get_capacity')
     rent_type = fields.Method('get_rent_type')
     residence_area = fields.Method('get_residence_area')

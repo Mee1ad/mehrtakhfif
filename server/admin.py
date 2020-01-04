@@ -154,7 +154,7 @@ class ProductAdmin(SafeDeleteAdmin):
     product_name.short_description = 'name'
 
 
-class RoomAdmin(SafeDeleteAdmin):
+class HouseAdmin(SafeDeleteAdmin):
     list_display = ('id', 'owner', 'state', 'city', 'price') + SafeDeleteAdmin.list_display
     # list_display_links = ('name',)
     search_fields = ['city']
@@ -162,7 +162,7 @@ class RoomAdmin(SafeDeleteAdmin):
     ordering = ('-created_at',)
 
 
-class RoomOwnerAdmin(SafeDeleteAdmin):
+class HouseOwnerAdmin(SafeDeleteAdmin):
     list_display = ('id', 'user', 'bank_name') + SafeDeleteAdmin.list_display
     list_filter = ('bank_name',) + SafeDeleteAdmin.list_filter
     # list_display_links = ('name',)
@@ -170,7 +170,7 @@ class RoomOwnerAdmin(SafeDeleteAdmin):
     ordering = ('-created_at',)
 
 
-class RoomPriceAdmin(SafeDeleteAdmin):
+class HousePriceAdmin(SafeDeleteAdmin):
     list_display = ('id', 'base') + SafeDeleteAdmin.list_display
     # list_display_links = ('name',)
     list_per_page = 10
@@ -238,9 +238,9 @@ admin.site.register(Feature)
 admin.site.register(Address)
 admin.site.register(Media, MediaAdmin)
 admin.site.register(Product, ProductAdmin)
-admin.site.register(Room, RoomAdmin)
-admin.site.register(RoomOwner, RoomOwnerAdmin)
-admin.site.register(RoomPrice, RoomPriceAdmin)
+admin.site.register(House, HouseAdmin)
+admin.site.register(HouseOwner, HouseOwnerAdmin)
+admin.site.register(HousePrice, HousePriceAdmin)
 admin.site.register(RentType, RentTypeAdmin)
 admin.site.register(Storage)
 admin.site.register(Basket)

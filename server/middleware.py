@@ -5,6 +5,7 @@ import json
 from django.urls import resolve
 import pysnooper
 import time
+from django.core.handlers.wsgi import WSGIRequest
 
 
 class AuthMiddleware:
@@ -20,7 +21,7 @@ class AuthMiddleware:
         path = request.path_info
         route = resolve(path).route
         app_name = resolve(path).app_name
-        request.user = User.objects.get(pk=1)
+        # request.user = User.objects.get(pk=1)
         if route == 'favicon.ico':
             return JsonResponse({})
         try:
@@ -30,10 +31,9 @@ class AuthMiddleware:
             request.lang = request.headers['language']
         except Exception:
             request.lang = 'persian'
-        try:
+        request.params = {}
+        if not isinstance(request, WSGIRequest):
             request.params = filter_params(request)
-        except Exception:
-            request.params = {}
         new_basket_count = None
         if request.user.is_authenticated:
             try:

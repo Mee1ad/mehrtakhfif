@@ -8,7 +8,8 @@ from django.utils import timezone
 from django.views import View
 from datetime import timedelta
 import operator
-from server.models import Invoice, InvoiceProduct, Basket
+from server.models import Invoice, InvoiceStorage, Basket
+from django_celery_beat.models import PeriodicTask
 from server.serialize import *
 from server.views.utils import des_encrypt, get_basket, add_one_off_job, sync_storage
 
@@ -51,12 +52,15 @@ class PaymentRequest(View):
             invoice.task.description = 'Canceled by system'
             invoice.task.save()
             new_invoice = self.create_invoice(request)
-            self.reserve_storage(basket, new_invoice)
+            self.reserve_storage(invoice.basket, new_invoice)
 
         amount = invoice.amount
         datetime = timezone.now()
         return_url = HOST + '/payment_callback'
+        self.ipg_api()
+        return JsonResponse({})
 
+    def ipg_api(self):
         # encrypt (PKCS7,ECB(TripleDes) => base64
         # sign_data = des_encrypt(f'{saddad["terminal_id"]};{invoice.pk};{amount}')
         additional_data = None  # json
@@ -80,8 +84,6 @@ class PaymentRequest(View):
         # print(r.status_code)
         # print(r.content)
 
-        return JsonResponse({})
-
     def create_invoice(self, request, basket=None):
         user = request.user
         address = None
@@ -90,35 +92,41 @@ class PaymentRequest(View):
             address = user.default_address
 
         invoice = Invoice(created_by=user, updated_by=user, user=user, amount=basket['summary']['discount_price'],
-                          type="unknown", address=address, tax=5, basket_id=basket['basket']['id'])
+                          type="unknown", address=address, tax=5, basket_id=basket['basket']['id'],
+                          final_price=basket['summary']['total_price'])
         invoice.save()
         return invoice
 
     def reserve_storage(self, basket, invoice):
         if basket.sync == 'false':
             sync_storage(basket, operator.sub)
-            task_name = f"{invoice.id}: cancel reservation"
+            task_name = f'{invoice.id}: cancel reservation'
             # args = []
             kwargs = {"invoice_id": invoice.id, "task_name": task_name}
-            invoice.job = add_one_off_job(name=task_name, kwargs=kwargs, interval=3,
-                                          task='server.tasks.cancel_reservation')
-            # basket.active = False
-            # basket.sync = 'reserved'
-            # basket.save()
-            # python manage.py rqscheduler
+            invoice.task = add_one_off_job(name=task_name, kwargs=kwargs, interval=5,
+                                           task='server.tasks.cancel_reservation')
+            basket.active = False
+            basket.sync = 'reserved'
+            basket.save()
 
 
 class CallBack(View):
+    @pysnooper.snoop()
     def post(self, request):
         data = json.loads(request.body)
         invoice_id = data['OrderId']
         description = data['Description']
         # details = self.verify(data['token'])
-        self.submit_invoice_products(invoice_id)
+        self.submit_invoice_storages(invoice_id)
         try:
-            updated = Invoice.objects.filter(pk=invoice_id).update(status='payed', payed_at=timezone.now())
-            assert updated
-        except AssertionError:
+            invoice = Invoice.objects.get(pk=invoice_id)
+            invoice.status = 'payed'
+            invoice.payed_at = timezone.now()
+            invoice.basket.sync = 'done'
+            invoice.basket.save()
+            invoice.save()
+        except Exception as e:
+            print(e)
             print('error')
         return JsonResponse({})
 
@@ -131,7 +139,7 @@ class CallBack(View):
                 'retrival_ref_no': res['RetrivalRefNo'], 'system_trace_no': res['SystemTraceNo'],
                 'invoice_id': res['OrderId']}
 
-    def submit_invoice_products(self, invoice_id):
+    def submit_invoice_storages(self, invoice_id):
         invoice = Invoice.objects.filter(pk=invoice_id).select_related(*Invoice.select).first()
         basket = invoice.basket
         basket_products = BasketProduct.objects.filter(basket=basket)
@@ -139,6 +147,11 @@ class CallBack(View):
         for product in basket_products:
             storage = product.storage
             invoice_products.append(
-                InvoiceProduct(product=storage.product, invoice_id=invoice_id, count=product.count, tax=storage.tax,
-                               final_price=storage.final_price, discount_price=storage.discount_price))
-        InvoiceProduct.objects.bulk_create(invoice_products)
+                InvoiceStorage(storage=storage, invoice_id=invoice_id, count=product.count, tax=storage.tax,
+                               final_price=storage.final_price, discount_price=storage.discount_price,
+                               discount_percent=storage.discount_percent, vip_discount_price=storage.vip_discount_price,
+                               vip_discount_percent=storage.vip_discount_percent))
+        task_name = f'{invoice.id}: cancel reservation'
+        description = f'{timezone.now()}: canceled by system'
+        PeriodicTask.objects.filter(name=task_name).update(enabled=False, description=description)
+        InvoiceStorage.objects.bulk_create(invoice_products)

@@ -40,7 +40,7 @@ INSTALLED_APPS = [
     'push_notifications',
     'django_celery_results',
     'django_celery_beat',
-    # 'django_elasticsearch_dsl'    
+    'django_elasticsearch_dsl'
 ]
 
 MIDDLEWARE = [
@@ -151,11 +151,11 @@ CACHES = {
 CACHE_TTL = 60 * 15
 SESSION_ENGINE = "django.contrib.sessions.backends.cache"
 
-# ELASTICSEARCH_DSL = {
-#     'default': {
-#         'hosts': 'localhost:9200'
-#     },
-# }
+ELASTICSEARCH_DSL = {
+    'default': {
+        'hosts': 'localhost:9200'
+    },
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators

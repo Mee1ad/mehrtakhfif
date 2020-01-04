@@ -9,7 +9,7 @@ from server.views.utils import LoginRequired
 from server.decorators import try_except
 
 
-class Profile(View):
+class Profile(LoginRequired):
     def get(self, request):
         return JsonResponse({'user': UserSchema().dump(request.user)})
 
@@ -27,7 +27,7 @@ class Profile(View):
         return JsonResponse({'user': UserSchema().dump(user)})
 
 
-class ShoppingList(View):
+class Orders(View):
     def get(self, request):
         shopping_list = Invoice.objects.filter(user=request.user)
         shopping_list = InvoiceSchema().dump(shopping_list, many=True)
@@ -35,7 +35,6 @@ class ShoppingList(View):
 
 
 class UserComment(View):
-
     def get(self, request):
         comments = Comment.objects.filter(user=request.user).order_by('created_at')
         return JsonResponse({'comments': CommentSchema().dump(comments, many=True)})
