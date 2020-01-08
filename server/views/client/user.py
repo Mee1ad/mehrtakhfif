@@ -9,7 +9,7 @@ from server.views.utils import LoginRequired
 from server.decorators import try_except
 
 
-class Profile(LoginRequired):
+class Profile(View):
     def get(self, request):
         return JsonResponse({'user': UserSchema().dump(request.user)})
 
@@ -29,9 +29,13 @@ class Profile(LoginRequired):
 
 class Orders(View):
     def get(self, request):
+        step = int(request.GET.get('s', default_step))
+        page = int(request.GET.get('p', default_page))
         shopping_list = Invoice.objects.filter(user=request.user)
+        last_page_info = last_page(shopping_list, step)
+        shopping_list = shopping_list[(page - 1) * step:step * page]
         shopping_list = InvoiceSchema().dump(shopping_list, many=True)
-        return JsonResponse({'shopping_list': shopping_list})
+        return JsonResponse({'shopping_list': shopping_list, **last_page_info})
 
 
 class UserComment(View):
@@ -114,8 +118,15 @@ class GetCity(View):
 
 class WishlistView(View):
     def get(self, request):
+        # import time
+        # time.sleep(5)
+        step = int(request.GET.get('s', default_step))
+        page = int(request.GET.get('p', default_page))
         wishlists = WishList.objects.filter(user_id=request.user)
-        return JsonResponse({'wishlists': WishListSchema(request.lang).dump(wishlists, many=True)})
+        last_page_info = last_page(wishlists, step)
+        wishlists = wishlists[(page - 1) * step:step * page]
+        wishlists = WishListSchema(request.lang).dump(wishlists, many=True)
+        return JsonResponse({'wishlists': wishlists, **last_page_info})
 
     def post(self, request):
         data = json.loads(request.body)
@@ -130,13 +141,12 @@ class WishlistView(View):
             return JSONField({'message': 'updated'}, status=204)
 
     def delete(self, request):
-        product_id = request.GET.get('product_id', None)
+        wishlist_id = request.GET.get('wishlist_id', None)
         try:
-            assert not WishList.objects.filter(user=request.user, product_id=product_id).exists()
-            address = WishList.objects.filter(pk=product_id, user_id=request.user).first()
+            address = WishList.objects.get(pk=wishlist_id, user_id=request.user)
             address.delete()
             return JsonResponse({'message': 'ok'})
-        except AssertionError:
+        except WishList.DoesNotExist:
             return JsonResponse({'message': 'product does not exist'}, status=406)
 
 

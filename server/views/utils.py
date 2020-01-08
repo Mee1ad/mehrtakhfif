@@ -1,8 +1,7 @@
 import difflib
 import json
 import math
-from datetime import datetime
-from django.db.models import F
+
 import jwt
 import magic
 from cryptography.hazmat.backends import default_backend
@@ -10,16 +9,14 @@ from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core import serializers
+from django.db.models import F
 from django.views import View
-import pysnooper
-import operator
+from django_celery_beat.models import PeriodicTask, IntervalSchedule
 
 from mehr_takhfif import settings
 from mehr_takhfif.settings import TOKEN_SECRET, SECRET_KEY
 from server.models import *
-from server.serialize import *
-from django_celery_beat.models import PeriodicTask, IntervalSchedule
-import json
+from server.serialize import BoxCategoriesSchema, BasketSchema, BasketProductSchema, MinProductSchema
 
 default_step = 12
 default_page = 1
@@ -213,7 +210,8 @@ def get_categories(language, box_id=None, category=None):
 
 
 def last_page(query, step):
-    return math.ceil(query.count() / step)
+    items = query.count()
+    return {'pagination': {'last_page': math.ceil(items / step), 'items': items}}
 
 
 def des_encrypt(data='test', key=os.urandom(16)):
@@ -299,7 +297,7 @@ def sync_storage(basket_id, op):
         count = basket_product.count
         storage.available_count = op(F('available_count'), count)
         storage.available_count_for_sale = op(F('available_count_for_sale'), count)
-        # storage.sold_count = op(F('sold_count'), count)
+        storage.sold_count = op(F('sold_count'), count)
         storage.save()
 
 

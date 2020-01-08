@@ -21,7 +21,7 @@ class AuthMiddleware:
         path = request.path_info
         route = resolve(path).route
         app_name = resolve(path).app_name
-        # request.user = User.objects.get(pk=1)
+        request.user = User.objects.get(pk=1)
         if route == 'favicon.ico':
             return JsonResponse({})
         try:
@@ -48,8 +48,6 @@ class AuthMiddleware:
             except Exception as e:
                 print(e)
 
-        try:
-            pass
             # app_name = resolve(request.path_info).app_name
             # route = resolve(request.path_info).route
             # if app_name == 'mehrpeyk':
@@ -83,18 +81,17 @@ class AuthMiddleware:
             #         except Exception:
             #             pass
             # return JsonResponse({}, status=401)
-            delay = request.GET.get('delay', None)
-            # print(request.GET)
-            if delay:
-                print(delay)
-                time.sleep(float(delay))
-            error = request.GET.get('error', None)
-            if error:
-                status_code = request.GET.get('status_code', 501)
-                return JsonResponse({}, status=status_code)
+        # Debug
+        delay = request.GET.get('delay', None)
+        # print(request.GET)
+        if delay:
+            print(delay)
+            time.sleep(float(delay))
+        error = request.GET.get('error', None)
+        if error:
+            status_code = request.GET.get('status_code', 501)
+            return JsonResponse({}, status=status_code)
 
-        except json.decoder.JSONDecodeError:
-            return HttpResponse('')
         response = self.get_response(request)
         if app_name == 'server' and new_basket_count and 200 <= response.status_code <= 299:
             res = json.loads(response.content)

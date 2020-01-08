@@ -39,7 +39,6 @@ class Backend(ModelBackend):
 
 
 class Login(Validation):
-    @pysnooper.snoop()
     def post(self, request):
         data = json.loads(request.body)
         cookie_age = 30 * 60

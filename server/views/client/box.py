@@ -47,14 +47,12 @@ class BoxView(View):
         except Box.DoesNotExist:
             box = Box.objects.all()
             query = {'box__in': box}
-        print(params)
         products = Product.objects.filter(verify=True, **query, **params['filter'])
-        last_page_number = last_page(products, step)
+        last_page_info = last_page(products, step)
         products = products.select_related(*Product.select).order_by(params['order'])
         # products = available_products(products, step, page)
         serialized_products = MinProductSchema(request.lang).dump(products, many=True)
-        return JsonResponse({'data': serialized_products,
-                             'current_page': page, 'last_page': last_page_number})
+        return JsonResponse({'data': serialized_products, **last_page_info})
 
 
 class GetFeature(View):

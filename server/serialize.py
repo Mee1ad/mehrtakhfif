@@ -2,7 +2,10 @@ from marshmallow import Schema, fields
 from mehr_takhfif.settings import HOST, MEDIA_URL
 import pysnooper
 from secrets import token_hex
-from server.models import BasketProduct, FeatureStorage
+from datetime import date
+from django.utils import timezone
+from server.models import BasketProduct, FeatureStorage, CostumeHousePrice, Booking
+import time
 
 
 # ManyToMany Relations
@@ -30,6 +33,12 @@ class ProductField(fields.Field):
     def _serialize(self, value, attr, obj, **kwargs):
         product = value.all()
         return StorageSchema().dump(product, many=True)
+
+
+class ResidenceTypeField(fields.Field):
+    def _serialize(self, value, attr, obj, **kwargs):
+        types = value.all()
+        return ResidenceTypeSchema().dump(types, many=True)
 
 
 class BasketProductField(fields.Field):
@@ -161,8 +170,8 @@ class BaseSchema(Schema):
 class UserSchema(BaseSchema):
     class Meta:
         additional = (
-            'id', 'email', 'first_name', 'last_name', 'gender', 'username', 'meli_code', 'wallet_money', 'vip', 'active_address')
-
+            'id', 'email', 'first_name', 'last_name', 'gender', 'username', 'meli_code', 'wallet_money', 'vip',
+            'active_address')
 
 
 class AddressSchema(BaseSchema):
@@ -251,23 +260,23 @@ class ProductSchema(BaseSchema):
     class Meta:
         additional = ('id', 'permalink', 'gender', 'type', 'address', 'short_address')
 
-    name = fields.Method("get_name")
-    box = fields.Method("get_box")
+    # name = fields.Method("get_name")
+    # box = fields.Method("get_box")
     category = fields.Method("get_category")
     house = fields.Method("get_house")
-    tag = TagField()
-    media = MediaField()
-    thumbnail = fields.Function(lambda o: HOST + o.thumbnail.file.url)
-    short_description = fields.Method("get_short_description")
-    description = fields.Method("get_description")
-    properties = fields.Method("get_properties")
-    details = fields.Method("get_details")
-    location = fields.Function(lambda o: {"lat": o.location['lat'], 'lng': o.location['lng']} if o.location else {})
+    # tag = TagField()
+    # media = MediaField()
+    # thumbnail = fields.Function(lambda o: HOST + o.thumbnail.file.url)
+    # short_description = fields.Method("get_short_description")
+    # description = fields.Method("get_description")
+    # properties = fields.Method("get_properties")
+    # details = fields.Method("get_details")
+    # location = fields.Function(lambda o: {"lat": o.location['lat'], 'lng': o.location['lng']} if o.location else {})
 
 
 class MinProductSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'permalink',)
+        additional = ('id', 'permalink', 'rate')
 
     name = fields.Method("get_name")
     thumbnail = fields.Function(lambda o: HOST + o.thumbnail.file.url)
@@ -455,29 +464,72 @@ class CitySchema(Schema):
     state = fields.Function(lambda o: o.state_id)
 
 
-class PriceSchema(BaseSchema):
-    class Meta:
-        additional = ('base', 'person_price', 'weekly_discount_percent', 'monthly_discount_percent')
+class ResidenceTypeSchema(BaseSchema):
+    cancel_rules = fields.Method("get_name")
 
-    year_price = fields.Method("get_year_price")
-    season_price = fields.Method("get_season_price")
-    month_price = fields.Method("get_month_price")
-    holiday_price = fields.Method("get_holiday_price")
-    week_price = fields.Method("get_week_price")
-    day_price = fields.Method("get_day_price")
+
+class PriceSchema(Schema):
+    class Meta:
+        additional = ('mid_week', 'weekend', 'person_price', 'weekly_discount_percent', 'monthly_discount_percent')
+
+
+class CostumeHousePriceSchema(Schema):
+    class Meta:
+        additional = ('start_date', 'end_date', 'price')
 
 
 class HouseSchema(BaseSchema):
+    class Meta:
+        additional = ('notify_before_arrival', 'future_booking_time')
+
     cancel_rules = fields.Method("get_cancel_rules")
-    rules = fields.Method("rules")
+    rules = fields.Method("get_rules")
     state = fields.Function(lambda o: o.state.name)
     city = fields.Function(lambda o: o.city.name)
-    price = fields.Nested(PriceSchema())
-    house_feature = fields.Method('get_house_feature')
-    capacity = fields.Method('get_capacity')
+    house_feature = fields.Function(lambda o: o.house_feature)
+    capacity = fields.Function(lambda o: o.capacity)
     rent_type = fields.Method('get_rent_type')
     residence_area = fields.Method('get_residence_area')
-    bedroom = fields.Method('get_bedroom')
-    safety = fields.Method('get_safety')
-    calender = fields.Method('get_calender')
-    # residence_type
+    bedroom = fields.Function(lambda o: o.bedroom)
+    safety = fields.Function(lambda o: o.safety)
+    calender = fields.Function(lambda o: o.calender)
+    residence_type = ResidenceTypeField()
+    prices = fields.Method("get_prices")
+
+    def get_prices(self, obj):
+        today = date.today()
+        weekend = [3, 4]
+        prices = []
+        costume_prices = CostumeHousePrice.objects.filter(house=obj)
+        bookings = Booking.objects.filter(house=obj, confirm=True).values('start_date', 'end_date')
+        for day in range(obj.future_booking_time):
+            price = dict()
+            price['date'] = today + timezone.timedelta(days=day)
+            weekday = price['date'].weekday()
+            if weekday not in weekend:
+                price['price'] = obj.price.mid_week
+            else:
+                price['price'] = obj.price.weekend
+            for costume_price in costume_prices:
+                if costume_price.start_date <= price['date'] <= costume_price.end_date:
+                    price['price'] = costume_price.price
+                    break
+            for booking in bookings:
+                price['available'] = True
+                if booking['start_date'] <= price['date'] <= booking['end_date']:
+                    price['available'] = False
+                    break
+            prices.append(price)
+        return prices
+
+    def get_rules(self, obj):
+        return self.get(obj.rules)
+
+    def get_cancel_rules(self, obj):
+        return self.get(obj.cancel_rules)
+
+    def get_rent_type(self, obj):
+        return self.get(obj.rent_type)
+
+    def get_residence_area(self, obj):
+        return self.get(obj.residence_area)

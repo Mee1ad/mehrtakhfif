@@ -133,9 +133,10 @@ class User(AbstractUser):
     default_address = models.ForeignKey(to="Address", on_delete=SET_NULL, null=True, blank=True,
                                         related_name="user_default_address")
     email_verified = models.BooleanField(default=False, verbose_name='Email verified')
+    subscribe = models.BooleanField(default=True)
     avatar_id = models.BigIntegerField(blank=True, null=True)
     meli_code = models.CharField(max_length=15, blank=True, null=True, verbose_name='National code', unique=True)
-    wallet_money = models.IntegerField(default=0, verbose_name='Wallet money')
+    wallet_credit = models.IntegerField(default=0)
     suspend_expire_date = models.DateTimeField(blank=True, null=True, verbose_name='Suspend expire date')
     activation_code = models.CharField(max_length=127, null=True, blank=True)
     activation_expire = models.DateTimeField(null=True, blank=True)
@@ -400,7 +401,6 @@ class Storage(Base):
     # category = models.ForeignKey(Category, on_delete=CASCADE)
     available_count = models.BigIntegerField(default=0, verbose_name='Available count')
     available_count_for_sale = models.IntegerField(default=0, verbose_name='Available count for sale')
-    count = models.IntegerField(default=0)
     priority = models.IntegerField(default=0)
     sold_count = models.BigIntegerField(default=0, verbose_name='Sold count')
     tax = models.IntegerField(default=0)
@@ -685,18 +685,6 @@ class SpecialProduct(Base):
         ordering = ['-id']
 
 
-class WalletDetail(models.Model):
-    def __str__(self):
-        return f"{self.user}"
-
-    credit = models.IntegerField(default=0)
-    user = models.ForeignKey(User, on_delete=CASCADE)
-
-    class Meta:
-        db_table = 'wallet_detail'
-        ordering = ['-id']
-
-
 class WishList(Base):
     def __str__(self):
         return f"{self.user}"
@@ -762,9 +750,9 @@ class HouseOwner(Base):
         ordering = ['-id']
 
 
-class RentType(Base):
+class ResidenceType(Base):
     class Meta:
-        db_table = 'rent_type'
+        db_table = 'residence_type'
         ordering = ['-id']
 
     def __str__(self):
@@ -775,16 +763,11 @@ class RentType(Base):
 
 class HousePrice(Base):
     def __str__(self):
-        return f'{self.base}'
+        return f'{self.mid_week}'
 
-    base = models.IntegerField(default=0)
     person_price = models.IntegerField(default=0)
-    year_price = JSONField(default=dict)
-    season_price = JSONField(default=dict)
-    month_price = JSONField(default=dict)
-    holiday_price = JSONField(default=dict)
-    week_price = JSONField(default=dict)
-    day_price = JSONField(default=dict)
+    weekend = models.IntegerField(default=0)
+    mid_week = models.IntegerField(default=0)
     weekly_discount_percent = models.IntegerField(default=0)
     monthly_discount_percent = models.IntegerField(default=0)
 
@@ -795,43 +778,55 @@ class HousePrice(Base):
 
 class House(Base):
     def __str__(self):
-        return f"{self.product}"
+        return self.product.name['persian']
 
     cancel_rules = JSONField(default=multilanguage, blank=True)
     rules = JSONField(default=multilanguage, blank=True)
     owner = models.ForeignKey(HouseOwner, on_delete=CASCADE)
     state = models.ForeignKey(State, on_delete=PROTECT)
     city = models.ForeignKey(City, on_delete=PROTECT)
-    price = models.ForeignKey(HousePrice, on_delete=PROTECT)
+    price = models.OneToOneField(HousePrice, on_delete=PROTECT, null=True)
     product = models.OneToOneField(Product, on_delete=PROTECT)
     house_feature = JSONField(blank=True)
-    inf_area = models.IntegerField()  # Infrastructure area
-    area = models.IntegerField()  # Infrastructure area
-    capacity = models.IntegerField(default=0)
-    residence_type = models.ManyToManyField(RentType)
+    capacity = JSONField()
+    residence_type = models.ManyToManyField(ResidenceType)
     rent_type = JSONField(default=multilanguage, blank=True)
     residence_area = JSONField(default=multilanguage, blank=True)
-    bedroom = JSONField(blank=True) # rooms, shared space, rakhte khab, description, ...
+    bedroom = JSONField(blank=True)  # rooms, shared space, rakhte khab, description, ...
     safety = JSONField(blank=True)
     calender = JSONField(blank=True)
+    notify_before_arrival = models.IntegerField(default=0)  # days number
+    future_booking_time = models.IntegerField(default=7)  # future days with reserve availability
 
     class Meta:
         db_table = 'house'
         ordering = ['-id']
 
 
+class CostumeHousePrice(Base):
+    house = models.ForeignKey(House, on_delete=PROTECT)
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+    price = models.IntegerField(default=0)
+
+    class Meta:
+        db_table = 'costume_house_price'
+        ordering = ['-id']
+
+
 class Booking(Base):
     def __str__(self):
-        return self.invoice
+        return f"{self.house}"
 
     user = models.ForeignKey(User, on_delete=PROTECT, related_name='booking_user')
     house = models.ForeignKey(House, on_delete=PROTECT)
-    invoice = models.ForeignKey(Invoice, on_delete=PROTECT)
+    invoice = models.ForeignKey(Invoice, on_delete=PROTECT, null=True, blank=True)
     confirmation_date = models.DateTimeField(null=True, blank=True)
     confirmation_by = models.ForeignKey(User, on_delete=PROTECT, null=True, blank=True,
                                         related_name='booking_confirmation')
-    start_date = models.DateTimeField(null=True, blank=True)
-    end_date = models.DateTimeField(null=True, blank=True)
+    confirm = models.BooleanField(default=False)
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
     cancel_at = models.DateTimeField(null=True, blank=True)
     cancel_by = models.ForeignKey(User, on_delete=PROTECT, null=True, blank=True, related_name='booking_cancel_by')
     reject_at = models.DateTimeField(null=True, blank=True)
