@@ -5,9 +5,11 @@ from django.http import JsonResponse
 from server.models import *
 from server.serialize import *
 from server.views.utils import View, default_page, default_step
+import pysnooper
 
 
 class Single(View):
+    @pysnooper.snoop()
     def get(self, request, permalink):
         lang = request.lang
         user = request.user

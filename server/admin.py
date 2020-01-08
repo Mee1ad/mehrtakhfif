@@ -171,13 +171,20 @@ class HouseOwnerAdmin(SafeDeleteAdmin):
 
 
 class HousePriceAdmin(SafeDeleteAdmin):
-    list_display = ('id', 'base') + SafeDeleteAdmin.list_display
+    list_display = ('id',) + SafeDeleteAdmin.list_display
     # list_display_links = ('name',)
     list_per_page = 10
     ordering = ('-created_at',)
 
 
-class RentTypeAdmin(SafeDeleteAdmin):
+class BookingAdmin(SafeDeleteAdmin):
+    list_display = ('id', 'start_date', 'end_date') + SafeDeleteAdmin.list_display
+    # list_display_links = ('name',)
+    list_per_page = 10
+    ordering = ('-created_at',)
+
+
+class ResidenceTypeAdmin(SafeDeleteAdmin):
     list_display = ('id', 'name') + SafeDeleteAdmin.list_display
     list_display_links = ('name',)
     list_per_page = 10
@@ -241,7 +248,9 @@ admin.site.register(Product, ProductAdmin)
 admin.site.register(House, HouseAdmin)
 admin.site.register(HouseOwner, HouseOwnerAdmin)
 admin.site.register(HousePrice, HousePriceAdmin)
-admin.site.register(RentType, RentTypeAdmin)
+admin.site.register(ResidenceType, ResidenceTypeAdmin)
+admin.site.register(CostumeHousePrice)
+admin.site.register(Booking, BookingAdmin)
 admin.site.register(Storage)
 admin.site.register(Basket)
 admin.site.register(Comment, CommentAdmin)
@@ -260,7 +269,6 @@ admin.site.register(NotifyUser)
 admin.site.register(Ad)
 admin.site.register(State, StateAdmin)
 admin.site.register(City, CityAdmin)
-
 admin.site.register(Permission)
 admin.site.site_header = "Mehr Takhfif"
 admin.site.site_title = "Mehr Takhfif"
