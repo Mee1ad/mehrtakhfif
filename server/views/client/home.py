@@ -15,11 +15,14 @@ from mehr_takhfif.celery import app
 
 class Test(View):
     def get(self, request):
-        # django_rq.enqueue(func)   
-        # scheduler = django_rq.get_scheduler('basket_sync')
-        # job2 = scheduler.enqueue_in(timedelta(minutes=5), func)
-        # scheduler.enqueue_in(timedelta(minutes=2), func)
-        return JsonResponse({})
+        step = int(request.GET.get('s', default_step))
+        page = int(request.GET.get('p', default_page))
+        data = []
+        for i in range(step):
+            data.append(page)
+
+        last_page_info = {'pagination': {'last_page': math.ceil(len(data) / step), 'items': len(data)}}
+        return JsonResponse({'data': data, **last_page_info})
 
 
 class GetSlider(View):

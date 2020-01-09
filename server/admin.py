@@ -177,7 +177,7 @@ class HousePriceAdmin(SafeDeleteAdmin):
     ordering = ('-created_at',)
 
 
-class BookingAdmin(SafeDeleteAdmin):
+class BookAdmin(SafeDeleteAdmin):
     list_display = ('id', 'start_date', 'end_date') + SafeDeleteAdmin.list_display
     # list_display_links = ('name',)
     list_per_page = 10
@@ -250,7 +250,7 @@ admin.site.register(HouseOwner, HouseOwnerAdmin)
 admin.site.register(HousePrice, HousePriceAdmin)
 admin.site.register(ResidenceType, ResidenceTypeAdmin)
 admin.site.register(CostumeHousePrice)
-admin.site.register(Booking, BookingAdmin)
+admin.site.register(Book, BookAdmin)
 admin.site.register(Storage)
 admin.site.register(Basket)
 admin.site.register(Comment, CommentAdmin)
