@@ -60,6 +60,7 @@ user = [
     path('get_states', user.GetState.as_view(), name='get_states'),
     path('get_cities/<int:state_id>', user.GetCity.as_view(), name='get_cities'),
     path('orders', user.Orders.as_view(), name='shopping_list'),
+    path('trips', user.Trips.as_view(), name='trips'),
     path('wishlist', user.WishlistView.as_view(), name='wishlist'),
     path('user_comments', user.UserComment.as_view(), name='user_comments'),
     path('address', user.AddressView.as_view(), name='address')]

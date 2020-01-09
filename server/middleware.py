@@ -1,5 +1,6 @@
 from mehr_takhfif.settings import TOKEN_SALT
-from server.views.utils import *
+from server.views.utils import default_step, default_page, filter_params
+from server.models import User, Basket
 from django.http import JsonResponse
 import json
 from django.urls import resolve
@@ -22,12 +23,11 @@ class AuthMiddleware:
         route = resolve(path).route
         app_name = resolve(path).app_name
         request.user = User.objects.get(pk=1)
+        request.step = request.GET.get('s', default_step)
+        request.page = request.GET.get('p', default_page)
         if route == 'favicon.ico':
             return JsonResponse({})
         try:
-            if request.headers.get('admin', None) == 'true':
-                print('this is admin')
-                request.user = User.objects.get(pk=1)
             request.lang = request.headers['language']
         except Exception:
             request.lang = 'persian'
@@ -82,6 +82,8 @@ class AuthMiddleware:
             #             pass
             # return JsonResponse({}, status=401)
         # Debug
+        if request.headers.get('admin', None) == 'true':
+            request.user = User.objects.get(pk=1)
         delay = request.GET.get('delay', None)
         # print(request.GET)
         if delay:

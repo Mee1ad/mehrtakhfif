@@ -214,6 +214,14 @@ def last_page(query, step):
     return {'pagination': {'last_page': math.ceil(items / step), 'items': items}}
 
 
+def user_data_with_pagination(model, serializer, request):
+    objects = model.objects.filter(user=request.user)
+    last_page_info = last_page(objects, request.step)
+    objects = objects[(request.page - 1) * request.step:request.step * request.page]
+    objects = serializer().dump(objects, many=True)
+    return {'data': objects, **last_page_info}
+
+
 def des_encrypt(data='test', key=os.urandom(16)):
     backend = default_backend()
     text = data.encode()

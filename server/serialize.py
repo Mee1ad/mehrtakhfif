@@ -4,7 +4,7 @@ import pysnooper
 from secrets import token_hex
 from datetime import date
 from django.utils import timezone
-from server.models import BasketProduct, FeatureStorage, CostumeHousePrice, Booking
+from server.models import BasketProduct, FeatureStorage, CostumeHousePrice, Book
 import time
 
 
@@ -127,9 +127,11 @@ class BaseSchema(Schema):
         return None
 
     def get_min_storage(self, obj):
+        if hasattr(obj, 'house'):
+            return None
         if hasattr(obj, 'default_storage'):
             return MinStorageSchema(self.lang).dump(obj.default_storage)
-        elif hasattr(obj, 'storage'):
+        if hasattr(obj, 'storage'):
             return MinStorageSchema(self.lang).dump(obj.storage)
         return None
 
@@ -470,7 +472,7 @@ class ResidenceTypeSchema(BaseSchema):
 
 class PriceSchema(Schema):
     class Meta:
-        additional = ('mid_week', 'weekend', 'person_price', 'weekly_discount_percent', 'monthly_discount_percent')
+        additional = ('weekday', 'weekend', 'person_price', 'weekly_discount_percent', 'monthly_discount_percent')
 
 
 class CostumeHousePriceSchema(Schema):
@@ -501,13 +503,13 @@ class HouseSchema(BaseSchema):
         weekend = [3, 4]
         prices = []
         costume_prices = CostumeHousePrice.objects.filter(house=obj)
-        bookings = Booking.objects.filter(house=obj, confirm=True).values('start_date', 'end_date')
+        bookings = Book.objects.filter(house=obj, confirm=True).values('start_date', 'end_date')
         for day in range(obj.future_booking_time):
             price = dict()
             price['date'] = today + timezone.timedelta(days=day)
             weekday = price['date'].weekday()
             if weekday not in weekend:
-                price['price'] = obj.price.mid_week
+                price['price'] = obj.price.weekday
             else:
                 price['price'] = obj.price.weekend
             for costume_price in costume_prices:
@@ -533,3 +535,30 @@ class HouseSchema(BaseSchema):
 
     def get_residence_area(self, obj):
         return self.get(obj.residence_area)
+
+
+class BooksSchema(BaseSchema):
+    class Meta:
+        additional = ('id',)
+
+    product = fields.Method("get_min_product")
+    status = fields.Method("get_status")
+    amount = fields.Method("get_amount")
+    start_date = fields.Function(lambda o: o.start_date)
+    end_date = fields.Function(lambda o: o.end_date)
+
+    def get_status(self, obj):
+        invoice = obj.invoice
+        if invoice:
+            return invoice.status
+        return None
+
+    def get_amount(self, obj):
+        invoice = obj.invoice
+        if invoice:
+            return invoice.amount
+        return None
+
+    def get_min_product(self, obj):
+        return MinProductSchema().dump(obj.house.product)
+

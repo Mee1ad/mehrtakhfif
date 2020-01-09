@@ -763,11 +763,11 @@ class ResidenceType(Base):
 
 class HousePrice(Base):
     def __str__(self):
-        return f'{self.mid_week}'
+        return f'{self.weekday}'
 
     person_price = models.IntegerField(default=0)
     weekend = models.IntegerField(default=0)
-    mid_week = models.IntegerField(default=0)
+    weekday = models.IntegerField(default=0)
     weekly_discount_percent = models.IntegerField(default=0)
     monthly_discount_percent = models.IntegerField(default=0)
 
@@ -814,7 +814,7 @@ class CostumeHousePrice(Base):
         ordering = ['-id']
 
 
-class Booking(Base):
+class Book(Base):
     def __str__(self):
         return f"{self.house}"
 
@@ -833,7 +833,7 @@ class Booking(Base):
     reject_by = models.ForeignKey(User, on_delete=PROTECT, null=True, blank=True, related_name='booking_reject_by')
 
     class Meta:
-        db_table = 'booking'
+        db_table = 'book'
         ordering = ['-id']
 
 

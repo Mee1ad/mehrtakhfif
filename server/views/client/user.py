@@ -29,19 +29,20 @@ class Profile(View):
 
 class Orders(View):
     def get(self, request):
-        step = int(request.GET.get('s', default_step))
-        page = int(request.GET.get('p', default_page))
-        shopping_list = Invoice.objects.filter(user=request.user)
-        last_page_info = last_page(shopping_list, step)
-        shopping_list = shopping_list[(page - 1) * step:step * page]
-        shopping_list = InvoiceSchema().dump(shopping_list, many=True)
-        return JsonResponse({'shopping_list': shopping_list, **last_page_info})
+        orders = user_data_with_pagination(Invoice, InvoiceSchema, request)
+        return JsonResponse(orders)
+
+
+class Trips(View):
+    def get(self, request):
+        books = user_data_with_pagination(Book, BooksSchema, request)
+        return JsonResponse(books)
 
 
 class UserComment(View):
     def get(self, request):
-        comments = Comment.objects.filter(user=request.user).order_by('created_at')
-        return JsonResponse({'comments': CommentSchema().dump(comments, many=True)})
+        comments = user_data_with_pagination(Comment, CommentSchema, request)
+        return JsonResponse(comments)
 
 
 class AddressView(LoginRequired):
@@ -118,13 +119,15 @@ class GetCity(View):
 
 class WishlistView(View):
     def get(self, request):
-        # import time
-        # time.sleep(5)
+        import time
+        time.sleep(5)
         step = int(request.GET.get('s', default_step))
         page = int(request.GET.get('p', default_page))
         wishlists = WishList.objects.filter(user_id=request.user)
         last_page_info = last_page(wishlists, step)
         wishlists = wishlists[(page - 1) * step:step * page]
+        for w, i in zip(wishlists, range(step)):
+            w.product.name['persian'] += f'{(step * (page - 1)) + i}'
         wishlists = WishListSchema(request.lang).dump(wishlists, many=True)
         return JsonResponse({'wishlists': wishlists, **last_page_info})
 
