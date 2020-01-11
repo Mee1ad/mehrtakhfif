@@ -141,7 +141,7 @@ class SpecialProductAdmin(SafeDeleteAdmin):
 
 
 class ProductAdmin(SafeDeleteAdmin):
-    list_display = ('product_name', 'category', 'gender', 'verify', 'type', 'permalink') + SafeDeleteAdmin.list_display
+    list_display = ('product_name', 'category', 'verify', 'type', 'permalink') + SafeDeleteAdmin.list_display
     list_filter = ('name', 'type', 'category') + SafeDeleteAdmin.list_filter
     # list_display_links = ('name',)
     search_fields = ['name']

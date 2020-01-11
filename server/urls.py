@@ -5,6 +5,7 @@ from server.views.client import box
 from server.views.client import home
 from server.views.client import shopping
 from server.views.client import product
+from server.views.client import tourism
 from server.views.client import user
 
 app_name = 'server'
@@ -44,6 +45,11 @@ product = [
     path('related_products/<str:permalink>', product.RelatedProduct.as_view(), name='related_products'),
 ]
 
+tourism = [
+    path('booking', tourism.BookingView.as_view(), name='booking')
+]
+
+
 shopping = [
     path('basket', shopping.BasketView.as_view(), name='basket'),
     # path('show_codes', shopping.ShowCodes.as_view(), name='show_codes'),
@@ -62,7 +68,6 @@ user = [
     path('orders', user.Orders.as_view(), name='shopping_list'),
     path('trips', user.Trips.as_view(), name='trips'),
     path('wishlist', user.WishlistView.as_view(), name='wishlist'),
-    path('user_comments', user.UserComment.as_view(), name='user_comments'),
     path('address', user.AddressView.as_view(), name='address')]
 
 auth = [
@@ -80,4 +85,4 @@ test = [
     path('delete/<str:job>', tests.Delete.as_view(), name='delete'),
 ]
 
-urlpatterns = [*home, *box, *user, *shopping, *product, *auth, *pay, *test]
+urlpatterns = [*home, *box, *user, *shopping, *product, *tourism, *auth, *pay, *test]

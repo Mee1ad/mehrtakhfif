@@ -4,8 +4,7 @@ from django.http import JsonResponse
 
 from server.models import *
 from server.serialize import *
-from server.views.utils import View, default_page, default_step
-import pysnooper
+from server.views.utils import View, default_page, default_step, user_data_with_pagination
 
 
 class Single(View):
@@ -72,8 +71,7 @@ class CommentView(View):
         if blog_id:
             comments = Comment.objects.filter(blog_post_id=blog_id, type=comment_type).order_by('-created_at')
             return JsonResponse({'comments': CommentSchema().dump(comments, many=True)})
-        comments = Comment.objects.filter(user=request.user).order_by('-created_at')
-        return JsonResponse({'comments': CommentSchema().dump(comments, many=True)})
+        return JsonResponse(user_data_with_pagination(Comment, CommentSchema, request))
 
     def post(self, request):
         data = json.loads(request.body)

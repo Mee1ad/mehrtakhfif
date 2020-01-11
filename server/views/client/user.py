@@ -39,16 +39,9 @@ class Trips(View):
         return JsonResponse(books)
 
 
-class UserComment(View):
-    def get(self, request):
-        comments = user_data_with_pagination(Comment, CommentSchema, request)
-        return JsonResponse(comments)
-
-
 class AddressView(LoginRequired):
     def get(self, request):
-        addresses = Address.objects.filter(user=request.user)
-        addresses = AddressSchema().dump(addresses, many=True)
+        addresses = user_data_with_pagination(Address, AddressSchema, request)
         default_address = AddressSchema().dump(request.user.default_address)
         return JsonResponse({'addresses': addresses, 'default_address': default_address})
 

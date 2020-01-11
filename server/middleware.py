@@ -23,8 +23,8 @@ class AuthMiddleware:
         route = resolve(path).route
         app_name = resolve(path).app_name
         request.user = User.objects.get(pk=1)
-        request.step = request.GET.get('s', default_step)
-        request.page = request.GET.get('p', default_page)
+        request.step = int(request.GET.get('s', default_step))
+        request.page = int(request.GET.get('p', default_page))
         if route == 'favicon.ico':
             return JsonResponse({})
         try:
