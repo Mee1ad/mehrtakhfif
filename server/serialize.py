@@ -262,18 +262,18 @@ class ProductSchema(BaseSchema):
     class Meta:
         additional = ('id', 'permalink', 'gender', 'type', 'address', 'short_address')
 
-    # name = fields.Method("get_name")
-    # box = fields.Method("get_box")
+    name = fields.Method("get_name")
+    box = fields.Method("get_box")
     category = fields.Method("get_category")
     house = fields.Method("get_house")
-    # tag = TagField()
-    # media = MediaField()
-    # thumbnail = fields.Function(lambda o: HOST + o.thumbnail.file.url)
-    # short_description = fields.Method("get_short_description")
-    # description = fields.Method("get_description")
-    # properties = fields.Method("get_properties")
-    # details = fields.Method("get_details")
-    # location = fields.Function(lambda o: {"lat": o.location['lat'], 'lng': o.location['lng']} if o.location else {})
+    tag = TagField()
+    media = MediaField()
+    thumbnail = fields.Function(lambda o: HOST + o.thumbnail.file.url)
+    short_description = fields.Method("get_short_description")
+    description = fields.Method("get_description")
+    properties = fields.Method("get_properties")
+    details = fields.Method("get_details")
+    location = fields.Function(lambda o: {"lat": o.location['lat'], 'lng': o.location['lng']} if o.location else {})
 
 
 class MinProductSchema(BaseSchema):
@@ -348,11 +348,12 @@ class BlogPostSchema(BaseSchema):
 
 class CommentSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'text', 'reply_id', 'type')
+        additional = ('id', 'text', 'type', 'approved', 'rate')
 
-    user = fields.Function(lambda obj: obj.user_id)
+    user = fields.Function(lambda o: o.user_id)
     reply_to = fields.Method("get_comment")
     created_at = fields.Method("get_created_at")
+    product = fields.Method("get_min_product")
 
 
 # todo
@@ -498,7 +499,8 @@ class HouseSchema(BaseSchema):
     residence_type = ResidenceTypeField()
     prices = fields.Method("get_prices")
 
-    def get_prices(self, obj):
+    @staticmethod
+    def get_prices(obj):
         today = date.today()
         weekend = [3, 4]
         prices = []
