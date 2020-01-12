@@ -13,11 +13,14 @@ from django.urls import reverse_lazy
 from django.contrib.admin.utils import NestedObjects
 import jwt
 from mehr_takhfif.settings import TOKEN_SECRET
+from server.serialize import *
+from admin.serializer import *
+from django.db.models.deletion import Collector
 
 
 class DeleteAdminView(View, PermissionRequiredMixin):
     def get_token(self, obj, serializer):
-        data = {'object': serializer(obj)}
+        data = serializer().dump(obj)
         return jwt.encode(data, TOKEN_SECRET, algorithm='HS256')
 
     def check_token(self, obj, token, serializer):
@@ -34,8 +37,9 @@ class DeleteAdminView(View, PermissionRequiredMixin):
     def get_related(self, pk, model, serializer):
         data = model.objects.filter(pk=pk).first()
         token = self.get_token(data, serializer)
-        related_objects = serialize.related_objects(self.collect_related(data))
-        return JsonResponse({'related_objects': related_objects, 'token': token})
+        ro = self.collect_related(data)
+        print(ro)
+        return JsonResponse({'related_objects': list_view(ro), 'token': token})
 
     def base_delete(self, request, pk, model, serializer):
         token = request.GET.get('token', None)
@@ -50,12 +54,9 @@ class DeleteCategory(DeleteAdminView):
     permission_required = 'delete_category'
 
     def get(self, request, pk):
-        category = Category.objects.filter(pk=pk).first()
-        token = self.get_token(category, serialize.category)
-        related_objects = serialize.related_objects(self.collect_related(category))
-        if category.box == request.user.box:
-            return JsonResponse({'related_objects': related_objects, 'token': token})
-        return HttpResponse(status=403)
+        data = self.get_related(pk, Category, CategorySchema)
+        return JsonResponse({})
+        # return self.get_related(pk, Category, CategorySchema)
 
     def delete(self, request, pk):
         return self.base_delete(request, pk, Category, serialize.category)

@@ -12,6 +12,8 @@ from django.core import serializers
 from django.db.models import F
 from django.views import View
 from django_celery_beat.models import PeriodicTask, IntervalSchedule
+from datetime import datetime
+import pysnooper
 
 from mehr_takhfif import settings
 from mehr_takhfif.settings import TOKEN_SECRET, SECRET_KEY
@@ -119,7 +121,7 @@ def get_token_data(token):
     return jwt.decode(first_decrypt['data'].encode(), TOKEN_SECRET, algorithms=['HS256'])
 
 
-def upload(request, title, box=1):
+def upload(request, title=None, box=None, avatar=False):
     image_formats = ['.jpeg', '.jpg', '.gif', '.png']
     video_formats = ['.avi', '.mp4', '.mkv', '.flv', '.mov', '.webm', '.wmv']
     for file in request.FILES.getlist('file'):
@@ -131,10 +133,15 @@ def upload(request, title, box=1):
                     return False
             if mimetype == 'video' and file_format not in video_formats:
                 return False
-            media = Media(file=file, box_id=box, created_by_id=1, type=mimetype, title=title or file)
+            if avatar and title:
+                file.name = f"{title['user_id']} {datetime.now().strftime('%Y-%m-%d, %H-%M-%S')}{file_format}"
+            else:
+                data = json.loads(request.POST.get('data'))
+                title = data['title']
+            media = Media(file=file, box_id=box, created_by_id=1, type='avatar' if avatar else mimetype,
+                          title=title, updated_by=request.user)
             media.save()
-
-            return True
+            return media
 
 
 def get_mimetype(image):

@@ -7,6 +7,7 @@ from server.serialize import *
 from server.views.utils import *
 from server.views.utils import LoginRequired
 from server.decorators import try_except
+from mehr_takhfif.settings import HOST
 
 
 class Profile(View):
@@ -25,6 +26,30 @@ class Profile(View):
         user.meli_code = data.get('meli_code') or user.meli_code
         user.save()
         return JsonResponse({'user': UserSchema().dump(user)})
+
+
+class Avatar(View):
+    def post(self, request):
+        user = request.user
+        pre_avatar_id = None
+        if user.avatar:
+            pre_avatar_id = user.avatar.id
+        title = {"user_id": f"{user.id}"}
+        media = upload(request, title, avatar=True)
+        if media:
+            user.avatar = media
+            user.save()
+            if pre_avatar_id:
+                Media.objects.filter(pk=pre_avatar_id).delete()
+            return JsonResponse({"url": HOST + media.file.url})
+        return JsonResponse({}, status=400)
+
+    def delete(self, request):
+        user = request.user
+        user.avatar.delete()
+        user.avatar = None
+        user.save()
+        return JsonResponse({})
 
 
 class Orders(View):

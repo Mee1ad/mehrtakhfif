@@ -10,6 +10,7 @@ from server.views.utils import View
 from django.contrib.admin.utils import NestedObjects
 from mehr_takhfif.settings import TOKEN_SECRET
 import jwt
+from admin.serializer import *
 
 
 class AdminView(View, PermissionRequiredMixin, LoginRequiredMixin):
@@ -42,8 +43,8 @@ class AdminView(View, PermissionRequiredMixin, LoginRequiredMixin):
     def get_related(self, pk, model, serializer):
         data = model.objects.filter(pk=pk).first()
         token = self.get_token(data, serializer)
-        related_objects = serialize.related_objects(self.collect_related(data))
-        return JsonResponse({'related_objects': related_objects, 'token': token})
+        ro = related_objects(self.collect_related(data))
+        return JsonResponse({'related_objects': ro, 'token': token})
 
     def base_delete(self, request, pk, model, serializer):
         token = request.GET.get('token', None)
@@ -72,7 +73,7 @@ class NewAddress(AdminView):
     def post(self, request):
         data = json.loads(request.body)
         Address(province=data['province'], city=data['city'], postal_code=data['postal_code'], address=data['address'],
-                 location=data['location'], user_id=data['user_id'])
+                location=data['location'], user_id=data['user_id'])
         return HttpResponse('ok', status=201)
 
 
@@ -87,14 +88,15 @@ class NewFeature(AdminView):
 
 class NewProduct(AdminView):
     permission_required = 'add_product'
+
     # first storage is default
 
     def post(self, request):
         data = json.loads(request.body)
         Product(name=data['name'], permalink=data['permalink'], category=data['category'], gender=data['gender'],
-                 short_description=data['short_description'], description=data['description'], media=data['media'],
-                 usage_condition=data['usage_condition'], location=data['location'], profit=data['profit'],
-                 disable=data['disable'], verify=data['verify'], type=data['type'])
+                short_description=data['short_description'], description=data['description'], media=data['media'],
+                usage_condition=data['usage_condition'], location=data['location'], profit=data['profit'],
+                disable=data['disable'], verify=data['verify'], type=data['type'])
         return HttpResponse('ok', status=201)
 
 
@@ -104,9 +106,9 @@ class NewStorage(AdminView):
     def post(self, request):
         data = json.loads(request.body)
         Storage(product_id=data['product_id'], count=data['count'], discount_vip_price=data['discount_vip_price'],
-                 available_count_for_sale=data['available_count_for_sale'], available_count=data['available_count'],
-                 start_price=data['start_price'], final_price=data['final_price'], default=data['default'],
-                 transportation_price=data['transportation_price'], discount_price=data['discount_price'])
+                available_count_for_sale=data['available_count_for_sale'], available_count=data['available_count'],
+                start_price=data['start_price'], final_price=data['final_price'], default=data['default'],
+                transportation_price=data['transportation_price'], discount_price=data['discount_price'])
         return HttpResponse('ok', status=201)
 
 
@@ -116,7 +118,7 @@ class NewMenu(AdminView):
     def post(self, request):
         data = json.loads(request.body)
         Menu(type=data['type'], name=data['name'], value=data['value'], parent=data['parent'],
-                 priority=data['priority'])
+             priority=data['priority'])
         return HttpResponse('ok', status=201)
 
 
@@ -149,11 +151,12 @@ class NewSpecialOffer(AdminView):
 
 class NewSpecialProducts(AdminView):
     permission_required = 'add_specialproducts'
+
     # todo if thumbnail==None use product thumbnail
     def post(self, request):
         data = json.loads(request.body)
-        SpecialProducts(title=data['title'], link=data['link'], product_id=data['product_id'], media=data['media'],
-                        type=data['type'], description=data['description'])
+        SpecialProduct(title=data['title'], link=data['link'], product_id=data['product_id'], media=data['media'],
+                       type=data['type'], description=data['description'])
         return HttpResponse('ok', status=201)
 
 
@@ -173,13 +176,4 @@ class NewBlogPost(AdminView):
     def post(self, request):
         data = json.loads(request.body)
         BlogPost(blog_id=data['blog_id'], body=data['body'], permalink=data['permalink'], media=data['media'])
-        return HttpResponse('ok', status=201)
-
-
-class NewTourism(AdminView):
-    permission_required = 'add_tourism'
-
-    def post(self, request):
-        data = json.loads(request.body)
-        Tourism(date=data['date'], date2=data['date2'], price=data['price'])
         return HttpResponse('ok', status=201)

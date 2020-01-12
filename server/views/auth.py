@@ -1,31 +1,15 @@
-from django.contrib.auth.backends import ModelBackend
-from django.views import View
-from server.models import *
-from django.http import JsonResponse
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.mixins import PermissionRequiredMixin
-from django.core import serializers
-import json
-from .utils import *
 import random
-from django.contrib.auth.hashers import (
-    check_password, is_password_usable, make_password,
-)
-from server.decorators import try_except
-from django.db.models import Q
-import pysnooper
-from mehr_takhfif.settings import HOST as host
-import os
-from django.contrib.sessions.models import Session
-from django.core.cache.backends.base import DEFAULT_TIMEOUT
-from django.views.decorators.cache import cache_page
-import time
-from django.core.cache import cache
-from mehr_takhfif.settings import CACHE_TTL, TOKEN_SALT
 from secrets import token_hex
-from django.contrib.auth import get_user_model
+
+import pysnooper
+from django.contrib.auth import login
 from django.contrib.auth import logout
+from django.contrib.auth.backends import ModelBackend
+from django.http import JsonResponse
+
+from mehr_takhfif.settings import TOKEN_SALT
+from .utils import *
+from server.serialize import UserSchema
 
 
 class Backend(ModelBackend):

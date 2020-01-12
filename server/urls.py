@@ -68,6 +68,7 @@ user = [
     path('orders', user.Orders.as_view(), name='shopping_list'),
     path('trips', user.Trips.as_view(), name='trips'),
     path('wishlist', user.WishlistView.as_view(), name='wishlist'),
+    path('avatar', user.Avatar.as_view(), name='avatar'),
     path('address', user.AddressView.as_view(), name='address')]
 
 auth = [
