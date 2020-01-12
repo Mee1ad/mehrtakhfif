@@ -188,7 +188,7 @@ PUSH_NOTIFICATIONS_SETTINGS = {
 LANGUAGE_CODE = 'en-us'
 
 # TIME_ZONE = 'Iran'
-TIME_ZONE = 'UTC'
+# TIME_ZONE = 'UTC'
 
 USE_I18N = True
 
@@ -196,7 +196,7 @@ USE_L10N = True
 
 USE_TZ = True
 
-activate(TIME_ZONE)
+# activate(TIME_ZONE)
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')

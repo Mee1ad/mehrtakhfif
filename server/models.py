@@ -8,11 +8,11 @@ from django.contrib.postgres.indexes import GinIndex
 from django.core.validators import *
 from django.db import models
 from django.db.models import CASCADE, PROTECT, SET_NULL
-from django.db.models.signals import post_delete
+from safedelete.signals import post_softdelete
 from django.dispatch import receiver
 from django.utils import timezone
 from push_notifications.models import GCMDevice
-from safedelete.models import SafeDeleteModel, SOFT_DELETE_CASCADE
+from safedelete.models import SafeDeleteModel, SOFT_DELETE_CASCADE, NO_DELETE
 from django_celery_beat.models import PeriodicTask
 from django_celery_results.models import TaskResult
 from mehr_takhfif.settings import HOST
@@ -91,6 +91,8 @@ def next_month():
 
 
 def upload_to(instance, filename):
+    if instance.type == 'avatar':
+        return f'avatar/{filename}'
     date = timezone.now().strftime("%Y-%m-%d")
     time = timezone.now().strftime("%H-%M-%S-%f")[:-4]
     # file_type = re.search('\\w+', instance.type)[0]
@@ -107,6 +109,7 @@ class MyManager(models.Manager):
 
 
 class User(AbstractUser):
+
     def __str__(self):
         return self.username
 
@@ -134,7 +137,7 @@ class User(AbstractUser):
                                         related_name="user_default_address")
     email_verified = models.BooleanField(default=False, verbose_name='Email verified')
     subscribe = models.BooleanField(default=True)
-    avatar_id = models.BigIntegerField(blank=True, null=True)
+    avatar = models.ForeignKey("Media", on_delete=SET_NULL, null=True, blank=True)
     meli_code = models.CharField(max_length=15, blank=True, null=True, verbose_name='National code', unique=True)
     wallet_credit = models.IntegerField(default=0)
     suspend_expire_date = models.DateTimeField(blank=True, null=True, verbose_name='Suspend expire date')
@@ -236,27 +239,34 @@ class Box(Base):
 
 class Media(Base):
     def __str__(self):
-        return self.title['persian']
+        try:
+            return self.title['persian']
+        except KeyError:
+            return self.title['user_id']
 
     def save(self, *args, **kwargs):
-        sizes = {'small': (200, 200), 'medium': (500, 500), 'large': (800, 800)}
-        qualities = {'small': 30, 'medium': 50, 'large': 80}
-        super().save(*args, **kwargs)
-        name = self.file.name
-        format = re.search(r'\.[a-z]+', name)
-        path = self.file.path
-        new_path = self.file.path.replace(format[0], '')
-        for quality in qualities:
-            # Image.open(path).resize((sizes[size][0], sizes[size][1])) \
-            #     .save(new_path + f'_{size}' + format[0], 'JPEG')
+        if not self.type == 'avatar':
+            sizes = {'small': (200, 200), 'medium': (500, 500), 'large': (800, 800)}
+            qualities = {'small': 30, 'medium': 50, 'large': 80}
+            super().save(*args, **kwargs)
+            name = self.file.name
+            format = re.search(r'\.[a-z]+', name)
+            path = self.file.path
+            new_path = self.file.path.replace(format[0], '')
+            for quality in qualities:
+                # Image.open(path).resize((sizes[size][0], sizes[size][1])) \
+                #     .save(new_path + f'_{size}' + format[0], 'JPEG')
 
-            Image.open(path).save(new_path + f'_{quality}' + format[0], 'JPEG',
-                                  quality=qualities[quality])
+                Image.open(path).save(new_path + f'_{quality}' + format[0], 'JPEG',
+                                      quality=qualities[quality])
+        else:
+            super().save(*args, **kwargs)
 
     file = models.FileField(upload_to=upload_to)
     title = JSONField(default=multilanguage)
     type = models.CharField(max_length=255, choices=[('video', 'video'), ('image', 'image'), ('audio', 'audio'),
-                                                     ('slider', 'slider'), ('ads', 'ads'), ('thumbnail', 'thumbnail')])
+                                                     ('slider', 'slider'), ('ads', 'ads'), ('thumbnail', 'thumbnail'),
+                                                     ('avatar', 'avatar')])
     box = models.ForeignKey(Box, on_delete=models.CASCADE, null=True, blank=True)
 
     class Meta:
@@ -270,7 +280,7 @@ class Category(Base):
     def __str__(self):
         return f"{self.name['persian']}"
 
-    parent = models.ForeignKey("self", on_delete=models.CASCADE, null=True, blank=True)
+    parent = models.ForeignKey("self", on_delete=CASCADE, null=True, blank=True)
     # child = models.CharField(max_length=null=True, blank=True)
     box = models.ForeignKey(Box, on_delete=CASCADE)
     name = JSONField(default=multilanguage)
@@ -293,7 +303,7 @@ class Feature(Base):
     type = models.CharField(max_length=255, default='bool')
     value = JSONField(default=feature_value)
     category = models.ManyToManyField(Category)
-    box = models.ForeignKey(Box, on_delete=models.CASCADE, blank=True, null=True)
+    box = models.ForeignKey(Box, on_delete=CASCADE, blank=True, null=True)
     icon = models.CharField(default='default', max_length=255)
 
     class Meta:
@@ -308,7 +318,7 @@ class Tag(Base):
     name = JSONField(default=multilanguage)
     meta_key = models.CharField(max_length=255, unique=True, null=True)
     box = models.ForeignKey(
-        Box, on_delete=models.CASCADE, blank=True, null=True)
+        Box, on_delete=CASCADE, blank=True, null=True)
 
     class Meta:
         db_table = 'tag'
@@ -444,7 +454,7 @@ class Basket(Base):
     def __str__(self):
         return f"{self.user}"
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    user = models.ForeignKey(User, on_delete=CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
     count = models.IntegerField(default=0)
     products = models.ManyToManyField(Storage, through='BasketProduct')
@@ -479,7 +489,7 @@ class Blog(Base):
     def __str__(self):
         return self.title
 
-    box = models.ForeignKey(Box, on_delete=models.CASCADE)
+    box = models.ForeignKey(Box, on_delete=CASCADE)
     title = JSONField(default=multilanguage)
     description = JSONField(null=True, blank=True)
     media = models.ForeignKey(Media, on_delete=CASCADE, blank=True, null=True)
@@ -511,12 +521,12 @@ class Comment(SafeDeleteModel):
     id = models.BigAutoField(auto_created=True, primary_key=True)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
-    deleted_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Deleted by',
+    deleted_by = models.ForeignKey(User, on_delete=CASCADE, null=True, blank=True, verbose_name='Deleted by',
                                    related_name='comment_deleted_by')
     text = models.TextField(null=True, blank=True)
     rate = models.PositiveSmallIntegerField(default=0, null=True)
     approved = models.BooleanField(null=True, blank=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=CASCADE)
     reply = models.ForeignKey('self', on_delete=CASCADE, blank=True, null=True)
     suspend = models.BooleanField(default=False)
     type = models.CharField(max_length=255, choices=[('q-a', 1), ('rate', 2)])
@@ -535,9 +545,9 @@ class Invoice(Base):
         return f"{self.user}"
 
     suspended_at = models.DateTimeField(blank=True, null=True, verbose_name='Suspended at')
-    suspended_by = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True, verbose_name='Suspended by',
+    suspended_by = models.ForeignKey(User, on_delete=CASCADE, blank=True, null=True, verbose_name='Suspended by',
                                      related_name='invoice_suspended_by')
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=CASCADE)
     task = models.OneToOneField(PeriodicTask, on_delete=CASCADE, null=True, blank=True)
     basket = models.OneToOneField(to=Basket, on_delete=PROTECT, related_name='invoice_to_basket')
     storages = models.ManyToManyField(Storage, through='InvoiceStorage')
@@ -605,9 +615,9 @@ class Rate(models.Model):
 
     id = models.BigAutoField(auto_created=True, primary_key=True)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=CASCADE)
     rate = models.FloatField()
-    storage = models.ForeignKey(Storage, on_delete=models.CASCADE, null=True, blank=True)
+    storage = models.ForeignKey(Storage, on_delete=CASCADE, null=True, blank=True)
 
     class Meta:
         db_table = 'rate'
@@ -837,6 +847,9 @@ class Book(Base):
         ordering = ['-id']
 
 
-@receiver(post_delete, sender=Media)
+@receiver(post_softdelete, sender=Media)
 def submission_delete(sender, instance, **kwargs):
-    instance.file.delete(False)
+    if instance.file:
+        instance.file.delete(False)
+
+

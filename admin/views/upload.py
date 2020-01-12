@@ -19,8 +19,7 @@ class BoxMedia(AdminView):
     permission_required = 'add_media'
 
     def post(self, request):
-        data = json.loads(request.POST.get('data'))
-        title = data['title']
+
         # box = request.user.box
         if upload(request, title, box=1):
             return HttpResponse('ok')
