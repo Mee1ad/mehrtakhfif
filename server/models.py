@@ -117,8 +117,6 @@ class User(AbstractUser):
                                   validators=[validate_slug])
     last_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='Last name',
                                  validators=[validate_slug])
-    # fullname = models.CharField(max_length=255, blank=True, null=True, verbose_name='full name',
-    #                             validators=[validate_slug])
     username = models.CharField(max_length=150, unique=True)
     language = models.CharField(max_length=7, default='fa')
     email = models.CharField(max_length=255, blank=True, null=True, validators=[validate_email])
