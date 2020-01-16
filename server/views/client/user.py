@@ -17,13 +17,17 @@ class Profile(View):
     @try_except
     def put(self, request):
         data = json.loads(request.body)
-        validation(data)
+        # validation(data)
         user = request.user
-        user.fullname = data.get('fullname') or user.fullname
+        user.first_name = data.get('first_name') or user.first_name
+        user.last_name = data.get('last_name') or user.last_name
         user.gender = data.get('gender') or user.gender
-        user.language = data.get('language') or user.language
+        # user.language = data.get('language') or user.language
         user.email = data.get('email') or user.email
         user.meli_code = data.get('meli_code') or user.meli_code
+        user.shaba = data.get('shaba') or user.shaba
+        user.birthday = data.get('birthday') or user.birthday
+        user.subscribe = data.get('subscribe') or user.subscribe
         user.save()
         return JsonResponse({'user': UserSchema().dump(user)})
 
