@@ -1,0 +1,11 @@
+### Available routes: slider, special_offer, special_product, box_special_product, best_seller, box_with_category,
+###                   ads, category, menu, get_states
+GET {{host}}/get_states
+###
+GET {{host}}/get_cities/26
+###
+GET {{host}}/search?q=query
+###
+GET {{host}}/get_box_categories?box_permalink=boom-gardi
+###
+GET {{host}}/special_offer

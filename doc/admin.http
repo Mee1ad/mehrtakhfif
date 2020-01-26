@@ -1,0 +1,275 @@
+### Available routs: blog, blog_post, category, feature, menu, product, special_product, storage, special_offer,tag
+### Methods: GET for get one or many objects, DELETE for delete object, POST for create object,
+###          PUT for replace object, PATCH for update many to many relations
+
+### Parameters => s for step, p for page, id for single item
+GET {{admin_host}}/category
+
+### 2 Step request: first without token, second with obtaind token from first request
+DELETE {{admin_host}}/category?id=6
+
+### Update for many to many relations
+PATCH {{admin_host}}/category
+Content-Type: Application/json
+Access-Token: {{access_token}}
+
+{
+  "category": 42,
+  "features": [
+    14,
+    15,
+    16
+  ]
+}
+
+###
+PATCH {{admin_host}}/product
+Content-Type: Application/json
+Access-Token: {{access_token}}
+
+{
+  "product": 28,
+  "tags": [
+    2,
+    3,
+    4
+  ],
+  "media": [
+    12
+  ]
+}
+
+###
+PATCH {{admin_host}}/storage
+Content-Type: Application/json
+Access-Token: {{access_token}}
+
+{
+  "storage": 14,
+  "features": [
+    14,
+    15,
+    16
+  ]
+}
+
+### For Replace just change POST to PUT and add id if is not
+### HINT: id in POST will not be used, don't mind if is in POST
+### Create
+POST {{admin_host}}/category
+Content-Type: Application/json
+Access-Token: {{access_token}}
+
+{
+  "parent_id": 3,
+  "box_id": 1,
+  "media_id": 1,
+  "priority": 1,
+  "disable": false,
+  "permalink": "permalink3",
+  "name": {
+    "fa": "نام دسته بندی"
+  }
+}
+
+###
+POST {{admin_host}}/feature
+Content-Type: Application/json
+Access-Token: {{access_token}}
+
+{
+  "box_id": 1,
+  "type": "bool",
+  "icon": "default",
+  "name": {
+    "fa": "تست"
+  },
+  "value": [
+    {
+      "id": 1,
+      "fa": "تست"
+    }
+  ]
+}
+
+###
+POST {{admin_host}}/menu
+Content-Type: Application/json
+Access-Token: {{access_token}}
+
+{
+  "media_id": 1,
+  "parent_id": 1,
+  "box_id": 1,
+  "priority": 1,
+  "type": "test",
+  "url": "http://google.com",
+  "name": {
+    "fa": "test"
+  }
+}
+
+### defaults => disable: true, verify: false
+### choices => type: service, product
+POST {{admin_host}}/product
+Content-Type: Application/json
+Access-Token: {{access_token}}
+
+{
+  "category_id": 1,
+  "box_id": 1,
+  "thumbnail_id": 1,
+  "disable": false,
+  "verify": true,
+  "address": "رشت کمربندی فلکه پاز",
+  "short_address": "رشت فلکه گاز",
+  "permalink": {
+    "fa": "permalink2"
+  },
+  "name": {
+    "fa": "نام محصول"
+  },
+  "short_description": {
+    "fa": "توضیح کوتاه"
+  },
+  "description": {
+    "fa": "توضیحات"
+  },
+  "properties": {
+    "fa": {
+      "usage_condition": {
+        "type": "default",
+        "priority": "high",
+        "text": "متن تست"
+      },
+      "property": {
+        "type": "date",
+        "priority": "high",
+        "text": "متن تست"
+      }
+    }
+  },
+  "type": "service",
+  "details": {
+    "fa": {
+      "text": "متن تست",
+      "phone": [
+        {
+          "value": "0911138056",
+          "type": "mobile"
+        }
+      ],
+      "serving_hours": "با هماهنگی",
+      "serving_days": "با هماهنگی"
+    }
+  }
+}
+
+### defaults => special: false
+POST {{admin_host}}/special_product
+Content-Type: Application/json
+Access-Token: {{access_token}}
+
+{
+  "storage_id": 1,
+  "thumbnail_id": 1,
+  "box_id": 1,
+  "category_id": 1,
+  "media_id": 1,
+  "special": true,
+  "type": "type",
+  "url": "http://google.com",
+  "name": {
+    "fa": "نام"
+  },
+  "label_name": {
+    "fa": "نام لیبل"
+  },
+  "description": {
+    "fa": "توضیحات"
+  }
+}
+
+### defaults => max_count_for_sale: 1, priority: 0, tax: 0, deadline: next month, start_time: now
+POST {{admin_host}}/storage
+Content-Type: Application/json
+Access-Token: {{access_token}}
+
+{
+  "product_id": 1,
+  "available_count": 1000,
+  "start_price": 50000,
+  "final_price": 100000,
+  "discount_price": 80000,
+  "discount_vip_price": 70000,
+  "transportation_price": 10000,
+  "discount_percent": 50,
+  "discount_vip_percent": 60,
+  "available_count_for_sale": 500,
+  "max_count_for_sale": 5,
+  "priority": 0,
+  "tax": 2300,
+  "gender": null,
+  "start_time": "2020-03-16 19:11:30+00:00",
+  "deadline": "2020-4-16 19:11:30+00:00",
+  "title": {
+    "fa": "عنوان"
+  }
+}
+
+###
+POST {{admin_host}}/special_offer
+Content-Type: Application/json
+Access-Token: {{access_token}}
+
+{
+  "box_id": 1,
+  "category_id": 1,
+  "media_id": 1,
+  "peak_price": 30000,
+  "discount_price": 28000,
+  "vip_discount_price": 24000,
+  "least_count": 2,
+  "discount_percent": 15,
+  "vip_discount_percent": 20,
+  "code": "Eyd-1400",
+  "start_date": "2020-2-16 19:11:30+00:00",
+  "end_date": "2020-03-16 19:11:30+00:00",
+  "name": {
+    "fa": "تخفیف عید"
+  }
+}
+
+###
+POST {{admin_host}}/tag
+Content-Type: Application/json
+Access-Token: {{access_token}}
+
+{
+  "id": 1,
+  "box_id": 1,
+  "permalink": "tour",
+  "name": {
+    "fa": "نام تگ"
+  }
+}
+
+### Upload Media
+POST {{admin_host}}/media
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+access-token: {{access-token}}
+
+--WebAppBoundary
+Content-Disposition: form-data; name="data"
+
+{"box_id": 1, "titles": [{"fa": "نام دسته بندی"}, {"fa": "2نام دسته بندی"}]}
+--WebAppBoundary--
+Content-Disposition: form-data; name="file"; filename="fmb.jpg"
+
+< F:\Download\Photos\fmb.jpg
+--WebAppBoundary--
+Content-Disposition: form-data; name="file"; filename="gram.jpg"
+
+< F:\Download\Photos\gram.jpg
+
+###

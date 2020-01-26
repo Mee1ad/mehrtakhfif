@@ -1,0 +1,22 @@
+### orders: cheap, expensive, best_seller, popular, discount
+
+### box main page
+GET {{host}}/box/boom-gardi?available=true&orderby=cheap
+###
+GET {{host}}/box/boom-gardi?brand=brand1&brand=brand2
+###
+GET {{host}}/box/boom-gardi?min_price=50000&max_price=100000
+###
+
+###
+GET {{host}}/features?box=boom-gardi
+###
+GET {{host}}/features?category=tour-safar
+###
+
+GET {{host}}/box_detail/boom-gardi
+###
+GET {{host}}/category/tour-safar
+###
+GET {{host}}/tag/cafe
+###

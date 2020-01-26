@@ -1,0 +1,132 @@
+### Authentication, Basket, Wishlist, Address, Profile, Avatar
+
+### Available routes: orders, user_comments
+GET {{host}}/user_comments
+
+### Authentication
+POST {{host}}/signup
+Content-Type: Application/json
+
+{
+	"username": "09015518457",
+	"password": "12345678"
+}
+###
+POST {{host}}/login
+Content-Type: Application/json
+
+{
+	"username": "09015518439",
+	"password": "123456"
+}
+###
+POST {{host}}/activate
+Content-Type: Application/json
+
+{
+	"code": 54150,
+	"token": "493c33304780f3579503e7b74b27ee726da16aab15a1589df0954c1c8a6684c607eb4b1577d44bef181b0e967e140bcb6a1c1fc87178de74f932341c852592562ce3e60a2fe2f350517daf6e3de16ad3a8917785145a710500967c9d90ada6b46bd5a227"
+}
+###
+POST {{host}}/resend_code
+Content-Type: Application/json
+
+{
+	"token": "pbkdf2_sha256$150000$activation_code$pHDguRDU41GcBFRTOLgrlF/+f1k/eCWE9KSQvDpEHXM="
+}
+###
+POST {{host}}/reset_password_request
+Content-Type: Application/json
+
+{
+	"phone": "09015518439"
+}
+###
+POST {{host}}/reset_password
+Content-Type: Application/json
+
+{
+	"new_password": "123456",
+	"token": "fed5510948065bc84974"
+}
+
+### Wishlist
+GET {{host}}/wishlist
+###
+DELETE {{host}}/wishlist?id=8
+###
+POST {{host}}/wishlist
+Content-Type: Application/json
+
+{
+  "type": "admin",
+  "notify": false,
+  "product_id": "4"
+}
+###
+
+### Address
+GET {{host}}/address
+###
+DELETE http://{{host}}/address?id=39
+###
+POST http://{{host}}/address
+Content-Type: Application/json
+
+{
+	"state_id": 9,
+	"city_id": 1699,
+	"postal_code": "1234512345",
+	"address": "رشت فلکه پاز چمارسرا",
+	"location": null,
+	"name": "محمد حسین باقری",
+	"phone": "09015515685",
+	"set_default": false
+}
+###
+PUT http://{{host}}/address
+Content-Type: Application/json
+
+{
+    "id":38,
+    "state_id": 9,
+    "city_id": 1699,
+    "postal_code": "1234512345",
+    "address": "محله آرین اینا",
+    "location": [12,13],
+    "name": "محمد جوادیان",
+    "phone": "09015518439",
+    "set_default": false
+}
+###
+
+### Profile
+GET {{host}}/profile
+###
+PUT http://{{host}}/profile
+Content-Type: Application/json
+
+{
+	"first_name": "محمد",
+	"last_name": "باقری",
+	"gender": true,
+	"email": "soheil@gmail.com",
+	"meli_code": 2580759721,
+	"shaba": "IR123456789",
+	"birthday": "1995-03-16",
+	"subscribe": false
+}
+###
+
+### Avatar
+DELETE {{host}}/avatar
+###
+POST {{host}}/avatar
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+access-token: {{access-token}}
+
+--WebAppBoundary--
+Content-Disposition: form-data; name="file"; filename="fmb.jpg"
+
+< F:\Download\Photos\fmb.jpg
+###
