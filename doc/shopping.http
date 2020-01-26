@@ -1,0 +1,35 @@
+### Basket
+GET http://{{host}}/basket
+###
+DELETE http://{{host}}/basket?product_id=4
+### add to basket
+POST {{host}}/basket
+Content-Type: Application/json
+
+{
+  "products": [{"id": 7, "count":  1}, {"id": 23, "count":  2}, {"id": 26, "count":  3}],
+  "override": true,
+  "add": true
+}
+###
+
+
+### get products with list of id
+POST {{host}}/get_products
+Content-Type: Application/json
+
+{
+	"basket": [{"id": 13, "count": 1}, {"id": 17, "count": 1}, {"id": 18, "count": 1}]
+}
+
+
+### get payment: basket_id
+GET {{host}}/payment/30
+###
+POST {{host}}/callback
+Content-Type: Application/json
+
+{
+	"OrderId": 100,
+	"Description": ""
+}

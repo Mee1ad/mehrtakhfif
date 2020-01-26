@@ -1,0 +1,48 @@
+### Comment
+### Available routes:
+
+### product
+GET {{host}}/product/p-30
+
+### related products
+GET {{host}}/related_products/p-30?p=1&s=3
+
+### Comment - type: 1: 'q-a'
+GET {{host}}/comment?product_id=25&type=1&s=5&p=1
+### Comment - type 2: 'rate'
+GET {{host}}/comment?product_id=25&type=1&s=5&p=1
+###
+DELETE {{host}}/comment?id=45
+### type 1
+POST {{host}}/comment
+Content-Type: Application/json
+
+{
+	"text": "راضی  بودی؟",
+	"type": 1,
+	"product_id": 25,
+    "rate": 5
+}
+### type 2 question
+POST {{host}}/comment
+Content-Type: Application/json
+
+{
+	"text": "راضی  بودی؟",
+	"type": 2,
+	"product_id": 25
+}
+### type 2 answer
+POST {{host}}/comment
+Content-Type: Application/json
+
+{
+	"text": "راضی  بودی؟",
+	"type": 2,
+    "reply_id": 49,
+	"product_id": 25
+}
+###
+
+
+
