@@ -20,7 +20,7 @@ class MediaField(fields.Field):
 class FeatureField(fields.Field):
     def _serialize(self, value, attr, obj, **kwargs):
         features = FeatureStorage.objects.filter(storage=obj)
-        return FeatureSchema().dump(features, many=True)
+        return FeatureStorageSchema().dump(features, many=True)
 
 
 class TagField(fields.Field):
@@ -52,24 +52,25 @@ class BasketProductField(fields.Field):
 
 class BaseSchema(Schema):
 
-    def __init__(self, language='persian'):
+    def __init__(self, language='fa'):
         super().__init__()
         self.lang = language
-        self.default_lang = 'persian'
+        self.default_lang = 'fa'
 
     def get(self, name):
         try:
+            print(name)
             if name[self.lang] != "":
                 return name[self.lang]
             return name[self.default_lang]
         except ValueError:
-            return ""
+            return name[self.default_lang]
 
     def get_name(self, obj):
         return self.get(obj.name)
 
-    def get_feature_name(self, obj):
-        return obj.feature.name[self.lang]
+    def get_brand(self, obj):
+        return {"id": obj.brand_id, "name": self.get(obj.brand.name)}
 
     def get_title(self, obj):
         return self.get(obj.title)
@@ -160,10 +161,17 @@ class BaseSchema(Schema):
             return {'lat': float(obj.location[0]), 'lng': float(obj.location[1])}
         return None
 
+    def get_feature(self, obj):
+        return FeatureSchema(language=self.lang).dump(obj.feature)
+
+    def get_feature_name(self, obj):
+        return obj.name[self.lang]
+
     def get_feature_value(self, obj):
-        for item, name in zip(obj.value, obj.feature.value):
-            item['name'] = name[self.lang]
-        return obj.value
+        new_value = []
+        for item, index in zip(obj.value, range(len(obj.value))):
+            new_value.append({'name': item[self.lang], 'id': item['id']})
+        return new_value
 
     def get_created_at(self, obj):
         return obj.created_at.timestamp()
@@ -199,7 +207,7 @@ class BoxSchema(BaseSchema):
 
 
 class MediaSchema(Schema):
-    def __init__(self, language='persian'):
+    def __init__(self, language='fa'):
         super().__init__()
         self.lang = language
 
@@ -250,8 +258,14 @@ class ParentSchema(BaseSchema):
 class FeatureSchema(BaseSchema):
     id = fields.Int()
     name = fields.Method('get_feature_name')
-    type = fields.Function(lambda o: o.feature.type)
+    type = fields.Function(lambda o: o.type)
     value = fields.Method('get_feature_value')
+
+
+class FeatureStorageSchema(BaseSchema):
+    id = fields.Int()
+    feature = fields.Method('get_feature')
+    value = fields.Function(lambda o: o.value)
 
 
 class TagSchema(BaseSchema):
@@ -260,11 +274,17 @@ class TagSchema(BaseSchema):
     box = fields.Method('get_box')
 
 
+class BrandSchema(BaseSchema):
+    id = fields.Int()
+    name = fields.Method('get_name')
+
+
 class ProductSchema(BaseSchema):
     class Meta:
         additional = ('id', 'permalink', 'gender', 'type', 'address', 'short_address')
 
     name = fields.Method("get_name")
+    brand = fields.Method("get_brand")
     box = fields.Method("get_box")
     category = fields.Method("get_category")
     house = fields.Method("get_house")
@@ -309,7 +329,7 @@ class StorageSchema(BaseSchema):
 
 class MinStorageSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'final_price', 'discount_price', 'discount_percent')
+        additional = ('id', 'final_price', 'discount_price', 'discount_percent', 'max_count_for_sale')
 
     title = fields.Method('get_title')
 

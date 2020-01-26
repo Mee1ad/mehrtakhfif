@@ -11,32 +11,28 @@ from server.views.client import user
 app_name = 'server'
 
 home = [
-    path('test', home.Test.as_view(), name='test'),
     path('slider', home.GetSlider.as_view(), name='slider'),
     path('special_offer', home.GetSpecialOffer.as_view(), name='special_offer'),
     path('box_special_product', home.BoxesGetSpecialProduct.as_view(), name='box_special_product'),
     path('special_product', home.GetSpecialProduct.as_view(), name='special_product'),
     path('best_seller', home.BestSeller.as_view(), name='best_seller'),
-    path('category', home.AllCategory.as_view(), name='category'),
-    path('box', home.AllBoxWithCategories.as_view(), name='box'),
+    path('get_box_categories', home.AllCategory.as_view(), name='get_box_categories'),
+    path('box_with_category', home.AllBoxWithCategories.as_view(), name='box_with_category'),
     path('menu', home.GetMenu.as_view(), name='menu'),
     path('search', home.ElasticSearch.as_view(), name='search'),
-    path('search2', home.Search.as_view(), name='search2'),
+    # path('search2', home.Search.as_view(), name='search2'),
     path('ads', home.GetAds.as_view(), name='ads'),
-    path('get_products', home.GetProducts.as_view(), name='get_products'),
 ]
 
 box = [
     path('box/<str:permalink>', box.BoxView.as_view(), name='box'),
-    path('special_offer/<str:name>', box.GetSpecialOffer.as_view(), name='special_offer'),
-    path('special_product/<str:permalink>', box.GetSpecialProduct.as_view(), name='special_product'),
-    path('best_seller/<str:permalink>', box.BestSeller.as_view(), name='best_seller'),
+    # path('special_offer/<str:name>', box.GetSpecialOffer.as_view(), name='special_offer'),
+    # path('special_product/<str:permalink>', box.GetSpecialProduct.as_view(), name='special_product'),
+    # path('best_seller/<str:permalink>', box.BestSeller.as_view(), name='best_seller'),
     path('box_detail/<str:permalink>', box.BoxDetail.as_view(), name='box_detail'),
     path('features', box.GetFeature.as_view(), name='features'),
-    path('filter', box.Filter.as_view(), name='filter'),
-    # path('tag/<int:pk>', box.TagView.as_view(), name='tag'),
-    path('box/<str:box>/category/<str:category>', box.BoxCategory.as_view(), name='category'),
-    # path('box/<str:name>', box.Filter.as_view(), name='box')
+    path('tag/<str:permalink>', box.TagView.as_view(), name='tag'),
+    path('category/<str:permalink>', box.CategoryView.as_view(), name='category'),
 ]
 
 product = [
@@ -52,6 +48,7 @@ tourism = [
 
 shopping = [
     path('basket', shopping.BasketView.as_view(), name='basket'),
+    path('get_products', shopping.GetProducts.as_view(), name='get_products'),
     # path('show_codes', shopping.ShowCodes.as_view(), name='show_codes'),
 ]
 
@@ -62,6 +59,7 @@ pay = [
 ]
 
 user = [
+    path('test', user.Test.as_view(), name='test'),
     path('profile', user.Profile.as_view(), name='profile'),
     path('get_states', user.GetState.as_view(), name='get_states'),
     path('get_cities/<int:state_id>', user.GetCity.as_view(), name='get_cities'),
@@ -69,7 +67,9 @@ user = [
     path('trips', user.Trips.as_view(), name='trips'),
     path('wishlist', user.WishlistView.as_view(), name='wishlist'),
     path('avatar', user.Avatar.as_view(), name='avatar'),
-    path('address', user.AddressView.as_view(), name='address')]
+    path('address', user.AddressView.as_view(), name='address'),
+    path('user_comments', user.CommentView.as_view(), name='user_comments')
+]
 
 auth = [
     path('login', auth.Login.as_view(), name='login'),

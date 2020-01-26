@@ -22,13 +22,13 @@ from mehr_takhfif.settings import HOST
 
 
 def multilanguage():
-    return {"persian": "",
-            "english": "",
-            "arabic": ""}
+    return {"fa": "",
+            "en": "",
+            "ar": ""}
 
 
 def feature_value():
-    return [{"id": 0, "persian": "", "english": "", "arabic": ""}]
+    return [{"id": 0, "fa": "", "en": "", "ar": ""}]
 
 
 def feature_value_storage():
@@ -48,12 +48,12 @@ def product_properties():
         {"type": "default", "priority": "low", "text": lorem},
         {"type": "date", "priority": "low", "text": lorem}
     ]
-    return {'persian': {"usage_condition": data, "property": data}}
+    return {'fa': {"usage_condition": data, "property": data}}
 
 
 def product_details():
     return {
-        "persian": {
+        "fa": {
             "text": "سلام",
             "phone": [
                 {
@@ -68,7 +68,7 @@ def product_details():
             "serving_hours": "با هماهنگی",
             "serving_days": "با هماهنگی"
         },
-        "english": {
+        "en": {
             "text": "salam",
             "phone": [
                 {
@@ -136,7 +136,7 @@ class User(AbstractUser):
     email_verified = models.BooleanField(default=False, verbose_name='Email verified')
     subscribe = models.BooleanField(default=True)
     avatar = models.ForeignKey("Media", on_delete=SET_NULL, null=True, blank=True)
-    meli_code = models.CharField(max_length=15, blank=True, null=True, verbose_name='National code', unique=True)
+    meli_code = models.CharField(max_length=15, blank=True, null=True, verbose_name='National code')
     wallet_credit = models.IntegerField(default=0)
     suspend_expire_date = models.DateTimeField(blank=True, null=True, verbose_name='Suspend expire date')
     activation_code = models.CharField(max_length=127, null=True, blank=True)
@@ -221,7 +221,7 @@ class Address(models.Model):
 class Box(Base):
     def __str__(self):
         try:
-            return self.name['persian']
+            return self.name['fa']
         except Exception:
             return self.name
 
@@ -238,25 +238,22 @@ class Box(Base):
 class Media(Base):
     def __str__(self):
         try:
-            return self.title['persian']
+            return self.title['fa']
         except KeyError:
             return self.title['user_id']
 
-    def save(self, *args, **kwargs):
+    def save2(self, *args, **kwargs):
         if not self.type == 'avatar':
             sizes = {'small': (200, 200), 'medium': (500, 500), 'large': (800, 800)}
-            qualities = {'small': 30, 'medium': 50, 'large': 80}
             super().save(*args, **kwargs)
             name = self.file.name
             format = re.search(r'\.[a-z]+', name)
             path = self.file.path
             new_path = self.file.path.replace(format[0], '')
-            for quality in qualities:
-                # Image.open(path).resize((sizes[size][0], sizes[size][1])) \
-                #     .save(new_path + f'_{size}' + format[0], 'JPEG')
+            for size in sizes:
+                Image.open(path).resize((sizes[size][0], sizes[size][1])) \
+                    .save(new_path + f'_{size}' + format[0], 'JPEG')
 
-                Image.open(path).save(new_path + f'_{quality}' + format[0], 'JPEG',
-                                      quality=qualities[quality])
         else:
             super().save(*args, **kwargs)
 
@@ -276,10 +273,10 @@ class Category(Base):
     prefetch = ['feature_set']
 
     def __str__(self):
-        return f"{self.name['persian']}"
+        print(self.name)
+        return f"{self.name['fa']}"
 
     parent = models.ForeignKey("self", on_delete=CASCADE, null=True, blank=True)
-    # child = models.CharField(max_length=null=True, blank=True)
     box = models.ForeignKey(Box, on_delete=CASCADE)
     name = JSONField(default=multilanguage)
     permalink = models.CharField(max_length=255, unique=True, null=True)
@@ -311,17 +308,24 @@ class Feature(Base):
 
 class Tag(Base):
     def __str__(self):
-        return f"{self.name['persian']}"
+        return f"{self.name['fa']}"
 
+    box = models.ForeignKey(Box, on_delete=CASCADE, blank=True, null=True)
+    permalink = models.CharField(max_length=255, unique=True, null=True)
     name = JSONField(default=multilanguage)
-    meta_key = models.CharField(max_length=255, unique=True, null=True)
-    box = models.ForeignKey(
-        Box, on_delete=CASCADE, blank=True, null=True)
 
     class Meta:
         db_table = 'tag'
         ordering = ['-id']
         indexes = [GinIndex(fields=['name'])]
+
+
+class Brand(Base):
+    name = JSONField(default=multilanguage)
+
+    class Meta:
+        db_table = 'brand'
+        ordering = ['-id']
 
 
 class Product(Base):
@@ -330,29 +334,25 @@ class Product(Base):
     filter = []
 
     def __str__(self):
-        return f"{self.name['persian']}"
-
-    @property
-    def test(self):
-        return self.name['persian']
+        return f"{self.name['fa']}"
 
     def get_name_fa(self):
-        return self.name['persian']
+        return self.name['fa']
 
     def get_name_en(self):
-        return self.name['english']
+        return self.name['en']
 
     def get_name_ar(self):
-        return self.name['arabic']
+        return self.name['ar']
 
     def get_category_fa(self):
-        return self.category.name['persian']
+        return self.category.name['fa']
 
     def get_category_en(self):
-        return self.category.name['english']
+        return self.category.name['en']
 
     def get_category_ar(self):
-        return self.category.name['arabic']
+        return self.category.name['ar']
 
     def get_thumbnail(self):
         return HOST + self.thumbnail.file.url
@@ -363,29 +363,33 @@ class Product(Base):
 
     category = models.ForeignKey(Category, on_delete=CASCADE)
     box = models.ForeignKey(Box, on_delete=PROTECT)
+    brand = models.ForeignKey(Brand, on_delete=PROTECT)
+    thumbnail = models.ForeignKey(Media, on_delete=PROTECT, related_name='product_thumbnail')
+    default_storage = models.OneToOneField(null=True, blank=True, to="Storage", on_delete=CASCADE,
+                                           related_name='product_default_storage')
+    tag = models.ManyToManyField(Tag)
+    media = models.ManyToManyField(Media)
+    income = models.BigIntegerField(default=0)
+    profit = models.BigIntegerField(default=0)
+    rate = models.PositiveSmallIntegerField(default=0)
+    disable = models.BooleanField(default=True)
+    verify = models.BooleanField(default=False)
+    address = models.CharField(max_length=255, null=True, blank=True)
+    short_address = models.CharField(max_length=255, null=True, blank=True)
+    type = models.CharField(max_length=255, choices=[(
+        'service', 'service'), ('product', 'product')])
+    permalink = models.CharField(max_length=255, blank=True, null=True, db_index=True, unique=True)
+
     name = JSONField(default=multilanguage)
     # name = pg_search.SearchVectorField(null=True)
-    tag = models.ManyToManyField(Tag)
-    permalink = models.CharField(max_length=255, blank=True, null=True, db_index=True, unique=True)
     short_description = JSONField(default=multilanguage)
     description = JSONField(default=multilanguage)
     location = JSONField(null=True, blank=True)
-    address = models.CharField(max_length=255, null=True, blank=True)
-    short_address = models.CharField(max_length=255, null=True, blank=True)
     properties = JSONField(default=product_properties)
-    media = models.ManyToManyField(Media)
-    thumbnail = models.ForeignKey(Media, on_delete=PROTECT, related_name='product_thumbnail')
-    income = models.BigIntegerField(default=0)
-    profit = models.BigIntegerField(default=0)
-    disable = models.BooleanField(default=True)
-    verify = models.BooleanField(default=False)
-    type = models.CharField(max_length=255, choices=[(
-        'service', 'service'), ('product', 'product')])
     details = JSONField(default=product_details)
-    rate = models.PositiveSmallIntegerField(default=0)
+
     # todo not null
-    default_storage = models.OneToOneField(null=True, blank=True, to="Storage", on_delete=CASCADE,
-                                           related_name='product_default_storage')
+
 
     # home_buissiness =
     # support_description =
@@ -402,28 +406,28 @@ class Storage(Base):
     def __str__(self):
         return f"{self.product}"
 
-    product = models.ForeignKey(Product, on_delete=CASCADE)
+    product = models.ForeignKey(Product, on_delete=PROTECT)
+    feature = models.ManyToManyField(Feature, blank=True, through='FeatureStorage')
+    available_count = models.BigIntegerField(verbose_name='Available count')
+    sold_count = models.BigIntegerField(default=0, verbose_name='Sold count')
+    start_price = models.BigIntegerField(verbose_name='Start price')
+    final_price = models.BigIntegerField(verbose_name='Final price')
+    discount_price = models.BigIntegerField(verbose_name='Discount price')
+    discount_vip_price = models.BigIntegerField(verbose_name='Discount vip price')
+    transportation_price = models.IntegerField(default=0)
+    available_count_for_sale = models.IntegerField(verbose_name='Available count for sale')
+    max_count_for_sale = models.IntegerField(default=1)
+    priority = models.IntegerField(default=0)
+    tax = models.IntegerField(default=0)
+    discount_percent = models.PositiveSmallIntegerField(verbose_name='Discount price percent')
+    discount_vip_percent = models.PositiveSmallIntegerField(verbose_name='Discount vip price percent')
+    gender = models.BooleanField(blank=True, null=True)
+    deadline = models.DateTimeField(default=next_month)
+    start_time = models.DateTimeField(auto_now_add=True)
     title = JSONField(default=multilanguage)
     # box = models.ForeignKey(Box, on_delete=PROTECT)
     # category = models.ForeignKey(Category, on_delete=CASCADE)
-    available_count = models.BigIntegerField(default=0, verbose_name='Available count')
-    available_count_for_sale = models.IntegerField(default=0, verbose_name='Available count for sale')
-    priority = models.IntegerField(default=0)
-    sold_count = models.BigIntegerField(default=0, verbose_name='Sold count')
-    tax = models.IntegerField(default=0)
-    gender = models.BooleanField(blank=True, null=True)
-    feature = models.ManyToManyField(Feature, blank=True, through='FeatureStorage')
-    deadline = models.DateTimeField(default=next_month)
-    start_time = models.DateTimeField(auto_now_add=True)
-    max_count_for_sale = models.IntegerField(default=0)
-    final_price = models.BigIntegerField(default=0, verbose_name='Final price')
-    start_price = models.BigIntegerField(default=0, verbose_name='Start price')
-    transportation_price = models.IntegerField(default=0)
-    discount_price = models.BigIntegerField(default=0, verbose_name='Discount price')
-    discount_vip_price = models.BigIntegerField(default=0, verbose_name='Discount vip price')
-    discount_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount price percent')
-    discount_vip_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount vip price percent')
-    default = models.BooleanField(default=False)
+    # default = models.BooleanField(default=False)
 
     class Meta:
         db_table = 'storage'
@@ -523,7 +527,7 @@ class Comment(SafeDeleteModel):
                                    related_name='comment_deleted_by')
     text = models.TextField(null=True, blank=True)
     rate = models.PositiveSmallIntegerField(default=0, null=True)
-    approved = models.BooleanField(null=True, blank=True)
+    approved = models.BooleanField(default=False)
     user = models.ForeignKey(User, on_delete=CASCADE)
     reply = models.ForeignKey('self', on_delete=CASCADE, blank=True, null=True)
     suspend = models.BooleanField(default=False)
@@ -593,7 +597,7 @@ class Menu(Base):
     select = ['media', 'parent']
 
     def __str__(self):
-        return f"{self.name['persian']}"
+        return f"{self.name['fa']}"
 
     type = models.CharField(max_length=255, blank=True, null=True)
     name = JSONField(default=multilanguage)
@@ -601,6 +605,7 @@ class Menu(Base):
     url = models.CharField(max_length=25, null=True, blank=True)
     parent = models.ForeignKey("self", on_delete=CASCADE, null=True, blank=True)
     priority = models.SmallIntegerField(default=0)
+    box = models.ForeignKey(Box, on_delete=PROTECT, null=True, blank=True)
 
     class Meta:
         db_table = 'menu'
@@ -626,7 +631,7 @@ class Slider(Base):
     select = ['media']
 
     def __str__(self):
-        return f"{self.title['persian']}"
+        return f"{self.title['fa']}"
 
     title = JSONField(default=multilanguage)
     product = models.ForeignKey(Product, on_delete=CASCADE, blank=True, null=True)
@@ -643,25 +648,25 @@ class SpecialOffer(Base):
     select = ['media']
 
     def __str__(self):
-        return f"{self.name['persian']}"
+        return f"{self.name['fa']}"
 
-    name = JSONField(default=multilanguage)
-    code = models.CharField(max_length=65)
+    box = models.ForeignKey(Box, on_delete=CASCADE, null=True, blank=True)
+    category = models.ForeignKey(Category, on_delete=CASCADE, null=True, blank=True)
+    media = models.ForeignKey(Media, on_delete=CASCADE)
     user = models.ManyToManyField(User, blank=True)
     product = models.ManyToManyField(Storage, related_name="special_offer_products", blank=True)
     not_accepted_products = models.ManyToManyField(Storage, related_name="special_offer_not_accepted_products",
                                                    blank=True)
-    box = models.ForeignKey(Box, on_delete=CASCADE, null=True, blank=True)
-    category = models.ForeignKey(Category, on_delete=CASCADE, null=True, blank=True)
+    peak_price = models.BigIntegerField(verbose_name='Peak price')
     discount_price = models.IntegerField(default=0, verbose_name='Discount price')
-    discount_percent = models.SmallIntegerField(default=0, verbose_name='Discount percent')
     vip_discount_price = models.IntegerField(default=0, verbose_name='Vip discount price')
+    least_count = models.IntegerField(default=1)
+    discount_percent = models.SmallIntegerField(default=0, verbose_name='Discount percent')
     vip_discount_percent = models.SmallIntegerField(default=0, verbose_name='Vip discount percent')
+    code = models.CharField(max_length=65)
     start_date = models.DateTimeField(verbose_name='Start date')
     end_date = models.DateTimeField(verbose_name='End date')
-    media = models.ForeignKey(Media, on_delete=CASCADE)
-    least_count = models.IntegerField(default=1)
-    peak_price = models.BigIntegerField(verbose_name='Peak price')
+    name = JSONField(default=multilanguage)
 
     class Meta:
         db_table = 'special_offer'
@@ -675,17 +680,17 @@ class SpecialProduct(Base):
     def __str__(self):
         return f"{self.storage}"
 
-    special = models.BooleanField(default=False, null=True, blank=True)
-    name = JSONField(default=multilanguage, null=True, blank=True)
-    label_name = JSONField(default=multilanguage, null=True, blank=True)
-    url = models.URLField(null=True, blank=True)
-    # product = models.ForeignKey(Product, on_delete=CASCADE, null=True, blank=True)
     storage = models.ForeignKey(Storage, on_delete=CASCADE, null=True, blank=True)
     thumbnail = models.ForeignKey(Media, on_delete=PROTECT, related_name='special_product_thumbnail')
     box = models.ForeignKey(Box, on_delete=PROTECT)
     category = models.ForeignKey(Category, on_delete=CASCADE)
     media = models.ForeignKey(Media, on_delete=CASCADE, null=True, blank=True)
+    special = models.BooleanField(default=False, null=True, blank=True)
     type = models.CharField(max_length=255, )
+    url = models.URLField(null=True, blank=True)
+    name = JSONField(default=multilanguage, null=True, blank=True)
+    label_name = JSONField(default=multilanguage, null=True, blank=True)
+    # product = models.ForeignKey(Product, on_delete=CASCADE, null=True, blank=True)
     description = JSONField(default=multilanguage)
 
     class Meta:
@@ -726,7 +731,7 @@ class Ad(models.Model):
     select = ['media', 'storage']
 
     def __str__(self):
-        return self.title['persian']
+        return self.title['fa']
 
     id = models.BigAutoField(auto_created=True, primary_key=True)
     title = JSONField(default=multilanguage)
@@ -764,7 +769,7 @@ class ResidenceType(Base):
         ordering = ['-id']
 
     def __str__(self):
-        return self.name['persian']
+        return self.name['fa']
 
     name = JSONField(default=multilanguage)
 
@@ -786,7 +791,7 @@ class HousePrice(Base):
 
 class House(Base):
     def __str__(self):
-        return self.product.name['persian']
+        return self.product.name['fa']
 
     cancel_rules = JSONField(default=multilanguage, blank=True)
     rules = JSONField(default=multilanguage, blank=True)

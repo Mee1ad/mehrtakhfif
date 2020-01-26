@@ -19,7 +19,7 @@ UserAdmin.list_per_page = 10
 class Base:
 
     @staticmethod
-    def persian(obj, table='language'):
+    def fa(obj, table='language'):
         link = reverse(f"admin:server_{table}_change", args=[obj.name.id])
         return mark_safe(f'<a href="{link}">{escape(obj.name)}</a>')
 
@@ -31,7 +31,7 @@ class Base:
     @staticmethod
     def get_product(obj):
         link = reverse(f"admin:server_product_change", args=[obj.product_id])
-        return mark_safe(f'<a href="{link}">{escape(obj.product.name["persian"])}</a>')
+        return mark_safe(f'<a href="{link}">{escape(obj.product.name["fa"])}</a>')
 
     @staticmethod
     def get_post(obj):
@@ -41,27 +41,27 @@ class Base:
 
 
 class BoxAdmin(SafeDeleteAdmin):
-    list_display = ('persian', 'created_by', 'updated_at', 'deleted_by') + SafeDeleteAdmin.list_display
+    list_display = ('fa', 'created_by', 'updated_at', 'deleted_by') + SafeDeleteAdmin.list_display
     list_filter = ('name',) + SafeDeleteAdmin.list_filter
     search_fields = ['name']
     list_per_page = 10
 
     # ordering = ('-created_at',)
 
-    def persian(self, obj):
-        return obj.name['persian']
+    def fa(self, obj):
+        return obj.name['fa']
 
 
 class CategoryAdmin(SafeDeleteAdmin):
-    list_display = ('parent', 'box', 'persian', 'deleted_by') + SafeDeleteAdmin.list_display
+    list_display = ('parent', 'box', 'fa', 'deleted_by') + SafeDeleteAdmin.list_display
     list_filter = ('name',) + SafeDeleteAdmin.list_filter
     list_display_links = ('box',)
     search_fields = ['name']
     list_per_page = 10
     ordering = ('-created_at',)
 
-    def persian(self, obj):
-        return obj.name['persian']
+    def fa(self, obj):
+        return obj.name['fa']
 
 
 class MenuAdmin(SafeDeleteAdmin):
@@ -73,7 +73,7 @@ class MenuAdmin(SafeDeleteAdmin):
     ordering = ('-created_at',)
 
     def menu_name(self, obj):
-        return obj.name['persian']
+        return obj.name['fa']
 
     menu_name.short_description = 'name'
 
@@ -107,12 +107,12 @@ class SliderAdmin(SafeDeleteAdmin):
     ordering = ('-created_at',)
 
     def slider_title(self, obj):
-        return obj.title['persian']
+        return obj.title['fa']
 
     slider_title.short_description = 'name'
 
     def url(self, obj):
-        return mark_safe(f'<a href="{HOST + obj.media.file.url}">{escape(obj.media.title["persian"])}</a>')
+        return mark_safe(f'<a href="{HOST + obj.media.file.url}">{escape(obj.media.title["fa"])}</a>')
 
     url.short_description = 'url'
 
@@ -126,7 +126,7 @@ class SpecialOfferAdmin(SafeDeleteAdmin):
     ordering = ('-created_at',)
 
     def menu_name(self, obj):
-        return obj.name['persian']
+        return obj.name['fa']
 
     menu_name.short_description = 'name'
 
@@ -149,7 +149,7 @@ class ProductAdmin(SafeDeleteAdmin):
     ordering = ('-created_at',)
 
     def product_name(self, obj):
-        return obj.name['persian']
+        return obj.name['fa']
 
     product_name.short_description = 'name'
 
@@ -200,7 +200,7 @@ class StorageAdmin(SafeDeleteAdmin):
     ordering = ('-created_at',)
 
     def product_name(self, obj):
-        return obj.name['persian']
+        return obj.name['fa']
 
     product_name.short_description = 'name'
 

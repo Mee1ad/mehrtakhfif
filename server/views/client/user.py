@@ -8,21 +8,26 @@ from server.views.utils import *
 from server.views.utils import LoginRequired
 from server.decorators import try_except
 from mehr_takhfif.settings import HOST
+from django.db.models import F
+
+
+from django.apps import apps
+from django.contrib.postgres.fields.jsonb import JSONField
+from django.db.models import F
 
 
 class Profile(View):
     def get(self, request):
         return JsonResponse({'user': UserSchema().dump(request.user)})
 
-    @try_except
     def put(self, request):
         data = json.loads(request.body)
-        # validation(data)
+        validation(data)
         user = request.user
         user.first_name = data.get('first_name') or user.first_name
         user.last_name = data.get('last_name') or user.last_name
         user.gender = data.get('gender') or user.gender
-        # user.language = data.get('language') or user.language
+        # user.language = data.get('language') or language
         user.email = data.get('email') or user.email
         user.meli_code = data.get('meli_code') or user.meli_code
         user.shaba = data.get('shaba') or user.shaba
@@ -39,7 +44,7 @@ class Avatar(View):
         if user.avatar:
             pre_avatar_id = user.avatar.id
         title = {"user_id": f"{user.id}"}
-        media = upload(request, title, avatar=True)
+        media = upload(request, [title], avatar=True)
         if media:
             user.avatar = media
             user.save()
@@ -75,7 +80,6 @@ class AddressView(LoginRequired):
         return JsonResponse({'addresses': addresses, 'default_address': default_address})
 
     # add address
-    @pysnooper.snoop()
     def post(self, request):
         data = json.loads(request.body)
         validation(data)
@@ -84,7 +88,7 @@ class AddressView(LoginRequired):
             address_count = Address.objects.filter(user=request.user).count()
             address = Address(state_id=data['state_id'], city_id=data['city_id'], postal_code=data['postal_code'],
                               address=data['address'], location=load_location(data['location']), user=request.user,
-                              name=data['fullname'], phone=data['phone'])
+                              name=data['name'], phone=data['phone'])
             address.save()
             if address_count < 2 or data['set_default']:
                 request.user.default_address_id = address.pk
@@ -94,7 +98,6 @@ class AddressView(LoginRequired):
             return JsonResponse({}, status=400)
 
     # set default
-    @pysnooper.snoop()
     def patch(self, request):
         data = json.loads(request.body)
         try:
@@ -105,26 +108,28 @@ class AddressView(LoginRequired):
             return JsonResponse({}, status=400)
 
     # edit address
-    @pysnooper.snoop()
     def put(self, request):
         data = json.loads(request.body)
-        try:
-            address = Address.objects.filter(pk=data['id'], user=request.user)
-            assert address.exists()
-            address.update(state_id=data['state_id'], city_id=data['city_id'], postal_code=data['postal_code'],
-                           address=data['address'], location=load_location(data['location']), user=request.user,
-                           name=data['name'], phone=data['phone'])
-            if data['set_default']:
-                request.user.default_address = address.first().id
-                request.user.save()
-            return JsonResponse({'message': 'ok'})
-        except Exception:
-            return JsonResponse({}, status=400)
+        validation(data)
+        address = Address.objects.filter(pk=data['id'], user=request.user)
+        assert address.exists()
+        address.update(state_id=data['state_id'], city_id=data['city_id'], postal_code=data['postal_code'],
+                       address=data['address'], location=load_location(data['location']), user=request.user,
+                       name=data['name'], phone=data['phone'])
+        if data['set_default']:
+            request.user.default_address = address.first().id
+            request.user.save()
+        return JsonResponse(AddressSchema().dump(address.first()))
 
     def delete(self, request):
         address_id = request.GET.get('id', None)
         Address.objects.filter(pk=address_id, user=request.user).delete()
         return JsonResponse({})
+
+
+class CommentView(LoginRequired):
+    def get(self, request):
+        return JsonResponse(user_data_with_pagination(Comment, CommentSchema, request))
 
 
 class GetState(LoginRequired):
@@ -141,38 +146,22 @@ class GetCity(View):
 
 class WishlistView(View):
     def get(self, request):
-        import time
-        time.sleep(5)
-        step = int(request.GET.get('s', default_step))
-        page = int(request.GET.get('p', default_page))
-        wishlists = WishList.objects.filter(user_id=request.user)
-        last_page_info = last_page(wishlists, step)
-        wishlists = wishlists[(page - 1) * step:step * page]
-        for w, i in zip(wishlists, range(step)):
-            w.product.name['persian'] += f'{(step * (page - 1)) + i}'
-        wishlists = WishListSchema(request.lang).dump(wishlists, many=True)
-        return JsonResponse({'wishlists': wishlists, **last_page_info})
+        wishlists = WishList.objects.filter()
+        pg = get_pagination(wishlists, request.step, request.page, WishListSchema)
+
+        return JsonResponse(pg)
 
     def post(self, request):
         data = json.loads(request.body)
-        try:
-            assert WishList.objects.filter(user=request.user, product_id=data['product_id']).exists()
-            WishList(type=data['type'], notify=data['notify'], product_id=data['product_id'], user=request.user,
-                     created_by=request.user, updated_by=request.user).save()
-            return JsonResponse({'message': 'ok'}, status=201)
-        except AssertionError:
-            WishList.objects.filter(user=request.user, product_id=data['product_id']) \
-                .update(type=data['type'])
-            return JSONField({'message': 'updated'}, status=204)
+        WishList.objects.update_or_create(type=data['type'], notify=data['notify'], product_id=data['product_id'],
+                                          user=request.user,
+                                          created_by=request.user, updated_by=request.user)
+        return JsonResponse({}, status=201)
 
     def delete(self, request):
-        wishlist_id = request.GET.get('wishlist_id', None)
-        try:
-            address = WishList.objects.get(pk=wishlist_id, user_id=request.user)
-            address.delete()
-            return JsonResponse({'message': 'ok'})
-        except WishList.DoesNotExist:
-            return JsonResponse({'message': 'product does not exist'}, status=406)
+        wishlist_id = request.GET.get('id', None)
+        WishList.objects.filter(pk=wishlist_id, user_id=request.user).delete()
+        return JsonResponse({})
 
 
 class NotifyView(View):

@@ -13,16 +13,7 @@ from django.utils.timezone import timedelta
 from mehr_takhfif.celery import app
 
 
-class Test(View):
-    def get(self, request):
-        step = int(request.GET.get('s', default_step))
-        page = int(request.GET.get('p', default_page))
-        data = []
-        for i in range(step):
-            data.append(page)
-
-        last_page_info = {'pagination': {'last_page': math.ceil(len(data) / step), 'items': len(data)}}
-        return JsonResponse({'data': data, **last_page_info})
+# todo use start time for filter products
 
 
 class GetSlider(View):
@@ -117,36 +108,12 @@ class GetAds(View):
             Ad.objects.select_related(*Ad.select).all(), many=True)})
 
 
-class GetProducts(View):
-    def post(self, request):
-        data = json.loads(request.body)
-        storage_ids = [item['id'] for item in data['basket']]
-        basket = data['basket']
-        assert not request.user.is_authenticated
-        storages = Storage.objects.filter(id__in=storage_ids).select_related('product')
-        basket_products = []
-        address_required = False
-        for storage, item in zip(storages, basket):
-            item = next(item for item in basket if item['id'] == storage.pk)  # search in dictionary
-            obj = type('Basket', (object,), {})()
-            obj.count = item['count']
-            obj.product = storage.product
-            if obj.product.type == 'product' and not address_required:
-                address_required = True
-            obj.product.default_storage = storage
-            basket_products.append(obj)
-
-        products = BasketProductSchema(language=request.lang).dump(basket_products, many=True)
-        profit = calculate_profit(products)
-        return JsonResponse({'products': products, 'profit': profit, 'address_required': address_required})
-
-
 class Search(View):
     #  py manage.py search_index --rebuild
     def get(self, request):
         q = request.GET.get('q', '')
-        sv = SearchVector(KeyTextTransform('persian', 'product__name'), weight='A')  # + \
-        # SearchVector(KeyTextTransform('persian', 'product__category__name'), weight='B')
+        sv = SearchVector(KeyTextTransform('fa', 'product__name'), weight='A')  # + \
+        # SearchVector(KeyTextTransform('fa', 'product__category__name'), weight='B')
         sq = SearchQuery(q)
         rank = SearchRank(sv, sq, weights=[0.2, 0.4, 0.6, 0.8])
         product = Storage.objects.select_related(*Storage.select).annotate(rank=rank) \

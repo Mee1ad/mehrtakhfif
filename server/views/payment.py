@@ -35,7 +35,6 @@ class IPG(View):
 
 
 class PaymentRequest(View):
-    @pysnooper.snoop()
     def get(self, request, basket_id):
         user = request.user
         assert Basket.objects.filter(pk=basket_id, user=user).exists()

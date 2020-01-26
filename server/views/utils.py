@@ -1,7 +1,7 @@
 import difflib
 import json
 import math
-
+import hashlib
 import jwt
 import magic
 from cryptography.hazmat.backends import default_backend
@@ -14,6 +14,7 @@ from django.views import View
 from django_celery_beat.models import PeriodicTask, IntervalSchedule
 from datetime import datetime
 import pysnooper
+from operator import add, sub
 
 from mehr_takhfif import settings
 from mehr_takhfif.settings import TOKEN_SECRET, SECRET_KEY
@@ -23,10 +24,12 @@ from server.serialize import BoxCategoriesSchema, BasketSchema, BasketProductSch
 default_step = 12
 default_page = 1
 default_response = {'ok': {'message': 'ok'}, 'bad': {'message': 'bad request'}}
+res_code = {'success': 200, 'bad_request': 400, 'forbidden': 403, 'integrity': 406}
 pattern = {'phone': r'^(09[0-9]{9})$', 'email': r'^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\
            [[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$',
            'postal_code': r'^\d{5}[ -]?\d{5}$', 'fullname': r'^[آ-یA-z]{2,}( [آ-یA-z]{2,})+([آ-یA-z]|[ ]?)$',
-           'address': r'(([^ -_]+)[\n -]+){2}.+', 'location': '', 'bool': r'^(true|false)$', 'name': r'^[ آ-یA-z]+$',
+           'address': r'(([^ -_]+)[\n -]+){2}.+', 'location': r'\.*', 'bool': r'^(true|false)$',
+           'name': r'^[ آ-یA-z]+$', 'first_name': r'^[ آ-یA-z]+$', 'last_name': r'^[ آ-یA-z]+$',
            'id': r'^\d+$', 'language': r'^\w{2}$', 'type': r'^[A-z]+$'}
 ids = ['id', 'city_id', 'state_id', 'product_id']
 bools = ['gender', 'set_default', 'notify']
@@ -36,13 +39,14 @@ def validation(data):
     try:
         for key in data:
             if key in ids:
-                assert re.search(pattern['id'], data[key])
+                assert re.search(pattern['id'], str(data[key]))
                 continue
             if key in bools:
                 assert type(data[key]) == bool
                 continue
-            assert re.search(pattern[key], data[key])
-    except (AssertionError, KeyError):
+            assert re.search(pattern[key], str(data[key]))
+    except (AssertionError, KeyError) as e:
+        print(e)
         raise ValidationError(message='validation error')
 
 
@@ -67,8 +71,9 @@ def load_data(request):
 #         pass
 
 
-def safe_delete(obj, user_id):
-    obj.deleted_by_id = user_id
+def safe_delete(model, pk, user_id):
+    obj = model.objects.filter(pk=pk)
+    obj.update(deleted_by_id=user_id)
     obj.delete()
 
 
@@ -92,28 +97,30 @@ def timestamp_to_date(timestamp):
     return datetime.fromtimestamp(timestamp)
 
 
+def check_csrf_token(token):
+    if hashlib.sha3_224(token[13:21]).hexdigest() == token[:13] + token[21:]:
+        return True
+
+
+def get_access_token(user, model=None, pk=None, try_again=None):
+    pk = 0 if pk is None else pk
+    time = add_minutes(0).strftime("%Y-%m-%d-%H") if try_again is None else add_minutes(-60).strftime("%Y-%m-%d-%H")
+    data = f'{user.pk}{pk}{time}'
+    data = model.__name__.lower() + data if model else data
+    token = hashlib.sha3_224(data.encode()).hexdigest()
+    return token
+
+
+def check_access_token(token, user, model, pk):
+    if token == get_access_token(user, model, pk):
+        return True
+    if token == get_access_token(user, model, pk, try_again=1):
+        return True
+    return False
+
+
 def generate_token(user):
-    expire = add_days(30).timestamp()
-    data = {'username': user.phone, 'expire': expire}
-    return {'token': hsencode(data, SECRET_KEY), 'expire': expire}
-
-
-def generate_token_old(request, user):
-    data = {'user': f'{user.last_login}'}
-    first_encrypt = jwt.encode(data, TOKEN_SECRET, algorithm='HS256')
-    secret = token_hex(10)
-    second_encrypt = jwt.encode({'data': first_encrypt.decode()}, secret, algorithm='HS256')
-    access_token = f'{second_encrypt.decode()}{secret}'
-    request.session['counter'] = 0
-    return access_token
-
-
-def hsencode(data, secret=SECRET_KEY):
-    return jwt.encode(data, secret, algorithm='HS256').decode()
-
-
-def hsdecode(token, secret=SECRET_KEY):
-    return jwt.decode(token, secret, algorithms=['HS256'])
+    hashlib.sha3_224(b"Nobody inspects the spammish repetition").hexdigest()
 
 
 def get_token_data(token):
@@ -121,27 +128,23 @@ def get_token_data(token):
     return jwt.decode(first_decrypt['data'].encode(), TOKEN_SECRET, algorithms=['HS256'])
 
 
-def upload(request, title=None, box=None, avatar=False):
+def upload(request, titles, box=None, avatar=False):
     image_formats = ['.jpeg', '.jpg', '.gif', '.png']
     video_formats = ['.avi', '.mp4', '.mkv', '.flv', '.mov', '.webm', '.wmv']
-    for file in request.FILES.getlist('file'):
+    for file, title in zip(request.FILES.getlist('file'), titles):
         if file is not None:
             file_format = os.path.splitext(file.name)[-1]
             mimetype = get_mimetype(file).split('/')[0]
-            if mimetype == 'image':
-                if file_format not in image_formats:
-                    return False
-            if mimetype == 'video' and file_format not in video_formats:
+            if (mimetype == 'image' and file_format not in image_formats) or \
+                    (mimetype == 'video' and file_format not in video_formats):
                 return False
-            if avatar and title:
+
+            if avatar and title == str:
                 file.name = f"{title['user_id']} {datetime.now().strftime('%Y-%m-%d, %H-%M-%S')}{file_format}"
-            else:
-                data = json.loads(request.POST.get('data'))
-                title = data['title']
             media = Media(file=file, box_id=box, created_by_id=1, type='avatar' if avatar else mimetype,
                           title=title, updated_by=request.user)
             media.save()
-            return media
+    return media
 
 
 def get_mimetype(image):
@@ -165,43 +168,58 @@ def move(obj, folder):
 
 def filter_params(params):
     if not params:
-        return {'filter': {}, 'order': {}}
+        return {'filter': {}, 'order': '-created_at'}
     ds = 'default_storage__'
     dis = 'discount'
-    filters = (f'{ds}{dis}_price', f'{ds}{dis}_vip_price', f'{ds}{dis}_percent', f'{ds}{dis}_vip_percent',
-               'product__sold_count')
-    valid_orders = {'cheap': f'-{ds}{dis}_price', 'expensive': f'{ds}{dis}_price',
-                    'best_seller': f'{ds}sold_count', 'popular': '-created_at', 'discount': f'-{ds}{dis}discount_percent'}
-    filters_op = ('__gt', '__gte', '__lt', '__lte')
-    valid_filters = [x + y for y in filters_op for x in filters]
+    valid_orders = {'cheap': f'{ds}{dis}_price', 'expensive': f'-{ds}{dis}_price',
+                    'best_seller': f'{ds}sold_count', 'popular': '-created_at',
+                    'discount': f'{ds}{dis}discount_percent'}
     filter_by = {}
-    orderby = '-created_at'
-    try:
-        keys = params.keys()
-        for key in keys:
-            if len(key) < 3:
-                continue
-            if key == 'orderby':
-                valid_key = valid_orders[f'{params[key]}']
-                orderby = valid_key
-            value = params.getlist(key)
-            if len(value) == 1:
-                valid_key = difflib.get_close_matches(key, valid_filters)[0]
-                filter_by[valid_key] = value[0]
-                continue
-            filter_by[key + '__in'] = value
-    except Exception:
-        pass
+    orderby = params.get('orderby', '-created_at')
+    available = params.get('available', None)
+    brand = params.getlist('brand', None)
+    min_price = params.get('min_price', None)
+    max_price = params.get('max_price', None)
+    if orderby != '-created_at':
+        valid_key = valid_orders[f'{params[orderby]}']
+        orderby = valid_key
+    if available:
+        filter_by[f'{ds}available_count_for_sale__gt'] = 0
+    if min_price and max_price:
+        filter_by[f'{ds}{dis}_price__range'] = (min_price, max_price)
+    if brand:
+        if len(brand) == 1:
+            filter_by['brand'] = brand[0]
+        else:
+            filter_by['brand__in'] = brand
+
+
+
+    # keys = params.keys()
+    # for key in keys:
+    #     if len(key) < 3:
+    #         continue
+    #     if key == 'orderby':
+    #         valid_key = valid_orders[f'{params[key]}']
+    #         orderby = valid_key
+    #         continue
+    #     value = params.getlist(key)
+    #     if len(value) == 1:
+    #         valid_key = difflib.get_close_matches(key, valid_filters)[0]
+    #         filter_by[valid_key] = value[0]
+    #         continue
+    #     filter_by[key + '__in'] = value
+
     return {'filter': filter_by, 'order': orderby}
 
 
 def get_categories(language, box_id=None, category=None):
-    if category is None:
-        try:  # todo delete assert
-            assert True is False
-            category = Category.objects.filter(box_id=box_id)
-        except Exception as e:
-            category = Category.objects.all()
+    if category is None and box_id:
+        category = Category.objects.filter(box_id=box_id)
+    else:
+        category = Category.objects.all()
+    if len(category) == 0:
+        return []
     new_cats = [*category]
     remove_index = []
     for cat, index in zip(category, range(len(category))):
@@ -216,17 +234,16 @@ def get_categories(language, box_id=None, category=None):
     return BoxCategoriesSchema(language=language).dump(new_cats, many=True)
 
 
-def last_page(query, step):
-    items = query.count()
-    return {'pagination': {'last_page': math.ceil(items / step), 'items': items}}
+def get_pagination(query, step, page, serializer):
+    count = query.count()
+    items = serializer().dump(query[(page - 1) * step: step * page], many=True)
+    return {'pagination': {'last_page': math.ceil(count / step), 'count': count},
+            'data': items}
 
 
 def user_data_with_pagination(model, serializer, request):
-    objects = model.objects.filter(user=request.user)
-    last_page_info = last_page(objects, request.step)
-    objects = objects[(request.page - 1) * request.step:request.step * request.page]
-    objects = serializer().dump(objects, many=True)
-    return {'data': objects, **last_page_info}
+    query = model.objects.filter(user=request.user)
+    return get_pagination(query, request.step, request.page, serializer)
 
 
 def des_encrypt(data='test', key=os.urandom(16)):
@@ -324,7 +341,9 @@ def to_obj(body):
 
 
 def load_location(location):
-    return {"lat": location[0], "lng": location[1]}
+    if location is not None:
+        return {"lat": location[0], "lng": location[1]}
+    return None
 
 
 def add_one_off_job(name, args=None, kwargs=None, task='server.tasks.hello', interval=30,
@@ -424,3 +443,9 @@ class ORM:
     def get_latest(count=5):
         return Storage.objects.select_related('product', 'product__thumbnail').filter(
             default=True).order_by('-product__sold_count')[:count]
+
+
+# test
+
+
+# test
