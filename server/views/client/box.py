@@ -2,6 +2,7 @@ from django.db.models import Max, Min
 from django.http import JsonResponse
 import pysnooper
 from server.views.utils import *
+from server.serialize import BoxSchema, FeatureSchema, MinProductSchema, BrandSchema
 
 
 class GetSpecialOffer(View):
@@ -22,15 +23,16 @@ class GetSpecialProduct(View):
 
 
 class BoxDetail(View):
-    @pysnooper.snoop()
     def get(self, request, permalink):
         try:
             box = Box.objects.filter(permalink=permalink).first()
             max_price = Storage.objects.filter(product__box=box).aggregate(Max('discount_price'))['discount_price__max']
             min_price = Storage.objects.filter(product__box=box).aggregate(Min('discount_price'))['discount_price__min']
             categories = get_categories(request.lang, box_id=box.id)
+            brands = Brand.objects.all()
             return JsonResponse({'box': BoxSchema(request.lang).dump(box), 'max_price': max_price,
-                                 'min_price': min_price, 'categories': categories})
+                                 'brands': BrandSchema(request.lang).dump(brands, many=True), 'min_price': min_price,
+                                 'categories': categories})
         except Exception as e:
             print(e)
             return JsonResponse({}, status=400)
@@ -39,8 +41,6 @@ class BoxDetail(View):
 class BoxView(View):
     def get(self, request, permalink='all'):
         params = filter_params(request.GET)
-        step = int(request.GET.get('s', default_step))
-        page = int(request.GET.get('p', default_page))
         try:
             box = Box.objects.get(permalink=permalink)
             query = {'box': box}
@@ -48,11 +48,10 @@ class BoxView(View):
             box = Box.objects.all()
             query = {'box__in': box}
         products = Product.objects.filter(verify=True, **query, **params['filter'])
-        last_page_info = last_page(products, step)
+        pg = get_pagination(products, request.step, request.page, MinProductSchema)
         products = products.select_related(*Product.select).order_by(params['order'])
         # products = available_products(products, step, page)
-        serialized_products = MinProductSchema(request.lang).dump(products, many=True)
-        return JsonResponse({'data': serialized_products, **last_page_info})
+        return JsonResponse(pg)
 
 
 class GetFeature(View):
@@ -82,38 +81,16 @@ class BestSeller(View):
         return JsonResponse({'best_seller': best_seller})
 
 
-class BoxCategory(View):
-    def get(self, request, box, category):
-        step = int(request.GET.get('s', default_step))
-        page = int(request.GET.get('e', default_page))
-        cat = Category.objects.filter(permalink=category).first()
-        products = Product.objects.filter(box__permalink=box, category__permalink=category)\
-            .select_related(*Product.permalink).order_by('-updated_at')[(page - 1) * step:step * page]
-
-        # storage = Storage.objects.filter(box__meta_key=box, category__meta_key=category).select_related(
-        #     'product', 'product__thumbnail').order_by('-updated_at')[(page - 1) * step:step * page]
-
-        # special_products = SpecialProduct.objects.filter(category_id=pk).select_related('storage')
-        # return JsonResponse({'products': serialize.storage(storage, True)})
-        return JsonResponse({'category': CategorySchema(request.lang).dump(cat)})
-        # 'special_products': serialize.special_product(special_products, True)}
-
-
 class TagView(View):
-    def get(self, request, pk):
-        step = int(request.GET.get('s', default_step))
-        page = int(request.GET.get('e', default_page))
-        tag = Tag.objects.filter(pk=pk).first()
-        products = tag.product.all().order_by('created_at')[(page - 1) * step:step * page]
-        return JsonResponse({'products': TagSchema().dump(products, many=True)})
+    def get(self, request, permalink):
+        tag = Tag.objects.filter(permalink=permalink).first()
+        products = tag.product_set.all()
+        pg = get_pagination(products, request.step, request.page, MinProductSchema)
+        return JsonResponse(pg)
 
-
-class Filter(View):
-    def get(self, request):
-        params = filter_params(request.GET)
-        print(params)
-        try:
-            products = Storage.objects.filter(**params['filter']).order_by(*params['order'])
-        except Exception:
-            products = Storage.objects.all().order_by('-created_at')
-        return JsonResponse({'products': StorageSchema(language=request.lang).dump(products, many=True)})
+class CategoryView(View):
+    def get(self, request, permalink):
+        category = Category.objects.filter(permalink=permalink).first()
+        products = Product.objects.filter(category=category)
+        pg = get_pagination(products, request.step, request.page, MinProductSchema)
+        return JsonResponse(pg)

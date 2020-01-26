@@ -23,23 +23,23 @@ class BasketView(View):
             assert request.user.is_authenticated
             basket = Basket.objects.get(user=request.user, active=True)
         except Basket.DoesNotExist:
-            basket = Basket(user=request.user, created_by=request.user, updated_by=request.user, active=True)
-            basket.save()
+            basket = Basket.objects.create(user=request.user, created_by=request.user, updated_by=request.user,
+                                           active=True)
         except AssertionError:
             return JsonResponse({}, status=401)
         basket_count = self.add_to_basket(basket, data['products'], data['override'], data['add'])
-        res = {'new_basket_count': basket_count}
-        if data['summary']:
-            res = {**res, **get_basket(request.user, request.lang)}
+        res = {'new_basket_count': basket_count, **get_basket(request.user, request.lang)}
         res = JsonResponse(res)
         res.set_signed_cookie('new_basket_count', basket_count, TOKEN_SALT)
         return res
 
+    @pysnooper.snoop()
     def delete(self, request):
-        storage_id = request.GET.get('product_id', None)
+        storage_id = request.GET.get('storage_id', None)
+        basket_id = request.GET.get('basket_id', None)
         summary = request.GET.get('summary', None)
         try:
-            basket = Basket.objects.get(user=request.user, active=True)
+            basket = Basket.objects.get(pk=basket_id, user=request.user, active=True)
             assert BasketProduct.objects.filter(basket__user=request.user, basket_id=basket.id,
                                                 storage_id=storage_id).exists()
             BasketProduct.objects.filter(basket_id=basket.id, storage_id=storage_id).delete()
@@ -55,7 +55,7 @@ class BasketView(View):
             pk = int(product['id'])
             count = int(product['count'])
             try:
-                product = BasketProduct.objects.filter(basket=basket, storage_id=pk).\
+                product = BasketProduct.objects.filter(basket=basket, storage_id=pk). \
                     select_related('storage')
                 if product:
                     available_count = product.first().storage.available_count_for_sale
@@ -67,7 +67,7 @@ class BasketView(View):
                     continue
                 product = Storage.objects.filter(id=pk)
                 if product.exists():
-                    BasketProduct(basket=basket, storage_id=pk, count=count).save()
+                    BasketProduct(basket=basket, storage_id=pk, count=count, box=product.first().product.box).save()
                     continue
             except AssertionError:
                 product.update(count=count)
@@ -86,6 +86,30 @@ class BasketView(View):
         return count
 
 
+class GetProducts(View):
+    def post(self, request):
+        data = json.loads(request.body)
+        storage_ids = [item['id'] for item in data['basket']]
+        basket = data['basket']
+        assert not request.user.is_authenticated
+        storages = Storage.objects.filter(id__in=storage_ids).select_related('product')
+        basket_products = []
+        address_required = False
+        for storage, item in zip(storages, basket):
+            item = next(item for item in basket if item['id'] == storage.pk)  # search in dictionary
+            obj = type('Basket', (object,), {})()
+            obj.count = item['count']
+            obj.product = storage.product
+            if obj.product.type == 'product' and not address_required:
+                address_required = True
+            obj.product.default_storage = storage
+            basket_products.append(obj)
+
+        products = BasketProductSchema(language=request.lang).dump(basket_products, many=True)
+        profit = calculate_profit(products)
+        return JsonResponse({'products': products, 'summary': profit, 'address_required': address_required})
+
+
 class Buy(View):
     def get(self, request):
         basket = get_basket(request.user, request.lang)
@@ -95,8 +119,5 @@ class Buy(View):
 class InvoiceView(View):
     @pysnooper.snoop()
     def get(self, request):
-
         # email.attach_file('/images/weather_map.png')
         return JsonResponse(default_response['ok'])
-
-

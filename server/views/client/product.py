@@ -4,17 +4,18 @@ from django.http import JsonResponse
 
 from server.models import *
 from server.serialize import *
-from server.views.utils import View, default_page, default_step, user_data_with_pagination
+from server.views.utils import View, default_page, default_step, get_pagination
 
 
 class Single(View):
-    @pysnooper.snoop()
+
     def get(self, request, permalink):
         lang = request.lang
         user = request.user
         try:
             product = Product.objects.filter(permalink=permalink).prefetch_related(*Product.prefetch).first()
-            tags = product.tag.all()
+            if product is None:
+                return JsonResponse({}, status=404)
             storages = Storage.objects.filter(product=product)
             product = ProductSchema(lang).dump(product)
             product['category'] = self.get_category(product['category'])
@@ -22,9 +23,7 @@ class Single(View):
             purchased = False
             if user.is_authenticated:
                 purchased = self.purchase_status(user, storages)
-            related_products = Product.objects.filter(tag__in=tags)[:5]
-            related_products = MinProductSchema(lang).dump(related_products, many=True)
-            return JsonResponse({'product': product, 'related_products': related_products, 'purchased': purchased})
+            return JsonResponse({'product': product, 'purchased': purchased})
         except Product.DoesNotExist:
             return JsonResponse({}, status=404)
 
@@ -52,12 +51,10 @@ class Single(View):
 
 class RelatedProduct(View):
     def get(self, request, permalink):
-        step = int(request.GET.get('s', default_step))
-        page = int(request.GET.get('e', default_page))
         product = Product.objects.get(permalink=permalink)
         tags = product.tag.all()
-        products = Product.objects.exclude(permalink=permalink).filter(tag__in=tags)[(page - 1) * step:step * page]
-        return JsonResponse({'products': MinProductSchema().dump(products, many=True)})
+        products = Product.objects.filter(tag__in=tags).order_by('-id').distinct('id')
+        return JsonResponse(get_pagination(products, request.step, request.page, MinProductSchema))
 
 
 class CommentView(View):
@@ -65,25 +62,20 @@ class CommentView(View):
         product_id = request.GET.get('product_id', None)
         blog_id = request.GET.get('blog_id', None)
         comment_type = request.GET.get('type', None)
-        if product_id:
-            comments = Comment.objects.filter(product_id=product_id, type=comment_type).order_by('-created_at')
-            return JsonResponse({'comments': CommentSchema().dump(comments, many=True)})
-        if blog_id:
-            comments = Comment.objects.filter(blog_post_id=blog_id, type=comment_type).order_by('-created_at')
-            return JsonResponse({'comments': CommentSchema().dump(comments, many=True)})
-        return JsonResponse(user_data_with_pagination(Comment, CommentSchema, request))
+        filterby = {"product_id": product_id} if product_id else {"blog_id": blog_id}
+        filterby = {"type": comment_type, **filterby}
+        comments = Comment.objects.filter(**filterby, approved=True)
+        return JsonResponse(get_pagination(comments, request.step, request.page, CommentSchema))
 
     def post(self, request):
         data = json.loads(request.body)
-        try:
-            if data['reply']:
-                comment = Comment.objects.filter(pk=data['reply']).first()
-                assert not comment.reply
-            Comment(text=data['text'], user=request.user, reply_id=data['reply'], type=data['type'],
-                    product_id=data['product_id']).save()
-            return JsonResponse({}, status=201)
-        except Exception:
-            return JsonResponse({}, status=400)
+        reply_id = data.get('reply_id', None)
+        rate = data.get('rate', None)
+        if reply_id:
+            assert Comment.objects.filter(pk=reply_id).exists()
+        Comment.objects.create(text=data['text'], user=request.user, reply_id=reply_id, type=data['type'],
+                               product_id=data['product_id'], rate=rate)
+        return JsonResponse({}, status=201)
 
     def delete(self, request):
         pk = request.GET.get('id', None)
