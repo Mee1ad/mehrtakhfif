@@ -17,6 +17,7 @@ ALLOWED_HOSTS = ['*']
 
 # HOST = 'http://67948730.ngrok.io'
 HOST = 'http://192.168.1.95'
+IP = '192.168.1.95'
 # HOST = 'http://localhost'
 # HOST = 'http://192.168.137.95'
 # HOST = 'http://192.168.137.1'
@@ -64,11 +65,11 @@ CORS_ORIGIN_WHITELIST = [
     "http://192.168.1.96:3000",
     "http://192.168.43.96:3000",
     "http://localhost:3000",
-    "http://192.168.1.95",
     "http://mt.com",
     "http://mt.com:3000",
     "http://localhost:8080",
     "http://localhost",
+    HOST
 ]
 # CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_CREDENTIALS = True
@@ -128,7 +129,7 @@ DATABASES = {
         'NAME': 'mehr_takhfif',
         # 'NAME': 'mehrtak1_db',
         # 'HOST': 'localhost',
-        'HOST': '192.168.1.95',
+        'HOST': IP,
         'USER': 'postgres',
         # 'USER': 'mehrtak1_admeen',
         'PASSWORD': 'admin',
@@ -141,7 +142,7 @@ CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
         # "LOCATION": "redis://127.0.0.1:6379/1",
-        "LOCATION": "redis://192.168.1.95:6379/1",
+        "LOCATION": f"redis://{IP}:6379/1",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient"
         },
