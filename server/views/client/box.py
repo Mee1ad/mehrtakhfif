@@ -16,8 +16,8 @@ class GetSpecialProduct(View):
     def get(self, request, permalink):
         step = int(request.GET.get('s', default_step))
         page = int(request.GET.get('e', default_page))
-        special_products = SpecialProduct.objects.filter(box__permalink=permalink)\
-            .select_related(*SpecialProduct.min_select)[(page - 1) * step:step * page]
+        special_products = SpecialProduct.objects.filter(box__permalink=permalink) \
+                               .select_related(*SpecialProduct.min_select)[(page - 1) * step:step * page]
         special_products = MinSpecialProductSchema(language=request.lang).dump(special_products, many=True)
         return JsonResponse({'special_product': special_products})
 
@@ -39,18 +39,11 @@ class BoxDetail(View):
 
 
 class BoxView(View):
-    def get(self, request, permalink='all'):
+    def get(self, request, permalink):
         params = filter_params(request.GET)
-        try:
-            box = Box.objects.get(permalink=permalink)
-            query = {'box': box}
-        except Box.DoesNotExist:
-            box = Box.objects.all()
-            query = {'box__in': box}
-        products = Product.objects.filter(verify=True, **query, **params['filter'])
+        box = Box.objects.get(permalink=permalink)
+        products = Product.objects.filter(verify=True, box=box, **params['filter']).order_by(params['order'])
         pg = get_pagination(products, request.step, request.page, MinProductSchema)
-        products = products.select_related(*Product.select).order_by(params['order'])
-        # products = available_products(products, step, page)
         return JsonResponse(pg)
 
 
@@ -63,7 +56,8 @@ class GetFeature(View):
                 box = Box.objects.filter(permalink=box_permalink).first()
                 features = Feature.objects.filter(box=box)
             else:
-                category = Category.objects.filter(permalink=category_permalink).prefetch_related(*Category.prefetch).first()
+                category = Category.objects.filter(permalink=category_permalink).prefetch_related(
+                    *Category.prefetch).first()
                 features = category.feature_set.all()
             features = FeatureSchema(language=request.lang).dump(features, many=True)
             return JsonResponse({'feature': features})
@@ -76,8 +70,8 @@ class BestSeller(View):
         box = Box.objects.get(permalink=permalink)
         last_week = add_days(-7)
         language = request.lang
-        basket_ids = Invoice.objects.filter(created_at__gte=last_week, status='payed').values('basket')
-        best_seller = get_best_seller(box, basket_ids, language)
+        invoice_ids = Invoice.objects.filter(created_at__gte=last_week, status='payed').values('id')
+        best_seller = get_best_seller(box, invoice_ids, request.step, request.page)
         return JsonResponse({'best_seller': best_seller})
 
 
@@ -87,6 +81,7 @@ class TagView(View):
         products = tag.product_set.all()
         pg = get_pagination(products, request.step, request.page, MinProductSchema)
         return JsonResponse(pg)
+
 
 class CategoryView(View):
     def get(self, request, permalink):

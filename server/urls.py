@@ -16,8 +16,7 @@ home = [
     path('box_special_product', home.BoxesGetSpecialProduct.as_view(), name='box_special_product'),
     path('special_product', home.GetSpecialProduct.as_view(), name='special_product'),
     path('best_seller', home.BestSeller.as_view(), name='best_seller'),
-    path('get_box_categories', home.AllCategory.as_view(), name='get_box_categories'),
-    path('box_with_category', home.AllBoxWithCategories.as_view(), name='box_with_category'),
+    path('box_with_category', home.BoxWithCategory.as_view(), name='box_with_category'),
     path('menu', home.GetMenu.as_view(), name='menu'),
     path('search', home.ElasticSearch.as_view(), name='search'),
     # path('search2', home.Search.as_view(), name='search2'),
@@ -28,7 +27,7 @@ box = [
     path('box/<str:permalink>', box.BoxView.as_view(), name='box'),
     # path('special_offer/<str:name>', box.GetSpecialOffer.as_view(), name='special_offer'),
     # path('special_product/<str:permalink>', box.GetSpecialProduct.as_view(), name='special_product'),
-    # path('best_seller/<str:permalink>', box.BestSeller.as_view(), name='best_seller'),
+    path('best_seller/<str:permalink>', box.BestSeller.as_view(), name='best_seller'),
     path('box_detail/<str:permalink>', box.BoxDetail.as_view(), name='box_detail'),
     path('features', box.GetFeature.as_view(), name='features'),
     path('tag/<str:permalink>', box.TagView.as_view(), name='tag'),
@@ -59,7 +58,6 @@ pay = [
 ]
 
 user = [
-    path('test', user.Test.as_view(), name='test'),
     path('profile', user.Profile.as_view(), name='profile'),
     path('get_states', user.GetState.as_view(), name='get_states'),
     path('get_cities/<int:state_id>', user.GetCity.as_view(), name='get_cities'),
@@ -80,10 +78,4 @@ auth = [
     path('privacy_policy', auth.PrivacyPolicy.as_view(), name='privacy_policy'),
 ]
 
-test = [
-    path('add', tests.Add.as_view(), name='add'),
-    path('get', tests.Get.as_view(), name='get'),
-    path('delete/<str:job>', tests.Delete.as_view(), name='delete'),
-]
-
-urlpatterns = [*home, *box, *user, *shopping, *product, *tourism, *auth, *pay, *test]
+urlpatterns = [*home, *box, *user, *shopping, *product, *tourism, *auth, *pay]

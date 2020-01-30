@@ -11,7 +11,7 @@ import operator
 from server.models import Invoice, InvoiceStorage, Basket
 from django_celery_beat.models import PeriodicTask
 from server.serialize import *
-from server.views.utils import des_encrypt, get_basket, add_one_off_job, sync_storage
+from server.views.utils import des_encrypt, get_basket, add_one_off_job, sync_storage, load_data
 
 ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'disable': True},
                 {'id': 2, 'key': 'melli', 'name': 'ملی', 'hide': False, 'disable': False},
@@ -36,6 +36,7 @@ class IPG(View):
 
 class PaymentRequest(View):
     def get(self, request, basket_id):
+        ipg_id = request.GET.get('ipg_id', 1)
         user = request.user
         assert Basket.objects.filter(pk=basket_id, user=user).exists()
         invoice = Invoice.objects.filter(user=user, basket_id=basket_id)
@@ -60,6 +61,7 @@ class PaymentRequest(View):
         return JsonResponse({})
 
     def ipg_api(self):
+        pass
         # encrypt (PKCS7,ECB(TripleDes) => base64
         # sign_data = des_encrypt(f'{saddad["terminal_id"]};{invoice.pk};{amount}')
         additional_data = None  # json
@@ -112,10 +114,11 @@ class PaymentRequest(View):
 class CallBack(View):
     @pysnooper.snoop()
     def post(self, request):
-        data = json.loads(request.body)
+        data = load_data(request)
         invoice_id = data['OrderId']
         description = data['Description']
         # details = self.verify(data['token'])
+        # todo verify
         self.submit_invoice_storages(invoice_id)
         try:
             invoice = Invoice.objects.get(pk=invoice_id)
@@ -149,7 +152,7 @@ class CallBack(View):
                 InvoiceStorage(storage=storage, invoice_id=invoice_id, count=product.count, tax=storage.tax,
                                final_price=storage.final_price, discount_price=storage.discount_price,
                                discount_percent=storage.discount_percent, vip_discount_price=storage.vip_discount_price,
-                               vip_discount_percent=storage.vip_discount_percent))
+                               vip_discount_percent=storage.vip_discount_percent, box=product.box))
         task_name = f'{invoice.id}: cancel reservation'
         description = f'{timezone.now()}: canceled by system'
         PeriodicTask.objects.filter(name=task_name).update(enabled=False, description=description)

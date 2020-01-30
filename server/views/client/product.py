@@ -1,10 +1,11 @@
 import json
 
 from django.http import JsonResponse
-
+import pysnooper
 from server.models import *
 from server.serialize import *
-from server.views.utils import View, default_page, default_step, get_pagination
+from server.views.utils import View, get_pagination, load_data
+from statistics import mean, StatisticsError
 
 
 class Single(View):
@@ -60,21 +61,29 @@ class RelatedProduct(View):
 class CommentView(View):
     def get(self, request):
         product_id = request.GET.get('product_id', None)
-        blog_id = request.GET.get('blog_id', None)
+        post_id = request.GET.get('post_id', None)
+        comment_id = request.GET.get('comment_id', None)
         comment_type = request.GET.get('type', None)
-        filterby = {"product_id": product_id} if product_id else {"blog_id": blog_id}
+        if comment_id:
+            comments = Comment.objects.filter(reply_to_id=comment_id)
+            return JsonResponse(get_pagination(comments, request.step, request.page, CommentSchema))
+        filterby = {"product_id": product_id} if product_id else {"blog_post_id": post_id}
         filterby = {"type": comment_type, **filterby}
-        comments = Comment.objects.filter(**filterby, approved=True)
+        comments = Comment.objects.filter(**filterby, approved=True).exclude(reply_to__isnull=False)
         return JsonResponse(get_pagination(comments, request.step, request.page, CommentSchema))
 
     def post(self, request):
-        data = json.loads(request.body)
-        reply_id = data.get('reply_id', None)
+        data = load_data(request)
+        reply_to_id = data.get('reply_to_id', None)
         rate = data.get('rate', None)
-        if reply_id:
-            assert Comment.objects.filter(pk=reply_id).exists()
-        Comment.objects.create(text=data['text'], user=request.user, reply_id=reply_id, type=data['type'],
-                               product_id=data['product_id'], rate=rate)
+        cm_type = data['type']
+        product_id = data.get('product_id')
+        blog_post_id = data.get('blog_post_id')
+        post = {"product_id": product_id} if product_id else {"blog_post_id": blog_post_id}
+        if reply_to_id:
+            assert Comment.objects.filter(pk=reply_to_id).exists()
+        Comment.objects.create(text=data['text'], user=request.user, reply_to_id=reply_to_id, type=cm_type,
+                               rate=rate, **post)
         return JsonResponse({}, status=201)
 
     def delete(self, request):

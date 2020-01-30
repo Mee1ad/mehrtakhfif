@@ -79,8 +79,8 @@ class MenuAdmin(SafeDeleteAdmin):
 
 
 class CommentAdmin(SafeDeleteAdmin):
-    list_display = ('get_user', 'type', 'get_product', 'get_post', 'approved') + SafeDeleteAdmin.list_display
-    list_filter = ('user', 'type', 'product', 'blog_post', 'approved') + SafeDeleteAdmin.list_filter
+    list_display = ('get_user', 'get_product', 'get_post', 'approved') + SafeDeleteAdmin.list_display
+    list_filter = ('user', 'product', 'blog_post', 'approved') + SafeDeleteAdmin.list_filter
     # list_display_links = ('name',)
     search_fields = ['user', 'product']
     list_per_page = 10

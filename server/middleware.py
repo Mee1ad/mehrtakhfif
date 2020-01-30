@@ -1,5 +1,5 @@
 from mehr_takhfif.settings import TOKEN_SALT
-from server.views.utils import default_step, default_page, filter_params, res_code
+from server.views.utils import default_step, default_page, filter_params, res_code, get_roll
 from server.models import User, Basket
 from django.http import JsonResponse
 import json
@@ -68,9 +68,7 @@ class AuthMiddleware:
 
         elif app_name == 'admin_panel':
             request.token = request.headers.get('access-token', None)
-            if not request.user.groups.filter(name='admin').exists()\
-                    or not request.user.is_superuser or not request.user.is_staff:
-                return JsonResponse({}, status=res_code['forbidden'])
+            get_roll(request.user)
 
         # set new basket count in cookie
         response = self.get_response(request)

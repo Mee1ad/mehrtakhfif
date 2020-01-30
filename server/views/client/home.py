@@ -1,16 +1,10 @@
-import json
-
 from django.contrib.postgres.fields.jsonb import KeyTextTransform
 from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
 from django.http import JsonResponse
-import pysnooper
-import django_rq
 
 from server.documents import *
 from server.serialize import *
 from server.views.utils import *
-from django.utils.timezone import timedelta
-from mehr_takhfif.celery import app
 
 
 # todo use start time for filter products
@@ -61,39 +55,34 @@ class BestSeller(View):
         last_week = add_days(-7)
         boxes = []
         language = request.lang
-        basket_ids = Invoice.objects.filter(created_at__gte=last_week, status='payed').values('basket')
+        invoice_ids = Invoice.objects.filter(created_at__gte=last_week, status='payed').values('id')
         for box, index in zip(all_box, range(len(all_box))):
             item = {}
             item['id'] = box.pk
             item['name'] = box.name[language]
             item['key'] = box.permalink
-            item['best_seller'] = get_best_seller(box, basket_ids, language)
+            item['best_seller'] = get_best_seller(box, invoice_ids, request.step, request.page)
             boxes.append(item)
         return JsonResponse({'box': boxes})
 
 
-class AllBoxWithCategories(View):
+class BoxWithCategory(View):
     def get(self, request):
-        boxes = Box.objects.all()
-        box_list = []
-        for box in boxes:
-            categories = get_categories(request.lang, box.id)
-            box = BoxSchema(language=request.lang).dump(box)
-            box['categories'] = categories
-            box_list.append(box)
-        return JsonResponse({'boxes': box_list})
-
-
-class AllCategory(View):
-    def get(self, request):
-        box_id = request.GET.get('box_id', None)
-        if box_id is None:
-            box_permalink = request.GET.get('box_permalink', None)
-            box_id = None
-            if box_permalink:
-                box_id = Box.objects.filter(permalink=box_permalink).first().pk
-        categories = get_categories(request.lang, box_id)
-        return JsonResponse({'categories': categories})
+        box_permalink = request.GET.get('box_permalink', None)
+        if box_permalink:
+            box_id = Box.objects.filter(permalink=box_permalink).first().pk
+            categories = get_categories(request.lang, box_id)
+            res = {'categories': categories}
+        else:
+            boxes = Box.objects.all()
+            box_list = []
+            for box in boxes:
+                categories = get_categories(request.lang, box.id)
+                box = BoxSchema(language=request.lang).dump(box)
+                box['categories'] = categories
+                box_list.append(box)
+            res = {'boxes': box_list}
+        return JsonResponse(res)
 
 
 class GetMenu(View):

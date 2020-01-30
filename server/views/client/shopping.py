@@ -9,16 +9,12 @@ import pdfkit
 from django.db.models import F
 
 
-class BasketView(View):
+class BasketView(LoginRequired):
     def get(self, request):
-        try:
-            assert request.user.is_authenticated  # must be logged in
-            return JsonResponse(get_basket(request.user, request.lang))
-        except AssertionError:
-            return JsonResponse({}, status=403)
+        return JsonResponse(get_basket(request.user, request.lang))
 
     def post(self, request):
-        data = json.loads(request.body)
+        data = load_data(request)
         try:
             assert request.user.is_authenticated
             basket = Basket.objects.get(user=request.user, active=True)
@@ -50,7 +46,7 @@ class BasketView(View):
         except (AssertionError, Basket.DoesNotExist):
             return JsonResponse(default_response['bad'], status=400)
 
-    def add_to_basket(self, basket, products, override, add):
+    def add_to_basket(self, basket, products, override, can_add):
         for product in products:
             pk = int(product['id'])
             count = int(product['count'])
@@ -60,7 +56,7 @@ class BasketView(View):
                 if product:
                     available_count = product.first().storage.available_count_for_sale
                     assert available_count >= count
-                    if add:
+                    if can_add:
                         product.update(count=F('count') + count)
                     if override:
                         product.update(count=count)
@@ -88,7 +84,7 @@ class BasketView(View):
 
 class GetProducts(View):
     def post(self, request):
-        data = json.loads(request.body)
+        data = load_data(request)
         storage_ids = [item['id'] for item in data['basket']]
         basket = data['basket']
         assert not request.user.is_authenticated
@@ -108,12 +104,6 @@ class GetProducts(View):
         products = BasketProductSchema(language=request.lang).dump(basket_products, many=True)
         profit = calculate_profit(products)
         return JsonResponse({'products': products, 'summary': profit, 'address_required': address_required})
-
-
-class Buy(View):
-    def get(self, request):
-        basket = get_basket(request.user, request.lang)
-        return 'ok'
 
 
 class InvoiceView(View):
