@@ -1,5 +1,6 @@
 import os
 from django.utils.timezone import activate
+from re import compile
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MEDIA_URL = '/media/'
@@ -13,7 +14,11 @@ TOKEN_SALT = 'nkU^&*()JH*757H*&^)_IJIO7JI874434%^&OHdfgdG457HIO44'
 
 DEBUG = True
 
+ADMINS = [('Soheil', 'soheilravasani@gmail.com')]
 ALLOWED_HOSTS = ['*']
+
+DEFAULT_FROM_EMAIL = 'webmaster@localhost'
+SERVER_EMAIL = 'root@localhost'
 
 # HOST = 'http://67948730.ngrok.io'
 HOST = 'http://192.168.1.95'
@@ -33,7 +38,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
     'server',
     'safedelete',
     'corsheaders',
@@ -41,6 +45,7 @@ INSTALLED_APPS = [
     'push_notifications',
     'django_celery_results',
     'django_celery_beat',
+    # 'django.contrib.admindocs',
     # 'django_elasticsearch_dsl'
 ]
 
@@ -50,6 +55,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     # 'django.middleware.csrf.CsrfViewMiddleware',
+    # 'django.contrib.admindocs.middleware.XViewMiddleware', # docadmin
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'server.middleware.AuthMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -57,10 +63,12 @@ MIDDLEWARE = [
     'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
 
-INTERNAL_IPS = [
-    '127.0.0.1',
-]
+DISALLOWED_USER_AGENTS = [compile('PostmanRuntime')]
 
+# INTERNAL_IPS = [
+#     '127.0.0.1',
+# ]
+# if user_agent_regex.search(request.META['HTTP_USER_AGENT']):
 CORS_ORIGIN_WHITELIST = [
     "http://192.168.1.96:3000",
     "http://192.168.43.96:3000",
@@ -121,20 +129,22 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'mehr_takhfif.wsgi.application'
 
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        # 'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        # 'ENGINE': 'django.contrib.gis.db.backends.postgis',
         'NAME': 'mehr_takhfif',
         # 'NAME': 'mehrtak1_db',
-        # 'HOST': 'localhost',
         'HOST': IP,
         'USER': 'postgres',
         # 'USER': 'mehrtak1_admeen',
         'PASSWORD': 'admin',
         # 'PASSWORD': '_Rz*5g;mTFF*0#quq&',
         'port': '5432',
+        'TEST': {
+            'NAME': 'mehr_takhfif_test',
+            'FIXTURES_DIR': 'server/fixtures'
+        },
     }
 }
 
@@ -160,7 +170,6 @@ SESSION_ENGINE = "django.contrib.sessions.backends.cache"
 
 # Password validation
 # https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators
-
 
 
 PASSWORD_HASHERS = [
