@@ -1,6 +1,5 @@
 import os
 import re
-
 from PIL import Image
 from django.contrib.auth.models import AbstractUser
 from django.contrib.postgres.fields import JSONField, ArrayField
@@ -16,6 +15,7 @@ from safedelete.models import SafeDeleteModel, SOFT_DELETE_CASCADE, NO_DELETE
 from django_celery_beat.models import PeriodicTask
 from django_celery_results.models import TaskResult
 from mehr_takhfif.settings import HOST
+import datetime
 
 
 # todo permalink in not null
@@ -87,7 +87,7 @@ def product_details():
 
 
 def next_month():
-    return timezone.now() + timezone.timedelta(days=30)
+    return timezone.now() + datetime.timedelta(days=30)
 
 
 def upload_to(instance, filename):
@@ -131,8 +131,8 @@ class User(AbstractUser):
     is_staff = models.BooleanField(default=False, verbose_name='Staff')
     is_vip = models.BooleanField(default=False)
     privacy_agreement = models.BooleanField(default=False)
-    default_address = models.ForeignKey(to="Address", on_delete=SET_NULL, null=True, blank=True,
-                                        related_name="user_default_address")
+    default_address = models.OneToOneField(to="Address", on_delete=SET_NULL, null=True, blank=True,
+                                           related_name="user_default_address")
     email_verified = models.BooleanField(default=False, verbose_name='Email verified')
     subscribe = models.BooleanField(default=True)
     avatar = models.ForeignKey("Media", on_delete=SET_NULL, null=True, blank=True)
@@ -199,6 +199,11 @@ class City(models.Model):
 
 
 class Address(models.Model):
+    """
+        Stores a single blog entry, related to :model:`auth.User` and
+        :model:`server.Address`.
+    """
+
     def __str__(self):
         return self.city.name
 
@@ -220,10 +225,7 @@ class Address(models.Model):
 
 class Box(Base):
     def __str__(self):
-        try:
-            return self.name['fa']
-        except Exception:
-            return self.name
+        return self.name['fa']
 
     objects = MyManager()
     name = JSONField(default=multilanguage)
@@ -273,7 +275,6 @@ class Category(Base):
     prefetch = ['feature_set']
 
     def __str__(self):
-        print(self.name)
         return f"{self.name['fa']}"
 
     parent = models.ForeignKey("self", on_delete=CASCADE, null=True, blank=True)
@@ -390,7 +391,6 @@ class Product(Base):
 
     # todo not null
 
-
     # home_buissiness =
     # support_description =
     class Meta:
@@ -413,18 +413,19 @@ class Storage(Base):
     start_price = models.BigIntegerField(verbose_name='Start price')
     final_price = models.BigIntegerField(verbose_name='Final price')
     discount_price = models.BigIntegerField(verbose_name='Discount price')
-    discount_vip_price = models.BigIntegerField(verbose_name='Discount vip price')
+    vip_discount_price = models.BigIntegerField(verbose_name='Discount vip price')
     transportation_price = models.IntegerField(default=0)
     available_count_for_sale = models.IntegerField(verbose_name='Available count for sale')
     max_count_for_sale = models.IntegerField(default=1)
     priority = models.IntegerField(default=0)
     tax = models.IntegerField(default=0)
     discount_percent = models.PositiveSmallIntegerField(verbose_name='Discount price percent')
-    discount_vip_percent = models.PositiveSmallIntegerField(verbose_name='Discount vip price percent')
+    vip_discount_percent = models.PositiveSmallIntegerField(verbose_name='Discount vip price percent')
     gender = models.BooleanField(blank=True, null=True)
     deadline = models.DateTimeField(default=next_month)
     start_time = models.DateTimeField(auto_now_add=True)
     title = JSONField(default=multilanguage)
+
     # box = models.ForeignKey(Box, on_delete=PROTECT)
     # category = models.ForeignKey(Category, on_delete=CASCADE)
     # default = models.BooleanField(default=False)
@@ -519,6 +520,9 @@ class Comment(SafeDeleteModel):
     def __str__(self):
         return f"{self.user}"
 
+    def clean(self):
+        Comment.objects.filter(user=self.user, type=self.type)
+
     _safedelete_policy = SOFT_DELETE_CASCADE
     id = models.BigAutoField(auto_created=True, primary_key=True)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
@@ -529,9 +533,9 @@ class Comment(SafeDeleteModel):
     rate = models.PositiveSmallIntegerField(default=0, null=True)
     approved = models.BooleanField(default=False)
     user = models.ForeignKey(User, on_delete=CASCADE)
-    reply = models.ForeignKey('self', on_delete=CASCADE, blank=True, null=True)
+    reply_to = models.ForeignKey('self', on_delete=CASCADE, blank=True, null=True)
     suspend = models.BooleanField(default=False)
-    type = models.CharField(max_length=255, choices=[('q-a', 1), ('rate', 2)])
+    type = models.CharField(max_length=255, choices=[(1, 'q-a'), (2, 'rate')])
     product = models.ForeignKey(Product, on_delete=CASCADE, null=True, blank=True)
     blog_post = models.ForeignKey(BlogPost, on_delete=CASCADE, null=True, blank=True)
 
@@ -578,6 +582,7 @@ class InvoiceStorage(models.Model):
         return f"{self.storage}"
 
     id = models.BigAutoField(auto_created=True, primary_key=True)
+    box = models.ForeignKey(Box, on_delete=CASCADE)
     storage = models.ForeignKey(Storage, on_delete=PROTECT)
     invoice = models.ForeignKey(Invoice, on_delete=PROTECT)
     count = models.SmallIntegerField(default=1)
@@ -703,7 +708,7 @@ class WishList(Base):
         return f"{self.user}"
 
     user = models.ForeignKey(User, on_delete=CASCADE)
-    type = models.CharField(max_length=255, )
+    # type = models.CharField(max_length=255, )
     notify = models.BooleanField(default=False)
     product = models.ForeignKey(Product, on_delete=CASCADE)
 
@@ -854,5 +859,3 @@ class Book(Base):
 def submission_delete(sender, instance, **kwargs):
     if instance.file:
         instance.file.delete(False)
-
-

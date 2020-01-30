@@ -1,5 +1,5 @@
 import random
-from secrets import token_hex
+
 
 import pysnooper
 from django.contrib.auth import login
@@ -7,7 +7,6 @@ from django.contrib.auth import logout
 from django.contrib.auth.backends import ModelBackend
 from django.http import JsonResponse
 
-from mehr_takhfif.settings import TOKEN_SALT
 from .utils import *
 from server.serialize import UserSchema
 
@@ -22,19 +21,19 @@ class Backend(ModelBackend):
             return None
 
 
-class Login(Validation):
+class Login(View):
     def post(self, request):
-        data = json.loads(request.body)
+        data = load_data(request)
         cookie_age = 30 * 60
         username = data['username']
         password = data['password']
         try:  # Login
             user = User.objects.get(username=username)
             if user.is_ban:
-                return JsonResponse({'message': 'user is banned'}, status=493)
+                return JsonResponse({'message': 'user is banned'}, status=res_code['banned'])
             if password is None:  # otp
                 if user.privacy_agreement:  # 202 need activation code (login)
-                    return self.set_token(user, self.send_activation(user))
+                    return set_token(user, self.send_activation(user))
                 # res = JsonResponse({}, status=251) # please agree privacy policy (signup)
                 # return self.set_token(user, res)
                 raise User.DoesNotExist  # redirect to signup
@@ -52,13 +51,12 @@ class Login(Validation):
                 # noinspection PyUnboundLocalVariable
                 user.delete()
             user = User.objects.create_user(username=username, password=password)
-            res = JsonResponse({}, status=251)  # please agree privacy policy
-            return self.set_token(user, res)
+            res = JsonResponse({}, status=res_code['signup_with_pp'])  # please agree privacy policy
+            return set_token(user, res)
         except AssertionError:  # invalid password
-            return JsonResponse({}, status=450)
+            return JsonResponse({}, status=res_code['invalid_password'])
 
     @staticmethod
-    @pysnooper.snoop()
     def send_activation(user):
         resend_timeout = 0.5
         activation_expire = 2
@@ -68,17 +66,7 @@ class Login(Validation):
         user.save()
         Login.send_sms(user.username, user.activation_code)
         res = {'code': user.activation_code, 'resend_timeout': resend_timeout, 'timeout': activation_expire}
-        return JsonResponse(res, status=202)
-
-    @staticmethod
-    def set_token(user, response):
-        try:
-            user.token = token_hex(100)
-            user.save()
-            response.set_signed_cookie('token', user.token, TOKEN_SALT, max_age=7200, expires=7200)
-            return response
-        except Exception:
-            return JsonResponse({}, status=401)
+        return JsonResponse(res, status=res_code['activate'])
 
     @staticmethod
     def send_sms(phone, code):
@@ -86,7 +74,6 @@ class Login(Validation):
 
     @staticmethod
     def check_password(user):
-        print(user.password[:6])
         return user.password[:6] == 'argon2'
 
 
@@ -99,7 +86,7 @@ class PrivacyPolicy(View):
             user.save()
             return Login.send_activation(user)  # need activation code
         except Exception:
-            return JsonResponse({}, status=401)
+            return JsonResponse({}, status=res_code['unauthorized'])
 
     @staticmethod
     def get_user(request):
@@ -117,7 +104,7 @@ class SetPassword(View):
             user.save()
             return JsonResponse(UserSchema().dump(user))
         except Exception:
-            return JsonResponse({}, status=400)
+            return JsonResponse({}, status=res_code['bad_request'])
 
 
 class ResendCode(View):
@@ -129,13 +116,12 @@ class ResendCode(View):
             res.status_code = 204
             return res
         except Exception:
-            return JsonResponse({'message': 'token not found'}, status=400)
+            return JsonResponse({'message': 'token not found'}, status=res_code['bad_request'])
 
 
 class Activate(View):
-    @pysnooper.snoop()
     def post(self, request):
-        data = json.loads(request.body)
+        data = load_data(request)
         # TODO: get csrf code
         try:
             client_token = request.get_signed_cookie('token', False, salt=TOKEN_SALT)
@@ -146,13 +132,13 @@ class Activate(View):
             user.is_active = True
             user.save()
             login(request, user)
-            res = JsonResponse(UserSchema().dump(user), status=201)  # signup without password
+            res = JsonResponse(UserSchema().dump(user), status=res_code['signup_with_pass'])  # signup without password
             if Login.check_password(user):
-                res = JsonResponse(UserSchema().dump(user))  # successfull login
+                res = JsonResponse(UserSchema().dump(user))  # successful login
                 res.delete_cookie('token')
             return res
         except Exception:
-            return JsonResponse({'message': 'code not found'}, status=406)
+            return JsonResponse({'message': 'code not found'}, status=res_code['integrity'])
 
 
 class LogoutView(View):
@@ -161,4 +147,4 @@ class LogoutView(View):
             logout(request)
             return JsonResponse({})
         except Exception:
-            return JsonResponse({}, status=403)
+            return JsonResponse({}, status=res_code['forbidden'])

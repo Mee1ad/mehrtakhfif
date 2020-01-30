@@ -4,7 +4,7 @@ import pysnooper
 from secrets import token_hex
 from datetime import date
 from django.utils import timezone
-from server.models import BasketProduct, FeatureStorage, CostumeHousePrice, Book
+from server.models import BasketProduct, FeatureStorage, CostumeHousePrice, Book, Comment
 import time
 
 
@@ -59,7 +59,6 @@ class BaseSchema(Schema):
 
     def get(self, name):
         try:
-            print(name)
             if name[self.lang] != "":
                 return name[self.lang]
             return name[self.default_lang]
@@ -137,8 +136,13 @@ class BaseSchema(Schema):
         return None
 
     def get_comment(self, obj):
-        if obj.reply is not None:
-            return CommentSchema().dump(obj.reply)
+        if obj.reply_to is not None:
+            return CommentSchema().dump(obj.reply_to)
+        return None
+
+    def get_comment_replies(self, obj):
+        if hasattr(obj, 'replies'):
+            return CommentSchema().dump(obj.replies, many=True)
         return None
 
     def get_media(self, obj):
@@ -170,6 +174,7 @@ class BaseSchema(Schema):
     def get_feature_value(self, obj):
         new_value = []
         for item, index in zip(obj.value, range(len(obj.value))):
+            print(item)
             new_value.append({'name': item[self.lang], 'id': item['id']})
         return new_value
 
@@ -281,7 +286,7 @@ class BrandSchema(BaseSchema):
 
 class ProductSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'permalink', 'gender', 'type', 'address', 'short_address')
+        additional = ('id', 'permalink', 'gender', 'type', 'address', 'short_address', 'rate')
 
     name = fields.Method("get_name")
     brand = fields.Method("get_brand")
@@ -319,7 +324,7 @@ class SliderSchema(BaseSchema):
 class StorageSchema(BaseSchema):
     class Meta:
         additional = ('id', 'final_price', 'transportation_price', 'max_count_for_sale', 'priority',
-                      'discount_price', 'discount_vip_price', 'discount_percent', 'discount_vip_percent')
+                      'discount_price', 'vip_discount_price', 'discount_percent', 'vip_discount_percent')
 
     title = fields.Method('get_title')
     deadline = fields.Function(lambda o: o.deadline.timestamp())
@@ -373,9 +378,12 @@ class CommentSchema(BaseSchema):
         additional = ('id', 'text', 'type', 'approved', 'rate')
 
     user = fields.Function(lambda o: o.user_id)
-    reply_to = fields.Method("get_comment")
+    reply_count = fields.Method('get_reply_count')
     created_at = fields.Method("get_created_at")
-    product = fields.Method("get_min_product")
+
+    def get_reply_count(self, obj):
+        comments = Comment.objects.filter(product=obj.product, type=obj.type, reply_to=obj)
+        return comments.count()
 
 
 # todo
@@ -585,4 +593,3 @@ class BooksSchema(BaseSchema):
 
     def get_min_product(self, obj):
         return MinProductSchema().dump(obj.house.product)
-

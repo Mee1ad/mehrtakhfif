@@ -10,19 +10,18 @@ from server.decorators import try_except
 from mehr_takhfif.settings import HOST
 from django.db.models import F
 
-
 from django.apps import apps
 from django.contrib.postgres.fields.jsonb import JSONField
 from django.db.models import F
+from django_celery_results.models import TaskResult
 
 
-class Profile(View):
+class Profile(LoginRequired):
     def get(self, request):
         return JsonResponse({'user': UserSchema().dump(request.user)})
 
     def put(self, request):
-        data = json.loads(request.body)
-        validation(data)
+        data = load_data(request)
         user = request.user
         user.first_name = data.get('first_name') or user.first_name
         user.last_name = data.get('last_name') or user.last_name
@@ -37,7 +36,7 @@ class Profile(View):
         return JsonResponse({'user': UserSchema().dump(user)})
 
 
-class Avatar(View):
+class Avatar(LoginRequired):
     def post(self, request):
         user = request.user
         pre_avatar_id = None
@@ -61,19 +60,31 @@ class Avatar(View):
         return JsonResponse({})
 
 
-class Orders(View):
+class Orders(LoginRequired):
     def get(self, request):
         orders = user_data_with_pagination(Invoice, InvoiceSchema, request)
         return JsonResponse(orders)
 
 
-class Trips(View):
+class Trips(LoginRequired):
     def get(self, request):
         books = user_data_with_pagination(Book, BooksSchema, request)
         return JsonResponse(books)
 
 
 class AddressView(LoginRequired):
+    """
+        Display an individual :model:`server.Address`.
+
+        **Context**
+
+        ``Address``
+            An instance of :model:`server.Address`.
+
+        **Template:**
+
+        :template:`server/my_template.html`
+    """
     def get(self, request):
         addresses = user_data_with_pagination(Address, AddressSchema, request)
         default_address = AddressSchema().dump(request.user.default_address)
@@ -81,8 +92,7 @@ class AddressView(LoginRequired):
 
     # add address
     def post(self, request):
-        data = json.loads(request.body)
-        validation(data)
+        data = load_data(request)
         try:
             assert City.objects.filter(pk=data['city_id'], state_id=data['state_id'])
             address_count = Address.objects.filter(user=request.user).count()
@@ -99,7 +109,7 @@ class AddressView(LoginRequired):
 
     # set default
     def patch(self, request):
-        data = json.loads(request.body)
+        data = load_data(request)
         try:
             request.user.default_address_id = data['id']
             request.user.save()
@@ -109,8 +119,7 @@ class AddressView(LoginRequired):
 
     # edit address
     def put(self, request):
-        data = json.loads(request.body)
-        validation(data)
+        data = load_data(request)
         address = Address.objects.filter(pk=data['id'], user=request.user)
         assert address.exists()
         address.update(state_id=data['state_id'], city_id=data['city_id'], postal_code=data['postal_code'],
@@ -138,13 +147,13 @@ class GetState(LoginRequired):
         return JsonResponse({'states': StateSchema().dump(states, many=True)})
 
 
-class GetCity(View):
+class GetCity(LoginRequired):
     def get(self, request, state_id):
         cities = City.objects.filter(state_id=state_id)
         return JsonResponse({'cities': CitySchema().dump(cities, many=True)})
 
 
-class WishlistView(View):
+class WishlistView(LoginRequired):
     def get(self, request):
         wishlists = WishList.objects.filter()
         pg = get_pagination(wishlists, request.step, request.page, WishListSchema)
@@ -152,7 +161,7 @@ class WishlistView(View):
         return JsonResponse(pg)
 
     def post(self, request):
-        data = json.loads(request.body)
+        data = load_data(request)
         WishList.objects.update_or_create(type=data['type'], notify=data['notify'], product_id=data['product_id'],
                                           user=request.user,
                                           created_by=request.user, updated_by=request.user)
@@ -164,13 +173,13 @@ class WishlistView(View):
         return JsonResponse({})
 
 
-class NotifyView(View):
+class NotifyView(LoginRequired):
     def get(self, request):
         notify = WishList.objects.filter(user_id=request.user)
         return JsonResponse({'wishlists': WishListSchema().dump(notify(notify))})
 
     def post(self, request):
-        data = json.loads(request.body)
+        data = load_data(request)
         NotifyUser(type=data['type'], notify=data['notify'], product_id=data['product_id'], user_id=request.user).save()
         return JsonResponse({}, status=201)
 
@@ -181,11 +190,11 @@ class NotifyView(View):
         return JsonResponse({'message': 'ok'})
 
 
-class MyTransactions(View):
+class MyTransactions(LoginRequired):
     def get(self, request):
         pass
 
 
-class WalletView(View):
+class WalletView(LoginRequired):
     def get(self, request):
         pass

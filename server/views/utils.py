@@ -15,7 +15,9 @@ from django_celery_beat.models import PeriodicTask, IntervalSchedule
 from datetime import datetime
 import pysnooper
 from operator import add, sub
-
+from secrets import token_hex
+from mehr_takhfif.settings import TOKEN_SALT
+from server.error import *
 from mehr_takhfif import settings
 from mehr_takhfif.settings import TOKEN_SECRET, SECRET_KEY
 from server.models import *
@@ -24,65 +26,42 @@ from server.serialize import BoxCategoriesSchema, BasketSchema, BasketProductSch
 default_step = 12
 default_page = 1
 default_response = {'ok': {'message': 'ok'}, 'bad': {'message': 'bad request'}}
-res_code = {'success': 200, 'bad_request': 400, 'forbidden': 403, 'integrity': 406}
+res_code = {'success': 200, 'bad_request': 400, 'unauthorized': 401, 'forbidden': 403, 'token_issue': 402,
+            'integrity': 406, 'banned': 493,
+            'signup_with_pp': 251, 'invalid_password': 450, 'signup_with_pass': 201, 'activate': 202}
 pattern = {'phone': r'^(09[0-9]{9})$', 'email': r'^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\
            [[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$',
            'postal_code': r'^\d{5}[ -]?\d{5}$', 'fullname': r'^[آ-یA-z]{2,}( [آ-یA-z]{2,})+([آ-یA-z]|[ ]?)$',
            'address': r'(([^ -_]+)[\n -]+){2}.+', 'location': r'\.*', 'bool': r'^(true|false)$',
            'name': r'^[ آ-یA-z]+$', 'first_name': r'^[ آ-یA-z]+$', 'last_name': r'^[ آ-یA-z]+$',
-           'id': r'^\d+$', 'language': r'^\w{2}$', 'type': r'^[A-z]+$'}
-ids = ['id', 'city_id', 'state_id', 'product_id']
+           'id': r'^\d+$', 'language': r'^\w{2}$', 'type': r'^[1-2]$'}
+ids = ['id', 'city_id', 'state_id', 'product_id', 'house_id']
 bools = ['gender', 'set_default', 'notify']
+rolls = ['superuser', 'backup', 'admin', 'accountants']
 
+
+# Data
 
 def validation(data):
-    try:
-        for key in data:
-            if key in ids:
-                assert re.search(pattern['id'], str(data[key]))
-                continue
-            if key in bools:
-                assert type(data[key]) == bool
-                continue
+    for key in data:
+        if key in ids:
+            assert re.search(pattern['id'], str(data[key]))
+            continue
+        if key in bools:
+            assert type(data[key]) == bool
+            continue
+        if key == 'basket':
+            assert len(key) < 20
+        try:
             assert re.search(pattern[key], str(data[key]))
-    except (AssertionError, KeyError) as e:
-        print(e)
-        raise ValidationError(message='validation error')
+        except KeyError:
+            pass
 
 
 def load_data(request):
     data = json.loads(request.body)
     validation(data)
     return data
-
-
-# def validation_old(data, allow_null=False):
-#     try:
-#         for key in args:
-#             if key in ids:
-#                 assert re.search(pattern['id'], data[key])
-#                 continue
-#             assert re.search(pattern[key], data[key])
-#     except AssertionError:
-#         raise ValidationError(message='validation error')
-#     except KeyError:
-#         if not allow_null:
-#             raise ValidationError(message='validation error')
-#         pass
-
-
-def safe_delete(model, pk, user_id):
-    obj = model.objects.filter(pk=pk)
-    obj.update(deleted_by_id=user_id)
-    obj.delete()
-
-
-def to_json(obj=None, string=None):
-    if obj is not list:
-        obj = [obj]
-    if obj:
-        string = serializers.serialize("json", obj)
-    return json.loads(string[1:-1])['fields']
 
 
 def add_minutes(minutes, time=None):
@@ -93,39 +72,11 @@ def add_days(days):
     return timezone.now() + timezone.timedelta(days=days)
 
 
-def timestamp_to_date(timestamp):
-    return datetime.fromtimestamp(timestamp)
-
-
-def check_csrf_token(token):
-    if hashlib.sha3_224(token[13:21]).hexdigest() == token[:13] + token[21:]:
-        return True
-
-
-def get_access_token(user, model=None, pk=None, try_again=None):
-    pk = 0 if pk is None else pk
-    time = add_minutes(0).strftime("%Y-%m-%d-%H") if try_again is None else add_minutes(-60).strftime("%Y-%m-%d-%H")
-    data = f'{user.pk}{pk}{time}'
-    data = model.__name__.lower() + data if model else data
-    token = hashlib.sha3_224(data.encode()).hexdigest()
-    return token
-
-
-def check_access_token(token, user, model, pk):
-    if token == get_access_token(user, model, pk):
-        return True
-    if token == get_access_token(user, model, pk, try_again=1):
-        return True
-    return False
-
-
-def generate_token(user):
-    hashlib.sha3_224(b"Nobody inspects the spammish repetition").hexdigest()
-
-
-def get_token_data(token):
-    first_decrypt = jwt.decode(token[7:-52], token[-52:-32], algorithms=['HS256'])
-    return jwt.decode(first_decrypt['data'].encode(), TOKEN_SECRET, algorithms=['HS256'])
+def get_mimetype(image):
+    mime = magic.Magic(mime=True)
+    mimetype = mime.from_buffer(image.read(1024))
+    image.seek(0)
+    return mimetype
 
 
 def upload(request, titles, box=None, avatar=False):
@@ -145,25 +96,6 @@ def upload(request, titles, box=None, avatar=False):
                           title=title, updated_by=request.user)
             media.save()
     return media
-
-
-def get_mimetype(image):
-    mime = magic.Magic(mime=True)
-    mimetype = mime.from_buffer(image.read(1024))
-    image.seek(0)
-    return mimetype
-
-
-def move(obj, folder):
-    old_path = obj.file.path
-    new_path = settings.MEDIA_ROOT + f'\\{folder}\\' + obj.file.name
-    try:
-        os.rename(old_path, new_path)
-    except FileNotFoundError:
-        os.makedirs(settings.MEDIA_ROOT + f'\\{folder}\\')
-        os.rename(old_path, new_path)
-    finally:
-        obj.save()
 
 
 def filter_params(params):
@@ -193,8 +125,6 @@ def filter_params(params):
         else:
             filter_by['brand__in'] = brand
 
-
-
     # keys = params.keys()
     # for key in keys:
     #     if len(key) < 3:
@@ -211,6 +141,93 @@ def filter_params(params):
     #     filter_by[key + '__in'] = value
 
     return {'filter': filter_by, 'order': orderby}
+
+
+def load_location(location):
+    if location is not None:
+        return {"lat": location[0], "lng": location[1]}
+    return None
+
+
+# User
+
+def get_roll(user):
+    try:
+        return user.groups.first().name
+    except AttributeError:
+        if user.is_superuser:
+            return 'superuser'
+        raise AuthError
+
+
+# Admin
+
+def safe_delete(model, pk, user_id):
+    obj = model.objects.filter(pk=pk)
+    obj.update(deleted_by_id=user_id)
+    obj.delete()
+
+
+def get_access_token(user, model=None, pk=None, try_again=None):
+    pk = 0 if pk is None else pk
+    time = add_minutes(0).strftime("%Y-%m-%d-%H") if try_again is None else add_minutes(-60).strftime("%Y-%m-%d-%H")
+    data = f'{user.pk}{pk}{time}'
+    data = model.__name__.lower() + data if model else data
+    token = hashlib.sha3_224(data.encode()).hexdigest()
+    return token
+
+
+def check_access_token(token, user, model, pk):
+    if token == get_access_token(user, model, pk):
+        return True
+    if token == get_access_token(user, model, pk, try_again=1):
+        return True
+    return False
+
+
+# No Usage
+
+def to_json(obj=None, string=None):
+    if obj is not list:
+        obj = [obj]
+    if obj:
+        string = serializers.serialize("json", obj)
+    return json.loads(string[1:-1])['fields']
+
+
+def timestamp_to_date(timestamp):
+    return datetime.fromtimestamp(timestamp)
+
+
+def check_csrf_token(token):
+    if hashlib.sha3_224(token[13:21]).hexdigest() == token[:13] + token[21:]:
+        return True
+
+
+def generate_token(user):
+    hashlib.sha3_224(b"Nobody inspects the spammish repetition").hexdigest()
+
+
+def move(obj, folder):
+    old_path = obj.file.path
+    new_path = settings.MEDIA_ROOT + f'\\{folder}\\' + obj.file.name
+    try:
+        os.rename(old_path, new_path)
+    except FileNotFoundError:
+        os.makedirs(settings.MEDIA_ROOT + f'\\{folder}\\')
+        os.rename(old_path, new_path)
+    finally:
+        obj.save()
+
+
+def to_obj(body):
+    dic = json.loads(body)
+    obj = type('test', (object,), {})()
+    obj.__dict__ = dic
+    return obj
+
+
+# Utils
 
 
 def get_categories(language, box_id=None, category=None):
@@ -234,9 +251,12 @@ def get_categories(language, box_id=None, category=None):
     return BoxCategoriesSchema(language=language).dump(new_cats, many=True)
 
 
-def get_pagination(query, step, page, serializer):
-    count = query.count()
-    items = serializer().dump(query[(page - 1) * step: step * page], many=True)
+def get_pagination(query, step, page, serializer, language="fa"):
+    try:
+        count = query.count()
+    except TypeError:
+        count = len(query)
+    items = serializer(language=language).dump(query[(page - 1) * step: step * page], many=True)
     return {'pagination': {'last_page': math.ceil(count / step), 'count': count},
             'data': items}
 
@@ -244,26 +264,6 @@ def get_pagination(query, step, page, serializer):
 def user_data_with_pagination(model, serializer, request):
     query = model.objects.filter(user=request.user)
     return get_pagination(query, request.step, request.page, serializer)
-
-
-def des_encrypt(data='test', key=os.urandom(16)):
-    backend = default_backend()
-    text = data.encode()
-    padder = padding.PKCS7(algorithms.TripleDES.block_size).padder()
-    cipher = Cipher(algorithms.TripleDES(key), modes.ECB(), backend=backend)
-    encryptor = cipher.encryptor()
-    encrypted_text = encryptor.update(padder.update(text) + padder.finalize()) + encryptor.finalize()
-    decrypted_text = des_decrypt(encrypted_text, key)
-    assert text == decrypted_text
-    return encrypted_text
-
-
-def des_decrypt(encrypted_text, key):
-    backend = default_backend()
-    unpadder = padding.PKCS7(algorithms.TripleDES.block_size).unpadder()
-    cipher = Cipher(algorithms.TripleDES(key), modes.ECB(), backend=backend)
-    decryptor = cipher.decryptor()
-    return unpadder.update(decryptor.update(encrypted_text) + decryptor.finalize()) + unpadder.finalize()
 
 
 def calculate_profit(products):
@@ -297,29 +297,29 @@ def get_basket(user, lang, basket=None):
     return {'basket': basket_dict, 'summary': profit, 'address_required': address_required}
 
 
-def get_best_seller(box, basket_ids, language):
-    # from invoices
-    basket_products = BasketProduct.objects.filter(basket_id__in=basket_ids, box=box).values('storage', 'count')
-    storage_count = {}
-    for product in basket_products:
-        if product['storage'] in storage_count.keys():
-            storage_count[product['storage']] += product['count']
-            continue
-        storage_count[product['storage']] = product['count']
-    storage_count = {k: v for k, v in sorted(storage_count.items(), key=lambda item: item[1], reverse=True)}
-    storage_ids = storage_count.keys()
-    storages = Storage.objects.filter(pk__in=storage_ids)
-    products = Product.objects.filter(storage__in=storages)
-    sync_default_storage(storages, products)
-    return MinProductSchema(language=language).dump(products, many=True)
-
-
 def sync_default_storage(storages, products):
     for storage, product in zip(storages, products):
         if product.default_storage == storage:
             continue
         if storage.product == product:
             product.default_storage = storage
+
+
+def get_best_seller(box, invoice_ids, step, page):
+    # from invoices
+    basket_products = InvoiceStorage.objects.filter(invoice_id__in=invoice_ids, box=box).values('storage', 'count')
+    storage_count = {}
+    for product in basket_products:
+        if product['storage'] in storage_count.keys():
+            storage_count[product['storage']] += product['count']
+            continue
+        storage_count[product['storage']] = product['count']
+    storage_count = {k: v for k, v in sorted(storage_count.items(), key=lambda item: item[1])}
+    storage_ids = storage_count.keys()
+    storages = Storage.objects.filter(pk__in=storage_ids)
+    products = Product.objects.filter(storage__in=storages)
+    sync_default_storage(storages, products)
+    return get_pagination(products, step, page, MinProductSchema)
 
 
 def sync_storage(basket_id, op):
@@ -333,19 +333,6 @@ def sync_storage(basket_id, op):
         storage.save()
 
 
-def to_obj(body):
-    dic = json.loads(body)
-    obj = type('test', (object,), {})()
-    obj.__dict__ = dic
-    return obj
-
-
-def load_location(location):
-    if location is not None:
-        return {"lat": location[0], "lng": location[1]}
-    return None
-
-
 def add_one_off_job(name, args=None, kwargs=None, task='server.tasks.hello', interval=30,
                     period=IntervalSchedule.MINUTES):
     schedule, created = IntervalSchedule.objects.get_or_create(every=interval, period=period)
@@ -354,18 +341,51 @@ def add_one_off_job(name, args=None, kwargs=None, task='server.tasks.hello', int
     return task
 
 
-# def products_availability_check(products, step, page):
-#     count = 0
-#     available_products = []
-#     for product in products:
-#         storages = Storage.objects.filter(available_count_for_sale__gt=0, product=product).exists()
-#         if storages:
-#             count += 1
-#             available_products.append(product)
-#             if count == step:
-#                 break
-#             continue
-#     return available_products
+# Security
+
+def set_token(user, response):
+    user.token = get_access_token(user)
+    user.save()
+    response.set_signed_cookie('token', user.token, TOKEN_SALT, max_age=7200, expires=7200)
+    return response
+
+
+def get_token_from_cookie(request):
+    return request.get_signed_cookie('token', False, salt=TOKEN_SALT)
+
+
+def des_encrypt(data='test', key=os.urandom(16)):
+    backend = default_backend()
+    text = data.encode()
+    padder = padding.PKCS7(algorithms.TripleDES.block_size).padder()
+    cipher = Cipher(algorithms.TripleDES(key), modes.ECB(), backend=backend)
+    encryptor = cipher.encryptor()
+    encrypted_text = encryptor.update(padder.update(text) + padder.finalize()) + encryptor.finalize()
+    decrypted_text = des_decrypt(encrypted_text, key)
+    assert text == decrypted_text
+    return encrypted_text
+
+
+def des_decrypt(encrypted_text, key):
+    backend = default_backend()
+    unpadder = padding.PKCS7(algorithms.TripleDES.block_size).unpadder()
+    cipher = Cipher(algorithms.TripleDES(key), modes.ECB(), backend=backend)
+    decryptor = cipher.decryptor()
+    return unpadder.update(decryptor.update(encrypted_text) + decryptor.finalize()) + unpadder.finalize()
+
+
+def products_availability_check(products, step, page):
+    count = 0
+    available_products = []
+    for product in products:
+        storages = Storage.objects.filter(available_count_for_sale__gt=0, product=product).exists()
+        if storages:
+            count += 1
+            available_products.append(product)
+            if count == step:
+                break
+            continue
+    return available_products
 
 
 # def available_products2(products):
@@ -380,30 +400,6 @@ def add_one_off_job(name, args=None, kwargs=None, task='server.tasks.hello', int
 
 class LoginRequired(LoginRequiredMixin, View):
     raise_exception = True
-
-
-class Validation(View):
-    def __init__(self):
-        super().__init__()
-        self.phone_pattern = r'^(09[0-9]{9})$'
-        self.email_pattern = r'^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$'
-        self.postal_pattern = r'^\d{5}[ -]?\d{5}$'
-        self.fullname_pattern = r'^[آ-یA-z]{2,}( [آ-یA-z]{2,})+([آ-یA-z]|[ ]?)$'
-        self.activate_pattern = 'test'
-
-    def regex(self, data, pattern, error, raise_error=True):
-        data = re.search(pattern, f'{data}')
-        if data is None:
-            if raise_error:
-                raise ValidationError(error)
-            return None
-        return data[0]
-
-    def valid_phone(self, text, raise_error=True):
-        return self.regex(text, self.phone_pattern, 'phone is invalid', raise_error)
-
-    def valid_email(self, text, raise_error=True):
-        return self.regex(text, self.email_pattern, 'email is invalid', raise_error)
 
 
 class ORM:
@@ -443,9 +439,3 @@ class ORM:
     def get_latest(count=5):
         return Storage.objects.select_related('product', 'product__thumbnail').filter(
             default=True).order_by('-product__sold_count')[:count]
-
-
-# test
-
-
-# test
