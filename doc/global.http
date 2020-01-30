@@ -5,7 +5,10 @@ GET {{host}}/get_states
 GET {{host}}/get_cities/26
 ###
 GET {{host}}/search?q=query
+
+### all box with category
+http://localhost/box_with_category
 ###
-GET {{host}}/get_box_categories?box_permalink=boom-gardi
+http://localhost/box_with_category?box_permalink=boom-gardi
 ###
 GET {{host}}/special_offer
