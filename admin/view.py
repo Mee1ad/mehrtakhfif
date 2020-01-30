@@ -1,17 +1,19 @@
 import json
 from operator import attrgetter
-
+from statistics import mean, StatisticsError
 from django.contrib.admin.utils import NestedObjects
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse
 from django.views import View
-
+from django.core.mail import send_mail
 from server.models import *
 from server.serialize import *
-from server.views.utils import res_code, get_pagination, safe_delete, get_access_token, check_access_token, upload
+from django.db.models import Q
+from server.views.auth import Login, Activate
+from django.contrib.auth import login
+from mehr_takhfif.settings import TOKEN_SALT
+from server.views.utils import *
 
-
-# todo check prices
 
 class AdminView(LoginRequiredMixin, View):
 
@@ -24,7 +26,8 @@ class AdminView(LoginRequiredMixin, View):
         return get_pagination(query, request.step, request.page, serializer)
 
     def get_data(self, request):
-        assert check_access_token(request.token, request.user, model=None, pk=None)
+        token = get_token_from_cookie(request)
+        assert check_access_token(token, request.user, model=None, pk=None)
         data = json.loads(request.body)
         remove = ['created_at', 'created_by', 'updated_at', 'updated_by', 'deleted_by', 'income', 'profit',
                   'rate', 'default_storage', 'sold_count', 'feature']
@@ -36,11 +39,12 @@ class AdminView(LoginRequiredMixin, View):
         return data
 
     def validate_box_id(self, user, box_id=None):
-        if user.groups.filter(name='admin').exists():
-            return Box.objects.filter(admin=user).first().pk
-        elif (user.is_superuser or user.is_staff) and box_id:
+        roll = get_roll(user)
+        if roll == 'admin':
+            return user.box.pk
+        if roll in rolls:
             return box_id
-        raise AssertionError
+        raise ValidationError
 
     def assign_default_value(self, product_id):
         storages = Storage.objects.filter(product_id=product_id)
@@ -61,11 +65,10 @@ class AdminView(LoginRequiredMixin, View):
     def delete_base(self, request, model):
         pk = int(request.GET.get('id', None))
         if request.token:
-            if self.delete_object(request.token, model, pk, request.user):
-                return {}
+            if self.delete_object(request, model, pk):
+                return JsonResponse({})
             return JsonResponse({}, status=400)
-        res = self.prepare_for_delete(model, pk, request.user)
-        return res
+        return self.prepare_for_delete(model, pk, request.user)
 
     def prepare_for_delete(self, model, pk, user):
         item = model.objects.get(pk=pk)
@@ -84,12 +87,15 @@ class AdminView(LoginRequiredMixin, View):
             else:
                 deleted_item = f'{item}'
         if len(related_objects) > 0:
-            res = {'deleted_item': deleted_item, 'related_objects': related_objects}
+            res = JsonResponse({'deleted_item': deleted_item, 'related_objects': related_objects})
         else:
-            res = {'deleted_item': deleted_item, 'access_token': get_access_token(model, user, pk)}
+            res = JsonResponse({'deleted_item': deleted_item})
+            res = set_token(user, res)
         return res
 
-    def delete_object(self, token, model, pk, user):
+    def delete_object(self, request, model, pk):
+        token = get_token_from_cookie(request)
+        user = request.user
         if check_access_token(token, user, model, pk):
             safe_delete(Category, pk, user.id)
             return True
@@ -98,7 +104,43 @@ class AdminView(LoginRequiredMixin, View):
 
 class Token(AdminView):
     def get(self, request):
-        return JsonResponse({'token': get_access_token(request.user)})
+        res = JsonResponse({'token': get_access_token(request.user)})
+        res = set_token(request.user, res)
+        return res
+
+
+class AdminLogin(AdminView):
+    def post(self, request):
+        data = load_data(request)
+        meli_code = data['meli_code']
+        password = data['password']
+        user = User.objects.get(Q(meli_code=meli_code), (Q(is_staff=True) | Q(is_superuser=True)))
+        if user.is_ban:
+            return JsonResponse({'message': 'user is banned'}, status=493)
+        assert user.check_password(password)
+        return set_token(user, Login.send_activation(user))
+
+
+class AdminActivate(AdminView):
+    def post(self, request):
+        data = load_data(request)
+        # TODO: get csrf code
+        try:
+            client_token = request.get_signed_cookie('token', False, salt=TOKEN_SALT)
+            code = data['code']
+            user = User.objects.get(Q(activation_code=code, token=client_token, is_ban=False,
+                                    activation_expire__gte=timezone.now()), (Q(is_staff=True) | Q(is_superuser=True)))
+            user.activation_expire = timezone.now()
+            user.is_active = True
+            user.save()
+            login(request, user)
+            res = JsonResponse(UserSchema().dump(user), status=201)  # signup without password
+            if Login.check_password(user):
+                res = JsonResponse(UserSchema().dump(user))  # successful login
+                res.delete_cookie('token')
+            return res
+        except Exception:
+            return JsonResponse({'message': 'code not found'}, status=406)
 
 
 class CheckPrices(AdminView):
@@ -107,16 +149,16 @@ class CheckPrices(AdminView):
         sp = data['start_price']
         fp = data['final_price']
         dp = data.get('discount_price', None)
-        dvp = data.get('discount_vip_price', None)
+        dvp = data.get('vip_discount_price', None)
         dper = data.get('discount_percent', None)
-        dvper = data.get('discount_vip_percent', None)
+        dvper = data.get('vip_discount_percent', None)
 
         if dp and dvp:
             dper = 100 - dp / fp * 100
             dvper = 100 - dvp / fp * 100
             if dper < sp or dvper < sp:
                 return JsonResponse({}, status=res_code['bad_request'])
-            return JsonResponse({'discount_percent': "%.2f" % dper, 'discount_vip_percent': "%.2f" % dvper})
+            return JsonResponse({'discount_percent': "%.2f" % dper, 'vip_discount_percent': "%.2f" % dvper})
         elif dper and dvper:
             pass
 
@@ -142,7 +184,7 @@ class CategoryView(AdminView):
         return JsonResponse({})
 
     def delete(self, request):
-        return JsonResponse(self.delete_base(request, Category))
+        return self.delete_base(request, Category)
 
 
 class FeatureView(AdminView):
@@ -159,7 +201,7 @@ class FeatureView(AdminView):
         return JsonResponse({})
 
     def delete(self, request):
-        return JsonResponse(self.delete_base(request, Feature))
+        return self.delete_base(request, Feature)
 
 
 class ProductView(AdminView):
@@ -185,7 +227,7 @@ class ProductView(AdminView):
         return JsonResponse({})
 
     def delete(self, request):
-        return JsonResponse(self.delete_base(request, Product))
+        return self.delete_base(request, Product)
 
 
 class StorageView(AdminView):
@@ -210,7 +252,7 @@ class StorageView(AdminView):
         return JsonResponse({})
 
     def delete(self, request):
-        return JsonResponse(self.delete_base(request, Storage))
+        return self.delete_base(request, Storage)
 
 
 class MenuView(AdminView):
@@ -227,7 +269,7 @@ class MenuView(AdminView):
         return JsonResponse({})
 
     def delete(self, request):
-        return JsonResponse(self.delete_base(request, Menu))
+        return self.delete_base(request, Menu)
 
 
 class TagView(AdminView):
@@ -244,7 +286,7 @@ class TagView(AdminView):
         return JsonResponse({})
 
     def delete(self, request):
-        return JsonResponse(self.delete_base(request, Tag))
+        return self.delete_base(request, Tag)
 
 
 class SpecialOfferView(AdminView):
@@ -261,7 +303,7 @@ class SpecialOfferView(AdminView):
         return JsonResponse({})
 
     def delete(self, request):
-        return JsonResponse(self.delete_base(request, SpecialOffer))
+        return self.delete_base(request, SpecialOffer)
 
 
 class SpecialProductsView(AdminView):
@@ -278,7 +320,7 @@ class SpecialProductsView(AdminView):
         return JsonResponse({})
 
     def delete(self, request):
-        return JsonResponse(self.delete_base(request, SpecialProduct))
+        return self.delete_base(request, SpecialProduct)
 
 
 class MediaView(AdminView):
@@ -306,7 +348,7 @@ class BlogView(AdminView):
         return JsonResponse({})
 
     def delete(self, request):
-        return JsonResponse(self.delete_base(request, Blog))
+        return self.delete_base(request, Blog)
 
 
 class BlogPostView(AdminView):
@@ -323,4 +365,40 @@ class BlogPostView(AdminView):
         return JsonResponse({})
 
     def delete(self, request):
-        return JsonResponse(self.delete_base(request, BlogPost))
+        return self.delete_base(request, BlogPost)
+
+
+class MailView(AdminView):
+    def post(self, request):
+        send_mail(
+            'Subject here',
+            'Here is the message.',
+            'from@example.com',
+            ['to@example.com'],
+            fail_silently=False,
+        )
+
+
+class CommentView(AdminView):
+    def patch(self, request):
+        data = self.get_data(request)
+        pk = data['id']
+        comment = Comment.objects.get(pk=pk)
+        duplicate_comment = Comment.objects.filter(user=comment.user, type=2, product=comment.product,
+                                                   approved=True).count() > 1
+        comment.approved = True
+        comment.save()
+        rates = Comment.objects.filter(product_id=comment.product_id, approved=True, type=2).values_list('rate')
+        try:
+            if duplicate_comment:
+                raise StatisticsError
+            average_rate = round(mean([rate[0] for rate in rates]))
+            Product.objects.filter(pk=comment.product_id).update(rate=average_rate)
+        except StatisticsError:
+            pass
+        return JsonResponse({})
+
+    def delete(self, request):
+        pk = int(request.GET.get('id', None))
+        Comment.objects.filter(pk=pk).update(suspend=True)
+        return JsonResponse({})
