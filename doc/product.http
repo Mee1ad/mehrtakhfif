@@ -8,22 +8,24 @@ GET {{host}}/product/p-30
 GET {{host}}/related_products/p-30?p=1&s=3
 
 ### Comment - type: 1: 'q-a'
-GET {{host}}/comment?product_id=25&type=1&s=5&p=1
+GET {{host}}/comment?product_id=23&type=1&s=5&p=1
 ### Comment - type 2: 'rate'
-GET {{host}}/comment?product_id=25&type=1&s=5&p=1
+GET {{host}}/comment?product_id=23&type=1&s=5&p=1
+### Comment replies
+GET {{host}}/comment?comment_id=48&s=5&p=1
 ###
 DELETE {{host}}/comment?id=45
-### type 1
+### type 2 rate
 POST {{host}}/comment
 Content-Type: Application/json
 
 {
 	"text": "راضی  بودی؟",
-	"type": 1,
+	"type": 2,
 	"product_id": 25,
-    "rate": 5
+    "rate": 4
 }
-### type 2 question
+### type 1 question
 POST {{host}}/comment
 Content-Type: Application/json
 
@@ -32,17 +34,25 @@ Content-Type: Application/json
 	"type": 2,
 	"product_id": 25
 }
-### type 2 answer
+### type 1 answer
 POST {{host}}/comment
 Content-Type: Application/json
 
 {
 	"text": "راضی  بودی؟",
 	"type": 2,
-    "reply_id": 49,
+    "reply_to_id": 49,
 	"product_id": 25
 }
 ###
+
+
+
+
+
+
+
+
 
 
 

@@ -2,6 +2,30 @@
 ### Methods: GET for get one or many objects, DELETE for delete object, POST for create object,
 ###          PUT for replace object, PATCH for update many to many relations
 
+
+### Authentication
+
+### login
+POST {{admin_host}}/login
+Content-Type: Application/json
+
+{
+  "username": 3,
+  "password": 1,
+}
+### activate
+POST {{admin_host}}/activate
+Content-Type: Application/json
+
+{
+  "code": 12345
+}
+
+
+
+
+
+
 ### Parameters => s for step, p for page, id for single item
 GET {{admin_host}}/category
 
@@ -201,10 +225,10 @@ Access-Token: {{access_token}}
   "start_price": 50000,
   "final_price": 100000,
   "discount_price": 80000,
-  "discount_vip_price": 70000,
+  "vip_discount_price": 70000,
   "transportation_price": 10000,
   "discount_percent": 50,
-  "discount_vip_percent": 60,
+  "vip_discount_percent": 60,
   "available_count_for_sale": 500,
   "max_count_for_sale": 5,
   "priority": 0,

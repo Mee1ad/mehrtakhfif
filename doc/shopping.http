@@ -7,7 +7,7 @@ POST {{host}}/basket
 Content-Type: Application/json
 
 {
-  "products": [{"id": 7, "count":  1}, {"id": 23, "count":  2}, {"id": 26, "count":  3}],
+  "products": [{"id": 1, "count":  5}, {"id": 2, "count":  3}, {"id": 3, "count":  1}, {"id": 3, "count":  2}],
   "override": true,
   "add": true
 }
@@ -23,13 +23,16 @@ Content-Type: Application/json
 }
 
 
-### get payment: basket_id
-GET {{host}}/payment/30
-###
+### get payment: basket_id, ipg_id: default = 1
+GET {{host}}/payment/31?ipg_id=1
+
+### for ipg
 POST {{host}}/callback
 Content-Type: Application/json
 
 {
-	"OrderId": 100,
-	"Description": ""
+	"OrderId": 102,
+	"Description": "this is a test payment"
 }
+
+###
