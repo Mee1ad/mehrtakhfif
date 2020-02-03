@@ -7,9 +7,6 @@ from server.serialize import *
 from server.views.utils import *
 
 
-# todo use start time for filter products
-
-
 class GetSlider(View):
     def get(self, request):
         slider = Slider.objects.select_related(*Slider.select).all()
@@ -26,8 +23,8 @@ class GetSpecialOffer(View):
 
 class GetSpecialProduct(View):
     def get(self, request):
-        special_product = SpecialProduct.objects.select_related(*SpecialProduct.select).filter(special=True)
-        res = {'special_product': MinSpecialProductSchema(language=request.lang).dump(special_product, many=True)}
+        special_product = SpecialProduct.objects.select_related(*SpecialProduct.select).filter(special=True)[:5]
+        res = {'special_product': SpecialProductSchema(language=request.lang).dump(special_product, many=True)}
         return JsonResponse(res)
 
 
@@ -43,7 +40,7 @@ class BoxesGetSpecialProduct(View):
             box_special_product = SpecialProduct.objects.select_related(*SpecialProduct.select).filter(box=box) \
                 [(page - 1) * step:step * page]
             box = {'id': box.pk, 'name': box.name[language], 'key': box.permalink}
-            box['special_products'] = MinSpecialProductSchema(request.lang).dump(box_special_product, many=True)
+            box['special_products'] = SpecialProductSchema(request.lang).dump(box_special_product, many=True)
             products.append(box)
         res = {'products': products}
         return JsonResponse(res)

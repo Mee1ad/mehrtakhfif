@@ -4,7 +4,7 @@ import pysnooper
 from secrets import token_hex
 from datetime import date
 from django.utils import timezone
-from server.models import BasketProduct, FeatureStorage, CostumeHousePrice, Book, Comment
+from server.models import BasketProduct, FeatureStorage, CostumeHousePrice, Book, Comment, Invoice
 import time
 
 
@@ -174,12 +174,8 @@ class BaseSchema(Schema):
     def get_feature_value(self, obj):
         new_value = []
         for item, index in zip(obj.value, range(len(obj.value))):
-            print(item)
             new_value.append({'name': item[self.lang], 'id': item['id']})
         return new_value
-
-    def get_created_at(self, obj):
-        return obj.created_at.timestamp()
 
 
 class UserSchema(BaseSchema):
@@ -217,7 +213,7 @@ class MediaSchema(Schema):
         self.lang = language
 
     id = fields.Int()
-    type = fields.Str()
+    type = fields.Function(lambda o: o.get_type_display())
     file = fields.Method("get_file")
     title = fields.Method("get_title")
     box = fields.Function(lambda o: o.box_id)
@@ -226,7 +222,10 @@ class MediaSchema(Schema):
         return HOST + obj.file.url
 
     def get_title(self, obj):
-        return obj.title[self.lang]
+        try:
+            return obj.title[self.lang]
+        except KeyError:
+            return obj.title
 
 
 class CategorySchema(BaseSchema):
@@ -263,7 +262,7 @@ class ParentSchema(BaseSchema):
 class FeatureSchema(BaseSchema):
     id = fields.Int()
     name = fields.Method('get_feature_name')
-    type = fields.Function(lambda o: o.type)
+    type = fields.Function(lambda o: o.get_type_display())
     value = fields.Method('get_feature_value')
 
 
@@ -286,9 +285,10 @@ class BrandSchema(BaseSchema):
 
 class ProductSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'permalink', 'gender', 'type', 'address', 'short_address', 'rate')
+        additional = ('id', 'permalink', 'gender', 'address', 'short_address', 'rate')
 
     name = fields.Method("get_name")
+    type = fields.Function(lambda o: o.get_type_display())
     brand = fields.Method("get_brand")
     box = fields.Method("get_box")
     category = fields.Method("get_category")
@@ -314,9 +314,10 @@ class MinProductSchema(BaseSchema):
 
 class SliderSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'type', 'link')
+        additional = ('id', 'link')
 
     title = fields.Method('get_title')
+    type = fields.Function(lambda o: o.get_type_display())
     product = fields.Method("get_permalink")
     media = fields.Method("get_media")
 
@@ -350,7 +351,17 @@ class BasketProductSchema(BaseSchema):
     class Meta:
         additional = ('count',)
 
-    product = fields.Nested(MinProductSchema())
+    product = fields.Method("get_min_product")
+    feature = fields.Method("get_basket_feature")
+
+    def get_basket_feature(self, obj):
+        features = []
+        for feature in obj.feature:
+            fs = obj.storage.featurestorage_set.get(feature_id=feature['fid'])
+            fname = obj.storage.feature.get(pk=feature['fid']).name[self.lang]
+            price = next(item['price'] for item in fs.value if item['fvid'] == feature['fvid'])
+            features.append({"name": fname, "price": price})
+        return features
 
 
 class BasketSchema(BaseSchema):
@@ -375,30 +386,46 @@ class BlogPostSchema(BaseSchema):
 
 class CommentSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'text', 'type', 'approved', 'rate')
+        additional = ('id', 'text', 'approved', 'rate')
 
-    user = fields.Function(lambda o: o.user_id)
+    user = fields.Function(lambda o: {"name": o.user.first_name + " " + o.user.last_name,
+                                      "avatar": HOST + o.user.avatar.file.url})
+    type = fields.Function(lambda o: o.get_type_display())
     reply_count = fields.Method('get_reply_count')
-    created_at = fields.Method("get_created_at")
+    created_at = fields.Function(lambda o: o.created_at.timestamp())
+    purchase_at = fields.Method("get_purchase_time")
+    satisfied = fields.Method("get_satisfied")
+
+    def is_rate(self, obj):
+        if obj.get_type_display() == 'rate':
+            return True
+        return False
+
+    def get_satisfied(self, obj):
+        if self.is_rate(obj):
+            return obj.satisfied
+        return None
+
+    def get_purchase_time(self, obj):
+        if not self.is_rate(obj):
+            return None
+        try:
+            return Invoice.objects.get(user=obj.user, status='payed',
+                                       storages__product=obj.product).payed_at.timestamp()
+        except Invoice.DoesNotExist:
+            return None
 
     def get_reply_count(self, obj):
         comments = Comment.objects.filter(product=obj.product, type=obj.type, reply_to=obj)
         return comments.count()
 
 
-# todo
-class InvoiceSchema(BaseSchema):
-    class Meta:
-        additional = ('id', 'amount', 'status', 'discount_price', 'created_at', 'final_price')
-
-    created_at = fields.Method("get_created_at")
-
-
 class MenuSchema(BasketSchema):
     class Meta:
-        additional = ('id', 'type', 'url', 'value', 'priority')
+        additional = ('id', 'url', 'value', 'priority')
 
     name = fields.Method('get_name')
+    type = fields.Function(lambda o: o.get_type_display())
     parent = fields.Function(lambda o: o.parent_id)
     media = fields.Method('get_media')
 
@@ -427,23 +454,14 @@ class SpecialOfferSchema(BaseSchema):
 
 class SpecialProductSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'type', 'link', 'url')
-
-    name = fields.Method('get_name')
-    thumbnail = fields.Function(lambda o: HOST + o.thumbnail.file.url)
-    description = fields.Method('get_description')
-    storages = fields.Method("get_storage")
-    media = fields.Method('get_media')
-
-
-class MinSpecialProductSchema(BaseSchema):
-    class Meta:
         additional = ('id', 'url')
 
     name = fields.Method('get_name')
     label_name = fields.Method('get_label_name')
     product_name = fields.Method('get_product_name')
-    default_storage = fields.Method('get_min_storage')
+    storage = fields.Method('get_min_storage')
+    # media = fields.Method('get_media')
+    description = fields.Method('get_description')
     thumbnail = fields.Function(lambda o: HOST + o.thumbnail.file.url)
     permalink = fields.Function(lambda o: o.storage.product.permalink)
 
@@ -468,19 +486,20 @@ class WalletDetailSchema(Schema):
         additional = ('id', 'credit', 'user')
 
 
-# todo user view
 class WishListSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'type', 'notify')
+        additional = ('id', 'notify')
 
     product = fields.Method("get_min_product")
+    type = fields.Function(lambda o: o.get_type_display())
 
 
 class NotifyUserSchema(Schema):
     class Meta:
-        additional = ('id', 'user', 'type', 'notify')
+        additional = ('id', 'user', 'notify')
 
     product = fields.Method("get_product")
+    type = fields.Function(lambda o: o.get_type_display())
     category = fields.Method("get_category")
     box = fields.Method("get_box")
 

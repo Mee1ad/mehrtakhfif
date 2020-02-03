@@ -8,25 +8,21 @@ from server.views.utils import View, get_pagination, load_data
 from statistics import mean, StatisticsError
 
 
-class Single(View):
-
+class ProductView(View):
     def get(self, request, permalink):
         lang = request.lang
         user = request.user
-        try:
-            product = Product.objects.filter(permalink=permalink).prefetch_related(*Product.prefetch).first()
-            if product is None:
-                return JsonResponse({}, status=404)
-            storages = Storage.objects.filter(product=product)
-            product = ProductSchema(lang).dump(product)
-            product['category'] = self.get_category(product['category'])
-            product['storages'] = StorageSchema(lang).dump(storages, many=True)
-            purchased = False
-            if user.is_authenticated:
-                purchased = self.purchase_status(user, storages)
-            return JsonResponse({'product': product, 'purchased': purchased})
-        except Product.DoesNotExist:
+        product = Product.objects.filter(permalink=permalink).prefetch_related(*Product.prefetch).first()
+        if product is None:
             return JsonResponse({}, status=404)
+        storages = product.storage_set.filter(start_time__lte=timezone.now())
+        product = ProductSchema(lang).dump(product)
+        product['category'] = self.get_category(product['category'])
+        product['storages'] = StorageSchema(lang).dump(storages, many=True)
+        purchased = False
+        if user.is_authenticated:
+            purchased = self.purchase_status(user, storages)
+        return JsonResponse({'product': product, 'purchased': purchased})
 
     def get_category(self, category):
         try:
@@ -42,12 +38,7 @@ class Single(View):
             return category
 
     def purchase_status(self, user, storages):
-        invoices = Invoice.objects.filter(user=user, status='payed').select_related(*Invoice.select)
-        for invoice in invoices:
-            purchased = BasketProduct.objects.filter(basket=invoice.basket, storage__in=storages)
-            if purchased:
-                return True
-        return False
+        return True if Invoice.objects.filter(user=user, status='payed', storages__in=storages).exists() else False
 
 
 class RelatedProduct(View):
@@ -76,6 +67,7 @@ class CommentView(View):
         data = load_data(request)
         reply_to_id = data.get('reply_to_id', None)
         rate = data.get('rate', None)
+        satisfied = data.get('satisfied', None)
         cm_type = data['type']
         product_id = data.get('product_id')
         blog_post_id = data.get('blog_post_id')
@@ -83,7 +75,7 @@ class CommentView(View):
         if reply_to_id:
             assert Comment.objects.filter(pk=reply_to_id).exists()
         Comment.objects.create(text=data['text'], user=request.user, reply_to_id=reply_to_id, type=cm_type,
-                               rate=rate, **post)
+                               rate=rate, satisfied=satisfied, **post)
         return JsonResponse({}, status=201)
 
     def delete(self, request):
