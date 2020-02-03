@@ -18,9 +18,6 @@ from mehr_takhfif.settings import HOST
 import datetime
 
 
-# todo permalink in not null
-
-
 def multilanguage():
     return {"fa": "",
             "en": "",
@@ -91,13 +88,13 @@ def next_month():
 
 
 def upload_to(instance, filename):
-    if instance.type == 'avatar':
+    if instance.type == 7:  # avatar
         return f'avatar/{filename}'
     date = timezone.now().strftime("%Y-%m-%d")
     time = timezone.now().strftime("%H-%M-%S-%f")[:-4]
     # file_type = re.search('\\w+', instance.type)[0]
     file_format = os.path.splitext(instance.file.name)[-1]
-    return f'boxes/{instance.box_id}/{date}/{instance.type}/{time}{file_format}'
+    return f'boxes/{instance.box_id}/{date}/{instance.get_type_display()}/{time}{file_format}'
 
 
 class MyManager(models.Manager):
@@ -229,7 +226,7 @@ class Box(Base):
 
     objects = MyManager()
     name = JSONField(default=multilanguage)
-    permalink = models.CharField(max_length=255, unique=True, null=True)
+    permalink = models.CharField(max_length=255, db_index=True, unique=True)
     admin = models.OneToOneField(User, on_delete=PROTECT)
 
     class Meta:
@@ -244,8 +241,8 @@ class Media(Base):
         except KeyError:
             return self.title['user_id']
 
-    def save2(self, *args, **kwargs):
-        if not self.type == 'avatar':
+    def save(self, *args, **kwargs):
+        if not self.type == 7:
             sizes = {'small': (200, 200), 'medium': (500, 500), 'large': (800, 800)}
             super().save(*args, **kwargs)
             name = self.file.name
@@ -261,9 +258,9 @@ class Media(Base):
 
     file = models.FileField(upload_to=upload_to)
     title = JSONField(default=multilanguage)
-    type = models.CharField(max_length=255, choices=[('video', 'video'), ('image', 'image'), ('audio', 'audio'),
-                                                     ('slider', 'slider'), ('ads', 'ads'), ('thumbnail', 'thumbnail'),
-                                                     ('avatar', 'avatar')])
+    type = models.PositiveSmallIntegerField(choices=[(1, 'image'), (2, 'video'), (3, 'audio'),
+                                                     (4, 'slider'), (5, 'ads'), (6, 'thumbnail'),
+                                                     (7, 'avatar')])
     box = models.ForeignKey(Box, on_delete=models.CASCADE, null=True, blank=True)
 
     class Meta:
@@ -280,7 +277,7 @@ class Category(Base):
     parent = models.ForeignKey("self", on_delete=CASCADE, null=True, blank=True)
     box = models.ForeignKey(Box, on_delete=CASCADE)
     name = JSONField(default=multilanguage)
-    permalink = models.CharField(max_length=255, unique=True, null=True)
+    permalink = models.CharField(max_length=255, db_index=True, unique=True)
     priority = models.SmallIntegerField(default=0)
     disable = models.BooleanField(default=False)
     media = models.ForeignKey(Media, on_delete=CASCADE, null=True, blank=True)
@@ -296,7 +293,7 @@ class Feature(Base):
         return f"{self.id}"
 
     name = JSONField(default=multilanguage)
-    type = models.CharField(max_length=255, default='bool')
+    type = models.CharField(max_length=255, choices=((1, 'bool'), (2, 'single'), (3, 'multi')))
     value = JSONField(default=feature_value)
     category = models.ManyToManyField(Category)
     box = models.ForeignKey(Box, on_delete=CASCADE, blank=True, null=True)
@@ -312,7 +309,7 @@ class Tag(Base):
         return f"{self.name['fa']}"
 
     box = models.ForeignKey(Box, on_delete=CASCADE, blank=True, null=True)
-    permalink = models.CharField(max_length=255, unique=True, null=True)
+    permalink = models.CharField(max_length=255, db_index=True, unique=True)
     name = JSONField(default=multilanguage)
 
     class Meta:
@@ -332,7 +329,7 @@ class Brand(Base):
 class Product(Base):
     select = ['category', 'box', 'thumbnail']
     prefetch = ['tag', 'media']
-    filter = []
+    filter = {"verify": True, "disable": False}
 
     def __str__(self):
         return f"{self.name['fa']}"
@@ -377,9 +374,8 @@ class Product(Base):
     verify = models.BooleanField(default=False)
     address = models.CharField(max_length=255, null=True, blank=True)
     short_address = models.CharField(max_length=255, null=True, blank=True)
-    type = models.CharField(max_length=255, choices=[(
-        'service', 'service'), ('product', 'product')])
-    permalink = models.CharField(max_length=255, blank=True, null=True, db_index=True, unique=True)
+    type = models.PositiveSmallIntegerField(choices=[(1, 'service'), (2, 'product'), (3, 'code')])
+    permalink = models.CharField(max_length=255, db_index=True, unique=True)
 
     name = JSONField(default=multilanguage)
     # name = pg_search.SearchVectorField(null=True)
@@ -389,14 +385,23 @@ class Product(Base):
     properties = JSONField(default=product_properties)
     details = JSONField(default=product_details)
 
-    # todo not null
-
     # home_buissiness =
     # support_description =
     class Meta:
         db_table = 'product'
-        # indexes = [GinIndex(fields=['name'])]
         ordering = ['-updated_at']
+
+
+class DiscountCode(Base):
+    box = models.ForeignKey(Box, on_delete=PROTECT)
+    product = models.ForeignKey(Product, on_delete=PROTECT, null=True, blank=True)
+    special_product = models.ForeignKey("SpecialProduct", on_delete=PROTECT, null=True, blank=True)
+    special_offer = models.ForeignKey("SpecialOffer", on_delete=PROTECT, null=True, blank=True)
+    available = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = 'discount_code'
+        ordering = ['-id']
 
 
 class Storage(Base):
@@ -405,6 +410,11 @@ class Storage(Base):
 
     def __str__(self):
         return f"{self.product}"
+
+    def save(self, *args, **kwargs):
+        if self.discount_price < self.start_price:
+            raise ValidationError("discount price is less than start price")
+        super().save(*args, **kwargs)
 
     product = models.ForeignKey(Product, on_delete=PROTECT)
     feature = models.ManyToManyField(Feature, blank=True, through='FeatureStorage')
@@ -425,14 +435,18 @@ class Storage(Base):
     deadline = models.DateTimeField(default=next_month)
     start_time = models.DateTimeField(auto_now_add=True)
     title = JSONField(default=multilanguage)
-
-    # box = models.ForeignKey(Box, on_delete=PROTECT)
-    # category = models.ForeignKey(Category, on_delete=CASCADE)
-    # default = models.BooleanField(default=False)
+    supplier = models.ManyToManyField(User, through='StorageSupplier')
 
     class Meta:
         db_table = 'storage'
         ordering = ['-id']
+
+
+class StorageSupplier(models.Model):
+    id = models.AutoField(auto_created=True, primary_key=True)
+    user = models.ForeignKey(User, on_delete=PROTECT)
+    storage = models.ForeignKey(Storage, on_delete=PROTECT)
+    percent = models.PositiveSmallIntegerField()
 
 
 class FeatureStorage(models.Model):
@@ -482,6 +496,7 @@ class BasketProduct(models.Model):
     basket = models.ForeignKey(Basket, on_delete=PROTECT)
     count = models.IntegerField(default=1)
     box = models.ForeignKey(Box, on_delete=PROTECT)
+    feature = JSONField(default=list)
 
     class Meta:
         db_table = 'basket_product'
@@ -508,7 +523,7 @@ class BlogPost(Base):
 
     blog = models.ForeignKey(Blog, on_delete=CASCADE, blank=True, null=True)
     body = JSONField(blank=True, null=True)
-    permalink = models.URLField(blank=True, null=True)
+    permalink = models.CharField(max_length=255, db_index=True, unique=True)
     media = models.ForeignKey(Media, on_delete=CASCADE, blank=True, null=True)
 
     class Meta:
@@ -531,11 +546,12 @@ class Comment(SafeDeleteModel):
                                    related_name='comment_deleted_by')
     text = models.TextField(null=True, blank=True)
     rate = models.PositiveSmallIntegerField(default=0, null=True)
+    satisfied = models.BooleanField(null=True, blank=True)
     approved = models.BooleanField(default=False)
     user = models.ForeignKey(User, on_delete=CASCADE)
     reply_to = models.ForeignKey('self', on_delete=CASCADE, blank=True, null=True)
     suspend = models.BooleanField(default=False)
-    type = models.CharField(max_length=255, choices=[(1, 'q-a'), (2, 'rate')])
+    type = models.PositiveSmallIntegerField(choices=[(1, 'q-a'), (2, 'rate')])
     product = models.ForeignKey(Product, on_delete=CASCADE, null=True, blank=True)
     blog_post = models.ForeignKey(BlogPost, on_delete=CASCADE, null=True, blank=True)
 
@@ -558,7 +574,7 @@ class Invoice(Base):
     basket = models.OneToOneField(to=Basket, on_delete=PROTECT, related_name='invoice_to_basket')
     storages = models.ManyToManyField(Storage, through='InvoiceStorage')
     payed_at = models.DateTimeField(blank=True, null=True, verbose_name='Payed at')
-    type = models.CharField(max_length=255, blank=True, null=True)
+    type = models.PositiveSmallIntegerField(blank=True, null=True)
     special_offer_id = models.BigIntegerField(blank=True, null=True, verbose_name='Special offer id')
     address = models.ForeignKey(to=Address, null=True, blank=True, on_delete=PROTECT)
     description = models.TextField(max_length=255, blank=True, null=True)
@@ -566,11 +582,8 @@ class Invoice(Base):
     final_price = models.IntegerField()
     tax = models.IntegerField()
     ipg = models.SmallIntegerField(default=1)
-    status = models.CharField(max_length=255, default='pending', choices=[('pending', 'pending'), ('payed', 'payed'),
-                                                                          ('canceled', 'canceled'),
-                                                                          ('rejected', 'rejected'),
-                                                                          ('new_invoice', 'new_invoice'),
-                                                                          ])
+    status = models.CharField(max_length=255, default='pending', choices=((1, 'pending'), (2, 'payed'), (3, 'canceled'),
+                                                                          (4, 'rejected'), (5, 'new_invoice')))
 
     class Meta:
         db_table = 'invoice'
@@ -604,7 +617,7 @@ class Menu(Base):
     def __str__(self):
         return f"{self.name['fa']}"
 
-    type = models.CharField(max_length=255, blank=True, null=True)
+    type = models.PositiveSmallIntegerField(choices=((1, 'home'),))
     name = JSONField(default=multilanguage)
     media = models.ForeignKey(Media, on_delete=PROTECT, blank=True, null=True)
     url = models.CharField(max_length=25, null=True, blank=True)
@@ -641,7 +654,7 @@ class Slider(Base):
     title = JSONField(default=multilanguage)
     product = models.ForeignKey(Product, on_delete=CASCADE, blank=True, null=True)
     media = models.ForeignKey(Media, on_delete=CASCADE)
-    type = models.CharField(max_length=255)
+    type = models.PositiveSmallIntegerField(null=True, blank=True, choices=((1, 'home'),))
     link = models.URLField(null=True, blank=True)
 
     class Meta:
@@ -679,19 +692,18 @@ class SpecialOffer(Base):
 
 
 class SpecialProduct(Base):
-    select = ['storage', 'media', 'thumbnail']
-    min_select = ['thumbnail']
+    select = ['storage', 'thumbnail']
 
     def __str__(self):
         return f"{self.storage}"
 
     storage = models.ForeignKey(Storage, on_delete=CASCADE, null=True, blank=True)
     thumbnail = models.ForeignKey(Media, on_delete=PROTECT, related_name='special_product_thumbnail')
-    box = models.ForeignKey(Box, on_delete=PROTECT)
-    category = models.ForeignKey(Category, on_delete=CASCADE)
-    media = models.ForeignKey(Media, on_delete=CASCADE, null=True, blank=True)
+    box = models.ForeignKey(Box, on_delete=PROTECT, null=True, blank=True)
+    category = models.ForeignKey(Category, on_delete=CASCADE, null=True, blank=True)
+    # media = models.ForeignKey(Media, on_delete=CASCADE, null=True, blank=True)
     special = models.BooleanField(default=False, null=True, blank=True)
-    type = models.CharField(max_length=255, )
+    # type = models.PositiveSmallIntegerField(choices=[(1, 'service'), (2, 'product'), (3, 'code')])
     url = models.URLField(null=True, blank=True)
     name = JSONField(default=multilanguage, null=True, blank=True)
     label_name = JSONField(default=multilanguage, null=True, blank=True)
@@ -723,7 +735,7 @@ class NotifyUser(models.Model):
 
     id = models.BigAutoField(auto_created=True, primary_key=True)
     user = models.ForeignKey(User, on_delete=CASCADE)
-    type = models.CharField(max_length=255)
+    type = models.PositiveSmallIntegerField(null=True, blank=True)
     category = models.ForeignKey(Category, on_delete=CASCADE)
     box = models.ForeignKey(Box, on_delete=CASCADE)
 

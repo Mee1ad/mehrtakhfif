@@ -268,10 +268,13 @@ def user_data_with_pagination(model, serializer, request):
 
 def calculate_profit(products):
     # TypeError: default storage is list but have one member
-    total_price = sum([product['product']['default_storage']['final_price'] * product['count']
-                       for product in products])
+    total_price = sum([product['product']['default_storage']['final_price'] * product['count'] for product in products])
     discount_price = sum(
         [product['product']['default_storage']['discount_price'] * product['count'] for product in products])
+    feature_price = sum([sum([feature['price'] for feature in product['feature']]) * product['count']
+                         for product in products])
+    discount_price += feature_price
+    total_price += feature_price
     profit = total_price - discount_price
     return {'total_price': total_price, 'discount_price': discount_price, 'profit': profit, 'shopping_cost': 0}
 

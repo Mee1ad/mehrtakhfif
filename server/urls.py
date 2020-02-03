@@ -35,7 +35,7 @@ box = [
 ]
 
 product = [
-    path('product/<str:permalink>', product.Single.as_view(), name='single'),
+    path('product/<str:permalink>', product.ProductView.as_view(), name='single'),
     path('comment', product.CommentView.as_view(), name='comment'),
     path('related_products/<str:permalink>', product.RelatedProduct.as_view(), name='related_products'),
 ]

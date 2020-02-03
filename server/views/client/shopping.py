@@ -63,7 +63,8 @@ class BasketView(LoginRequired):
                     continue
                 product = Storage.objects.filter(id=pk)
                 if product.exists():
-                    BasketProduct(basket=basket, storage_id=pk, count=count, box=product.first().product.box).save()
+                    BasketProduct.objects.create(basket=basket, storage_id=pk, count=count,
+                                                 box=product.first().product.box, )
                     continue
             except AssertionError:
                 product.update(count=count)
