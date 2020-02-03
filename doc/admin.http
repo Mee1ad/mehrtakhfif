@@ -22,7 +22,24 @@ Content-Type: Application/json
 }
 
 
+### Check Prices with price
+POST {{admin_host}}/check_prices
+Content-Type: Application/json
 
+{
+  "final_price": 20000,
+  "discount_price": 16000,
+  "vip_discount_price": 10000
+}
+### Check Prices with percent
+POST {{admin_host}}/check_prices
+Content-Type: Application/json
+
+{
+  "final_price": 60000,
+  "discount_percent": 10,
+  "vip_discount_percent": 15
+}
 
 
 

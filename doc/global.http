@@ -1,5 +1,21 @@
-### Available routes: slider, special_offer, special_product, box_special_product, best_seller, box_with_category,
-###                   ads, category, menu, get_states
+GET {{host}}/slider
+###
+GET {{host}}/special_offer
+###
+GET {{host}}/special_product
+###
+GET {{host}}/box_special_product
+###
+GET {{host}}/best_seller
+###
+GET {{host}}/box_with_category
+###
+GET {{host}}/ads
+###
+GET {{host}}/category
+###
+GET {{host}}/menu
+###
 GET {{host}}/get_states
 ###
 GET {{host}}/get_cities/26

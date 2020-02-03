@@ -20,10 +20,11 @@ POST {{host}}/comment
 Content-Type: Application/json
 
 {
-	"text": "راضی  بودی؟",
+	"text": "راضی  بودی؟7",
 	"type": 2,
-	"product_id": 25,
-    "rate": 4
+	"product_id": 23,
+    "rate": 10,
+    "satisfied": false
 }
 ### type 1 question
 POST {{host}}/comment
@@ -32,7 +33,7 @@ Content-Type: Application/json
 {
 	"text": "راضی  بودی؟",
 	"type": 2,
-	"product_id": 25
+	"product_id": 23
 }
 ### type 1 answer
 POST {{host}}/comment
@@ -40,9 +41,9 @@ Content-Type: Application/json
 
 {
 	"text": "راضی  بودی؟",
-	"type": 2,
+	"type": 1,
     "reply_to_id": 49,
-	"product_id": 25
+	"product_id": 23
 }
 ###
 
