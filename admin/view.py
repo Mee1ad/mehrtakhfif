@@ -7,7 +7,7 @@ from django.http import JsonResponse
 from django.views import View
 from django.core.mail import send_mail
 from server.models import *
-from server.serialize import *
+from admin.serializer import *
 from django.db.models import Q
 from server.views.auth import Login, Activate
 from django.contrib.auth import login
@@ -18,7 +18,7 @@ from server.views.utils import *
 class AdminView(LoginRequiredMixin, View):
 
     def serialized_objects(self, request, model, serializer):
-        pk = request.GET.get('pk', None)
+        pk = request.GET.get('id', None)
         if pk:
             obj = model.objects.get(pk=pk)
             return serializer().dump(obj)
@@ -129,7 +129,7 @@ class AdminActivate(AdminView):
             client_token = request.get_signed_cookie('token', False, salt=TOKEN_SALT)
             code = data['code']
             user = User.objects.get(Q(activation_code=code, token=client_token, is_ban=False,
-                                    activation_expire__gte=timezone.now()), (Q(is_staff=True) | Q(is_superuser=True)))
+                                      activation_expire__gte=timezone.now()), (Q(is_staff=True) | Q(is_superuser=True)))
             user.activation_expire = timezone.now()
             user.is_active = True
             user.save()
@@ -146,30 +146,39 @@ class AdminActivate(AdminView):
 class CheckPrices(AdminView):
     def post(self, request):
         data = json.loads(request.body)
-        sp = data['start_price']
         fp = data['final_price']
         dp = data.get('discount_price', None)
-        dvp = data.get('vip_discount_price', None)
+        vdp = data.get('vip_discount_price', None)
         dper = data.get('discount_percent', None)
-        dvper = data.get('vip_discount_percent', None)
+        vdper = data.get('vip_discount_percent', None)
 
-        if dp and dvp:
-            dper = 100 - dp / fp * 100
-            dvper = 100 - dvp / fp * 100
-            if dper < sp or dvper < sp:
-                return JsonResponse({}, status=res_code['bad_request'])
-            return JsonResponse({'discount_percent': "%.2f" % dper, 'vip_discount_percent': "%.2f" % dvper})
-        elif dper and dvper:
-            pass
+        if dp and vdp:
+            dper = int(100 - dp / fp * 100)
+            dvper = int(100 - vdp / fp * 100)
+            return JsonResponse({'discount_percent': dper, 'vip_discount_percent': dvper})
+        elif dper and vdper:
+            dp = int(fp - fp * dper / 100)
+            vdp = int(fp - fp * vdper / 100)
+            return JsonResponse({'discount_price': dp, 'vip_discount_price': vdp})
+        return JsonResponse({})
+
+
+class GenerateCode(AdminView):
+    def post(self, request):
+        data = load_data(request)
+        product = data.get('start_price')
+        special_product = data.get('special_product')
+        special_offer = data.get('special_offer')
+        price = data.get['price']
 
 
 class CategoryView(AdminView):
 
     def get(self, request):
-        return JsonResponse({'data': self.serialized_objects(request, Category, CategorySchema)})
+        return JsonResponse({'data': self.serialized_objects(request, Category, CategoryAdminSchema)})
 
     def post(self, request):
-        last_items = self.create_object(request, Category, CategorySchema)
+        last_items = self.create_object(request, Category, CategoryAdminSchema)
         return JsonResponse(last_items, status=201)
 
     def patch(self, request):
@@ -187,13 +196,30 @@ class CategoryView(AdminView):
         return self.delete_base(request, Category)
 
 
+class BrandView(AdminView):
+
+    def get(self, request):
+        return JsonResponse({'data': self.serialized_objects(request, Brand, BrandAdminSchema)})
+
+    def post(self, request):
+        last_items = self.create_object(request, Brand, BrandAdminSchema)
+        return JsonResponse(last_items, status=201)
+
+    def put(self, request):
+        self.update_object(request, Brand)
+        return JsonResponse({})
+
+    def delete(self, request):
+        return self.delete_base(request, Brand)
+
+
 class FeatureView(AdminView):
 
     def get(self, request):
-        return JsonResponse(self.serialized_objects(request, Feature, FeatureSchema))
+        return JsonResponse(self.serialized_objects(request, Feature, FeatureAdminSchema))
 
     def post(self, request):
-        items = self.create_object(request, Feature, FeatureSchema)
+        items = self.create_object(request, Feature, FeatureAdminSchema)
         return JsonResponse(items, status=201)
 
     def put(self, request):
@@ -207,10 +233,10 @@ class FeatureView(AdminView):
 class ProductView(AdminView):
 
     def get(self, request):
-        return self.serialized_objects(request, Product, ProductSchema)
+        return JsonResponse({'data': self.serialized_objects(request, Product, ProductAdminSchema)})
 
     def post(self, request):
-        items = self.create_object(request, Product, MinProductSchema)
+        items = self.create_object(request, Product, ProductAdminSchema)
         return JsonResponse(items, status=201)
 
     def patch(self, request):
@@ -233,10 +259,10 @@ class ProductView(AdminView):
 class StorageView(AdminView):
 
     def get(self, request):
-        return self.serialized_objects(request, Storage, StorageSchema)
+        return JsonResponse({'data': self.serialized_objects(request, Storage, StorageAdminSchema)})
 
     def post(self, request):
-        storage = self.create_object(request, Storage, MinStorageSchema)
+        storage = self.create_object(request, Storage, StorageAdminSchema)
 
         return JsonResponse(storage, status=201)
 
@@ -255,13 +281,25 @@ class StorageView(AdminView):
         return self.delete_base(request, Storage)
 
 
+class InvoiceView(AdminView):
+    def get(self, request):
+        return JsonResponse({'data': self.serialized_objects(request, Invoice, InvoiceAdminSchema)})
+
+
+class InvoiceStorageView(AdminView):
+    def get(self, request):
+        pk = request.GET.get('id', 0)
+        storages = InvoiceStorage.objects.filter(invoice_id=pk)
+        return JsonResponse({'data': InvoiceStorageAdminSchema().dump(storages, many=True)})
+
+
 class MenuView(AdminView):
 
     def get(self, request):
-        return self.serialized_objects(request, Menu, MenuSchema)
+        return JsonResponse({'data': self.serialized_objects(request, Menu, MenuAdminSchema)})
 
     def post(self, request):
-        items = self.create_object(request, Menu, MenuSchema)
+        items = self.create_object(request, Menu, MenuAdminSchema)
         return JsonResponse(items, status=201)
 
     def put(self, request):
@@ -275,10 +313,10 @@ class MenuView(AdminView):
 class TagView(AdminView):
 
     def get(self, request):
-        return self.serialized_objects(request, Tag, TagSchema)
+        return JsonResponse({'data': self.serialized_objects(request, Tag, TagAdminSchema)})
 
     def post(self, request):
-        items = self.create_object(request, Tag, TagSchema)
+        items = self.create_object(request, Tag, TagAdminSchema)
         return JsonResponse(items, status=201)
 
     def put(self, request):
@@ -292,10 +330,10 @@ class TagView(AdminView):
 class SpecialOfferView(AdminView):
 
     def get(self, request):
-        return self.serialized_objects(request, SpecialOffer, SpecialOfferSchema)
+        return JsonResponse({'data': self.serialized_objects(request, SpecialOffer, SpecialOfferAdminSchema)})
 
     def post(self, request):
-        items = self.create_object(request, SpecialOffer, SpecialOfferSchema)
+        items = self.create_object(request, SpecialOffer, SpecialOfferAdminSchema)
         return JsonResponse(items, status=201)
 
     def put(self, request):
@@ -306,13 +344,13 @@ class SpecialOfferView(AdminView):
         return self.delete_base(request, SpecialOffer)
 
 
-class SpecialProductsView(AdminView):
+class SpecialProductView(AdminView):
 
     def get(self, request):
-        return self.serialized_objects(request, SpecialProduct, SpecialProductSchema)
+        return JsonResponse({'data': self.serialized_objects(request, SpecialProduct, SpecialProductSchema)})
 
     def post(self, request):
-        items = self.create_object(request, SpecialProduct, MinSpecialProductSchema)
+        items = self.create_object(request, SpecialProduct, SpecialProductSchema)
         return JsonResponse(items, status=201)
 
     def put(self, request):
@@ -324,6 +362,9 @@ class SpecialProductsView(AdminView):
 
 
 class MediaView(AdminView):
+    def get(self, request):
+        return JsonResponse({'data': self.serialized_objects(request, Media, MediaAdminSchema)})
+
     def post(self, request):
         data = json.loads(request.POST.get('data'))
         titles = data['titles']
@@ -333,14 +374,17 @@ class MediaView(AdminView):
             return JsonResponse({})
         return JsonResponse({}, status=res_code['bad_request'])
 
+    def delete(self, request):
+        return self.delete_base(request, Media)
+
 
 class BlogView(AdminView):
 
     def get(self, request):
-        return self.serialized_objects(request, Blog, BlogSchema)
+        return JsonResponse({'data': self.serialized_objects(request, Blog, BlogAdminSchema)})
 
     def post(self, request):
-        items = self.create_object(request, Blog, BlogSchema)
+        items = self.create_object(request, Blog, BlogAdminSchema)
         return JsonResponse(items, status=201)
 
     def put(self, request):
@@ -354,10 +398,10 @@ class BlogView(AdminView):
 class BlogPostView(AdminView):
 
     def get(self, request):
-        return self.serialized_objects(request, BlogPost, BlogPostSchema)
+        return JsonResponse({'data': self.serialized_objects(request, BlogPost, BlogPostAdminSchema)})
 
     def post(self, request):
-        items = self.create_object(request, BlogPost, BlogPostSchema)
+        items = self.create_object(request, BlogPost, BlogPostAdminSchema)
         return JsonResponse(items, status=201)
 
     def put(self, request):
@@ -380,6 +424,9 @@ class MailView(AdminView):
 
 
 class CommentView(AdminView):
+    def get(self, request):
+        return JsonResponse({'data': self.serialized_objects(request, Comment, CommentAdminSchema)})
+
     def patch(self, request):
         data = self.get_data(request)
         pk = data['id']
