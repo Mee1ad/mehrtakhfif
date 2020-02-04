@@ -110,6 +110,7 @@ static/*
 media/*
 htmlcov/*
 settings.json
+settings_var.py
 staticfiles
 celerybeat.pid
 celerybeat-schedule
