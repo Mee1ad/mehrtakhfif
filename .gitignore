@@ -104,11 +104,13 @@ venv.bak/
 .mypy_cache/
 
 */migrations/*
-settings.json
-staticfiles
+static/*
 .idea/*
 .vscode/*
 media/*
 htmlcov/*
-
+settings.json
+staticfiles
+celerybeat.pid
+celerybeat-schedule
 !media/.gitkeep
