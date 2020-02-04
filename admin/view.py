@@ -21,7 +21,7 @@ class AdminView(LoginRequiredMixin, View):
         pk = request.GET.get('id', None)
         if pk:
             obj = model.objects.get(pk=pk)
-            return serializer().dump(obj)
+            return {"data": serializer().dump(obj)}
         query = model.objects.all()
         return get_pagination(query, request.step, request.page, serializer)
 
@@ -175,7 +175,7 @@ class GenerateCode(AdminView):
 class CategoryView(AdminView):
 
     def get(self, request):
-        return JsonResponse({'data': self.serialized_objects(request, Category, CategoryAdminSchema)})
+        return JsonResponse(self.serialized_objects(request, Category, CategoryAdminSchema))
 
     def post(self, request):
         last_items = self.create_object(request, Category, CategoryAdminSchema)
@@ -199,7 +199,7 @@ class CategoryView(AdminView):
 class BrandView(AdminView):
 
     def get(self, request):
-        return JsonResponse({'data': self.serialized_objects(request, Brand, BrandAdminSchema)})
+        return JsonResponse(self.serialized_objects(request, Brand, BrandAdminSchema))
 
     def post(self, request):
         last_items = self.create_object(request, Brand, BrandAdminSchema)
@@ -233,7 +233,7 @@ class FeatureView(AdminView):
 class ProductView(AdminView):
 
     def get(self, request):
-        return JsonResponse({'data': self.serialized_objects(request, Product, ProductAdminSchema)})
+        return JsonResponse(self.serialized_objects(request, Product, ProductAdminSchema))
 
     def post(self, request):
         items = self.create_object(request, Product, ProductAdminSchema)
@@ -259,7 +259,7 @@ class ProductView(AdminView):
 class StorageView(AdminView):
 
     def get(self, request):
-        return JsonResponse({'data': self.serialized_objects(request, Storage, StorageAdminSchema)})
+        return JsonResponse(self.serialized_objects(request, Storage, StorageAdminSchema))
 
     def post(self, request):
         storage = self.create_object(request, Storage, StorageAdminSchema)
@@ -283,7 +283,7 @@ class StorageView(AdminView):
 
 class InvoiceView(AdminView):
     def get(self, request):
-        return JsonResponse({'data': self.serialized_objects(request, Invoice, InvoiceAdminSchema)})
+        return JsonResponse(self.serialized_objects(request, Invoice, InvoiceAdminSchema))
 
 
 class InvoiceStorageView(AdminView):
@@ -296,7 +296,7 @@ class InvoiceStorageView(AdminView):
 class MenuView(AdminView):
 
     def get(self, request):
-        return JsonResponse({'data': self.serialized_objects(request, Menu, MenuAdminSchema)})
+        return JsonResponse(self.serialized_objects(request, Menu, MenuAdminSchema))
 
     def post(self, request):
         items = self.create_object(request, Menu, MenuAdminSchema)
@@ -313,7 +313,7 @@ class MenuView(AdminView):
 class TagView(AdminView):
 
     def get(self, request):
-        return JsonResponse({'data': self.serialized_objects(request, Tag, TagAdminSchema)})
+        return JsonResponse(self.serialized_objects(request, Tag, TagAdminSchema))
 
     def post(self, request):
         items = self.create_object(request, Tag, TagAdminSchema)
@@ -330,7 +330,7 @@ class TagView(AdminView):
 class SpecialOfferView(AdminView):
 
     def get(self, request):
-        return JsonResponse({'data': self.serialized_objects(request, SpecialOffer, SpecialOfferAdminSchema)})
+        return JsonResponse(self.serialized_objects(request, SpecialOffer, SpecialOfferAdminSchema))
 
     def post(self, request):
         items = self.create_object(request, SpecialOffer, SpecialOfferAdminSchema)
@@ -347,7 +347,7 @@ class SpecialOfferView(AdminView):
 class SpecialProductView(AdminView):
 
     def get(self, request):
-        return JsonResponse({'data': self.serialized_objects(request, SpecialProduct, SpecialProductSchema)})
+        return JsonResponse(self.serialized_objects(request, SpecialProduct, SpecialProductSchema))
 
     def post(self, request):
         items = self.create_object(request, SpecialProduct, SpecialProductSchema)
@@ -363,7 +363,7 @@ class SpecialProductView(AdminView):
 
 class MediaView(AdminView):
     def get(self, request):
-        return JsonResponse({'data': self.serialized_objects(request, Media, MediaAdminSchema)})
+        return JsonResponse(self.serialized_objects(request, Media, MediaAdminSchema))
 
     def post(self, request):
         data = json.loads(request.POST.get('data'))
@@ -381,7 +381,7 @@ class MediaView(AdminView):
 class BlogView(AdminView):
 
     def get(self, request):
-        return JsonResponse({'data': self.serialized_objects(request, Blog, BlogAdminSchema)})
+        return JsonResponse(self.serialized_objects(request, Blog, BlogAdminSchema))
 
     def post(self, request):
         items = self.create_object(request, Blog, BlogAdminSchema)
@@ -398,7 +398,7 @@ class BlogView(AdminView):
 class BlogPostView(AdminView):
 
     def get(self, request):
-        return JsonResponse({'data': self.serialized_objects(request, BlogPost, BlogPostAdminSchema)})
+        return JsonResponse(self.serialized_objects(request, BlogPost, BlogPostAdminSchema))
 
     def post(self, request):
         items = self.create_object(request, BlogPost, BlogPostAdminSchema)
@@ -425,7 +425,7 @@ class MailView(AdminView):
 
 class CommentView(AdminView):
     def get(self, request):
-        return JsonResponse({'data': self.serialized_objects(request, Comment, CommentAdminSchema)})
+        return JsonResponse(self.serialized_objects(request, Comment, CommentAdminSchema))
 
     def patch(self, request):
         data = self.get_data(request)

@@ -109,5 +109,6 @@ staticfiles
 .idea/*
 .vscode/*
 media/*
+htmlcov/*
 
 !media/.gitkeep
