@@ -110,3 +110,4 @@ settings.json
 staticfiles
 /.idea
 /.vscode/
+media/
