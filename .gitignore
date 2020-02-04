@@ -110,4 +110,6 @@ settings.json
 staticfiles
 /.idea
 /.vscode/
-media/
+media/*
+
+!media/.gitkeep
