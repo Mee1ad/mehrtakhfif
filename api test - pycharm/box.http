@@ -1,8 +1,0 @@
-GET {{host}}/box_detail/boom-gardi
-Content-Type: Application/json
-admin: True
-###
-GET {{host}}/box/boom-gardi?s=2&p=1
-Content-Type: Application/json
-admin: True
-###
