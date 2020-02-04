@@ -103,13 +103,11 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-/GameExchange 2
 */migrations/*
 settings.json
-.vscode/settings.json
 staticfiles
-/.idea
-/.vscode/
+.idea/*
+.vscode/*
 media/*
 
 !media/.gitkeep
