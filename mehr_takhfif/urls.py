@@ -19,7 +19,7 @@ from mehr_takhfif import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
-    path('admin_panel/', include('admin.urls')),
+    path('admin_panel/', include('mtadmin.urls')),
     path('admin/', admin.site.urls),
     path('', include('server.urls')),
     # path('admin/doc/', include('django.contrib.admindocs.urls')),

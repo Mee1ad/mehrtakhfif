@@ -7,7 +7,7 @@ from django.http import JsonResponse
 from django.views import View
 from django.core.mail import send_mail
 from server.models import *
-from admin.serializer import *
+from mtadmin.serializer import *
 from django.db.models import Q
 from server.views.auth import Login, Activate
 from django.contrib.auth import login

@@ -1,6 +1,6 @@
 from django.urls import path
-from admin.view import *
-from admin.decorator import error_handler
+from mtadmin.view import *
+from mtadmin.decorator import error_handler
 
 app_name = 'admin_panel'
 

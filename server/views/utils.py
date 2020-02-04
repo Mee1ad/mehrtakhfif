@@ -256,7 +256,10 @@ def get_pagination(query, step, page, serializer, language="fa"):
         count = query.count()
     except TypeError:
         count = len(query)
-    items = serializer(language=language).dump(query[(page - 1) * step: step * page], many=True)
+    try:
+        items = serializer(language=language).dump(query[(page - 1) * step: step * page], many=True)
+    except TypeError:
+        items = serializer().dump(query[(page - 1) * step: step * page], many=True)
     return {'pagination': {'last_page': math.ceil(count / step), 'count': count},
             'data': items}
 

@@ -1,6 +1,7 @@
 import os
 from django.utils.timezone import activate
 from re import compile
+from .settings_var import *
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MEDIA_URL = '/media/'
@@ -15,19 +16,13 @@ TOKEN_SALT = 'nkU^&*()JH*757H*&^)_IJIO7JI874434%^&OHdfgdG457HIO44'
 DEBUG = True
 
 ADMINS = [('Soheil', 'soheilravasani@gmail.com')]
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ALLOWED_HOSTS
 
 DEFAULT_FROM_EMAIL = 'webmaster@localhost'
 SERVER_EMAIL = 'root@localhost'
 
-# HOST = 'http://67948730.ngrok.io'
-HOST = 'http://192.168.1.95'
-IP = '192.168.1.95'
-# HOST = 'http://localhost'
-# HOST = 'http://192.168.137.95'
-# HOST = 'http://192.168.137.1'
-# HOST = 'http://mehrtakhfif.com'
-# HOST = 'http://mt.com'
+HOST = HOST
+IP = IP
 
 AUTH_USER_MODEL = 'server.User'
 
@@ -39,6 +34,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'server',
+    'mtadmin',
     'safedelete',
     'corsheaders',
     'debug_toolbar',
@@ -68,17 +64,9 @@ DISALLOWED_USER_AGENTS = [compile('PostmanRuntime')]
 # INTERNAL_IPS = [
 #     '127.0.0.1',
 # ]
-# if user_agent_regex.search(request.META['HTTP_USER_AGENT']):
-CORS_ORIGIN_WHITELIST = [
-    "http://192.168.1.96:3000",
-    "http://192.168.43.96:3000",
-    "http://localhost:3000",
-    "http://mt.com",
-    "http://mt.com:3000",
-    "http://localhost:8080",
-    "http://localhost",
-    HOST
-]
+
+CORS_ORIGIN_WHITELIST = CORS_ORIGIN_WHITELIST
+
 # CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = [
@@ -130,43 +118,13 @@ TEMPLATES = [
 WSGI_APPLICATION = 'mehr_takhfif.wsgi.application'
 
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'mehr_takhfif',
-        # 'NAME': 'mehrtak1_db',
-        'HOST': IP,
-        'USER': 'postgres',
-        # 'USER': 'mehrtak1_admeen',
-        'PASSWORD': 'admin',
-        # 'PASSWORD': '_Rz*5g;mTFF*0#quq&',
-        'port': '5432',
-        'TEST': {
-            'NAME': 'mehr_takhfif_test',
-            'FIXTURES_DIR': 'server/fixtures'
-        },
-    }
-}
+DATABASES = DATABASES
 
-CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        # "LOCATION": "redis://127.0.0.1:6379/1",
-        "LOCATION": f"redis://{IP}:6379/1",
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient"
-        },
-        "KEY_PREFIX": "example"
-    }
-}
+CACHES = CACHES
 CACHE_TTL = 60 * 15
 SESSION_ENGINE = "django.contrib.sessions.backends.cache"
 
-# ELASTICSEARCH_DSL = {
-#     'default': {
-#         'hosts': 'localhost:9200'
-#     },
-# }
+# ELASTICSEARCH_DSL = ELASTICSEARCH_DSL
 
 # Password validation
 # https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators
@@ -279,5 +237,4 @@ LOGGING = {
 
 if DEBUG:
     LOGGING = {}
-    # for queueConfig in RQ_QUEUES.values():
-    #     queueConfig['ASYNC'] = False
+
