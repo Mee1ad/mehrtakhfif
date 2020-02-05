@@ -1,4 +1,4 @@
-from mehr_takhfif.settings import TOKEN_SALT
+from mehr_takhfif.settings import TOKEN_SALT, ADMIN
 from server.views.utils import default_step, default_page, filter_params, res_code, get_roll
 from server.models import User, Basket
 from django.http import JsonResponse
@@ -11,7 +11,6 @@ from django.db.models import Q
 
 
 class AuthMiddleware:
-
     def __init__(self, get_response):
         super().__init__()
         self.get_response = get_response
@@ -23,11 +22,10 @@ class AuthMiddleware:
         app_name = resolve(path).app_name
 
         # Debug
-        request.user = User.objects.get(pk=1)
+        if ADMIN:
+            request.user = User.objects.get(pk=1)
         if route == 'favicon.ico':
             return JsonResponse({})
-        if request.headers.get('admin', None) == 'true':
-            request.user = User.objects.get(pk=1)
         delay = request.GET.get('delay', None)
         if delay:
             print(delay)

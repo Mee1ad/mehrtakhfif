@@ -24,7 +24,7 @@ GET {{host}}/search?q=query
 
 ### all box with category
 http://localhost/box_with_category
-###
+### boom-gardi with category
 http://localhost/box_with_category?box_permalink=boom-gardi
 ###
 GET {{host}}/special_offer
