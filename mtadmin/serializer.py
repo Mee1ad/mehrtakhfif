@@ -73,7 +73,8 @@ class InvoiceStorageSchema(BaseSchema):
 
 
 class ProductESchema(BaseAdminSchema, ProductSchema):
-    additional = ('income', 'profit', 'disable', 'verify')
+    class Meta:
+        additional = ('income', 'profit', 'disable', 'verify')
 
 
 class ProductSchema(BaseAdminSchema):
