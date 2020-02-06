@@ -1,8 +1,10 @@
 from django.urls import path
-from mtadmin.view import *
+from mtadmin.views.tables import *
+from mtadmin.views.auth import *
+from mtadmin.views.views import *
 from mtadmin.decorator import error_handler
 
-app_name = 'admin_panel'
+app_name = 'mtadmin'
 
 urlpatterns = [
     # path('test', Test.as_view(), name='test'),
@@ -26,4 +28,5 @@ urlpatterns = [
     path('mail', error_handler(MailView.as_view()), name='mail'),
     path('check_prices', error_handler(CheckPrices.as_view()), name='check_prices'),
     path('generate_code', error_handler(GenerateCode.as_view()), name='generate_code'),
+    path('table_filter/<str:table>', error_handler(TableFilter.as_view()), name='table_filter'),
 ]

@@ -2,11 +2,10 @@ import functools
 import traceback
 import re
 
-from django.core.exceptions import ObjectDoesNotExist
 from django.http import JsonResponse
 from django.core.exceptions import FieldDoesNotExist, ValidationError
 from django.db.utils import IntegrityError
-from server.views.utils import res_code
+from server.utils import res_code
 from server.error import *
 
 
