@@ -1,19 +1,9 @@
-import json
-import pysnooper
-
 from django.http import JsonResponse
 
 from server.serialize import *
-from server.views.utils import *
-from server.views.utils import LoginRequired
-from server.decorators import try_except
+from server.utils import *
+from server.utils import LoginRequired
 from mehr_takhfif.settings import HOST
-from django.db.models import F
-
-from django.apps import apps
-from django.contrib.postgres.fields.jsonb import JSONField
-from django.db.models import F
-from django_celery_results.models import TaskResult
 
 
 class Profile(LoginRequired):

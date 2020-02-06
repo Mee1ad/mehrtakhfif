@@ -432,6 +432,7 @@ class Storage(Base):
     discount_percent = models.PositiveSmallIntegerField(verbose_name='Discount price percent')
     vip_discount_percent = models.PositiveSmallIntegerField(verbose_name='Discount vip price percent')
     gender = models.BooleanField(blank=True, null=True)
+    disable = models.BooleanField(default=False)
     deadline = models.DateTimeField(default=next_month)
     start_time = models.DateTimeField(auto_now_add=True)
     title = JSONField(default=multilanguage)
@@ -447,6 +448,10 @@ class StorageSupplier(models.Model):
     user = models.ForeignKey(User, on_delete=PROTECT)
     storage = models.ForeignKey(Storage, on_delete=PROTECT)
     percent = models.PositiveSmallIntegerField()
+
+    class Meta:
+        db_table = 'storage_supplier'
+        ordering = ['-id']
 
 
 class FeatureStorage(models.Model):

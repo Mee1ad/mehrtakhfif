@@ -4,7 +4,7 @@ from django.http import JsonResponse
 
 from server.documents import *
 from server.serialize import *
-from server.views.utils import *
+from server.utils import *
 
 
 class GetSlider(View):

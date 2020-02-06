@@ -1,4 +1,4 @@
-from server.views.utils import View
+from server.utils import View
 
 
 class BlogView(View):

@@ -1,13 +1,12 @@
 from mehr_takhfif.settings import TOKEN_SALT, ADMIN
-from server.views.utils import default_step, default_page, filter_params, res_code, get_roll
+from server.utils import default_step, default_page, res_code
+from mtadmin.utils import get_roll
 from server.models import User, Basket
 from django.http import JsonResponse
 import json
 from django.urls import resolve
-import pysnooper
 import time
-from django.core.handlers.wsgi import WSGIRequest
-from django.db.models import Q
+from server.error import AuthError
 
 
 class AuthMiddleware:
@@ -40,11 +39,8 @@ class AuthMiddleware:
         # assign request attributes
         request.step = int(request.GET.get('s', default_step))
         request.page = int(request.GET.get('p', default_page))
-
         if app_name == 'server':
             request.params = {}
-            if not isinstance(request, WSGIRequest):
-                request.params = filter_params(request)
             try:
                 request.lang = request.headers['language']
             except Exception:
@@ -63,10 +59,12 @@ class AuthMiddleware:
                         request.basket = basket
                 except AssertionError:
                     new_basket_count = db_basket_count
-
-        elif app_name == 'admin_panel':
+        elif app_name == 'mtadmin':
             request.token = request.headers.get('access-token', None)
-            get_roll(request.user)
+            try:
+                get_roll(request.user)
+            except AuthError:
+                return JsonResponse({}, status=res_code['unauthorized'])
 
         # set new basket count in cookie
         response = self.get_response(request)

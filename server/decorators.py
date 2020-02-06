@@ -31,6 +31,7 @@ def try_except(func):
             error_type = exc_type.__name__
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             trace = {'Type': error_type, 'Description': f'{exc_obj}', 'File': fname, 'Line': exc_tb.tb_lineno}
+            print(trace)
             # devices = FCMDevice.objects.filter(device_id='469f8ce1bfe86a95')
             # devices.send_message(title="oops, an error occurred", body=error_type + f', {exc_obj}', sound="cave")
             # return HttpResponse(f'{error_type}: {exc_obj} {fname}')

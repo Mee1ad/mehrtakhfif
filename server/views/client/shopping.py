@@ -1,11 +1,7 @@
-from server.views.utils import *
-from django.http import HttpResponse, JsonResponse
-from django.template.loader import render_to_string
-import tempfile
+from server.utils import *
+from django.http import JsonResponse
 from mehr_takhfif.settings import TOKEN_SALT
-from django.core.mail import EmailMessage
 import pysnooper
-import pdfkit
 from django.db.models import F
 
 

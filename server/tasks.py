@@ -3,12 +3,11 @@ from __future__ import absolute_import, unicode_literals
 from celery import shared_task
 from celery.signals import task_postrun
 from server.models import Invoice
-from operator import add, sub
-from server.views.utils import sync_storage
+from operator import add
+from server.utils import sync_storage
 from django.utils import timezone
 from django_celery_beat.models import PeriodicTask
 from django_celery_results.models import TaskResult
-import pysnooper
 
 
 @shared_task

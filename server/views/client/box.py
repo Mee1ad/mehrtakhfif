@@ -1,7 +1,6 @@
 from django.db.models import Max, Min
 from django.http import JsonResponse
-import pysnooper
-from server.views.utils import *
+from server.utils import *
 from server.serialize import BoxSchema, FeatureSchema, MinProductSchema, BrandSchema
 
 

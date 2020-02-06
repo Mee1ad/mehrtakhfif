@@ -1,13 +1,11 @@
 import random
 
-
-import pysnooper
 from django.contrib.auth import login
 from django.contrib.auth import logout
 from django.contrib.auth.backends import ModelBackend
 from django.http import JsonResponse
 
-from .utils import *
+from server.utils import *
 from server.serialize import UserSchema
 
 

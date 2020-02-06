@@ -26,7 +26,7 @@ from server.serialize import BoxCategoriesSchema, BasketSchema, BasketProductSch
 default_step = 12
 default_page = 1
 default_response = {'ok': {'message': 'ok'}, 'bad': {'message': 'bad request'}}
-res_code = {'success': 200, 'bad_request': 400, 'unauthorized': 401, 'forbidden': 403, 'token_issue': 402,
+res_code = {'success': 200, 'bad_request': 400, 'unauthorized': 401, 'forbidden': 403, 'token_issue': 401,
             'integrity': 406, 'banned': 493,
             'signup_with_pp': 251, 'invalid_password': 450, 'signup_with_pass': 201, 'activate': 202}
 pattern = {'phone': r'^(09[0-9]{9})$', 'email': r'^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\
@@ -37,7 +37,6 @@ pattern = {'phone': r'^(09[0-9]{9})$', 'email': r'^(([^<>()\[\]\\.,;:\s@"]+(\.[^
            'id': r'^\d+$', 'language': r'^\w{2}$', 'type': r'^[1-2]$'}
 ids = ['id', 'city_id', 'state_id', 'product_id', 'house_id']
 bools = ['gender', 'set_default', 'notify']
-rolls = ['superuser', 'backup', 'admin', 'accountants']
 
 
 # Data
@@ -59,6 +58,7 @@ def validation(data):
 
 
 def load_data(request):
+
     data = json.loads(request.body)
     validation(data)
     return data
@@ -107,7 +107,7 @@ def filter_params(params):
                     'best_seller': f'{ds}sold_count', 'popular': '-created_at',
                     'discount': f'{ds}{dis}discount_percent'}
     filter_by = {}
-    orderby = params.get('orderby', '-created_at')
+    orderby = params.get('o', '-created_at')
     available = params.get('available', None)
     brand = params.getlist('brand', None)
     min_price = params.get('min_price', None)
@@ -147,42 +147,6 @@ def load_location(location):
     if location is not None:
         return {"lat": location[0], "lng": location[1]}
     return None
-
-
-# User
-
-def get_roll(user):
-    try:
-        return user.groups.first().name
-    except AttributeError:
-        if user.is_superuser:
-            return 'superuser'
-        raise AuthError
-
-
-# Admin
-
-def safe_delete(model, pk, user_id):
-    obj = model.objects.filter(pk=pk)
-    obj.update(deleted_by_id=user_id)
-    obj.delete()
-
-
-def get_access_token(user, model=None, pk=None, try_again=None):
-    pk = 0 if pk is None else pk
-    time = add_minutes(0).strftime("%Y-%m-%d-%H") if try_again is None else add_minutes(-60).strftime("%Y-%m-%d-%H")
-    data = f'{user.pk}{pk}{time}'
-    data = model.__name__.lower() + data if model else data
-    token = hashlib.sha3_224(data.encode()).hexdigest()
-    return token
-
-
-def check_access_token(token, user, model, pk):
-    if token == get_access_token(user, model, pk):
-        return True
-    if token == get_access_token(user, model, pk, try_again=1):
-        return True
-    return False
 
 
 # No Usage
@@ -348,6 +312,23 @@ def add_one_off_job(name, args=None, kwargs=None, task='server.tasks.hello', int
 
 
 # Security
+
+def get_access_token(user, model=None, pk=None, try_again=None):
+    pk = 0 if pk is None else pk
+    time = add_minutes(0).strftime("%Y-%m-%d-%H") if try_again is None else add_minutes(-60).strftime("%Y-%m-%d-%H")
+    data = f'{user.pk}{pk}{time}'
+    data = model.__name__.lower() + data if model else data
+    token = hashlib.sha3_224(data.encode()).hexdigest()
+    return token
+
+
+def check_access_token(token, user, model=None, pk=None):
+    if token == get_access_token(user, model, pk):
+        return True
+    if token == get_access_token(user, model, pk, try_again=1):
+        return True
+    return False
+
 
 def set_token(user, response):
     user.token = get_access_token(user)

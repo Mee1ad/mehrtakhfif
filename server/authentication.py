@@ -2,9 +2,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from .models import User
 from django.utils import timezone
-from server.views.utils import add_days
 from mehr_takhfif.settings import SECRET_KEY
-import pysnooper
 
 UserModel = get_user_model()
 

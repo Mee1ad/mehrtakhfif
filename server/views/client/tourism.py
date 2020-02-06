@@ -1,11 +1,8 @@
-import json
-
 from django.http import JsonResponse
 
 from server.models import *
 from server.serialize import *
-from server.views.utils import View, load_data
-import pysnooper
+from server.utils import View, load_data
 
 
 class BookingView(View):

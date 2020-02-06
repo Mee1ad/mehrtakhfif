@@ -1,11 +1,7 @@
-import json
-
 from django.http import JsonResponse
-import pysnooper
 from server.models import *
 from server.serialize import *
-from server.views.utils import View, get_pagination, load_data
-from statistics import mean, StatisticsError
+from server.utils import View, get_pagination, load_data
 
 
 class ProductView(View):
