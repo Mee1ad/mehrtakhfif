@@ -20,7 +20,6 @@ class AdminView(LoginRequiredMixin, View):
 def serialized_objects(request, model, serializer):
     pk = request.GET.get('id', None)
     params = get_params(request)
-    print(params)
     if pk:
         obj = model.objects.get(pk=pk)
         return {"data": serializer().dump(obj)}
@@ -33,10 +32,12 @@ def serialized_objects(request, model, serializer):
 
 
 def get_params(request):
+    remove_param = ['s', 'p', 'delay', 'error']
     filterby = {}
     orderby = []
     try:
         params = request.GET
+        [params.pop(key) for key in remove_param]
         keys = params.keys()
     except AttributeError:
         return {'filter': filterby, 'order': orderby}

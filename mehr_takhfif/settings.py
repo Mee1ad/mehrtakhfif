@@ -13,7 +13,7 @@ TOKEN_SECRET = 'NRJu&@D-sqQa@2xEu6^yt8yjfd!*K4TawDD?v&LxChs2uJ7=9YvXF6pGEXNJHnPZ
                '&hGbAHuhE_TZh3yN?PGZky!Zx&uc'
 TOKEN_SALT = 'nkU^&*()JH*757H*&^)_IJIO7JI874434%^&OHdfgdG457HIO44'
 
-DEBUG = True
+DEBUG = DEBUG
 
 ADMINS = [('Soheil', 'soheilravasani@gmail.com')]
 ALLOWED_HOSTS = ALLOWED_HOSTS
