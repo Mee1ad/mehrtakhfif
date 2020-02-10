@@ -115,3 +115,4 @@ staticfiles
 celerybeat.pid
 celerybeat-schedule
 !media/.gitkeep
+!static/.gitkeep
