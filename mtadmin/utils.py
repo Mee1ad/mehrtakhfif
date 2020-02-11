@@ -9,6 +9,7 @@ from operator import attrgetter
 import json
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views import View
+import pysnooper
 
 rolls = ['superuser', 'backup', 'admin', 'accountants']
 
@@ -16,29 +17,30 @@ rolls = ['superuser', 'backup', 'admin', 'accountants']
 class AdminView(LoginRequiredMixin, View):
     pass
 
-
+@pysnooper.snoop()
 def serialized_objects(request, model, serializer, single_serializer):
     pk = request.GET.get('id', None)
     params = get_params(request)
     if pk:
         obj = model.objects.get(pk=pk)
         return {"data": single_serializer().dump(obj)}
-    query = model.objects.filter(**params['filter']).order_by(*params['order'])
     try:
+        query = model.objects.filter(**params['filter']).order_by(*params['order'])
         return get_pagination(query, request.step, request.page, serializer)
-    except FieldError:
+    except (FieldError, ValueError):
         query = model.objects.all()
         return get_pagination(query, request.step, request.page, serializer)
 
-
+@pysnooper.snoop()
 def get_params(request):
     remove_param = ['s', 'p', 'delay', 'error']
     filterby = {}
     orderby = []
     try:
         params = request.GET
-        [params.pop(key) for key in remove_param]
-        keys = params.keys()
+        new_params = dict(params)
+        [new_params.pop(key, None) for key in remove_param]
+        keys = new_params.keys()
     except AttributeError:
         return {'filter': filterby, 'order': orderby}
     for key in keys:
@@ -48,6 +50,7 @@ def get_params(request):
             continue
         if len(value) == 1:
             filterby[key] = value[0]
+            continue
         filterby[key + '__in'] = value
     return {'filter': filterby, 'order': orderby}
 
