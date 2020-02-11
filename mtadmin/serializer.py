@@ -153,4 +153,4 @@ class BlogPostSchema(BaseAdminSchema, BlogPostSchema):
     pass
 
 
-tables = {'product': ProductSchema}
+tables = {'product': ProductASchema}

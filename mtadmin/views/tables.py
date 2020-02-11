@@ -67,7 +67,7 @@ class FeatureView(AdminView):
 class ProductView(AdminView):
 
     def get(self, request):
-        return JsonResponse(serialized_objects(request, Product, ProductSchema, ProductESchema))
+        return JsonResponse(serialized_objects(request, Product, ProductASchema, ProductESchema))
 
     def post(self, request):
         items = create_object(request, Product, ProductESchema)

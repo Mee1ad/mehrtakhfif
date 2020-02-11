@@ -166,14 +166,11 @@ USE_TZ = True
 
 # activate(TIME_ZONE)
 
-STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
+STATIC_URL = STATIC_URL
+STATIC_ROOT = STATIC_ROOT
 
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, "static"),
-]
+STATICFILES_DIRS = STATICFILES_DIRS
 
-# LOGGING = {
 #     'version': 1,
 #     'disable_existing_loggers': False,
 #     'filters': {
