@@ -54,6 +54,21 @@ class BaseAdminSchema(Schema):
                                  'count': storage.available_count_for_sale, 'disable': storage.disable})
         return storage_list
 
+    def get_media(self, obj):
+        medias = obj.media.all()
+        media_list = []
+        for index, media in enumerate(medias):
+            media_list.append({'id': media.pk, 'title': media.title['fa'],
+                               'type': media.get_type_display()})
+        return media_list
+
+    def get_tag(self, obj):
+        tags = obj.tag.all()
+        tag_list = []
+        for index, media in enumerate(tags):
+            tag_list.append({'id': media.pk, 'title': media.name['fa']})
+        return tag_list
+
 
 class InvoiceSchema(Schema):
     class Meta:
@@ -72,12 +87,7 @@ class InvoiceStorageSchema(BaseSchema):
     storage = fields.Method("get_min_storage")
 
 
-class ProductESchema(BaseAdminSchema, ProductSchema):
-    class Meta:
-        additional = ('income', 'profit', 'disable', 'verify')
-
-
-class ProductSchema(BaseAdminSchema):
+class ProductASchema(BaseAdminSchema):
     list_filter = [Box, Category]
 
     id = fields.Int()
@@ -85,6 +95,14 @@ class ProductSchema(BaseAdminSchema):
     box = fields.Method("get_box")
     category = fields.Method("get_category")
     storages = fields.Method("get_storage")
+
+
+class ProductESchema(ProductASchema, ProductSchema):
+    class Meta:
+        additional = ('disable', 'verify')
+
+    media = fields.Method("get_media")
+    tag = fields.Method("get_tag")
 
 
 class StorageSchema(BaseAdminSchema, StorageSchema):

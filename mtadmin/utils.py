@@ -17,12 +17,12 @@ class AdminView(LoginRequiredMixin, View):
     pass
 
 
-def serialized_objects(request, model, serializer):
+def serialized_objects(request, model, serializer, single_serializer):
     pk = request.GET.get('id', None)
     params = get_params(request)
     if pk:
         obj = model.objects.get(pk=pk)
-        return {"data": serializer().dump(obj)}
+        return {"data": single_serializer().dump(obj)}
     query = model.objects.filter(**params['filter']).order_by(*params['order'])
     try:
         return get_pagination(query, request.step, request.page, serializer)
