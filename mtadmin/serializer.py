@@ -30,6 +30,7 @@ class BaseAdminSchema(Schema):
     E = Edit
     S = Schema
     """
+    id = fields.Int()
     created_at = fields.Function(lambda o: o.created_at.timestamp())
     created_by = fields.Function(lambda o:
                                  {'id': o.created_by_id, 'name': f"{o.created_by.first_name} {o.created_by.last_name}"})
@@ -39,6 +40,9 @@ class BaseAdminSchema(Schema):
 
     def get_name(self, obj):
         return obj.name['fa']
+
+    def get_title(self, obj):
+        return obj.title['fa']
 
     def get_box(self, obj):
         return {'id': obj.box_id, 'name': obj.box.name['fa']}
@@ -70,7 +74,16 @@ class BaseAdminSchema(Schema):
         return tag_list
 
 
-class InvoiceSchema(Schema):
+class InvoiceASchema(Schema):
+    class Meta:
+        additional = ('id', 'basket_id', 'amount', 'status', 'final_price')
+
+    user = fields.Function(lambda o: o.user.first_name + " " + o.user.last_name)
+    created_at = fields.Function(lambda o: o.created_at.timestamp())
+    payed_at = fields.Function(lambda o: o.payed_at.timestamp() if o.payed_at else None)
+
+
+class InvoiceESchema(InvoiceASchema):
     class Meta:
         additional = ('id', 'basket_id', 'amount', 'status', 'final_price')
 
@@ -90,7 +103,6 @@ class InvoiceStorageSchema(BaseSchema):
 class ProductASchema(BaseAdminSchema):
     list_filter = [Box, Category]
 
-    id = fields.Int()
     name = fields.Method("get_name")
     box = fields.Method("get_box")
     category = fields.Method("get_category")
@@ -99,57 +111,89 @@ class ProductASchema(BaseAdminSchema):
 
 class ProductESchema(ProductASchema, ProductSchema):
     class Meta:
-        additional = ('disable', 'verify')
+        additional = ProductSchema.Meta.additional + ('disable', 'verify')
 
     media = fields.Method("get_media")
     tag = fields.Method("get_tag")
 
 
-class StorageSchema(BaseAdminSchema, StorageSchema):
-    additional = ('sold_count', 'start_price', 'available_count', 'available_count_for_sale', 'priority', 'start_time')
+class StorageASchema(BaseAdminSchema):
+    class Meta:
+        additional = ('sold_count', 'start_price', 'available_count_for_sale', 'start_time')
+
+    title = fields.Method("get_title")
 
 
-class CommentSchema(BaseAdminSchema, CommentSchema):
+class StorageESchema(StorageASchema, StorageSchema):
+    class Meta:
+        additional = ('sold_count', 'start_price', 'available_count', 'available_count_for_sale', 'priority', 'start_time')
+
+
+class CommentASchema(BaseAdminSchema):
     additional = ('approved', 'suspend')
 
 
-class MediaSchema(BaseAdminSchema, MediaSchema):
+class CommentESchema(CommentASchema, CommentSchema):
+    additional = ('approved', 'suspend')
+
+
+class MediaASchema(BaseAdminSchema):
     pass
 
 
-class CategorySchema(BaseAdminSchema, CategorySchema):
+class MediaESchema(MediaASchema, MediaSchema):
     pass
 
 
-class FeatureSchema(BaseAdminSchema, FeatureSchema):
+class CategoryASchema(BaseAdminSchema):
     pass
 
 
-class TagSchema(BaseAdminSchema, TagSchema):
+class CategoryESchema(CategoryASchema, CategorySchema):
     pass
 
 
-class BrandSchema(BaseAdminSchema, BrandSchema):
+class FeatureASchema(BaseAdminSchema):
     pass
 
 
-class MenuSchema(BaseAdminSchema, MenuSchema):
+class FeatureESchema(FeatureASchema, FeatureSchema):
     pass
 
 
-class SpecialOfferSchema(BaseAdminSchema, SpecialOfferSchema):
+class TagASchema(BaseAdminSchema):
     pass
 
 
-class SpecialProductSchema(BaseAdminSchema, SpecialProductSchema):
+class TagESchema(TagASchema, TagSchema):
     pass
 
 
-class BlogSchema(BaseAdminSchema, BlogSchema):
+class BrandASchema(BaseAdminSchema, BrandSchema):
     pass
 
 
-class BlogPostSchema(BaseAdminSchema, BlogPostSchema):
+class MenuASchema(BaseAdminSchema):
+    pass
+
+
+class MenuESchema(MenuASchema, MenuSchema):
+    pass
+
+
+class SpecialOfferASchema(BaseAdminSchema):
+    pass
+
+
+class SpecialOfferESchema(SpecialOfferASchema, SpecialOfferSchema):
+    pass
+
+
+class SpecialProductASchema(BaseAdminSchema):
+    pass
+
+
+class SpecialProductESchema(SpecialProductASchema, SpecialProductSchema):
     pass
 
 

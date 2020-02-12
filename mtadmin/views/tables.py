@@ -9,10 +9,10 @@ from mtadmin.serializer import *
 class CategoryView(AdminView):
 
     def get(self, request):
-        return JsonResponse(serialized_objects(request, Category, CategorySchema))
+        return JsonResponse(serialized_objects(request, Category, CategoryASchema, CategoryESchema))
 
     def post(self, request):
-        last_items = create_object(request, Category, CategorySchema)
+        last_items = create_object(request, Category, CategoryASchema)
         return JsonResponse(last_items, status=201)
 
     def patch(self, request):
@@ -33,7 +33,7 @@ class CategoryView(AdminView):
 class BrandView(AdminView):
 
     def get(self, request):
-        return JsonResponse(serialized_objects(request, Brand, BrandSchema))
+        return JsonResponse(serialized_objects(request, Brand, BrandSchema, BrandSchema))
 
     def post(self, request):
         last_items = create_object(request, Brand, BrandSchema)
@@ -50,10 +50,10 @@ class BrandView(AdminView):
 class FeatureView(AdminView):
 
     def get(self, request):
-        return JsonResponse(serialized_objects(request, Feature, FeatureSchema))
+        return JsonResponse(serialized_objects(request, Feature, FeatureASchema, FeatureESchema))
 
     def post(self, request):
-        items = create_object(request, Feature, FeatureSchema)
+        items = create_object(request, Feature, FeatureASchema)
         return JsonResponse(items, status=201)
 
     def put(self, request):
@@ -93,10 +93,10 @@ class ProductView(AdminView):
 class StorageView(AdminView):
 
     def get(self, request):
-        return JsonResponse(serialized_objects(request, Storage, StorageSchema))
+        return JsonResponse(serialized_objects(request, Storage, StorageASchema, StorageESchema))
 
     def post(self, request):
-        storage = create_object(request, Storage, StorageSchema)
+        storage = create_object(request, Storage, StorageASchema)
 
         return JsonResponse(storage, status=201)
 
@@ -117,7 +117,7 @@ class StorageView(AdminView):
 
 class InvoiceView(AdminView):
     def get(self, request):
-        return JsonResponse(serialized_objects(request, Invoice, InvoiceSchema))
+        return JsonResponse(serialized_objects(request, Invoice, InvoiceASchema, InvoiceESchema))
 
 
 class InvoiceStorageView(AdminView):
@@ -130,10 +130,10 @@ class InvoiceStorageView(AdminView):
 class MenuView(AdminView):
 
     def get(self, request):
-        return JsonResponse(serialized_objects(request, Menu, MenuSchema))
+        return JsonResponse(serialized_objects(request, Menu, MenuASchema, MenuESchema))
 
     def post(self, request):
-        items = create_object(request, Menu, MenuSchema)
+        items = create_object(request, Menu, MenuASchema)
         return JsonResponse(items, status=201)
 
     def put(self, request):
@@ -147,10 +147,10 @@ class MenuView(AdminView):
 class TagView(AdminView):
 
     def get(self, request):
-        return JsonResponse(serialized_objects(request, Tag, TagSchema))
+        return JsonResponse(serialized_objects(request, Tag, TagASchema, TagESchema))
 
     def post(self, request):
-        items = create_object(request, Tag, TagSchema)
+        items = create_object(request, Tag, TagASchema)
         return JsonResponse(items, status=201)
 
     def put(self, request):
@@ -164,10 +164,10 @@ class TagView(AdminView):
 class SpecialOfferView(AdminView):
 
     def get(self, request):
-        return JsonResponse(serialized_objects(request, SpecialOffer, SpecialOfferSchema))
+        return JsonResponse(serialized_objects(request, SpecialOffer, SpecialOfferASchema, SpecialOfferESchema))
 
     def post(self, request):
-        items = create_object(request, SpecialOffer, SpecialOfferSchema)
+        items = create_object(request, SpecialOffer, SpecialOfferASchema)
         return JsonResponse(items, status=201)
 
     def put(self, request):
@@ -181,10 +181,10 @@ class SpecialOfferView(AdminView):
 class SpecialProductView(AdminView):
 
     def get(self, request):
-        return JsonResponse(serialized_objects(request, SpecialProduct, SpecialProductSchema))
+        return JsonResponse(serialized_objects(request, SpecialProduct, SpecialProductASchema, SpecialProductESchema))
 
     def post(self, request):
-        items = create_object(request, SpecialProduct, SpecialProductSchema)
+        items = create_object(request, SpecialProduct, SpecialProductASchema)
         return JsonResponse(items, status=201)
 
     def put(self, request):
@@ -197,7 +197,7 @@ class SpecialProductView(AdminView):
 
 class MediaView(AdminView):
     def get(self, request):
-        return JsonResponse(serialized_objects(request, Media, MediaSchema))
+        return JsonResponse(serialized_objects(request, Media, MediaASchema, MediaESchema))
 
     def post(self, request):
         data = json.loads(request.POST.get('data'))
@@ -212,43 +212,9 @@ class MediaView(AdminView):
         return delete_base(request, Media)
 
 
-class BlogView(AdminView):
-
-    def get(self, request):
-        return JsonResponse(serialized_objects(request, Blog, BlogSchema))
-
-    def post(self, request):
-        items = create_object(request, Blog, BlogSchema)
-        return JsonResponse(items, status=201)
-
-    def put(self, request):
-        update_object(request, Blog)
-        return JsonResponse({})
-
-    def delete(self, request):
-        return delete_base(request, Blog)
-
-
-class BlogPostView(AdminView):
-
-    def get(self, request):
-        return JsonResponse(serialized_objects(request, BlogPost, BlogPostSchema))
-
-    def post(self, request):
-        items = create_object(request, BlogPost, BlogPostSchema)
-        return JsonResponse(items, status=201)
-
-    def put(self, request):
-        update_object(request, BlogPost)
-        return JsonResponse({})
-
-    def delete(self, request):
-        return delete_base(request, BlogPost)
-
-
 class CommentView(AdminView):
     def get(self, request):
-        return JsonResponse(serialized_objects(request, Comment, CommentSchema))
+        return JsonResponse(serialized_objects(request, Comment, CommentASchema, CommentESchema))
 
     def patch(self, request):
         data = get_data(request)

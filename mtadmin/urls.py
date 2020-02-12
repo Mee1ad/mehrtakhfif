@@ -8,9 +8,6 @@ app_name = 'mtadmin'
 
 urlpatterns = [
     # path('test', Test.as_view(), name='test'),
-
-    path('blog', error_handler(BlogView.as_view()), name='blog'),
-    path('blog_post', error_handler(BlogPostView.as_view()), name='blog_post'),
     path('category', error_handler(CategoryView.as_view()), name='category'),
     path('feature', error_handler(FeatureView.as_view()), name='feature'),
     path('menu', error_handler(MenuView.as_view()), name='menu'),
