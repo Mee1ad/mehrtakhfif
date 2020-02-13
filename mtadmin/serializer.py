@@ -104,6 +104,7 @@ class ProductASchema(BaseAdminSchema):
     list_filter = [Box, Category]
 
     name = fields.Method("get_name")
+    permalink = fields.Str()
     box = fields.Method("get_box")
     category = fields.Method("get_category")
     storages = fields.Method("get_storage")
