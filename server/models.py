@@ -2,6 +2,7 @@ import os
 import re
 from PIL import Image
 from django.contrib.auth.models import AbstractUser
+from guardian.mixins import GuardianUserMixin
 from django.contrib.postgres.fields import JSONField, ArrayField
 from django.contrib.postgres.indexes import GinIndex
 from django.core.validators import *
@@ -16,6 +17,7 @@ from django_celery_beat.models import PeriodicTask
 from django_celery_results.models import TaskResult
 from mehr_takhfif.settings import HOST
 import datetime
+
 
 
 def multilanguage():
@@ -105,7 +107,7 @@ class MyManager(models.Manager):
             pass
 
 
-class User(AbstractUser):
+class User(AbstractUser, GuardianUserMixin):
 
     def __str__(self):
         return self.username
@@ -232,6 +234,7 @@ class Box(Base):
     class Meta:
         db_table = 'box'
         ordering = ['-id']
+        permissions = [("has_access", "Can manage that box")]
 
 
 class Media(Base):
@@ -372,7 +375,6 @@ class Product(Base):
     rate = models.PositiveSmallIntegerField(default=0)
     disable = models.BooleanField(default=True)
     verify = models.BooleanField(default=False)
-    address = models.CharField(max_length=255, null=True, blank=True)
     short_address = models.CharField(max_length=255, null=True, blank=True)
     type = models.PositiveSmallIntegerField(choices=[(1, 'service'), (2, 'product'), (3, 'code')])
     permalink = models.CharField(max_length=255, db_index=True, unique=True)
@@ -382,6 +384,7 @@ class Product(Base):
     short_description = JSONField(default=multilanguage)
     description = JSONField(default=multilanguage)
     location = JSONField(null=True, blank=True)
+    address = JSONField(null=True, blank=True)
     properties = JSONField(default=product_properties)
     details = JSONField(default=product_details)
 

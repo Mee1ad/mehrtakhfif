@@ -39,22 +39,22 @@ class BaseAdminSchema(Schema):
                                  {'id': o.updated_by_id, 'name': f"{o.updated_by.first_name} {o.updated_by.last_name}"})
 
     def get_name(self, obj):
-        return obj.name['fa']
+        return {'fa': obj.name['fa']}
 
     def get_title(self, obj):
-        return obj.title['fa']
+        return {'fa': obj.title['fa']}
 
     def get_box(self, obj):
-        return {'id': obj.box_id, 'name': obj.box.name['fa']}
+        return {'id': obj.box_id, 'name': {'fa': obj.box.name['fa']}}
 
     def get_category(self, obj):
-        return {'id': obj.category_id, 'name': obj.category.name['fa']}
+        return {'id': obj.category_id, 'name': {'fa': obj.category.name['fa']}}
 
     def get_storage(self, obj):
         storages = obj.storage_set.all()
         storage_list = []
         for index, storage in enumerate(storages):
-            storage_list.append({'id': storage.pk, 'title': storage.title['fa'],
+            storage_list.append({'id': storage.pk, 'title': {'fa': storage.title['fa']},
                                  'count': storage.available_count_for_sale, 'disable': storage.disable})
         return storage_list
 
@@ -62,7 +62,7 @@ class BaseAdminSchema(Schema):
         medias = obj.media.all()
         media_list = []
         for index, media in enumerate(medias):
-            media_list.append({'id': media.pk, 'title': media.title['fa'],
+            media_list.append({'id': media.pk, 'title': {'fa': media.title['fa']},
                                'type': media.get_type_display()})
         return media_list
 
@@ -70,7 +70,7 @@ class BaseAdminSchema(Schema):
         tags = obj.tag.all()
         tag_list = []
         for index, media in enumerate(tags):
-            tag_list.append({'id': media.pk, 'title': media.name['fa']})
+            tag_list.append({'id': media.pk, 'name': {'fa': media.name['fa']}})
         return tag_list
 
 
@@ -116,6 +116,13 @@ class ProductESchema(ProductASchema, ProductSchema):
 
     media = fields.Method("get_media")
     tag = fields.Method("get_tag")
+    brand = fields.Function(lambda o: o.brand.name)
+    properties = fields.Function(lambda o: o.properties)
+    details = fields.Function(lambda o: o.details)
+    address = fields.Function(lambda o: o.address)
+    short_address = fields.Function(lambda o: o.short_address)
+    description = fields.Function(lambda o: o.description['fa'])
+    short_description = fields.Function(lambda o: o.short_description['fa'])
 
 
 class StorageASchema(BaseAdminSchema):

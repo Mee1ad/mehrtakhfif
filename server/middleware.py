@@ -21,14 +21,6 @@ class AuthMiddleware:
         app_name = resolve(path).app_name
 
         # Debug
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(',')[0]
-        else:
-            ip = request.META.get('REMOTE_ADDR')
-        print(ip)
-        if ip != '94.183.35.132':
-            return HttpResponseNotFound()
         if ADMIN:
             request.user = User.objects.get(pk=1)
         if route == 'favicon.ico':

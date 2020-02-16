@@ -108,12 +108,15 @@ def filter_params(params):
                     'discount': f'{ds}{dis}discount_percent'}
     filter_by = {}
     orderby = params.get('o', '-created_at')
+    category = params.get('cat', None)
     available = params.get('available', None)
     brand = params.getlist('brand', None)
     min_price = params.get('min_price', None)
     max_price = params.get('max_price', None)
+    if category:
+        filter_by['category__permalink'] = category
     if orderby != '-created_at':
-        valid_key = valid_orders[f'{params[orderby]}']
+        valid_key = valid_orders[orderby]
         orderby = valid_key
     if available:
         filter_by[f'{ds}available_count_for_sale__gt'] = 0

@@ -17,8 +17,8 @@ rolls = ['superuser', 'backup', 'admin', 'accountants']
 class AdminView(LoginRequiredMixin, View):
     pass
 
-@pysnooper.snoop()
-def serialized_objects(request, model, serializer, single_serializer):
+
+def serialized_objects(request, model, serializer, single_serializer=None):
     pk = request.GET.get('id', None)
     params = get_params(request)
     if pk:
@@ -31,7 +31,7 @@ def serialized_objects(request, model, serializer, single_serializer):
         query = model.objects.all()
         return get_pagination(query, request.step, request.page, serializer)
 
-@pysnooper.snoop()
+
 def get_params(request):
     remove_param = ['s', 'p', 'delay', 'error']
     filterby = {}
