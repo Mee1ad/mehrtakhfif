@@ -196,12 +196,14 @@ def to_obj(body):
 
 # Utils
 
-def send_sms(self, code, to):
+def send_sms(code, to):
     # +985000125475
-    data = {"op": 'pattern', "user": '09379118854', "pass": '6530065131', 'fromNum': '+98100020400',
-            'toNum': to, 'patternCode': "121", 'inputData': [{'activate-code': code}]}
+    # data = {"op": 'pattern', "user": '09379118854', "pass": '6530065131', 'fromNum': '+98100020400',
+    #         'toNum': to, 'patternCode': "121", 'inputData': [{'activate-code': code}]}
+    data = {"op": 'send', "uname": '09379118854', "pass": '6530065131', 'from': '+98100020400',
+            'to': to, 'message': f'کد: {code}\nمهرتخفیف'}
 
-    requests.post('http://37.130.202.188/api/select', data=json.dumps(data))
+    requests.post('http://ippanel.com/api/select', data=json.dumps(data))
 
 
 def get_categories(language, box_id=None, category=None):

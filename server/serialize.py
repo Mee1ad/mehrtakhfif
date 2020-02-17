@@ -459,7 +459,7 @@ class SpecialProductSchema(BaseSchema):
     name = fields.Method('get_name')
     label_name = fields.Method('get_label_name')
     product_name = fields.Method('get_product_name')
-    storage = fields.Method('get_min_storage')
+    default_storage = fields.Method('get_min_storage')
     # media = fields.Method('get_media')
     description = fields.Method('get_description')
     thumbnail = fields.Function(lambda o: HOST + o.thumbnail.file.url)
