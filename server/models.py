@@ -19,7 +19,6 @@ from mehr_takhfif.settings import HOST
 import datetime
 
 
-
 def multilanguage():
     return {"fa": "",
             "en": "",
@@ -375,7 +374,6 @@ class Product(Base):
     rate = models.PositiveSmallIntegerField(default=0)
     disable = models.BooleanField(default=True)
     verify = models.BooleanField(default=False)
-    short_address = models.CharField(max_length=255, null=True, blank=True)
     type = models.PositiveSmallIntegerField(choices=[(1, 'service'), (2, 'product'), (3, 'code')])
     permalink = models.CharField(max_length=255, db_index=True, unique=True)
 
@@ -385,6 +383,7 @@ class Product(Base):
     description = JSONField(default=multilanguage)
     location = JSONField(null=True, blank=True)
     address = JSONField(null=True, blank=True)
+    short_address = JSONField(null=True, blank=True)
     properties = JSONField(default=product_properties)
     details = JSONField(default=product_details)
 
@@ -539,7 +538,7 @@ class BlogPost(Base):
         ordering = ['-id']
 
 
-class Comment(SafeDeleteModel):
+class Comment(Base):
     def __str__(self):
         return f"{self.user}"
 
@@ -548,10 +547,6 @@ class Comment(SafeDeleteModel):
 
     _safedelete_policy = SOFT_DELETE_CASCADE
     id = models.BigAutoField(auto_created=True, primary_key=True)
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated at')
-    deleted_by = models.ForeignKey(User, on_delete=CASCADE, null=True, blank=True, verbose_name='Deleted by',
-                                   related_name='comment_deleted_by')
     text = models.TextField(null=True, blank=True)
     rate = models.PositiveSmallIntegerField(default=0, null=True)
     satisfied = models.BooleanField(null=True, blank=True)

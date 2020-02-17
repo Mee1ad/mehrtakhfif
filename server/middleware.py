@@ -27,7 +27,6 @@ class AuthMiddleware:
             return JsonResponse({})
         delay = request.GET.get('delay', None)
         if delay:
-            print(delay)
             time.sleep(float(delay))
         error = request.GET.get('error', None)
         if error:

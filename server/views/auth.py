@@ -7,6 +7,7 @@ from django.http import JsonResponse
 
 from server.utils import *
 from server.serialize import UserSchema
+import pysnooper
 
 
 class Backend(ModelBackend):
@@ -19,7 +20,9 @@ class Backend(ModelBackend):
             return None
 
 
+
 class Login(View):
+    @pysnooper.snoop()
     def post(self, request):
         data = load_data(request)
         cookie_age = 30 * 60
@@ -38,7 +41,7 @@ class Login(View):
             if not user.is_active:  # incomplete signup
                 raise User.DoesNotExist  # redirect to signup
             assert user.check_password(password)
-            login(request, user)
+            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
             res = {'user': UserSchema().dump(user)}
             basket = Basket.objects.filter(user=user, active=True)
             if basket.exists():
@@ -100,7 +103,7 @@ class SetPassword(View):
             data = json.loads(request.body)
             user.set_password(data['new_password'])
             user.save()
-            return JsonResponse(UserSchema().dump(user))
+            return JsonResponse({'user': UserSchema().dump(user)})
         except Exception:
             return JsonResponse({}, status=res_code['bad_request'])
 
@@ -129,7 +132,7 @@ class Activate(View):
             user.activation_expire = timezone.now()
             user.is_active = True
             user.save()
-            login(request, user)
+            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
             res = JsonResponse(UserSchema().dump(user), status=res_code['signup_with_pass'])  # signup without password
             if Login.check_password(user):
                 res = JsonResponse(UserSchema().dump(user))  # successful login

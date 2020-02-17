@@ -21,6 +21,7 @@ from server.error import *
 from mehr_takhfif import settings
 from mehr_takhfif.settings import TOKEN_SECRET, SECRET_KEY
 from server.models import *
+import requests
 from server.serialize import BoxCategoriesSchema, BasketSchema, BasketProductSchema, MinProductSchema
 
 default_step = 12
@@ -58,7 +59,6 @@ def validation(data):
 
 
 def load_data(request):
-
     data = json.loads(request.body)
     validation(data)
     return data
@@ -195,6 +195,13 @@ def to_obj(body):
 
 
 # Utils
+
+def send_sms(self, code, to):
+    # +985000125475
+    data = {"op": 'pattern', "user": '09379118854', "pass": '6530065131', 'fromNum': '+98100020400',
+            'toNum': to, 'patternCode': "121", 'inputData': [{'activate-code': code}]}
+
+    requests.post('http://37.130.202.188/api/select', data=json.dumps(data))
 
 
 def get_categories(language, box_id=None, category=None):
