@@ -244,20 +244,8 @@ class Media(Base):
             return self.title['user_id']
 
     def save(self, *args, **kwargs):
-        if not self.type == 7:
-
-            sizes = {'thumbnail': "350*217", 'small': (200, 200), 'medium': (500, 500), 'large': (800, 800)}
-            super().save(*args, **kwargs)
-            name = self.file.name
-            format = re.search(r'\.[a-z]+', name)
-            path = self.file.path
-            new_path = self.file.path.replace(format[0], '')
-            for size in sizes:
-                Image.open(path).resize((sizes[size][0], sizes[size][1])) \
-                    .save(new_path + f'_{size}' + format[0], 'JPEG')
-
-        else:
-            super().save(*args, **kwargs)
+        sizes = {'thumbnail': "350*217", 'small': (200, 200), 'medium': (500, 500), 'large': (800, 800)}
+        super().save(*args, **kwargs)
 
     file = models.FileField(upload_to=upload_to)
     title = JSONField(default=multilanguage)
