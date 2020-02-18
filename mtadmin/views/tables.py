@@ -4,6 +4,7 @@ from statistics import mean, StatisticsError
 from server.utils import *
 from mtadmin.utils import *
 from mtadmin.serializer import *
+import pysnooper
 
 
 class CategoryView(AdminView):
@@ -198,7 +199,7 @@ class SpecialProductView(AdminView):
 class MediaView(AdminView):
     def get(self, request):
         return JsonResponse(serialized_objects(request, Media, MediaASchema, MediaESchema))
-
+    @pysnooper.snoop()
     def post(self, request):
         data = json.loads(request.POST.get('data'))
         titles = data['titles']
