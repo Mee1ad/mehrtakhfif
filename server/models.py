@@ -1,5 +1,4 @@
 import os
-import re
 from PIL import Image
 from django.contrib.auth.models import AbstractUser
 from guardian.mixins import GuardianUserMixin
@@ -17,6 +16,7 @@ from django_celery_beat.models import PeriodicTask
 from django_celery_results.models import TaskResult
 from mehr_takhfif.settings import HOST
 import datetime
+import pysnooper
 
 
 def multilanguage():
@@ -242,10 +242,14 @@ class Media(Base):
             return self.title['fa']
         except KeyError:
             return self.title['user_id']
-
+    @pysnooper.snoop()
     def save(self, *args, **kwargs):
-        sizes = {'thumbnail': "350*217", 'small': (200, 200), 'medium': (500, 500), 'large': (800, 800)}
-        super().save(*args, **kwargs)
+        sizes = {'thumbnail': (350, 217)}
+        im = Image.open(self.file)
+        width, height = im.size
+        if (width, height) != sizes[self.get_type_display()]:
+            raise ValidationError
+        # super().save(*args, **kwargs)
 
     file = models.FileField(upload_to=upload_to)
     title = JSONField(default=multilanguage)

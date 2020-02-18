@@ -74,6 +74,12 @@ class BaseSchema(Schema):
     def get_title(self, obj):
         return self.get(obj.title)
 
+    def get_address(self, obj):
+        return self.get(obj.address)
+
+    def get_short_address(self, obj):
+        return self.get(obj.short_address)
+
     def get_short_description(self, obj):
         return self.get(obj.short_description)
 
@@ -285,9 +291,11 @@ class BrandSchema(BaseSchema):
 
 class ProductSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'permalink', 'gender', 'address', 'short_address', 'rate')
+        additional = ('id', 'permalink', 'gender', 'rate')
 
     name = fields.Method("get_name")
+    address = fields.Method("get_address")
+    short_address = fields.Method("get_short_address")
     type = fields.Function(lambda o: o.get_type_display())
     brand = fields.Method("get_brand")
     box = fields.Method("get_box")
