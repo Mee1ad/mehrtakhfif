@@ -171,9 +171,10 @@ class CommentESchema(CommentASchema, CommentSchema):
 
 class MediaASchema(BaseAdminSchema):
     class Meta:
-        additional = ('title', 'type')
+        additional = ('title', )
 
     url = fields.Function(lambda o: HOST + o.file.url)
+    type = fields.Function(lambda o: o.get_type_display())
 
 
 class MediaESchema(MediaASchema, MediaSchema):

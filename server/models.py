@@ -242,14 +242,14 @@ class Media(Base):
             return self.title['fa']
         except KeyError:
             return self.title['user_id']
-    @pysnooper.snoop()
+
     def save(self, *args, **kwargs):
         sizes = {'thumbnail': (350, 217)}
         im = Image.open(self.file)
         width, height = im.size
-        if (width, height) != sizes[self.get_type_display()]:
-            raise ValidationError
-        # super().save(*args, **kwargs)
+        # if (width, height) != sizes[self.get_type_display()]:
+        #     raise ValidationError
+        super().save(*args, **kwargs)
 
     file = models.FileField(upload_to=upload_to)
     title = JSONField(default=multilanguage)

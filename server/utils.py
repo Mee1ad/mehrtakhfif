@@ -80,7 +80,6 @@ def get_mimetype(image):
     return mimetype
 
 
-@pysnooper.snoop()
 def upload(request, titles, media_type, box=None):
     image_formats = ['.jpeg', '.jpg', '.gif', '.png']
     audio_formats = ['.jpeg', '.jpg', '.gif', '.png']
