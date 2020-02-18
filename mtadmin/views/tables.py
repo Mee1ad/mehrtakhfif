@@ -203,8 +203,9 @@ class MediaView(AdminView):
         data = json.loads(request.POST.get('data'))
         titles = data['titles']
         box_id = data['box_id']
+        media_type = data['type']
         box_id = validate_box_id(request.user, box_id)
-        if upload(request, titles, box_id):
+        if upload(request, titles, media_type, box_id):
             return JsonResponse({})
         return JsonResponse({}, status=res_code['bad_request'])
 

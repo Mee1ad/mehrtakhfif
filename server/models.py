@@ -260,9 +260,8 @@ class Media(Base):
 
     file = models.FileField(upload_to=upload_to)
     title = JSONField(default=multilanguage)
-    type = models.PositiveSmallIntegerField(choices=[(1, 'image'), (2, 'video'), (3, 'audio'),
-                                                     (4, 'slider'), (5, 'ads'), (6, 'thumbnail'),
-                                                     (7, 'avatar')])
+    type = models.PositiveSmallIntegerField(choices=[(1, 'image'), (2, 'thumbnail'), (3, 'audio'),
+                                                     (4, 'slider'), (5, 'ads'), (6, 'avatar')])
     box = models.ForeignKey(Box, on_delete=models.CASCADE, null=True, blank=True)
 
     class Meta:

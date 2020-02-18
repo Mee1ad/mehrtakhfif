@@ -79,9 +79,10 @@ def get_mimetype(image):
     return mimetype
 
 
-def upload(request, titles, box=None, avatar=False):
+def upload(request, titles, media_type, box=None, avatar=False):
     image_formats = ['.jpeg', '.jpg', '.gif', '.png']
     video_formats = ['.avi', '.mp4', '.mkv', '.flv', '.mov', '.webm', '.wmv']
+    types = {'image': 1, 'thumbnail': 2, 'slider': 3, 'ads': 4, 'avatar': 7}
     for file, title in zip(request.FILES.getlist('file'), titles):
         if file is not None:
             file_format = os.path.splitext(file.name)[-1]
@@ -90,9 +91,9 @@ def upload(request, titles, box=None, avatar=False):
                     (mimetype == 'video' and file_format not in video_formats):
                 return False
 
-            if avatar and title == str:
+            if media_type == 'avatar' and title == str:
                 file.name = f"{title['user_id']} {datetime.now().strftime('%Y-%m-%d, %H-%M-%S')}{file_format}"
-            media = Media(file=file, box_id=box, created_by_id=1, type='avatar' if avatar else mimetype,
+            media = Media(file=file, box_id=box, created_by_id=1, type=types[media_type],
                           title=title, updated_by=request.user)
             media.save()
     return media

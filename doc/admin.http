@@ -303,7 +303,7 @@ access-token: {{access-token}}
 --WebAppBoundary
 Content-Disposition: form-data; name="data"
 
-{"box_id": 1, "titles": [{"fa": "نام دسته بندی"}, {"fa": "2نام دسته بندی"}]}
+{"box_id": 6, "type": "thumbnail", "titles": [{"fa": "نام دسته بندی"}, {"fa": "2نام دسته بندی"}]}
 --WebAppBoundary--
 Content-Disposition: form-data; name="file"; filename="fmb.jpg"
 

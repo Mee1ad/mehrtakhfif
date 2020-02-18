@@ -33,7 +33,7 @@ class Avatar(LoginRequired):
         if user.avatar:
             pre_avatar_id = user.avatar.id
         title = {"user_id": f"{user.id}"}
-        media = upload(request, [title], avatar=True)
+        media = upload(request, [title], 'avatar')
         if media:
             user.avatar = media
             user.save()
