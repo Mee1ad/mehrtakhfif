@@ -39,7 +39,7 @@ class Avatar(LoginRequired):
             user.save()
             if pre_avatar_id:
                 Media.objects.filter(pk=pre_avatar_id).delete()
-            return JsonResponse({"url": HOST + media.file.url})
+            return JsonResponse({"media": MediaSchema().dump(media)})
         return JsonResponse({}, status=400)
 
     def delete(self, request):

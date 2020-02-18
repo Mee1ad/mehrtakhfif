@@ -205,8 +205,9 @@ class MediaView(AdminView):
         box_id = data['box_id']
         media_type = data['type']
         box_id = validate_box_id(request.user, box_id)
-        if upload(request, titles, media_type, box_id):
-            return JsonResponse({})
+        media = upload(request, titles, media_type, box_id)
+        if media:
+            return JsonResponse({'media': media})
         return JsonResponse({}, status=res_code['bad_request'])
 
     def delete(self, request):

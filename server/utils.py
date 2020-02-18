@@ -22,6 +22,7 @@ from mehr_takhfif import settings
 from mehr_takhfif.settings import TOKEN_SECRET, SECRET_KEY
 from server.models import *
 import requests
+from server.serialize import MediaSchema
 from server.serialize import BoxCategoriesSchema, BasketSchema, BasketProductSchema, MinProductSchema
 
 default_step = 12
@@ -79,16 +80,19 @@ def get_mimetype(image):
     return mimetype
 
 
-def upload(request, titles, media_type, box=None, avatar=False):
+@pysnooper.snoop()
+def upload(request, titles, media_type, box=None):
     image_formats = ['.jpeg', '.jpg', '.gif', '.png']
-    video_formats = ['.avi', '.mp4', '.mkv', '.flv', '.mov', '.webm', '.wmv']
+    audio_formats = ['.jpeg', '.jpg', '.gif', '.png']
     types = {'image': 1, 'thumbnail': 2, 'slider': 3, 'ads': 4, 'avatar': 7}
+    media_list = []
     for file, title in zip(request.FILES.getlist('file'), titles):
         if file is not None:
             file_format = os.path.splitext(file.name)[-1]
             mimetype = get_mimetype(file).split('/')[0]
             if (mimetype == 'image' and file_format not in image_formats) or \
-                    (mimetype == 'video' and file_format not in video_formats):
+                    (mimetype == 'audio' and file_format not in audio_formats) or \
+                    (mimetype != 'image' and mimetype != 'audio'):
                 return False
 
             if media_type == 'avatar' and title == str:
@@ -96,7 +100,8 @@ def upload(request, titles, media_type, box=None, avatar=False):
             media = Media(file=file, box_id=box, created_by_id=1, type=types[media_type],
                           title=title, updated_by=request.user)
             media.save()
-    return media
+            media_list.append(MediaSchema().dump(media))
+    return media_list
 
 
 def filter_params(params):
