@@ -245,7 +245,8 @@ class Media(Base):
 
     def save(self, *args, **kwargs):
         if not self.type == 7:
-            sizes = {'small': (200, 200), 'medium': (500, 500), 'large': (800, 800)}
+
+            sizes = {'thumbnail': "350*217", 'small': (200, 200), 'medium': (500, 500), 'large': (800, 800)}
             super().save(*args, **kwargs)
             name = self.file.name
             format = re.search(r'\.[a-z]+', name)

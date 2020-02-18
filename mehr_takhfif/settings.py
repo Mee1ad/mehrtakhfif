@@ -60,7 +60,7 @@ MIDDLEWARE = [
     'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
 
-DISALLOWED_USER_AGENTS = [compile('PostmanRuntime')]
+DISALLOWED_USER_AGENTS = [compile('PostmanRuntime')] if not DEBUG else []
 
 # INTERNAL_IPS = [
 #     '127.0.0.1',
