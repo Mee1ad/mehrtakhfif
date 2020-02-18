@@ -199,7 +199,7 @@ class SpecialProductView(AdminView):
 class MediaView(AdminView):
     def get(self, request):
         return JsonResponse(serialized_objects(request, Media, MediaASchema, MediaESchema))
-    @pysnooper.snoop()
+
     def post(self, request):
         data = json.loads(request.POST.get('data'))
         titles = data['titles']
@@ -208,7 +208,7 @@ class MediaView(AdminView):
         box_id = validate_box_id(request.user, box_id)
         media = upload(request, titles, media_type, box_id)
         if media:
-            return JsonResponse({'media': media})
+            return JsonResponse({'media': MediaASchema().dump(media, many=True)})
         return JsonResponse({}, status=res_code['bad_request'])
 
     def delete(self, request):

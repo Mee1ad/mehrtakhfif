@@ -99,7 +99,7 @@ def upload(request, titles, media_type, box=None):
             media = Media(file=file, box_id=box, created_by_id=1, type=types[media_type],
                           title=title, updated_by=request.user)
             media.save()
-            media_list.append(MediaSchema().dump(media))
+            media_list.append(media)
     return media_list
 
 
