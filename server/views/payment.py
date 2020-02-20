@@ -47,7 +47,7 @@ class PaymentRequest(View):
 
         assert Basket.objects.filter(pk=basket_id, user=user).exists()
         # invoice = Invoice.objects.filter(user=user, basket_id=basket_id)
-        invoice = Invoice.objects.filter(pk=101)
+        invoice = Invoice.objects.filter(basket=basket_id)
         if not invoice.exists():
             basket = Basket.objects.filter(user=request.user, active=True).first()
             invoice = self.create_invoice(request)

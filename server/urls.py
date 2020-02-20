@@ -56,7 +56,7 @@ shopping = [
 pay = [
     path('ipg', try_except(IPG.as_view()), name='ipg'),
     path('payment/<int:basket_id>', try_except(PaymentRequest.as_view()), name='payment'),
-    path('callback', try_except(CallBack.as_view()), name='callback'),
+    path('payment/callback', try_except(CallBack.as_view()), name='callback'),
 ]
 
 user = [
