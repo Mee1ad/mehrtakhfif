@@ -92,7 +92,7 @@ class PaymentRequest(View):
                                                 "callBackUrl": bp["callback"], "payerId": 0}))
         print(r.status_code)
         print(r.content)
-        return {"status": r.status_code, "content": r.content}
+        return {"status": r.status_code}
         res_code = res["ResCode"]
         ref_id = res["refId"]
 
