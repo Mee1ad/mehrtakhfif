@@ -45,6 +45,14 @@ class PaymentRequest(View):
         user = User.objects.filter(pk=1).first()
         # ipg_id = request.GET.get('ipg_id', 1)
         order = request.GET.get('order')
+        terminal = request.GET.get('terminal')
+        username = request.GET.get('username')
+        password = request.GET.get('password')
+        date = request.GET.get('date')
+        amount = request.GET.get('amount')
+        time = request.GET.get('time')
+        callBackUrl = request.GET.get('callBackUrl')
+        payer = request.GET.get('payer')
 
         # user = request.user
 
@@ -71,11 +79,12 @@ class PaymentRequest(View):
         amount = invoice.amount
         datetime = timezone.now()
         return_url = HOST + '/payment/callback'
-        res = self.behpardakht_api(invoice.pk, order)
+        res = self.behpardakht_api(invoice.pk, order, terminal, username, password, date, amount, time, callBackUrl,
+                                   payer)
         return JsonResponse(res)
 
     @pysnooper.snoop()
-    def behpardakht_api(self, invoice_id, order):
+    def behpardakht_api(self, invoice_id, order, terminal, username, password, date, amount, time, callBackUrl, payer):
         invoice = Invoice.objects.get(pk=invoice_id)
         local_date = timezone.now().strftime("%Y%m%d")
         local_time = pytz.timezone("Iran").localize(datetime.now()).strftime("%H%M%S")
@@ -86,11 +95,10 @@ class PaymentRequest(View):
         #                                                "localTime": local_time, "additionalData": "",
         #                                                "callBackUrl": callback})
         client = zeep.Client(wsdl=bp['wsdl'])
-        r = client.service.bpPayRequest(terminalId=bp["terminal_id"], userName=bp["username"],
-                                        userPassword=bp["password"],
-                                        localDate=local_date, orderId=order, amount=1000, localTime=local_time,
-                                        payerId=0, callBackUrl="mehrtakhfif.ir/payment/callback")
-        print(r)
+        r = client.service.bpPayRequest(terminalId=terminal, userName=username,
+                                        userPassword=password,
+                                        localDate=date, orderId=order, amount=amount, localTime=time,
+                                        payerId=payer, callBackUrl=callBackUrl)
         return {"message": "ok"}
         res_code = res["ResCode"]
         ref_id = res["refId"]
