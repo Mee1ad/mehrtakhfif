@@ -89,7 +89,7 @@ class PaymentRequest(View):
         r = client.service.bpPayRequest(terminalId=bp["terminal_id"], userName=bp["username"],
                                         userPassword=bp["password"],
                                         localDate=local_date, orderId=order, amount=1000, localTime=local_time,
-                                        payerId=0, callBackUrl="mehrtakhfif.com/payment/callback")
+                                        payerId=0, callBackUrl="mehrtakhfif.ir/payment/callback")
         print(r)
         return {"message": "ok"}
         res_code = res["ResCode"]
