@@ -124,6 +124,10 @@ class PaymentRequest(View):
         invoice = Invoice(created_by=user, updated_by=user, user=user, amount=basket['summary']['discount_price'],
                           type="unknown", address=address, tax=5, basket_id=basket['basket']['id'],
                           final_price=basket['summary']['total_price'])
+        print(basket['summary']['discount_price'])
+        print(address)
+        print(basket['basket']['id'])
+        print(basket['summary']['discount_price'])
         invoice.save()
         return invoice
 
