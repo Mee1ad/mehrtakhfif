@@ -97,6 +97,7 @@ class PaymentRequest(View):
                                         userPassword=password,
                                         localDate=date, orderId=order, amount=amount, localTime=time,
                                         payerId=payer, callBackUrl=callBackUrl)
+        print(r.Status)
         return {"message": "ok"}
         res_code = res["ResCode"]
         ref_id = res["refId"]
