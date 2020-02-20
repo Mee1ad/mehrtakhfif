@@ -72,7 +72,6 @@ class PaymentRequest(View):
         datetime = timezone.now()
         return_url = HOST + '/payment/callback'
         res = self.behpardakht_api(invoice.pk, url)
-        print(res)
         return JsonResponse(res)
 
     @pysnooper.snoop()
@@ -93,7 +92,7 @@ class PaymentRequest(View):
                                                 "callBackUrl": bp["callback"], "payerId": 0}))
         print(r.status_code)
         print(r.content)
-        return HttpResponse("ok")
+        return {"status": r.status_code, "content": r.content}
         res_code = res["ResCode"]
         ref_id = res["refId"]
 
