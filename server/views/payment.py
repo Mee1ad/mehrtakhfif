@@ -56,9 +56,12 @@ class PaymentRequest(View):
             invoice = invoice.first()
             assert invoice.status == 'pending'
             invoice.status = 'canceled'
-            invoice.task.enabled = False
-            invoice.task.description = 'Canceled by system'
-            invoice.task.save()
+            try:
+                invoice.task.enabled = False
+                invoice.task.description = 'Canceled by system'
+                invoice.task.save()
+            except AttributeError:
+                pass
             invoice = self.create_invoice(request)
             self.reserve_storage(invoice.basket, invoice)
 
@@ -125,10 +128,6 @@ class PaymentRequest(View):
         invoice = Invoice(created_by=user, updated_by=user, user=user, amount=basket['summary']['discount_price'],
                           type=1, address=address, tax=5, basket_id=basket['basket']['id'],
                           final_price=basket['summary']['total_price'])
-        print(basket['summary']['discount_price'])
-        print(address)
-        print(basket['basket']['id'])
-        print(basket['summary']['discount_price'])
         invoice.save()
         return invoice
 
