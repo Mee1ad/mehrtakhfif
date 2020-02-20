@@ -1,5 +1,5 @@
 import requests
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views import View
 import operator
 from server.models import InvoiceStorage, Basket, User
@@ -93,7 +93,7 @@ class PaymentRequest(View):
                                                 "callBackUrl": bp["callback"], "payerId": 0}))
         print(r.status_code)
         print(r.content)
-        return JsonResponse({"message": "ok"})
+        return HttpResponse("ok")
         res_code = res["ResCode"]
         ref_id = res["refId"]
 
