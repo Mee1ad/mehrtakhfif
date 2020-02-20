@@ -9,6 +9,8 @@ import pytz
 from datetime import datetime
 from server.utils import des_encrypt, get_basket, add_one_off_job, sync_storage, load_data
 import pysnooper
+import json
+
 ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'به پرداخت ملت', 'hide': False, 'disable': False},
                 {'id': 2, 'key': 'melli', 'name': 'ملی', 'hide': True, 'disable': True},
                 {'id': 3, 'key': 'saman', 'name': 'سامان', 'hide': True, 'disable': True},
@@ -20,7 +22,8 @@ ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'به پرداخت ملت', '
 # behpardakht
 bp = {'terminal_id': 5290645, 'username': "takh252", 'password': "71564848",
       'payment_request': 'https://bpm.shaparak.ir/pgwchannel/services/pgw?wsdl=bpCumulativeDynamicPayRequest',
-      'redirect_url': 'https://sadad.shaparak.ir/VPG/Purchase', 'callback': HOST + '/payment/callback'}  # mellat
+      'redirect_url': 'https://sadad.shaparak.ir/VPG/Purchase',
+      'callback': 'mehrtakhfif.com/payment/callback'}  # mellat
 
 saddad = {'merchant_id': None, 'terminal_id': None, 'terminal_key': None,
           'payment_request': 'https://sadad.shaparak.ir/VPG/api/v0/Request/PaymentRequest',
@@ -42,7 +45,7 @@ class PaymentRequest(View):
         user = User.objects.filter(pk=1).first()
         # ipg_id = request.GET.get('ipg_id', 1)
         url = request.GET.get('url')
-        print(url)
+
         # user = request.user
 
         assert Basket.objects.filter(pk=basket_id, user=user).exists()
@@ -83,11 +86,11 @@ class PaymentRequest(View):
         #                                                "orderId": invoice_id, "amount": invoice.amount,
         #                                                "localTime": local_time, "additionalData": "",
         #                                                "callBackUrl": callback})
-        r = requests.post(url, data={'terminalId': bp["terminal_id"], "userName": bp["username"],
-                                     "userPassword": bp["password"], "localDate": local_date,
-                                     "orderId": invoice_id, "amount": invoice.amount,
-                                     "localTime": local_time, "additionalData": "",
-                                     "callBackUrl": bp["callback"], "payerId": 0})
+        r = requests.post(url, data=json.dumps({'terminalId': bp["terminal_id"], "userName": bp["username"],
+                                                "userPassword": bp["password"], "localDate": local_date,
+                                                "orderId": invoice_id, "amount": invoice.amount,
+                                                "localTime": local_time, "additionalData": "",
+                                                "callBackUrl": bp["callback"], "payerId": 0}))
         res = r.json()
         return res
         res_code = res["ResCode"]
