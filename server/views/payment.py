@@ -90,8 +90,8 @@ class PaymentRequest(View):
                                                 "orderId": invoice_id, "amount": invoice.amount,
                                                 "localTime": local_time, "additionalData": "",
                                                 "callBackUrl": bp["callback"], "payerId": 0}))
-        print(r.status_code)
-        print(r.content)
+        if r.status_code:
+            return {"status": r.status_code, "response": r.json()}
         return {"status": r.status_code}
         res_code = res["ResCode"]
         ref_id = res["refId"]
