@@ -8,7 +8,7 @@ from server.serialize import *
 import pytz
 from datetime import datetime
 from server.utils import des_encrypt, get_basket, add_one_off_job, sync_storage, load_data
-
+import pysnooper
 ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'به پرداخت ملت', 'hide': False, 'disable': False},
                 {'id': 2, 'key': 'melli', 'name': 'ملی', 'hide': True, 'disable': True},
                 {'id': 3, 'key': 'saman', 'name': 'سامان', 'hide': True, 'disable': True},
@@ -113,7 +113,7 @@ class PaymentRequest(View):
         # r = requests.post(url=pecco['payment_request'], data=request_data)
         # print(r.status_code)
         # print(r.content)
-
+    @pysnooper.snoop()
     def create_invoice(self, request, basket=None):
         user = request.user
         address = None
