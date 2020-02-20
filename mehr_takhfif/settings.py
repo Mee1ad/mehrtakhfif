@@ -100,7 +100,7 @@ AUTHENTICATION_BACKENDS = [
     # 'server.views.auth.Backend',
     'guardian.backends.ObjectPermissionBackend',
 ]
-GUARDIAN_MONKEY_PATCH = False
+GUARDIAN_MONKEY_PATCH = True
 
 TEMPLATES = [
     {

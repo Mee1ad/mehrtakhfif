@@ -10,6 +10,7 @@ from datetime import datetime
 from server.utils import des_encrypt, get_basket, add_one_off_job, sync_storage, load_data
 import pysnooper
 import json
+import zeep
 
 ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'به پرداخت ملت', 'hide': False, 'disable': False},
                 {'id': 2, 'key': 'melli', 'name': 'ملی', 'hide': True, 'disable': True},
@@ -21,8 +22,7 @@ ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'به پرداخت ملت', '
 # allowed_ip = 0.0.0.0
 # behpardakht
 bp = {'terminal_id': 5290645, 'username': "takh252", 'password': "71564848",
-      'payment_request': 'https://bpm.shaparak.ir/pgwchannel/services/pgw?wsdl=bpCumulativeDynamicPayRequest',
-      'redirect_url': 'https://sadad.shaparak.ir/VPG/Purchase',
+      'wsdl': 'https://bpm.shaparak.ir/pgwchannel/services/pgw?wsdl',
       'callback': 'mehrtakhfif.com/payment/callback'}  # mellat
 
 saddad = {'merchant_id': None, 'terminal_id': None, 'terminal_key': None,
@@ -44,7 +44,7 @@ class PaymentRequest(View):
     def get(self, request, basket_id):
         user = User.objects.filter(pk=1).first()
         # ipg_id = request.GET.get('ipg_id', 1)
-        url = request.GET.get('url')
+        order = request.GET.get('order')
 
         # user = request.user
 
@@ -71,11 +71,11 @@ class PaymentRequest(View):
         amount = invoice.amount
         datetime = timezone.now()
         return_url = HOST + '/payment/callback'
-        res = self.behpardakht_api(invoice.pk, url)
+        res = self.behpardakht_api(invoice.pk, order)
         return JsonResponse(res)
 
     @pysnooper.snoop()
-    def behpardakht_api(self, invoice_id, url):
+    def behpardakht_api(self, invoice_id, order):
         invoice = Invoice.objects.get(pk=invoice_id)
         local_date = timezone.now().strftime("%Y%m%d")
         local_time = pytz.timezone("Iran").localize(datetime.now()).strftime("%H%M%S")
@@ -85,14 +85,13 @@ class PaymentRequest(View):
         #                                                "orderId": invoice_id, "amount": invoice.amount,
         #                                                "localTime": local_time, "additionalData": "",
         #                                                "callBackUrl": callback})
-        r = requests.post(url, data=json.dumps({'terminalId': bp["terminal_id"], "userName": bp["username"],
-                                                "userPassword": bp["password"], "localDate": local_date,
-                                                "orderId": invoice_id, "amount": invoice.amount,
-                                                "localTime": local_time, "additionalData": "",
-                                                "callBackUrl": bp["callback"], "payerId": 0}))
-        if r.status_code:
-            return {"status": r.status_code, "response": r.json()}
-        return {"status": r.status_code}
+        client = zeep.Client(wsdl=bp['wsdl'])
+        r = client.service.bpPayRequest(terminalId=bp["terminal_id"], userName=bp["username"],
+                                        userPassword=bp["password"],
+                                        localDate=local_date, orderId=order, amount=1000, localTime=local_time,
+                                        payerId=0, callBackUrl="mehrtakhfif.com/payment/callback")
+        print(r)
+        return {"message": "ok"}
         res_code = res["ResCode"]
         ref_id = res["refId"]
 
