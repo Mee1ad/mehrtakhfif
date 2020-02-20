@@ -49,7 +49,6 @@ class PaymentRequest(View):
         username = request.GET.get('username')
         password = request.GET.get('password')
         date = request.GET.get('date')
-        amount = request.GET.get('amount')
         time = request.GET.get('time')
         callBackUrl = request.GET.get('callBackUrl')
         payer = request.GET.get('payer')
@@ -77,8 +76,7 @@ class PaymentRequest(View):
             self.reserve_storage(invoice.basket, invoice)
 
         amount = invoice.amount
-        datetime = timezone.now()
-        return_url = HOST + '/payment/callback'
+        amount = request.GET.get('amount')
         res = self.behpardakht_api(invoice.pk, order, terminal, username, password, date, amount, time, callBackUrl,
                                    payer)
         return JsonResponse(res)
