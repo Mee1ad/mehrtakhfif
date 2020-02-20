@@ -20,7 +20,6 @@ class Backend(ModelBackend):
             return None
 
 
-
 class Login(View):
     @pysnooper.snoop()
     def post(self, request):
@@ -46,7 +45,9 @@ class Login(View):
             basket = Basket.objects.filter(user=user, active=True)
             if basket.exists():
                 res['basket_count'] = basket.first().products.all().count()
-            return JsonResponse(res)
+            res = JsonResponse(res)
+            res = set_csrf_token(res)
+            return res
         except User.DoesNotExist:  # Signup
             if 'user' in locals():
                 # noinspection PyUnboundLocalVariable
@@ -137,6 +138,7 @@ class Activate(View):
             if Login.check_password(user):
                 res = JsonResponse(UserSchema().dump(user))  # successful login
                 res.delete_cookie('token')
+                set_csrf_token(res)
             return res
         except Exception:
             return JsonResponse({'message': 'code not found'}, status=res_code['integrity'])

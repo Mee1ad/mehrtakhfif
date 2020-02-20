@@ -2,7 +2,7 @@ import requests
 from django.http import JsonResponse
 from django.views import View
 import operator
-from server.models import InvoiceStorage, Basket
+from server.models import InvoiceStorage, Basket, User
 from django_celery_beat.models import PeriodicTask
 from server.serialize import *
 import pytz
@@ -18,9 +18,9 @@ ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'به پرداخت ملت', '
 
 # allowed_ip = 0.0.0.0
 # behpardakht
-bp = {'terminal_id': None, 'username': None, 'password': None,
+bp = {'terminal_id': 5290645, 'username': "takh252", 'password': "71564848",
       'payment_request': 'https://bpm.shaparak.ir/pgwchannel/services/pgw?wsdl=bpCumulativeDynamicPayRequest',
-      'redirect_url': 'https://sadad.shaparak.ir/VPG/Purchase'}  # mellat
+      'redirect_url': 'https://sadad.shaparak.ir/VPG/Purchase', 'callback': HOST + '/payment/callback'}  # mellat
 
 saddad = {'merchant_id': None, 'terminal_id': None, 'terminal_key': None,
           'payment_request': 'https://sadad.shaparak.ir/VPG/api/v0/Request/PaymentRequest',
@@ -31,6 +31,7 @@ pecco = {'pin': '4MuVGr1FaB6P7S43Ggh5', 'terminal_id': '44481453',
 
 callback = HOST + "/callback"
 
+
 class IPG(View):
     def get(self, request):
         return JsonResponse({'ipg': ipg})
@@ -38,10 +39,15 @@ class IPG(View):
 
 class PaymentRequest(View):
     def get(self, request, basket_id):
-        ipg_id = request.GET.get('ipg_id', 1)
-        user = request.user
+        user = User.objects.filter(pk=1).first()
+        # ipg_id = request.GET.get('ipg_id', 1)
+        url = request.GET.get('url')
+
+        # user = request.user
+
         assert Basket.objects.filter(pk=basket_id, user=user).exists()
-        invoice = Invoice.objects.filter(user=user, basket_id=basket_id)
+        # invoice = Invoice.objects.filter(user=user, basket_id=basket_id)
+        invoice = Invoice.objects.filter(pk=101)
         if not invoice.exists():
             basket = Basket.objects.filter(user=request.user, active=True).first()
             invoice = self.create_invoice(request)
@@ -53,26 +59,33 @@ class PaymentRequest(View):
             invoice.task.enabled = False
             invoice.task.description = 'Canceled by system'
             invoice.task.save()
-            new_invoice = self.create_invoice(request)
-            self.reserve_storage(invoice.basket, new_invoice)
+            invoice = self.create_invoice(request)
+            self.reserve_storage(invoice.basket, invoice)
 
         amount = invoice.amount
         datetime = timezone.now()
-        return_url = HOST + '/payment_callback'
-        self.behpardakht_api()
-        return JsonResponse({})
+        return_url = HOST + '/payment/callback'
+        res = self.behpardakht_api(invoice.pk, url)
+        print(res)
+        return JsonResponse(res)
 
-    def behpardakht_api(self, invoice_id):
+    def behpardakht_api(self, invoice_id, url):
         invoice = Invoice.objects.get(pk=invoice_id)
         local_date = timezone.now().strftime("%Y%m%d")
         local_time = pytz.timezone("Iran").localize(datetime.now()).strftime("%H%M%S")
         multiplexing_data = {'Type': 'Percentage', 'MultiplexingRows': [{'IbanNumber': 1, 'Value': 50}]}
-        r = requests.post(bp['payment_request'], data={'terminalId': bp["terminal_id"], "userName": bp["username"],
-                                                       "userPassword": bp["password"], "localDate": local_date,
-                                                       "orderId": invoice_id, "amount": invoice.amount,
-                                                       "localTime": local_time, "additionalData": "",
-                                                       "callBackUrl": callback})
+        # r = requests.post(bp['payment_request'], data={'terminalId': bp["terminal_id"], "userName": bp["username"],
+        #                                                "userPassword": bp["password"], "localDate": local_date,
+        #                                                "orderId": invoice_id, "amount": invoice.amount,
+        #                                                "localTime": local_time, "additionalData": "",
+        #                                                "callBackUrl": callback})
+        r = requests.post(url, data={'terminalId': bp["terminal_id"], "userName": bp["username"],
+                                     "userPassword": bp["password"], "localDate": local_date,
+                                     "orderId": invoice_id, "amount": invoice.amount,
+                                     "localTime": local_time, "additionalData": "",
+                                     "callBackUrl": bp["callback"], "payerId": 0})
         res = r.json()
+        return res
         res_code = res["ResCode"]
         ref_id = res["refId"]
 

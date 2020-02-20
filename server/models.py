@@ -139,6 +139,7 @@ class User(AbstractUser, GuardianUserMixin):
     suspend_expire_date = models.DateTimeField(blank=True, null=True, verbose_name='Suspend expire date')
     activation_code = models.CharField(max_length=127, null=True, blank=True)
     activation_expire = models.DateTimeField(null=True, blank=True)
+    admin_token = models.CharField(max_length=255, unique=True, null=True, blank=True)
     token = models.CharField(max_length=255, unique=True, null=True, blank=True)
     token_expire = models.DateTimeField(auto_now_add=True)
 
@@ -254,7 +255,7 @@ class Media(Base):
     file = models.FileField(upload_to=upload_to)
     title = JSONField(default=multilanguage)
     type = models.PositiveSmallIntegerField(choices=[(1, 'image'), (2, 'thumbnail'), (3, 'audio'),
-                                                     (4, 'slider'), (5, 'ads'), (6, 'avatar')])
+                                                     (4, 'slider'), (5, 'ads'), (6, 'avatar'), (7, 'media')])
     box = models.ForeignKey(Box, on_delete=models.CASCADE, null=True, blank=True)
 
     class Meta:

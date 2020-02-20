@@ -12,6 +12,7 @@ SALT = 'we\w[34=-otl34e[rl][qwe;w328474/*2342+-325(*^&%><>.'
 TOKEN_SECRET = 'NRJu&@D-sqQa@2xEu6^yt8yjfd!*K4TawDD?v&LxChs2uJ7=9YvXF6pGEXNJHnPZ-gbHmnJf&D-9?y2g78YgKC?AX-FbHR6fgws_' \
                '&hGbAHuhE_TZh3yN?PGZky!Zx&uc'
 TOKEN_SALT = 'nkU^&*()JH*757H*&^)_IJIO7JI874434%^&OHdfgdG457HIO44'
+CSRF_SALT = "2<Q3$]GDZYy;S/Ed)P{4S4!PqXkFLy+='4?p2py}89:N&e[%!!@WSB&"
 
 DEBUG = DEBUG
 

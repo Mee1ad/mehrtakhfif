@@ -2,7 +2,7 @@ import difflib
 import json
 import math
 import hashlib
-import jwt
+import uuid
 import magic
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import padding
@@ -16,10 +16,8 @@ from datetime import datetime
 import pysnooper
 from operator import add, sub
 from secrets import token_hex
-from mehr_takhfif.settings import TOKEN_SALT
 from server.error import *
-from mehr_takhfif import settings
-from mehr_takhfif.settings import TOKEN_SECRET, SECRET_KEY
+from mehr_takhfif.settings import CSRF_SALT, TOKEN_SALT, MEDIA_ROOT
 from server.models import *
 import requests
 from server.serialize import MediaSchema
@@ -60,6 +58,7 @@ def validation(data):
 
 
 def load_data(request):
+    check_csrf_token(request)
     data = json.loads(request.body)
     validation(data)
     return data
@@ -171,22 +170,13 @@ def timestamp_to_date(timestamp):
     return datetime.fromtimestamp(timestamp)
 
 
-def check_csrf_token(token):
-    if hashlib.sha3_224(token[13:21]).hexdigest() == token[:13] + token[21:]:
-        return True
-
-
-def generate_token(user):
-    hashlib.sha3_224(b"Nobody inspects the spammish repetition").hexdigest()
-
-
 def move(obj, folder):
     old_path = obj.file.path
-    new_path = settings.MEDIA_ROOT + f'\\{folder}\\' + obj.file.name
+    new_path = MEDIA_ROOT + f'\\{folder}\\' + obj.file.name
     try:
         os.rename(old_path, new_path)
     except FileNotFoundError:
-        os.makedirs(settings.MEDIA_ROOT + f'\\{folder}\\')
+        os.makedirs(MEDIA_ROOT + f'\\{folder}\\')
         os.rename(old_path, new_path)
     finally:
         obj.save()
@@ -354,8 +344,28 @@ def set_token(user, response):
     return response
 
 
+def set_admin_token(user):
+    pass
+
+
 def get_token_from_cookie(request):
     return request.get_signed_cookie('token', False, salt=TOKEN_SALT)
+
+
+def set_csrf_token(response):
+    random_text = uuid.uuid4().hex
+    token = hashlib.sha3_224(random_text).hexdigest()
+    response.set_signed_cookie('csrf_cookie', token, CSRF_SALT, max_age=15778800, expires=15778800)  # 6 month
+    return response
+
+
+def check_csrf_token(request):
+    csrf_cookie = request.get_signed_cookie('csrf_cookie', False, salt=CSRF_SALT)
+    token = hashlib.sha3_224(csrf_cookie + CSRF_SALT).hexdigest()
+
+    if token == request.header['csrf_token']:
+        return True
+    raise AuthError
 
 
 def des_encrypt(data='test', key=os.urandom(16)):
