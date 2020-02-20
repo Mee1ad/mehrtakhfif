@@ -42,7 +42,7 @@ class PaymentRequest(View):
         user = User.objects.filter(pk=1).first()
         # ipg_id = request.GET.get('ipg_id', 1)
         url = request.GET.get('url')
-
+        print(url)
         # user = request.user
 
         assert Basket.objects.filter(pk=basket_id, user=user).exists()
