@@ -69,6 +69,7 @@ class PaymentRequest(View):
         print(res)
         return JsonResponse(res)
 
+    @pysnooper.snoop()
     def behpardakht_api(self, invoice_id, url):
         invoice = Invoice.objects.get(pk=invoice_id)
         local_date = timezone.now().strftime("%Y%m%d")
@@ -113,7 +114,7 @@ class PaymentRequest(View):
         # r = requests.post(url=pecco['payment_request'], data=request_data)
         # print(r.status_code)
         # print(r.content)
-    @pysnooper.snoop()
+
     def create_invoice(self, request, basket=None):
         user = request.user
         address = None
