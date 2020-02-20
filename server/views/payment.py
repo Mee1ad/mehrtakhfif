@@ -122,7 +122,7 @@ class PaymentRequest(View):
             address = user.default_address
 
         invoice = Invoice(created_by=user, updated_by=user, user=user, amount=basket['summary']['discount_price'],
-                          type="unknown", address=address, tax=5, basket_id=basket['basket']['id'],
+                          type=1, address=address, tax=5, basket_id=basket['basket']['id'],
                           final_price=basket['summary']['total_price'])
         print(basket['summary']['discount_price'])
         print(address)
