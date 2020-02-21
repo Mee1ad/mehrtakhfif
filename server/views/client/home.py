@@ -9,16 +9,8 @@ from server.utils import *
 
 class GetSlider(View):
     def get(self, request):
-        for i in range(100):
-            r = requests.get("http://members.rcs.ir/signup/register/branch2?id=" + str(i))
-            r = r.json()
-            if len(r) > 2:
-                State.objects.create(id=i, name='test')
-                for item in r:
-                    City.objects.create(id=item['id'], name=item['title'], state_id=i)
-        # slider = Slider.objects.select_related(*Slider.select).all()
-        # res = {'slider': SliderSchema().dump(slider, many=True)}
-        res = {"message": "ok"}
+        slider = Slider.objects.select_related(*Slider.select).all()
+        res = {'slider': SliderSchema().dump(slider, many=True)}
         return JsonResponse(res)
 
 

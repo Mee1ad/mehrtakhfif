@@ -57,7 +57,8 @@ class MailView(AdminView):
 class TableFilter(AdminView):
     def get(self, request, table):
         if table == 'media':
-            pass
+            media = Media.objects.order_by('type').distinct('type')
+            return JsonResponse({'types': [{'id': item.type, 'name': item.get_type_display()} for item in media]})
         filters = get_table_filter(table)
         return JsonResponse({'data': filters})
 
