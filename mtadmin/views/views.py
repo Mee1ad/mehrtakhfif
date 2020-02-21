@@ -56,5 +56,14 @@ class MailView(AdminView):
 
 class TableFilter(AdminView):
     def get(self, request, table):
+        if table == 'media':
+            pass
         filters = get_table_filter(table)
         return JsonResponse({'data': filters})
+
+
+class AdminInfo(AdminView):
+    def get(self, request):
+        user = request.user
+        boxes = BoxSchema().dump(get_box_permission(user), many=True)
+        return JsonResponse({'roll': get_roll(user), 'boxes': boxes})

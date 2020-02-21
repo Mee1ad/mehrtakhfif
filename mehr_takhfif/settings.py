@@ -42,7 +42,6 @@ INSTALLED_APPS = [
     'push_notifications',
     'django_celery_results',
     'django_celery_beat',
-    'guardian',
     # 'django.contrib.admindocs',
     # 'django_elasticsearch_dsl'
 ]
@@ -92,13 +91,13 @@ CORS_ALLOW_HEADERS = [
 ]
 
 MESSAGE_STORAGE = 'django.contrib.messages.storage.cookie.CookieStorage'
+SESSION_COOKIE_DOMAIN = 'mehrtakhfif.com'
 
 ROOT_URLCONF = 'mehr_takhfif.urls'
 
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
     # 'server.views.auth.Backend',
-    'guardian.backends.ObjectPermissionBackend',
 ]
 GUARDIAN_MONKEY_PATCH = True
 

@@ -78,6 +78,10 @@ def get_roll(user):
         raise AuthError
 
 
+def get_box_permission(user):
+    return user.box_permission.all()
+
+
 def validate_box_id(user, box_id=None):
     roll = get_roll(user)
     if roll == 'admin':

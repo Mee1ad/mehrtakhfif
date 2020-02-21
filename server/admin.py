@@ -13,7 +13,9 @@ from mehr_takhfif.settings import HOST
 UserAdmin.list_display += ('updated_at',)
 UserAdmin.list_filter = ('username',)
 UserAdmin.ordering = ('-id',)
-UserAdmin.list_per_page = 10
+UserAdmin.list_per_page = 1
+UserAdmin.fieldsets[2][1]['fields'] += ('box_permission',)
+UserAdmin.filter_horizontal += ('box_permission',)
 
 
 class Base:

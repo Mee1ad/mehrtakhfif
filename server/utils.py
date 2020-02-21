@@ -193,12 +193,12 @@ def to_obj(body):
 
 def send_sms(code, to):
     # +985000125475
-    # data = {"op": 'pattern', "user": '09379118854', "pass": '6530065131', 'fromNum': '+98100020400',
-    #         'toNum': to, 'patternCode': "121", 'inputData': [{'activate-code': code}]}
-    data = {"op": 'send', "uname": '09379118854', "pass": '6530065131', 'from': '+98100020400',
-            'to': to, 'message': f'کد: {code}\nمهرتخفیف'}
+    data = {"op": 'pattern', "user": '09379118854', "pass": 'Mojirzg6654', 'fromNum': '+98100020400',
+            'toNum': to, 'patternCode': "gs3vltcvoi", 'inputData': [{'code': code}]}
+    # data = {"op": 'send', "uname": '09379118854', "pass": 'Mojirzg6654', 'from': '+98100020400',
+    #         'to': to, 'message': f'کد: {code}\nمهرتخفیف'}
 
-    requests.post('http://ippanel.com/api/select', data=json.dumps(data))
+    return requests.post('http://ippanel.com/api/select', data=json.dumps(data))
 
 
 def get_categories(language, box_id=None, category=None):
@@ -344,10 +344,6 @@ def set_token(user, response):
     return response
 
 
-def set_admin_token(user):
-    pass
-
-
 def get_token_from_cookie(request):
     return request.get_signed_cookie('token', False, salt=TOKEN_SALT)
 
@@ -355,15 +351,19 @@ def get_token_from_cookie(request):
 def set_csrf_token(response):
     random_text = uuid.uuid4().hex
     token = hashlib.sha3_224(random_text).hexdigest()
-    response.set_signed_cookie('csrf_cookie', token, CSRF_SALT, max_age=15778800, expires=15778800)  # 6 month
+    response.set_signed_cookie('csrf_cookie', token, max_age=15778800, expires=15778800)  # 6 month
     return response
 
 
 def check_csrf_token(request):
-    csrf_cookie = request.get_signed_cookie('csrf_cookie', False, salt=CSRF_SALT)
-    token = hashlib.sha3_224(csrf_cookie + CSRF_SALT).hexdigest()
+    csrf_cookie = request.get_signed_cookie('csrf_cookie', False)
 
-    if token == request.header['csrf_token']:
+    def double_check_token(minute):
+        time = add_minutes(minute).strftime("%Y-%m-%d-%H-%M")
+        token = hashlib.sha3_224(csrf_cookie + time + CSRF_SALT).hexdigest()
+        if token == request.header['X-CSRF-Token']:
+            return True
+    if double_check_token(0) or double_check_token(-1):
         return True
     raise AuthError
 

@@ -46,8 +46,7 @@ class Login(View):
             if basket.exists():
                 res['basket_count'] = basket.first().products.all().count()
             res = JsonResponse(res)
-            res = set_csrf_token(res)
-            return res
+            return set_csrf_token(res)
         except User.DoesNotExist:  # Signup
             if 'user' in locals():
                 # noinspection PyUnboundLocalVariable
@@ -138,8 +137,7 @@ class Activate(View):
             if Login.check_password(user):
                 res = JsonResponse(UserSchema().dump(user))  # successful login
                 res.delete_cookie('token')
-                set_csrf_token(res)
-            return res
+            return set_csrf_token(res)
         except Exception:
             return JsonResponse({'message': 'code not found'}, status=res_code['integrity'])
 

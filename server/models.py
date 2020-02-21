@@ -1,7 +1,6 @@
 import os
 from PIL import Image
 from django.contrib.auth.models import AbstractUser
-from guardian.mixins import GuardianUserMixin
 from django.contrib.postgres.fields import JSONField, ArrayField
 from django.contrib.postgres.indexes import GinIndex
 from django.core.validators import *
@@ -106,7 +105,7 @@ class MyManager(models.Manager):
             pass
 
 
-class User(AbstractUser, GuardianUserMixin):
+class User(AbstractUser):
 
     def __str__(self):
         return self.username
@@ -131,6 +130,7 @@ class User(AbstractUser, GuardianUserMixin):
     privacy_agreement = models.BooleanField(default=False)
     default_address = models.OneToOneField(to="Address", on_delete=SET_NULL, null=True, blank=True,
                                            related_name="user_default_address")
+    box_permission = models.ManyToManyField("Box")
     email_verified = models.BooleanField(default=False, verbose_name='Email verified')
     subscribe = models.BooleanField(default=True)
     avatar = models.ForeignKey("Media", on_delete=SET_NULL, null=True, blank=True)
@@ -177,7 +177,7 @@ class State(models.Model):
     def __str__(self):
         return self.name
 
-    id = models.IntegerField(auto_created=True, primary_key=True)
+    id = models.AutoField(auto_created=True, primary_key=True)
     name = models.CharField(max_length=255)
 
     class Meta:
@@ -189,6 +189,7 @@ class City(models.Model):
     def __str__(self):
         return self.name
 
+    id = models.AutoField(auto_created=True, primary_key=True)
     name = models.CharField(max_length=255)
     state = models.ForeignKey(State, on_delete=CASCADE)
 
@@ -358,6 +359,7 @@ class Product(Base):
     box = models.ForeignKey(Box, on_delete=PROTECT)
     brand = models.ForeignKey(Brand, on_delete=PROTECT)
     thumbnail = models.ForeignKey(Media, on_delete=PROTECT, related_name='product_thumbnail')
+    city = models.ForeignKey(City, on_delete=CASCADE, null=True, blank=True)
     default_storage = models.OneToOneField(null=True, blank=True, to="Storage", on_delete=CASCADE,
                                            related_name='product_default_storage')
     tag = models.ManyToManyField(Tag)

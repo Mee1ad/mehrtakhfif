@@ -61,8 +61,8 @@ pay = [
 
 user = [
     path('profile', try_except(Profile.as_view()), name='profile'),
-    path('get_states', try_except(GetState.as_view()), name='get_states'),
-    path('get_cities/<int:state_id>', try_except(GetCity.as_view()), name='get_cities'),
+    path('states', try_except(GetState.as_view()), name='get_states'),
+    path('cities/<int:state_id>', try_except(GetCity.as_view()), name='get_cities'),
     path('orders', try_except(Orders.as_view()), name='shopping_list'),
     path('trips', try_except(Trips.as_view()), name='trips'),
     path('wishlist', try_except(WishlistView.as_view()), name='wishlist'),

@@ -125,6 +125,7 @@ class ProductASchema(BaseAdminSchema):
     box = fields.Method("get_box")
     category = fields.Method("get_category")
     storages = fields.Method("get_storage")
+    city = fields.Nested(CitySchema)
 
 
 class ProductESchema(ProductASchema, ProductSchema):
@@ -170,8 +171,10 @@ class CommentESchema(CommentASchema, CommentSchema):
 
 
 class MediaASchema(BaseAdminSchema):
+    list_filter = [Box, Category]
+
     class Meta:
-        additional = ('title', )
+        additional = ('title',)
 
     url = fields.Function(lambda o: HOST + o.file.url)
     type = fields.Function(lambda o: o.get_type_display())
@@ -233,4 +236,4 @@ class SpecialProductESchema(SpecialProductASchema, SpecialProductSchema):
     pass
 
 
-tables = {'product': ProductASchema}
+tables = {'product': ProductASchema, 'media': MediaASchema}
