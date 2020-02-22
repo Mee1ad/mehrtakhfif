@@ -42,6 +42,7 @@ class IPG(View):
 
 
 class PaymentRequest(View):
+    @pysnooper.snoop()
     def get(self, request, basket_id):
         # todo debug
         user = User.objects.filter(pk=1).first()
