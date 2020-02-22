@@ -148,24 +148,21 @@ class PaymentRequest(View):
 class CallBack(View):
     @pysnooper.snoop()
     def post(self, request):
-        print(request.body)
-        data = json.loads(request.body)
-        invoice_id = data['OrderId']
-        ref_id = data['RefId']
-        res_code = data['ResCode']
-        sale_order_id = data['SaleOrderId']
-        sale_ref_id = data['SaleReferenceId']
-        card_holder = data['CardHolderPAN']
-        card_res_detail = data['CreditCardSaleResponseDetail']
-        final_amount = data['FinalAmount']
-        self.verify(invoice_id, sale_order_id, sale_ref_id)
+        data = request.body.decode().split('&')
+        data_dict = {}
+        for param in data:
+            val = param.split('=')
+            data_dict[val[0]] = val[1]
+        invoice_id = data_dict['SaleOrderId']
+        ref_id = data_dict['SaleReferenceId']
+        self.verify(invoice_id, invoice_id, ref_id)
         # self.submit_invoice_storages(invoice_id)
         try:
             invoice = Invoice.objects.get(pk=invoice_id, reference_id=ref_id)
             invoice.status = 'payed'
             invoice.payed_at = timezone.now()
-            invoice.card_holder = card_holder
-            invoice.final_amount = final_amount
+            invoice.card_holder = data_dict['CardHolderPan']
+            invoice.final_amount = data_dict['FinalAmount']
             invoice.basket.sync = 'done'
             invoice.basket.save()
             invoice.save()
