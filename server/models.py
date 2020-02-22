@@ -579,7 +579,7 @@ class Invoice(Base):
     amount = models.IntegerField()
     final_price = models.IntegerField()
     tax = models.IntegerField()
-    reference_id = models.IntegerField(null=True, blank=True)
+    reference_id = models.CharField(max_length=127, null=True, blank=True)
     sale_order_id = models.IntegerField(null=True, blank=True)
     sale_reference_id = models.IntegerField(null=True, blank=True)
     card_holder = models.CharField(max_length=31, null=True, blank=True)
