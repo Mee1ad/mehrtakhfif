@@ -22,8 +22,9 @@ ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'به پرداخت ملت', '
 # allowed_ip = 0.0.0.0
 # behpardakht
 bp = {'terminal_id': 5290645, 'username': "takh252", 'password': "71564848",
+      'ipg_url': "https://bpm.shaparak.ir/pgwchannel/startpay.mellat",
       'wsdl': 'https://bpm.shaparak.ir/pgwchannel/services/pgw?wsdl',
-      'callback': 'mehrtakhfif.com/payment/callback'}  # mellat
+      'callback': 'api.mehrtakhfif.com/payment/callback'}  # mellat
 
 saddad = {'merchant_id': None, 'terminal_id': None, 'terminal_key': None,
           'payment_request': 'https://sadad.shaparak.ir/VPG/api/v0/Request/PaymentRequest',
@@ -42,22 +43,15 @@ class IPG(View):
 
 class PaymentRequest(View):
     def get(self, request, basket_id):
+        # todo debug
         user = User.objects.filter(pk=1).first()
+        order_id = request.GET.get('o', None)
+        amount = request.GET.get('a')
+
         # ipg_id = request.GET.get('ipg_id', 1)
-        order = request.GET.get('order')
-        terminal = request.GET.get('terminal')
-        username = request.GET.get('username')
-        password = request.GET.get('password')
-        date = request.GET.get('date')
-        time = request.GET.get('time')
-        callBackUrl = request.GET.get('callBackUrl')
-        payer = request.GET.get('payer')
-
         # user = request.user
-
         assert Basket.objects.filter(pk=basket_id, user=user).exists()
-        # invoice = Invoice.objects.filter(user=user, basket_id=basket_id)
-        invoice = Invoice.objects.filter(basket=basket_id)
+        invoice = Invoice.objects.filter(user=user, basket_id=basket_id)
         if not invoice.exists():
             basket = Basket.objects.filter(user=request.user, active=True).first()
             invoice = self.create_invoice(request)
@@ -75,31 +69,28 @@ class PaymentRequest(View):
             invoice = self.create_invoice(request)
             self.reserve_storage(invoice.basket, invoice)
 
-        amount = invoice.amount
-        amount = request.GET.get('amount')
-        res = self.behpardakht_api(invoice.pk, order, terminal, username, password, date, amount, time, callBackUrl,
-                                   payer)
+        res = {"url": bp['ipg_url'] + '?RefId=' + self.behpardakht_api(invoice.pk, amount, order_id)}
         return JsonResponse(res)
 
     @pysnooper.snoop()
-    def behpardakht_api(self, invoice_id, order, terminal, username, password, date, amount, time, callBackUrl, payer):
+    def behpardakht_api(self, invoice_id, amount, order_id):
         invoice = Invoice.objects.get(pk=invoice_id)
+        # todo debug
+        invoice.amount = amount
+        invoice.id = order_id
+
         local_date = timezone.now().strftime("%Y%m%d")
         local_time = pytz.timezone("Iran").localize(datetime.now()).strftime("%H%M%S")
-        multiplexing_data = {'Type': 'Percentage', 'MultiplexingRows': [{'IbanNumber': 1, 'Value': 50}]}
-        # r = requests.post(bp['payment_request'], data={'terminalId': bp["terminal_id"], "userName": bp["username"],
-        #                                                "userPassword": bp["password"], "localDate": local_date,
-        #                                                "orderId": invoice_id, "amount": invoice.amount,
-        #                                                "localTime": local_time, "additionalData": "",
-        #                                                "callBackUrl": callback})
         client = zeep.Client(wsdl=bp['wsdl'])
-        r = client.service.bpPayRequest(terminalId=terminal, userName=username,
-                                        userPassword=password,
-                                        localDate=date, orderId=order, amount=amount, localTime=time,
-                                        payerId=payer, callBackUrl=callBackUrl)
-        return {"message": r}
-        res_code = res["ResCode"]
-        ref_id = res["refId"]
+        r = client.service.bpPayRequest(terminalId=bp['terminal_id'], userName=bp['username'],
+                                        userPassword=bp['password'], localTime=local_time,
+                                        localDate=local_date, orderId=invoice.id, amount=invoice.amount,
+                                        payerId=0, callBackUrl=bp['callback'])
+        if r[0:2] == "0,":
+            ref_id = r[2:]
+            return ref_id
+        else:
+            raise ValueError("can not get ipg page")
 
     def ipg_api(self):
         pass
