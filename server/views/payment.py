@@ -97,7 +97,7 @@ class PaymentRequest(View):
                                         userPassword=password,
                                         localDate=date, orderId=order, amount=amount, localTime=time,
                                         payerId=payer, callBackUrl=callBackUrl)
-        return {"message": "ok"}
+        return {"message": r}
         res_code = res["ResCode"]
         ref_id = res["refId"]
 
