@@ -1,5 +1,5 @@
 import requests
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
 from django.views import View
 import operator
 from server.models import InvoiceStorage, Basket, User
@@ -158,7 +158,7 @@ class CallBack(View):
         self.verify(invoice_id, invoice_id, ref_id)
         # self.submit_invoice_storages(invoice_id)
         try:
-            invoice = Invoice.objects.get(pk=invoice_id, reference_id=ref_id)
+            invoice = Invoice.objects.get(pk=102, reference_id=ref_id)
             invoice.status = 'payed'
             invoice.payed_at = timezone.now()
             invoice.card_holder = data_dict['CardHolderPan']
@@ -169,7 +169,7 @@ class CallBack(View):
         except Exception as e:
             print(e)
             print('error')
-        return JsonResponse({})
+        return HttpResponseRedirect("https://mehrtakhfif.com")
 
     @pysnooper.snoop()
     def verify(self, invoice_id, sale_order_id, sale_ref_id):
@@ -177,6 +177,8 @@ class CallBack(View):
         r = client.service.bpVerifyRequest(terminalId=bp['terminal_id'], userName=bp['username'],
                                            userPassword=bp['password'], orderId=invoice_id,
                                            saleOrderId=sale_order_id, saleReferenceId=sale_ref_id)
+        if r == '0':
+            return True
 
     def submit_invoice_storages(self, invoice_id):
         invoice = Invoice.objects.filter(pk=invoice_id).select_related(*Invoice.select).first()
