@@ -579,6 +579,11 @@ class Invoice(Base):
     amount = models.IntegerField()
     final_price = models.IntegerField()
     tax = models.IntegerField()
+    reference_id = models.IntegerField(null=True, blank=True)
+    sale_order_id = models.IntegerField(null=True, blank=True)
+    sale_reference_id = models.IntegerField(null=True, blank=True)
+    card_holder = models.CharField(max_length=31, null=True, blank=True)
+    final_amount = models.IntegerField(null=True, blank=True)
     ipg = models.SmallIntegerField(default=1)
     status = models.CharField(max_length=255, default='pending', choices=((1, 'pending'), (2, 'payed'), (3, 'canceled'),
                                                                           (4, 'rejected'), (5, 'new_invoice')))

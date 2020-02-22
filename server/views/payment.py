@@ -88,6 +88,8 @@ class PaymentRequest(View):
                                         payerId=0, callBackUrl=bp['callback'])
         if r[0:2] == "0,":
             ref_id = r[2:]
+            invoice.reference_id = ref_id
+            invoice.save()
             return ref_id
         else:
             raise ValueError("can not get ipg page")
@@ -148,14 +150,21 @@ class CallBack(View):
     def post(self, request):
         data = load_data(request)
         invoice_id = data['OrderId']
-        description = data['Description']
-        # details = self.verify(data['token'])
-        # todo verify
-        self.submit_invoice_storages(invoice_id)
+        ref_id = data['RefId']
+        res_code = data['ResCode']
+        sale_order_id = data['SaleOrderId']
+        sale_ref_id = data['SaleReferenceId']
+        card_holder = data['CardHolderPAN']
+        card_res_detail = data['CreditCardSaleResponseDetail']
+        final_amount = data['FinalAmount']
+        self.verify(invoice_id, sale_order_id, sale_ref_id)
+        # self.submit_invoice_storages(invoice_id)
         try:
-            invoice = Invoice.objects.get(pk=invoice_id)
+            invoice = Invoice.objects.get(pk=invoice_id, reference_id=ref_id)
             invoice.status = 'payed'
             invoice.payed_at = timezone.now()
+            invoice.card_holder = card_holder
+            invoice.final_amount = final_amount
             invoice.basket.sync = 'done'
             invoice.basket.save()
             invoice.save()
@@ -164,14 +173,12 @@ class CallBack(View):
             print('error')
         return JsonResponse({})
 
-    def verify(self, token):
-        url = 'https://sadad.shaparak.ir/VPG/api/v0/Advice/Verify'
-        sign_data = des_encrypt(token)  # encrypted token with TripleDes
-        r = requests.post(url, data={'Token': token, 'SignData': sign_data})
-        res = r.json()
-        return {'res_code': res['ResCode'], 'amount': res['Amount'], 'description': res['Description'],
-                'retrival_ref_no': res['RetrivalRefNo'], 'system_trace_no': res['SystemTraceNo'],
-                'invoice_id': res['OrderId']}
+    @pysnooper.snoop()
+    def verify(self, invoice_id, sale_order_id, sale_ref_id):
+        client = zeep.Client(wsdl=bp['wsdl'])
+        r = client.service.bpVerifyRequest(terminalId=bp['terminal_id'], userName=bp['username'],
+                                           userPassword=bp['password'], orderId=invoice_id,
+                                           saleOrderId=sale_order_id, saleReferenceId=sale_ref_id)
 
     def submit_invoice_storages(self, invoice_id):
         invoice = Invoice.objects.filter(pk=invoice_id).select_related(*Invoice.select).first()
