@@ -148,6 +148,7 @@ class PaymentRequest(View):
 class CallBack(View):
     @pysnooper.snoop()
     def post(self, request):
+        print(request.body)
         data = json.loads(request.body)
         invoice_id = data['OrderId']
         ref_id = data['RefId']
