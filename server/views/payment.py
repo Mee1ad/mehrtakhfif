@@ -69,10 +69,10 @@ class PaymentRequest(View):
             invoice = self.create_invoice(request)
             self.reserve_storage(invoice.basket, invoice)
 
-        res = {"url": bp['ipg_url'] + '?RefId=' + self.behpardakht_api(invoice.pk, amount, order_id)}
+        res = {"url": f"{bp['ipg_url']}?RefId={self.behpardakht_api(invoice.pk, amount, order_id)}"
+                      f"&mobileNo={user.username}"}
         return JsonResponse(res)
 
-    @pysnooper.snoop()
     def behpardakht_api(self, invoice_id, amount, order_id):
         invoice = Invoice.objects.get(pk=invoice_id)
         # todo debug
