@@ -54,7 +54,7 @@ class PaymentRequest(View):
             invoice = Invoice.objects.get(user=user, basket_id=basket_id, status='pending', expire__gte=timezone.now())
             return JsonResponse({"url": f"{bp['ipg_url']}?RefId={invoice.reference_id}"})
         except Invoice.DoesNotExist:
-            basket = Basket.objects.filter(user=request.user, basket_id=basket_id, active=True).first()
+            basket = Basket.objects.filter(user=request.user, id=basket_id, active=True).first()
         invoice = self.create_invoice(request)
         self.reserve_storage(basket, invoice)
 
