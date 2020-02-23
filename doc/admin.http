@@ -44,7 +44,7 @@ Content-Type: Application/json
 
 
 ### Parameters => s for step, p for page, id for single item
-GET {{admin_host}}/category
+GET {{admin_host}}/token
 
 ### 2 Step request: first without token, second with obtaind token from first request
 DELETE {{admin_host}}/category?id=6
@@ -285,13 +285,14 @@ Access-Token: {{access_token}}
 POST {{admin_host}}/tag
 Content-Type: Application/json
 Access-Token: {{access_token}}
+Cookie: token={{access_token}}
 
 {
   "id": 1,
   "box_id": 1,
   "permalink": "tour",
   "name": {
-    "fa": "نام تگ"
+    "fa": "اندروید"
   }
 }
 

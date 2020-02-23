@@ -304,7 +304,6 @@ class Tag(Base):
     def __str__(self):
         return f"{self.name['fa']}"
 
-    box = models.ForeignKey(Box, on_delete=CASCADE, blank=True, null=True)
     permalink = models.CharField(max_length=255, db_index=True, unique=True)
     name = JSONField(default=multilanguage)
 
@@ -585,6 +584,7 @@ class Invoice(Base):
     card_holder = models.CharField(max_length=31, null=True, blank=True)
     final_amount = models.IntegerField(null=True, blank=True)
     ipg = models.SmallIntegerField(default=1)
+    expire = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=255, default='pending', choices=((1, 'pending'), (2, 'payed'), (3, 'canceled'),
                                                                           (4, 'rejected'), (5, 'new_invoice')))
 

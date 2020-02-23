@@ -38,13 +38,12 @@ class AuthMiddleware:
         # assign request attributes
         request.step = int(request.GET.get('s', default_step))
         request.page = int(request.GET.get('p', default_page))
+        try:
+            request.lang = request.headers['language']
+        except Exception:
+            request.lang = 'fa'
         if app_name == 'server':
             request.params = {}
-            try:
-                request.lang = request.headers['language']
-            except Exception:
-                request.lang = 'fa'
-
             # sync user basket count
             new_basket_count = None
             if request.user.is_authenticated:

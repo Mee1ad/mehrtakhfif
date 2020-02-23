@@ -3,7 +3,7 @@ from server.utils import get_pagination, get_token_from_cookie, set_token, check
 from server.error import AuthError
 from django.core.exceptions import ValidationError, FieldError
 from django.contrib.admin.utils import NestedObjects
-from server.models import Storage, Product, Category
+from server.models import Storage, Product, Category, Tag, Media
 from mtadmin.serializer import tables
 from operator import attrgetter
 import json
@@ -100,6 +100,12 @@ def create_object(request, model, serializer):
     data = get_data(request)
     user = request.user
     obj = model.objects.create(**data, created_by=user, updated_by=user)
+    if model == Product:
+        product = obj
+        tags = Tag.objects.filter(pk__in=data['tags'])
+        media = Media.objects.filter(pk__in=data['media'])
+        product.tag.add(*tags)
+        product.media.add(*media)
     if model == Storage:
         assign_default_value(obj.product_id)
     return serialized_objects(request, model, serializer)

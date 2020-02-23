@@ -1,6 +1,7 @@
 
 from statistics import mean, StatisticsError
-
+from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
+from django.contrib.postgres.fields.jsonb import KeyTextTransform
 from server.utils import *
 from mtadmin.utils import *
 from mtadmin.serializer import *
@@ -146,9 +147,21 @@ class MenuView(AdminView):
 
 
 class TagView(AdminView):
-
     def get(self, request):
-        return JsonResponse(serialized_objects(request, Tag, TagASchema, TagESchema))
+        pk = request.GET.get('id', None)
+        params = get_params(request)
+        if pk:
+            obj = Tag.objects.get(pk=pk)
+            return JsonResponse({"data": TagESchema().dump(obj)})
+        try:
+            query = Tag.objects.annotate(contain=SearchVector(KeyTextTransform(request.lang, 'name')),).\
+                filter(**params['filter']).order_by(*params['order'])
+            res = get_pagination(query, request.step, request.page, TagASchema)
+        except (FieldError, ValueError):
+            query = Tag.objects.all()
+            res = get_pagination(query, request.step, request.page, TagASchema)
+
+        return JsonResponse(res)
 
     def post(self, request):
         items = create_object(request, Tag, TagASchema)

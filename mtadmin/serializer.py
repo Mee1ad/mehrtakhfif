@@ -134,6 +134,7 @@ class ProductESchema(ProductASchema, ProductSchema):
 
     media = fields.Method("get_media")
     tag = fields.Method("get_tag")
+    thumbnail = fields.Nested("MediaASchema")
     name = fields.Dict()
     properties = fields.Dict()
     details = fields.Dict()
@@ -201,7 +202,7 @@ class FeatureESchema(FeatureASchema, FeatureSchema):
 
 
 class TagASchema(BaseAdminSchema):
-    pass
+    name = fields.Method("get_name")
 
 
 class TagESchema(TagASchema, TagSchema):

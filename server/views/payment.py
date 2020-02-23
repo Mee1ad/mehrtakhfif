@@ -23,8 +23,8 @@ ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'به پرداخت ملت', '
 # behpardakht
 bp = {'terminal_id': 5290645, 'username': "takh252", 'password': "71564848",
       'ipg_url': "https://bpm.shaparak.ir/pgwchannel/startpay.mellat",
-      'wsdl': 'https://bpm.shaparak.ir/pgwchannel/services/pgw?wsdl',
       'callback': 'https://api.mehrtakhfif.com/payment/callback'}  # mellat
+client = zeep.Client(wsdl="https://bpm.shaparak.ir/pgwchannel/services/pgw?wsdl")
 
 saddad = {'merchant_id': None, 'terminal_id': None, 'terminal_key': None,
           'payment_request': 'https://sadad.shaparak.ir/VPG/api/v0/Request/PaymentRequest',
@@ -45,44 +45,31 @@ class PaymentRequest(View):
     @pysnooper.snoop()
     def get(self, request, basket_id):
         # todo debug
-        user = User.objects.filter(pk=1).first()
-        order_id = request.GET.get('o', None)
         amount = request.GET.get('a')
 
         # ipg_id = request.GET.get('ipg_id', 1)
-        # user = request.user
+        user = request.user
         assert Basket.objects.filter(pk=basket_id, user=user).exists()
-        invoice = Invoice.objects.filter(user=user, basket_id=basket_id)
-        if not invoice.exists():
-            basket = Basket.objects.filter(user=request.user, active=True).first()
-            invoice = self.create_invoice(request)
-            self.reserve_storage(basket, invoice)
-        else:
-            invoice = invoice.first()
-            assert invoice.status == 'pending'
-            invoice.status = 'canceled'
-            try:
-                invoice.task.enabled = False
-                invoice.task.description = 'Canceled by system'
-                invoice.task.save()
-            except AttributeError:
-                pass
-            invoice = self.create_invoice(request)
-            self.reserve_storage(invoice.basket, invoice)
+        try:
+            invoice = Invoice.objects.get(user=user, basket_id=basket_id, status='pending', expire__gte=timezone.now())
+            return JsonResponse({"url": f"{bp['ipg_url']}?RefId={invoice.reference_id}"})
+        except Invoice.DoesNotExist:
+            basket = Basket.objects.filter(user=request.user, basket_id=basket_id, active=True).first()
+        invoice = self.create_invoice(request)
+        self.reserve_storage(basket, invoice)
 
-        res = {"url": f"{bp['ipg_url']}?RefId={self.behpardakht_api(invoice.pk, amount, order_id)}"
+        res = {"url": f"{bp['ipg_url']}?RefId={self.behpardakht_api(invoice.pk, amount)}"
                       f"&mobileNo={user.username}"}
         return JsonResponse(res)
 
-    def behpardakht_api(self, invoice_id, amount, order_id):
+    @pysnooper.snoop()
+    def behpardakht_api(self, invoice_id, amount):
         invoice = Invoice.objects.get(pk=invoice_id)
         # todo debug
         invoice.amount = amount
-        invoice.id = order_id
 
         local_date = timezone.now().strftime("%Y%m%d")
         local_time = pytz.timezone("Iran").localize(datetime.now()).strftime("%H%M%S")
-        client = zeep.Client(wsdl=bp['wsdl'])
         r = client.service.bpPayRequest(terminalId=bp['terminal_id'], userName=bp['username'],
                                         userPassword=bp['password'], localTime=local_time,
                                         localDate=local_date, orderId=invoice.id, amount=invoice.amount,
@@ -120,6 +107,7 @@ class PaymentRequest(View):
         # print(r.status_code)
         # print(r.content)
 
+    @pysnooper.snoop()
     def create_invoice(self, request, basket=None):
         user = request.user
         address = None
@@ -133,6 +121,7 @@ class PaymentRequest(View):
         invoice.save()
         return invoice
 
+    @pysnooper.snoop()
     def reserve_storage(self, basket, invoice):
         if basket.sync == 'false':
             sync_storage(basket, operator.sub)
@@ -174,7 +163,6 @@ class CallBack(View):
 
     @pysnooper.snoop()
     def verify(self, invoice_id, sale_order_id, sale_ref_id):
-        client = zeep.Client(wsdl=bp['wsdl'])
         r = client.service.bpVerifyRequest(terminalId=bp['terminal_id'], userName=bp['username'],
                                            userPassword=bp['password'], orderId=invoice_id,
                                            saleOrderId=sale_order_id, saleReferenceId=sale_ref_id)
