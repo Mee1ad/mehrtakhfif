@@ -137,6 +137,7 @@ class PaymentRequest(View):
             # basket.active = False
             basket.sync = 'reserved'
             basket.save()
+            invoice.save()
 
 
 class CallBack(View):
