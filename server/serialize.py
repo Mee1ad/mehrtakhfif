@@ -281,7 +281,6 @@ class FeatureStorageSchema(BaseSchema):
 class TagSchema(BaseSchema):
     id = fields.Int()
     name = fields.Method('get_name')
-    box = fields.Method('get_box')
 
 
 class BrandSchema(BaseSchema):

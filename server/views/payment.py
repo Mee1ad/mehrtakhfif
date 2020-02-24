@@ -7,7 +7,7 @@ from django_celery_beat.models import PeriodicTask
 from server.serialize import *
 import pytz
 from datetime import datetime
-from server.utils import des_encrypt, get_basket, add_one_off_job, sync_storage, load_data
+from server.utils import get_basket, add_one_off_job, sync_storage, add_minutes
 import pysnooper
 import json
 import zeep
@@ -51,7 +51,8 @@ class PaymentRequest(View):
         user = request.user
         assert Basket.objects.filter(pk=basket_id, user=user).exists()
         try:
-            invoice = Invoice.objects.get(user=user, basket_id=basket_id, status='pending', expire__gte=timezone.now())
+            invoice = Invoice.objects.get(user=user, basket_id=basket_id, status='pending')
+            assert invoice.expire >= timezone.now()
             return JsonResponse({"url": f"{bp['ipg_url']}?RefId={invoice.reference_id}"})
         except Invoice.DoesNotExist:
             basket = Basket.objects.filter(user=request.user, id=basket_id, active=True).first()
@@ -117,7 +118,7 @@ class PaymentRequest(View):
 
         invoice = Invoice(created_by=user, updated_by=user, user=user, amount=basket['summary']['discount_price'],
                           type=1, address=address, tax=5, basket_id=basket['basket']['id'],
-                          final_price=basket['summary']['total_price'])
+                          final_price=basket['summary']['total_price'], expire=add_minutes(13))
         invoice.save()
         return invoice
 
