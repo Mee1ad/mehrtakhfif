@@ -13,8 +13,8 @@ from django_celery_results.models import TaskResult
 @shared_task
 def cancel_reservation(invoice_id, **kwargs):
     invoice = Invoice.objects.get(pk=invoice_id)
-    if invoice.status != 'payed':
-        invoice.status = 'canceled'
+    if invoice.status != 2:  # payed
+        invoice.status = 3  # canceled
         invoice.suspended_at = timezone.now()
         invoice.save()
         sync_storage(invoice.basket_id, add)

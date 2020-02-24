@@ -49,7 +49,7 @@ class AuthMiddleware:
             if request.user.is_authenticated:
                 db_basket_count = None
                 try:
-                    basket = Basket.objects.filter(user=request.user, active=True)
+                    basket = Basket.objects.filter(user=request.user).order_by('-id')
                     if basket.exists():
                         db_basket_count = basket.first().products.all().count()
                         user_basket_count = request.get_signed_cookie('basket_count', False, salt=TOKEN_SALT)

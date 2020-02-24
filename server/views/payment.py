@@ -63,8 +63,7 @@ class PaymentRequest(View):
         invoice = self.create_invoice(request)
         self.reserve_storage(basket, invoice)
 
-        res = {"url": f"{bp['ipg_url']}?RefId={self.behpardakht_api(invoice.pk, amount)}"
-                      f"&mobileNo={user.username}"}
+        res = {"url": f"{bp['ipg_url']}?RefId={self.behpardakht_api(invoice.pk, amount)}"}
         return JsonResponse(res)
 
     @pysnooper.snoop()
@@ -135,7 +134,7 @@ class PaymentRequest(View):
             kwargs = {"invoice_id": invoice.id, "task_name": task_name}
             invoice.task = add_one_off_job(name=task_name, kwargs=kwargs, interval=5,
                                            task='server.tasks.cancel_reservation')
-            basket.active = False
+            # basket.active = False
             basket.sync = 'reserved'
             basket.save()
 

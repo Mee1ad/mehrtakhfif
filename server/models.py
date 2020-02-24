@@ -477,7 +477,7 @@ class Basket(Base):
     count = models.IntegerField(default=0)
     products = models.ManyToManyField(Storage, through='BasketProduct')
     description = models.TextField(blank=True, null=True)
-    active = models.BooleanField(default=True)
+    # active = models.BooleanField(default=True)
     sync = models.CharField(max_length=255, choices=[('false', 0), ('reserved', 1),
                                                      ('canceled', 2), ('done', 3)], default='false')
 
