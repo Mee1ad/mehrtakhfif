@@ -10,11 +10,12 @@
 # one command for development
 # celery -A mehr_takhfif worker --beat --scheduler django --loglevel=info
 
+from mehr_takhfif.settings_var import broker_url
 
 cache_backend = 'django-cache'
 result_backend = 'django-db'
 # result_backend = 'redis://192.168.1.95:6379/11'
-broker_url = 'redis://192.168.1.95:6379/10'
+broker_url = broker_url
 # accept_content = ['json']
 # task_serializer = 'json'
 # timezone = 'UTC'
