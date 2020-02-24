@@ -132,7 +132,7 @@ class PaymentRequest(View):
             task_name = f'{invoice.id}: cancel reservation'
             # args = []
             kwargs = {"invoice_id": invoice.id, "task_name": task_name}
-            invoice.task = add_one_off_job(name=task_name, kwargs=kwargs, interval=5,
+            invoice.task = add_one_off_job(name=task_name, kwargs=kwargs, interval=15,
                                            task='server.tasks.cancel_reservation')
             # basket.active = False
             basket.sync = 'reserved'
