@@ -59,7 +59,7 @@ class PaymentRequest(View):
             invoice.save()
         except Invoice.DoesNotExist:
             pass
-        basket = Basket.objects.filter(user=request.user, id=basket_id, active=True).first()
+        basket = Basket.objects.filter(user=request.user, id=basket_id).first()
         invoice = self.create_invoice(request)
         self.reserve_storage(basket, invoice)
 
