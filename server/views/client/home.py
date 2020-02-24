@@ -9,6 +9,7 @@ from server.utils import *
 
 class GetSlider(View):
     def get(self, request):
+        print(request.get_signed_cookie('csrf_cookie', False))
         slider = Slider.objects.select_related(*Slider.select).all()
         res = {'slider': SliderSchema().dump(slider, many=True)}
         return JsonResponse(res)

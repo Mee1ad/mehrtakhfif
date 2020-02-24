@@ -34,7 +34,7 @@ class ProductView(View):
             return category
 
     def purchase_status(self, user, storages):
-        return True if Invoice.objects.filter(user=user, status='payed', storages__in=storages).exists() else False
+        return True if Invoice.objects.filter(user=user, status=2, storages__in=storages).exists() else False
 
 
 class RelatedProduct(View):

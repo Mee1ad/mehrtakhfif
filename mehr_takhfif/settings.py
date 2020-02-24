@@ -91,7 +91,10 @@ CORS_ALLOW_HEADERS = [
 ]
 
 MESSAGE_STORAGE = 'django.contrib.messages.storage.cookie.CookieStorage'
-SESSION_COOKIE_DOMAIN = 'mehrtakhfif.com'
+# SESSION_COOKIE_DOMAIN = SESSION_COOKIE_DOMAIN
+# CSRF_COOKIE_HTTPONLY = False
+# SESSION_COOKIE_HTTPONLY = False
+# SESSION_COOKIE_NAME = SESSION_COOKIE_NAME
 
 ROOT_URLCONF = 'mehr_takhfif.urls'
 
@@ -99,7 +102,6 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
     # 'server.views.auth.Backend',
 ]
-GUARDIAN_MONKEY_PATCH = True
 
 TEMPLATES = [
     {

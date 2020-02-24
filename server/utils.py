@@ -57,8 +57,9 @@ def validation(data):
             pass
 
 
-def load_data(request):
-    check_csrf_token(request)
+def load_data(request, check_token=True):
+    if check_token:
+        check_csrf_token(request)
     data = json.loads(request.body)
     validation(data)
     return data
@@ -347,11 +348,11 @@ def set_token(user, response):
 def get_token_from_cookie(request):
     return request.get_signed_cookie('token', False, salt=TOKEN_SALT)
 
-
+@pysnooper.snoop()
 def set_csrf_token(response):
     random_text = uuid.uuid4().hex
-    token = hashlib.sha3_224(random_text).hexdigest()
-    response.set_signed_cookie('csrf_cookie', token, max_age=15778800, expires=15778800)  # 6 month
+    token = hashlib.sha3_224(random_text.encode()).hexdigest()
+    response.set_signed_cookie('csrf_cookie', token, max_age=15778800, expires=15778800, domain="mt.com")  # 6 month
     return response
 
 

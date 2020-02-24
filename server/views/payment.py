@@ -51,11 +51,15 @@ class PaymentRequest(View):
         user = request.user
         assert Basket.objects.filter(pk=basket_id, user=user).exists()
         try:
-            invoice = Invoice.objects.get(user=user, basket_id=basket_id, status='pending')
+            invoice = Invoice.objects.get(user=user, basket_id=basket_id, status=1)
             assert invoice.expire >= timezone.now()
             return JsonResponse({"url": f"{bp['ipg_url']}?RefId={invoice.reference_id}"})
+        except AssertionError:
+            invoice.status = 3
+            invoice.save()
         except Invoice.DoesNotExist:
-            basket = Basket.objects.filter(user=request.user, id=basket_id, active=True).first()
+            pass
+        basket = Basket.objects.filter(user=request.user, id=basket_id, active=True).first()
         invoice = self.create_invoice(request)
         self.reserve_storage(basket, invoice)
 
@@ -145,12 +149,14 @@ class CallBack(View):
             val = param.split('=')
             data_dict[val[0]] = val[1]
         invoice_id = data_dict['SaleOrderId']
-        ref_id = data_dict['SaleReferenceId']
+        ref_id = data_dict.get('SaleReferenceId', None)
+        if not ref_id:
+            return HttpResponseRedirect("https://mehrtakhfif.com")
         self.verify(invoice_id, invoice_id, ref_id)
         # self.submit_invoice_storages(invoice_id)
         try:
-            invoice = Invoice.objects.get(pk=102, reference_id=ref_id)
-            invoice.status = 'payed'
+            invoice = Invoice.objects.get(pk=invoice_id, reference_id=ref_id)
+            invoice.status = 2
             invoice.payed_at = timezone.now()
             invoice.card_holder = data_dict['CardHolderPan']
             invoice.final_amount = data_dict['FinalAmount']
@@ -159,7 +165,6 @@ class CallBack(View):
             invoice.save()
         except Exception as e:
             print(e)
-            print('error')
         return HttpResponseRedirect("https://mehrtakhfif.com")
 
     @pysnooper.snoop()

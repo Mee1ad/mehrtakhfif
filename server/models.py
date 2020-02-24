@@ -585,8 +585,8 @@ class Invoice(Base):
     final_amount = models.IntegerField(null=True, blank=True)
     ipg = models.SmallIntegerField(default=1)
     expire = models.DateTimeField(null=True, blank=True)
-    status = models.CharField(max_length=255, default='pending', choices=((1, 'pending'), (2, 'payed'), (3, 'canceled'),
-                                                                          (4, 'rejected'), (5, 'new_invoice')))
+    status = models.PositiveSmallIntegerField(default=1, choices=((1, 'pending'), (2, 'payed'), (3, 'canceled'),
+                                                                  (4, 'rejected'), (5, 'new_invoice')))
 
     class Meta:
         db_table = 'invoice'
