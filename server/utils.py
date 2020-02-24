@@ -255,7 +255,7 @@ def calculate_profit(products):
 
 
 def get_basket(user, lang, basket=None):
-    basket = basket or Basket.objects.filter(user=user, active=True).first()
+    basket = basket or Basket.objects.filter(user=user).order_by('-id').first()
     if basket is None:
         return {}
     basket_products = BasketProduct.objects.filter(basket=basket).select_related(*BasketProduct.related)
