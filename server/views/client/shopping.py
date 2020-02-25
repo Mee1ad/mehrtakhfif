@@ -13,10 +13,9 @@ class BasketView(LoginRequired):
         data = load_data(request)
         try:
             assert request.user.is_authenticated
-            basket = Basket.objects.get(user=request.user, active=True)
+            basket = Basket.objects.filter(user=request.user).order_by('-id').first()
         except Basket.DoesNotExist:
-            basket = Basket.objects.create(user=request.user, created_by=request.user, updated_by=request.user,
-                                           active=True)
+            basket = Basket.objects.create(user=request.user, created_by=request.user, updated_by=request.user)
         except AssertionError:
             return JsonResponse({}, status=401)
         basket_count = self.add_to_basket(basket, data['products'], data['override'], data['add'])

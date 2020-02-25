@@ -10,6 +10,7 @@
 # one command for development
 # celery -A mehr_takhfif worker --beat --scheduler django --loglevel=info
 
+
 from mehr_takhfif.settings_var import broker_url
 
 cache_backend = 'django-cache'

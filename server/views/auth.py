@@ -42,11 +42,10 @@ class Login(View):
             assert user.check_password(password)
             login(request, user, backend='django.contrib.auth.backends.ModelBackend')
             res = {'user': UserSchema().dump(user)}
-            basket = Basket.objects.filter(user=user, active=True)
+            basket = Basket.objects.filter(user=user).order_by('-id')
             if basket.exists():
                 res['basket_count'] = basket.first().products.all().count()
-            res = JsonResponse(res)
-            return set_csrf_token(res)
+            return JsonResponse(res)
         except User.DoesNotExist:  # Signup
             if 'user' in locals():
                 # noinspection PyUnboundLocalVariable
@@ -137,7 +136,7 @@ class Activate(View):
             if Login.check_password(user):
                 res = JsonResponse(UserSchema().dump(user))  # successful login
                 res.delete_cookie('token')
-            return set_csrf_token(res)
+            return res
         except Exception:
             return JsonResponse({'message': 'code not found'}, status=res_code['integrity'])
 

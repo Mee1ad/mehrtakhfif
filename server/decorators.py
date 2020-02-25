@@ -5,6 +5,8 @@ import traceback
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import JsonResponse, HttpResponse
+from server.utils import res_code
+from server.error import *
 
 from server.models import *
 
@@ -25,6 +27,9 @@ def try_except(func):
             print('Json Decode Error')
             traceback.print_exc()
             return JsonResponse({}, status=500)
+        except AuthError:
+            traceback.print_exc()
+            return JsonResponse({}, status=res_code['forbidden'])
         except Exception:
             traceback.print_exc()
             exc_type, exc_obj, exc_tb = sys.exc_info()

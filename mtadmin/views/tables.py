@@ -1,4 +1,3 @@
-
 from statistics import mean, StatisticsError
 from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
 from django.contrib.postgres.fields.jsonb import KeyTextTransform
@@ -16,13 +15,6 @@ class CategoryView(AdminView):
     def post(self, request):
         last_items = create_object(request, Category, CategoryASchema)
         return JsonResponse(last_items, status=201)
-
-    def patch(self, request):
-        data = get_data(request)
-        category = Category.objects.filter(pk=data['category']).first()
-        features = Feature.objects.filter(pk__in=data['features'])
-        category.feature_set.add(*features)
-        return JsonResponse({})
 
     def put(self, request):
         update_object(request, Category)
@@ -75,15 +67,6 @@ class ProductView(AdminView):
         items = create_object(request, Product, ProductESchema)
         return JsonResponse(items, status=201)
 
-    def patch(self, request):
-        data = get_data(request)
-        product = Product.objects.filter(pk=data['product']).first()
-        tags = Tag.objects.filter(pk__in=data['tags'])
-        media = Media.objects.filter(pk__in=data['media'])
-        product.tag.add(*tags)
-        product.media.add(*media)
-        return JsonResponse({})
-
     def put(self, request):
         update_object(request, Product)
         return JsonResponse({})
@@ -99,15 +82,7 @@ class StorageView(AdminView):
 
     def post(self, request):
         storage = create_object(request, Storage, StorageASchema)
-
         return JsonResponse(storage, status=201)
-
-    def patch(self, request):
-        data = get_data(request)
-        storage = Storage.objects.filter(pk=data['storage']).first()
-        features = Feature.objects.filter(pk__in=data['features'])
-        storage.feature.add(*features)
-        return JsonResponse({})
 
     def put(self, request):
         update_object(request, Storage)
@@ -154,7 +129,7 @@ class TagView(AdminView):
             obj = Tag.objects.get(pk=pk)
             return JsonResponse({"data": TagESchema().dump(obj)})
         try:
-            query = Tag.objects.annotate(contain=SearchVector(KeyTextTransform(request.lang, 'name')),).\
+            query = Tag.objects.annotate(contain=SearchVector(KeyTextTransform(request.lang, 'name')), ). \
                 filter(**params['filter']).order_by(*params['order'])
             res = get_pagination(query, request.step, request.page, TagASchema)
         except (FieldError, ValueError):

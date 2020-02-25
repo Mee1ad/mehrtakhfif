@@ -348,22 +348,30 @@ def set_token(user, response):
 def get_token_from_cookie(request):
     return request.get_signed_cookie('token', False, salt=TOKEN_SALT)
 
+
 @pysnooper.snoop()
-def set_csrf_token(response):
+def set_csrf_cookie(response):
     random_text = uuid.uuid4().hex
     token = hashlib.sha3_224(random_text.encode()).hexdigest()
     response.set_signed_cookie('csrf_cookie', token, max_age=15778800, expires=15778800, domain="mt.com")  # 6 month
     return response
 
 
+@pysnooper.snoop()
 def check_csrf_token(request):
     csrf_cookie = request.get_signed_cookie('csrf_cookie', False)
 
+    @pysnooper.snoop()
     def double_check_token(minute):
         time = add_minutes(minute).strftime("%Y-%m-%d-%H-%M")
-        token = hashlib.sha3_224(csrf_cookie + time + CSRF_SALT).hexdigest()
-        if token == request.header['X-CSRF-Token']:
+        try:
+            token = hashlib.sha3_224((csrf_cookie + time + CSRF_SALT).encode()).hexdigest()
+        except TypeError:
+            raise AuthError
+        print(request.headers)
+        if token == request.headers['X-Csrf-Token']:
             return True
+
     if double_check_token(0) or double_check_token(-1):
         return True
     raise AuthError

@@ -3,7 +3,7 @@ from server.utils import get_pagination, get_token_from_cookie, set_token, check
 from server.error import AuthError
 from django.core.exceptions import ValidationError, FieldError
 from django.contrib.admin.utils import NestedObjects
-from server.models import Storage, Product, Category, Tag, Media
+from server.models import *
 from mtadmin.serializer import tables
 from operator import attrgetter
 import json
@@ -97,23 +97,56 @@ def assign_default_value(product_id):
 
 
 def create_object(request, model, serializer):
-    data = get_data(request)
+    # data = get_data(request)
+    data = json.loads(request)
     user = request.user
+    rm = ['tags', 'media', 'features']
+    m2m = {}
+    for item in rm:
+        try:
+            m2m[item] = data[item]
+            data.pop(item)
+        except KeyError:
+            continue
     obj = model.objects.create(**data, created_by=user, updated_by=user)
     if model == Product:
         product = obj
-        tags = Tag.objects.filter(pk__in=data['tags'])
-        media = Media.objects.filter(pk__in=data['media'])
+        tags = Tag.objects.filter(pk__in=m2m['tags'])
+        media = Media.objects.filter(pk__in=m2m['media'])
         product.tag.add(*tags)
         product.media.add(*media)
-    if model == Storage:
-        assign_default_value(obj.product_id)
+    if model == Category or model == Storage:
+        item = obj
+        features = Feature.objects.filter(pk__in=m2m['features'])
+        item.feature_set.add(*features)
+        if model == Storage:
+            assign_default_value(obj.product_id)
     return serialized_objects(request, model, serializer)
 
 
 def update_object(request, model):
-    data = get_data(request)
-    model.objects.filter(pk=data['id']).update(**data)
+    # data = get_data(request)
+    data = json.loads(request.body)
+    items = model.objects.filter(pk=data['id'])
+    if model == Product:
+        tags = Tag.objects.filter(pk__in=data['tags'])
+        media = Media.objects.filter(pk__in=data['media'])
+        product = items.first()
+        product.tag.clear()
+        product.tag.add(*tags)
+        product.media.clear()
+        product.media.add(*media)
+        data.pop('tags')
+        data.pop('media')
+    if model == Category or model == Storage:
+        item = items.first()
+        features = Feature.objects.filter(pk__in=data['features'])
+        data.pop('features')
+        item.feature_set.clear()
+        item.feature_set.add(*features)
+        if model == Storage:
+            assign_default_value(item.product_id)
+    items.update(**data)
 
 
 def delete_base(request, model):

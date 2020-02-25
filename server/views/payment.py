@@ -12,7 +12,7 @@ import pysnooper
 import json
 import zeep
 
-ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'به پرداخت ملت', 'hide': False, 'disable': False},
+ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'disable': False},
                 {'id': 2, 'key': 'melli', 'name': 'ملی', 'hide': True, 'disable': True},
                 {'id': 3, 'key': 'saman', 'name': 'سامان', 'hide': True, 'disable': True},
                 {'id': 4, 'key': 'refah', 'name': 'رفاه', 'hide': True, 'disable': True},
@@ -44,8 +44,6 @@ class IPG(View):
 class PaymentRequest(View):
     @pysnooper.snoop()
     def get(self, request, basket_id):
-        # todo debug
-        amount = request.GET.get('a')
 
         # ipg_id = request.GET.get('ipg_id', 1)
         user = request.user
@@ -63,14 +61,14 @@ class PaymentRequest(View):
         invoice = self.create_invoice(request)
         self.reserve_storage(basket, invoice)
 
-        res = {"url": f"{bp['ipg_url']}?RefId={self.behpardakht_api(invoice.pk, amount)}"}
+        res = {"url": f"{bp['ipg_url']}?RefId={self.behpardakht_api(invoice.pk)}"}
         return JsonResponse(res)
 
     @pysnooper.snoop()
-    def behpardakht_api(self, invoice_id, amount):
+    def behpardakht_api(self, invoice_id):
         invoice = Invoice.objects.get(pk=invoice_id)
         # todo debug
-        invoice.amount = amount
+        invoice.amount = 1000
 
         local_date = timezone.now().strftime("%Y%m%d")
         local_time = pytz.timezone("Iran").localize(datetime.now()).strftime("%H%M%S")
