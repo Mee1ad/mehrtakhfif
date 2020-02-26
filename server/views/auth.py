@@ -4,7 +4,7 @@ from django.contrib.auth import login
 from django.contrib.auth import logout
 from django.contrib.auth.backends import ModelBackend
 from django.http import JsonResponse
-
+from django.db.models import ProtectedError
 from server.utils import *
 from server.serialize import UserSchema
 import pysnooper
@@ -47,9 +47,10 @@ class Login(View):
                 res['basket_count'] = basket.first().products.all().count()
             return JsonResponse(res)
         except User.DoesNotExist:  # Signup
-            if 'user' in locals():
-                # noinspection PyUnboundLocalVariable
+            try:
                 user.delete()
+            except ProtectedError:
+                pass
             user = User.objects.create_user(username=username, password=password)
             res = JsonResponse({}, status=res_code['signup_with_pp'])  # please agree privacy policy
             return set_token(user, res)
@@ -57,6 +58,7 @@ class Login(View):
             return JsonResponse({}, status=res_code['invalid_password'])
 
     @staticmethod
+    @pysnooper.snoop()
     def send_activation(user):
         resend_timeout = 0.5
         activation_expire = 2
@@ -120,6 +122,7 @@ class ResendCode(View):
 
 
 class Activate(View):
+    @pysnooper.snoop()
     def post(self, request):
         data = load_data(request)
         # TODO: get csrf code
@@ -132,11 +135,15 @@ class Activate(View):
             user.is_active = True
             user.save()
             login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-            res = JsonResponse(UserSchema().dump(user), status=res_code['signup_with_pass'])  # signup without password
+            res = {'user': UserSchema().dump(user)}  # signup without password
+            basket = Basket.objects.filter(user=user).order_by('-id')
+            if basket.exists():
+                res['basket_count'] = basket.first().products.all().count()
+            response = JsonResponse(res, status=res_code['signup_with_pass'])
             if Login.check_password(user):
-                res = JsonResponse(UserSchema().dump(user))  # successful login
-                res.delete_cookie('token')
-            return res
+                response = JsonResponse(res)  # successful login
+                response.delete_cookie('token')
+            return response
         except Exception:
             return JsonResponse({'message': 'code not found'}, status=res_code['integrity'])
 

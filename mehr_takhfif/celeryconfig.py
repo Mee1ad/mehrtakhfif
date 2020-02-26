@@ -19,5 +19,4 @@ result_backend = 'django-db'
 broker_url = broker_url
 # accept_content = ['json']
 # task_serializer = 'json'
-# timezone = 'UTC'
-# time_zone = 'UTC'
+timezone = 'UTC'

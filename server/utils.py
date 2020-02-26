@@ -349,7 +349,6 @@ def get_token_from_cookie(request):
     return request.get_signed_cookie('token', False, salt=TOKEN_SALT)
 
 
-@pysnooper.snoop()
 def set_csrf_cookie(response):
     random_text = uuid.uuid4().hex
     token = hashlib.sha3_224(random_text.encode()).hexdigest()
@@ -357,11 +356,9 @@ def set_csrf_cookie(response):
     return response
 
 
-@pysnooper.snoop()
 def check_csrf_token(request):
     csrf_cookie = request.get_signed_cookie('csrf_cookie', False)
 
-    @pysnooper.snoop()
     def double_check_token(minute):
         time = add_minutes(minute).strftime("%Y-%m-%d-%H-%M")
         try:

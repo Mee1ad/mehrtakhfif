@@ -199,6 +199,16 @@ class MediaView(AdminView):
             return JsonResponse({'media': MediaASchema().dump(media, many=True)})
         return JsonResponse({}, status=res_code['bad_request'])
 
+    @pysnooper.snoop()
+    def patch(self, request):
+        data = json.loads(request.body)
+        title = data['title']
+        pk = data['id']
+        media = Media.objects.filter(pk=pk)
+        assert request.user.box_permission.filter(box=media.first().box).exists()
+        media.update(title=title)
+        return JsonResponse({'media': MediaASchema().dump(media, many=True)})
+
     def delete(self, request):
         return delete_base(request, Media)
 
