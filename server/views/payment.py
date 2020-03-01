@@ -42,9 +42,8 @@ class IPG(View):
 
 
 class PaymentRequest(View):
-    @pysnooper.snoop()
     def get(self, request, basket_id):
-
+        return JsonResponse({"url": "http://api.mt.com/payment/callback"})
         # ipg_id = request.GET.get('ipg_id', 1)
         user = request.user
         assert Basket.objects.filter(pk=basket_id, user=user).exists()
@@ -139,7 +138,12 @@ class PaymentRequest(View):
 
 
 class CallBack(View):
-    @pysnooper.snoop()
+
+    def get(self, request):
+        # return HttpResponseRedirect("http://mt.com:3000/shopping/fail")
+        digital = Invoice.objects.get(pk=102).storages.filter(product__type=1).exists()
+        return HttpResponseRedirect("http://mt.com:3000/shopping/invoice?id=102&d=" + str(digital).lower())
+
     def post(self, request):
         data = request.body.decode().split('&')
         data_dict = {}

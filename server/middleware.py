@@ -1,5 +1,5 @@
 from mehr_takhfif.settings import TOKEN_SALT, ADMIN
-from server.utils import default_step, default_page, res_code, set_csrf_cookie
+from server.utils import default_step, default_page, res_code, set_csrf_cookie, check_csrf_token
 from mtadmin.utils import get_roll
 from server.models import User, Basket
 from django.http import JsonResponse, HttpResponseNotFound
@@ -7,6 +7,7 @@ import json
 from django.urls import resolve
 import time
 from server.error import AuthError
+import pysnooper
 
 
 class AuthMiddleware:
@@ -19,6 +20,10 @@ class AuthMiddleware:
         path = request.path_info
         route = resolve(path).route
         app_name = resolve(path).app_name
+        token_requests = ['POST', 'PUT', 'PATCH', 'DELETE']
+        allow_without_token = ['login']
+        if request.method in token_requests and route not in allow_without_token:
+            check_csrf_token(request)
 
         # Debug
         if ADMIN:
@@ -71,7 +76,6 @@ class AuthMiddleware:
             res['new_basket_count'] = new_basket_count
             response.content = json.dumps(res)
             response.set_signed_cookie('basket_count', new_basket_count, salt=TOKEN_SALT)
-        token_requests = ['POST', 'PUT', 'PATCH', 'DELETE']
         if request.method in token_requests:
             return set_csrf_cookie(response)
         return response

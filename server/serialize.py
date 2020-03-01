@@ -51,6 +51,7 @@ class BasketProductField(fields.Field):
 
 
 class BaseSchema(Schema):
+    id = fields.Int()
 
     def __init__(self, language='fa'):
         super().__init__()
@@ -369,6 +370,28 @@ class BasketProductSchema(BaseSchema):
             price = next(item['price'] for item in fs.value if item['fvid'] == feature['fvid'])
             features.append({"name": fname, "price": price})
         return features
+
+
+class InvoiceSchema(BaseSchema):
+    class Meta:
+        additional = ('id', 'amount', 'final_price')
+
+    created_at = fields.Function(lambda o: o.created_at.timestamp())
+    status = fields.Function(lambda o: o.get_status_display())
+
+
+class InvoiceStorageSchema(BaseSchema):
+    class Meta:
+        additional = ('count', 'discount_price', 'final_price', 'discount_percent', 'vip_discount_price',
+                      'vip_discount_percent', 'invoice_id')
+
+    storage = fields.Function(lambda o: {"id": o.storage.pk, "title": o.storage.title})
+    permalink = fields.Function(lambda o: o.storage.product.permalink)
+    box = fields.Function(lambda o: {"permalink": o.storage.product.box.permalink,
+                                     "name": o.storage.product.box.name})
+    thumbnail = fields.Function(lambda o: HOST + o.storage.product.thumbnail.file.url)
+    unit_price = fields.Function(lambda o: int(o.discount_price / o.count))
+    type = fields.Function(lambda o: o.storage.product.get_type_display())
 
 
 class BasketSchema(BaseSchema):

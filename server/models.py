@@ -368,7 +368,7 @@ class Product(Base):
     rate = models.PositiveSmallIntegerField(default=0)
     disable = models.BooleanField(default=True)
     verify = models.BooleanField(default=False)
-    type = models.PositiveSmallIntegerField(choices=[(1, 'service'), (2, 'product'), (3, 'code')])
+    type = models.PositiveSmallIntegerField(choices=[(1, 'service'), (2, 'product')])
     permalink = models.CharField(max_length=255, db_index=True, unique=True)
 
     name = JSONField(default=multilanguage)
@@ -586,7 +586,7 @@ class Invoice(Base):
     ipg = models.SmallIntegerField(default=1)
     expire = models.DateTimeField(null=True, blank=True)
     status = models.PositiveSmallIntegerField(default=1, choices=((1, 'pending'), (2, 'payed'), (3, 'canceled'),
-                                                                  (4, 'rejected'), (5, 'new_invoice')))
+                                                                  (4, 'rejected')))
 
     class Meta:
         db_table = 'invoice'
@@ -609,6 +609,7 @@ class InvoiceStorage(models.Model):
     vip_discount_price = models.BigIntegerField(verbose_name='Discount price', default=0)
     vip_discount_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount price percent')
 
+    # todo change to invoice_storage
     class Meta:
         db_table = 'invoice_product'
         ordering = ['-id']

@@ -10,6 +10,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core import serializers
 from django.db.models import F
+from django.core.mail import send_mail
 from django.views import View
 from django_celery_beat.models import PeriodicTask, IntervalSchedule
 from datetime import datetime
@@ -58,8 +59,6 @@ def validation(data):
 
 
 def load_data(request, check_token=True):
-    if check_token:
-        check_csrf_token(request)
     data = json.loads(request.body)
     validation(data)
     return data
@@ -200,6 +199,12 @@ def send_sms(code, to):
     #         'to': to, 'message': f'کد: {code}\nمهرتخفیف'}
 
     return requests.post('http://ippanel.com/api/select', data=json.dumps(data))
+
+
+def send_email(subject, message, to, mail='me@mehrtakhfif.com'):
+    if type(to) != list:
+        to = [to]
+    send_mail(subject, message, mail, to, fail_silently=False)
 
 
 def get_categories(language, box_id=None, category=None):

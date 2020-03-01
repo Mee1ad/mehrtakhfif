@@ -201,13 +201,15 @@ class MediaView(AdminView):
 
     @pysnooper.snoop()
     def patch(self, request):
+        import time
+        time.sleep(5)
         data = json.loads(request.body)
         title = data['title']
         pk = data['id']
         media = Media.objects.filter(pk=pk)
-        assert request.user.box_permission.filter(box=media.first().box).exists()
+        assert request.user.box_permission.filter(id=media.first().box_id).exists()
         media.update(title=title)
-        return JsonResponse({'media': MediaASchema().dump(media, many=True)})
+        return JsonResponse({'media': MediaASchema().dump(media.first())})
 
     def delete(self, request):
         return delete_base(request, Media)

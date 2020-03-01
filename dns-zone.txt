@@ -1,0 +1,39 @@
+$TTL 120        ; 2 minutes default TTL
+
+; MX Records - 1
+ @                 IN      MX 10   box.mehrtakhfif.com.
+
+
+; Machine Names - 8
+@                  IN        A      37.152.182.220
+www                IN        A      37.152.182.220
+api                IN        A      37.152.182.220
+box                IN        A      193.176.241.44
+autoconfig         IN        A      193.176.241.44
+autodiscover       IN        A      193.176.241.44
+autoconfig.box     IN        A      193.176.241.44
+autodiscover.box   IN        A      193.176.241.44
+
+
+
+; TXT Records - 16
+@	        IN              TXT	    "v=spf1 mx -all"
+_dmarc	IN                  TXT	    "v=DMARC1; p=quarantine"
+mail._domainkey             TXT	    "v=DKIM1; h=sha256; k=rsa; s=email; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApm+WiNv8y5cjTstw8rUSsehq0IPZbMcKevy7mI/l+KptQ1RWOfHLP37tkRHDd23YhR3ZMxTj8bpAWxGttGfgdpag6o/ITcC5sAvYDsAB+RrutD7dmo7MC2g9IBu65W+oxWfg8w/QGxZ75pJoS31Szi+0uhiTjMByoj65ElNf7zFef55qYrUs8EJFzZ1P0c5ebnyJb1ZZfXRKvIgxPE0+Y8N03nAg0r/MOIDycBW/trHtU6MWirNA+1aDYE5RpkaT5h2TCq2ly+KBImGICd/RBIN9Tqt0P1y5CgRGMP4/8uvAv6EqUzakKjWHoU4ilHp8RaBf00Ab58181h2ExwqpDQIDAQAB"
+box	                        TXT	    "v=spf1 mx -all"
+_dmarc.box	                TXT	    "v=DMARC1; p=quarantine"
+mail._domainkey.box	        TXT	    "v=DKIM1; h=sha256; k=rsa; s=email; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApm+WiNv8y5cjTstw8rUSsehq0IPZbMcKevy7mI/l+KptQ1RWOfHLP37tkRHDd23YhR3ZMxTj8bpAWxGttGfgdpag6o/ITcC5sAvYDsAB+RrutD7dmo7MC2g9IBu65W+oxWfg8w/QGxZ75pJoS31Szi+0uhiTjMByoj65ElNf7zFef55qYrUs8EJFzZ1P0c5ebnyJb1ZZfXRKvIgxPE0+Y8N03nAg0r/MOIDycBW/trHtU6MWirNA+1aDYE5RpkaT5h2TCq2ly+KBImGICd/RBIN9Tqt0P1y5CgRGMP4/8uvAv6EqUzakKjWHoU4ilHp8RaBf00Ab58181h2ExwqpDQIDAQAB"
+autoconfig.box	            TXT 	"v=spf1 -all"
+_dmarc.autoconfig.box	    TXT	    "v=DMARC1; p=reject"
+autodiscover.box	        TXT	    "v=spf1 -all"
+_dmarc.autodiscover.box	    TXT	    "v=DMARC1; p=reject"
+ns1.box	                    TXT	    "v=spf1 -all"
+_dmarc.ns1.box        	    TXT	    "v=DMARC1; p=reject"
+ns2.box	                    TXT	    "v=spf1 -all"
+_dmarc.ns2.box        	    TXT	    "v=DMARC1; p=reject"
+www	                        TXT	    "v=spf1 -all"
+_dmarc.www	                TXT	    "v=DMARC1; p=reject"
+
+;SRV Records - 2
+_caldavs._tcp	            SRV	    0 0 443 box.mehrtakhfif.com
+_carddavs._tcp              SRV	    0 0 443 box.mehrtakhfif.com

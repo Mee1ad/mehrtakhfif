@@ -4,6 +4,7 @@ from server.serialize import *
 from server.utils import *
 from server.utils import LoginRequired
 from mehr_takhfif.settings import HOST
+import pysnooper
 
 
 class Profile(LoginRequired):
@@ -51,9 +52,32 @@ class Avatar(LoginRequired):
 
 
 class Orders(LoginRequired):
+    @pysnooper.snoop()
     def get(self, request):
+        pk = request.GET.get('id', None)
+        if pk:
+            invoice_exists = Invoice.objects.filter(pk=pk, user=request.user)
+            assert invoice_exists
+            products = InvoiceStorage.objects.filter(invoice_id=pk)
+            invoice = invoice_exists.first()
+            address = AddressSchema().dump(invoice.address)
+            products = InvoiceStorageSchema().dump(products, many=True)
+            return JsonResponse({"products": products, 'address': address,
+                                 'status': invoice.get_status_display(), 'amount': invoice.amount})
         orders = user_data_with_pagination(Invoice, InvoiceSchema, request)
         return JsonResponse(orders)
+
+
+class OrderProduct(LoginRequired):
+    def get(self, request):
+        pk = request.GET.get('id', None)
+        invoice_product = InvoiceStorage.objects.get(pk=pk, invoice__user=request.user)
+        product = invoice_product.storage.product
+        product_dict = ProductSchema(language=request.lang).dump(product)
+        product_dict['default_storage'] = MinStorageSchema().dump(product.default_storage)
+        invoice_product = InvoiceStorageSchema().dump(invoice_product)
+        invoice_product['product'] = product_dict
+        return JsonResponse({"product": invoice_product})
 
 
 class Trips(LoginRequired):
@@ -75,6 +99,7 @@ class AddressView(LoginRequired):
 
         :template:`server/my_template.html`
     """
+
     def get(self, request):
         addresses = user_data_with_pagination(Address, AddressSchema, request)
         default_address = AddressSchema().dump(request.user.default_address)

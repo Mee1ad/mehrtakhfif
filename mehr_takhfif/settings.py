@@ -242,5 +242,12 @@ if DEBUG:
 
 TIME_ZONE = 'UTC'
 USE_TZ = True
-CELERY_ENABLE_UTC = True
-CELERY_TIMEZONE = "UTC"
+# CELERY_ENABLE_UTC = True
+# CELERY_TIMEZONE = "UTC"
+
+# Email settings
+EMAIL_HOST = 'box.mehrtakhfif.com'
+EMAIL_HOST_USER = 'me@mehrtakhfif.com'
+EMAIL_HOST_PASSWORD = 'KHMIF3ELI%AZzS5x^mYdk6XQcu#d8ugmeelad1995'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
