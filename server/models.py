@@ -375,6 +375,7 @@ class Product(Base):
     # name = pg_search.SearchVectorField(null=True)
     short_description = JSONField(default=multilanguage)
     description = JSONField(default=multilanguage)
+    extra_description = JSONField(default=multilanguage)
     location = JSONField(null=True, blank=True)
     address = JSONField(null=True, blank=True)
     short_address = JSONField(null=True, blank=True)
@@ -394,6 +395,7 @@ class DiscountCode(Base):
     special_product = models.ForeignKey("SpecialProduct", on_delete=PROTECT, null=True, blank=True)
     special_offer = models.ForeignKey("SpecialOffer", on_delete=PROTECT, null=True, blank=True)
     available = models.BooleanField(default=True)
+    code = models.CharField(max_length=32)
 
     class Meta:
         db_table = 'discount_code'
@@ -433,6 +435,7 @@ class Storage(Base):
     start_time = models.DateTimeField(auto_now_add=True)
     title = JSONField(default=multilanguage)
     supplier = models.ManyToManyField(User, through='StorageSupplier')
+    extra_description = JSONField(default=multilanguage)
 
     class Meta:
         db_table = 'storage'

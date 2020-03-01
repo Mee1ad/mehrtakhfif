@@ -184,6 +184,11 @@ class BaseSchema(Schema):
             new_value.append({'name': item[self.lang], 'id': item['id']})
         return new_value
 
+    def get_code(self, obj):
+        if obj.type == 1:
+            return "esfand-98"
+        return None
+
 
 class UserSchema(BaseSchema):
     class Meta:
@@ -308,6 +313,7 @@ class ProductSchema(BaseSchema):
     description = fields.Method("get_description")
     properties = fields.Method("get_properties")
     details = fields.Method("get_details")
+    code = fields.Method("get_code")
     location = fields.Function(lambda o: {"lat": o.location['lat'], 'lng': o.location['lng']} if o.location else {})
 
 
@@ -318,6 +324,7 @@ class MinProductSchema(BaseSchema):
     name = fields.Method("get_name")
     thumbnail = fields.Function(lambda o: HOST + o.thumbnail.file.url)
     default_storage = fields.Method("get_min_storage")
+    code = fields.Method("get_code")
 
 
 class SliderSchema(BaseSchema):
@@ -385,13 +392,29 @@ class InvoiceStorageSchema(BaseSchema):
         additional = ('count', 'discount_price', 'final_price', 'discount_percent', 'vip_discount_price',
                       'vip_discount_percent', 'invoice_id')
 
-    storage = fields.Function(lambda o: {"id": o.storage.pk, "title": o.storage.title})
-    permalink = fields.Function(lambda o: o.storage.product.permalink)
-    box = fields.Function(lambda o: {"permalink": o.storage.product.box.permalink,
-                                     "name": o.storage.product.box.name})
-    thumbnail = fields.Function(lambda o: HOST + o.storage.product.thumbnail.file.url)
+    storage = fields.Method("get_storage")
+    box = fields.Method("get_box")
     unit_price = fields.Function(lambda o: int(o.discount_price / o.count))
-    type = fields.Function(lambda o: o.storage.product.get_type_display())
+    product = fields.Method("get_storage_product")
+
+    def get_storage_product(self, obj):
+        p = obj.storage.product
+        product = MinProductSchema(self.lang).dump(p)
+        product['type'] = p.get_type_display()
+        del product['rate'], product["default_storage"]
+        try:
+            product['extra_description'] = p.extra_description[self.lang]
+        except AttributeError:
+            product['extra_description'] = p.extra_description['fa']
+        return product
+
+    def get_storage(self, obj):
+        storage = {"id": obj.storage.pk, "title": obj.storage.title[self.lang]}
+        try:
+            storage["extra_description"] = obj.storage.extra_description[self.lang]
+        except AttributeError:
+            storage["extra_description"] = obj.storage.extra_description['fa']
+        return storage
 
 
 class BasketSchema(BaseSchema):

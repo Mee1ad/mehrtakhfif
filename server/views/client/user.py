@@ -73,11 +73,10 @@ class OrderProduct(LoginRequired):
         pk = request.GET.get('id', None)
         invoice_product = InvoiceStorage.objects.get(pk=pk, invoice__user=request.user)
         product = invoice_product.storage.product
-        product_dict = ProductSchema(language=request.lang).dump(product)
-        product_dict['default_storage'] = MinStorageSchema().dump(product.default_storage)
+        # product_dict = ProductSchema(language=request.lang).dump(product)
         invoice_product = InvoiceStorageSchema().dump(invoice_product)
-        invoice_product['product'] = product_dict
-        return JsonResponse({"product": invoice_product})
+        # invoice_product['product'] = product_dict
+        return JsonResponse(invoice_product)
 
 
 class Trips(LoginRequired):
