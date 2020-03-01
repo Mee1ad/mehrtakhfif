@@ -403,17 +403,17 @@ class InvoiceStorageSchema(BaseSchema):
         product['type'] = p.get_type_display()
         del product['rate'], product["default_storage"]
         try:
-            product['extra_description'] = p.extra_description[self.lang]
+            product['invoice_description'] = p.invoice_description[self.lang]
         except AttributeError:
-            product['extra_description'] = p.extra_description['fa']
+            product['invoice_description'] = p.invoice_description['fa']
         return product
 
     def get_storage(self, obj):
         storage = {"id": obj.storage.pk, "title": obj.storage.title[self.lang]}
         try:
-            storage["extra_description"] = obj.storage.extra_description[self.lang]
+            storage["invoice_description"] = obj.storage.invoice_description[self.lang]
         except AttributeError:
-            storage["extra_description"] = obj.storage.extra_description['fa']
+            storage["invoice_description"] = obj.storage.invoice_description['fa']
         return storage
 
 
