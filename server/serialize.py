@@ -409,11 +409,11 @@ class InvoiceStorageSchema(BaseSchema):
         return product
 
     def get_storage(self, obj):
-        storage = {"id": obj.storage.pk, "title": obj.storage.title[self.lang]}
-        try:
-            storage["invoice_description"] = obj.storage.invoice_description[self.lang]
-        except AttributeError:
-            storage["invoice_description"] = obj.storage.invoice_description['fa']
+        storage = obj.storage
+        storage = {"id": storage.pk, "title": storage.title[self.lang],
+                   "invoice_description": storage.invoice_description[self.lang],
+                   "invoice_title": storage.invoice_title[self.lang]}
+
         return storage
 
 

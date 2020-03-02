@@ -436,6 +436,7 @@ class Storage(Base):
     title = JSONField(default=multilanguage)
     supplier = models.ManyToManyField(User, through='StorageSupplier')
     invoice_description = JSONField(default=multilanguage)
+    invoice_title = JSONField(default=multilanguage)
 
     class Meta:
         db_table = 'storage'
