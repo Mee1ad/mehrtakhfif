@@ -11,6 +11,7 @@ from server.utils import get_basket, add_one_off_job, sync_storage, add_minutes
 import pysnooper
 import json
 import zeep
+from django.template.loader import render_to_string
 
 ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'disable': False},
                 {'id': 2, 'key': 'melli', 'name': 'ملی', 'hide': True, 'disable': True},
@@ -193,3 +194,7 @@ class CallBack(View):
         description = f'{timezone.now()}: canceled by system'
         PeriodicTask.objects.filter(name=task_name).update(enabled=False, description=description)
         InvoiceStorage.objects.bulk_create(invoice_products)
+
+    def send_invoice(self):
+        rendered = render_to_string('test.html', {'foo': 'bar'})
+        send_email("django html test", "soheilravasani@gmail.com", html_message=rendered)

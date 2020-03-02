@@ -201,10 +201,10 @@ def send_sms(code, to):
     return requests.post('http://ippanel.com/api/select', data=json.dumps(data))
 
 
-def send_email(subject, message, to, mail='me@mehrtakhfif.com'):
+def send_email(subject, to, mail='support@mehrtakhfif.com', message=None, html_message=None):
     if type(to) != list:
         to = [to]
-    send_mail(subject, message, mail, to, fail_silently=False)
+    send_mail(subject, message, mail, to, fail_silently=False, html_message=html_message)
 
 
 def get_categories(language, box_id=None, category=None):

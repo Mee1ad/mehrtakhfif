@@ -186,7 +186,7 @@ class BaseSchema(Schema):
 
     def get_code(self, obj):
         if obj.type == 1:
-            return "esfand-98"
+            return ["esfand-98", "esfand-99"]
         return None
 
 

@@ -16,11 +16,7 @@ CSRF_SALT = "2<Q3$]GDZYy;S/Ed)P{4S4!PqXkFLy+='4?p2py}89:N&e[%!!@WSB&"
 
 DEBUG = DEBUG
 
-ADMINS = [('Soheil', 'soheilravasani@gmail.com')]
 ALLOWED_HOSTS = ALLOWED_HOSTS
-
-DEFAULT_FROM_EMAIL = 'webmaster@localhost'
-SERVER_EMAIL = 'root@localhost'
 
 HOST = HOST
 IP = IP
@@ -121,7 +117,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'mehr_takhfif.wsgi.application'
-
 
 DATABASES = DATABASES
 
@@ -247,7 +242,8 @@ USE_TZ = True
 
 # Email settings
 EMAIL_HOST = 'box.mehrtakhfif.com'
-EMAIL_HOST_USER = 'me@mehrtakhfif.com'
-EMAIL_HOST_PASSWORD = 'KHMIF3ELI%AZzS5x^mYdk6XQcu#d8ugmeelad1995'
+EMAIL_HOST_USER = 'superuser@mehrtakhfif.com'
+EMAIL_HOST_PASSWORD = 'vcza$!me1jEnP%ES^0x2tWX&RehafiD'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
+ADMINS = [('Soheil', 'superuser@mehrtakhfif.com')]
