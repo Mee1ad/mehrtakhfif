@@ -395,6 +395,7 @@ class InvoiceStorageSchema(BaseSchema):
     storage = fields.Method("get_storage")
     box = fields.Method("get_box")
     unit_price = fields.Function(lambda o: int(o.discount_price / o.count))
+    purchase_date = fields.Function(lambda o: o.invoice.payed_at.timestamp())
     product = fields.Method("get_storage_product")
 
     def get_storage_product(self, obj):
