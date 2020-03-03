@@ -415,7 +415,7 @@ class Storage(Base):
         super().save(*args, **kwargs)
 
     product = models.ForeignKey(Product, on_delete=PROTECT)
-    feature = models.ManyToManyField(Feature, blank=True, through='FeatureStorage')
+    features = models.ManyToManyField(Feature, blank=True, through='FeatureStorage')
     available_count = models.BigIntegerField(verbose_name='Available count')
     sold_count = models.BigIntegerField(default=0, verbose_name='Sold count')
     start_price = models.BigIntegerField(verbose_name='Start price')
