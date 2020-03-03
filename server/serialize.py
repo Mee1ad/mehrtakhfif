@@ -226,12 +226,12 @@ class MediaSchema(Schema):
 
     id = fields.Int()
     type = fields.Function(lambda o: o.get_type_display())
-    file = fields.Method("get_file")
+    file = fields.Method("get_image")
     title = fields.Method("get_title")
     box = fields.Function(lambda o: o.box_id)
 
-    def get_file(self, obj):
-        return HOST + obj.file.url
+    def get_image(self, obj):
+        return HOST + obj.image.url
 
     def get_title(self, obj):
         try:
@@ -308,7 +308,7 @@ class ProductSchema(BaseSchema):
     house = fields.Method("get_house")
     tag = TagField()
     media = MediaField()
-    thumbnail = fields.Function(lambda o: HOST + o.thumbnail.file.url)
+    thumbnail = fields.Function(lambda o: HOST + o.thumbnail.image.url)
     short_description = fields.Method("get_short_description")
     description = fields.Method("get_description")
     properties = fields.Method("get_properties")

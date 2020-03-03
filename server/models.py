@@ -247,15 +247,20 @@ class Media(Base):
 
     def save(self, *args, **kwargs):
         sizes = {'thumbnail': (350, 217)}
-        im = Image.open(self.file)
-        width, height = im.size
-        # if (width, height) != sizes[self.get_type_display()]:
-        #     raise ValidationError
+        try:
+            im = Image.open(self.image)
+            width, height = im.size
+            # if (width, height) != sizes[self.get_type_display()]:
+            #     raise ValidationError
+        except AttributeError:
+            pass
         super().save(*args, **kwargs)
 
-    file = models.FileField(upload_to=upload_to)
+    image = models.FileField(upload_to=upload_to)
+    video = models.URLField()
+    audio = models.URLField()
     title = JSONField(default=multilanguage)
-    type = models.PositiveSmallIntegerField(choices=[(1, 'image'), (2, 'thumbnail'), (3, 'audio'),
+    type = models.PositiveSmallIntegerField(choices=[(1, 'image'), (2, 'thumbnail'),
                                                      (4, 'slider'), (5, 'ads'), (6, 'avatar'), (7, 'media')])
     box = models.ForeignKey(Box, on_delete=models.CASCADE, null=True, blank=True)
 
