@@ -7,7 +7,7 @@ from django_celery_beat.models import PeriodicTask
 from server.serialize import *
 import pytz
 from datetime import datetime
-from server.utils import get_basket, add_one_off_job, sync_storage, add_minutes
+from server.utils import get_basket, add_one_off_job, sync_storage, add_minutes, send_email
 import pysnooper
 import json
 import zeep

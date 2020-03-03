@@ -345,7 +345,7 @@ class StorageSchema(BaseSchema):
     title = fields.Method('get_title')
     deadline = fields.Function(lambda o: o.deadline.timestamp())
     default = fields.Function(lambda o: o == o.product.default_storage)
-    feature = FeatureField()
+    features = FeatureField()
 
 
 class MinStorageSchema(BaseSchema):
