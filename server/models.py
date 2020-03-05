@@ -93,7 +93,7 @@ def upload_to(instance, filename):
     date = timezone.now().strftime("%Y-%m-%d")
     time = timezone.now().strftime("%H-%M-%S-%f")[:-4]
     # file_type = re.search('\\w+', instance.type)[0]
-    file_format = os.path.splitext(instance.file.name)[-1]
+    file_format = os.path.splitext(instance.image.name)[-1]
     return f'boxes/{instance.box_id}/{date}/{instance.get_type_display()}/{time}{file_format}'
 
 
@@ -294,7 +294,7 @@ class Feature(Base):
         return f"{self.id}"
 
     name = JSONField(default=multilanguage)
-    type = models.CharField(max_length=255, choices=((1, 'bool'), (2, 'single'), (3, 'multi')))
+    type = models.PositiveSmallIntegerField(default=1, choices=((1, 'bool'), (2, 'single'), (3, 'multi')))
     value = JSONField(default=feature_value)
     category = models.ManyToManyField(Category)
     box = models.ForeignKey(Box, on_delete=CASCADE, blank=True, null=True)
@@ -353,7 +353,7 @@ class Product(Base):
         return self.category.name['ar']
 
     def get_thumbnail(self):
-        return HOST + self.thumbnail.file.url
+        return HOST + self.thumbnail.image.url
 
     # def save(self):
     #     self.slug = slugify(self.title)
@@ -506,7 +506,7 @@ class BasketProduct(models.Model):
     basket = models.ForeignKey(Basket, on_delete=PROTECT)
     count = models.IntegerField(default=1)
     box = models.ForeignKey(Box, on_delete=PROTECT)
-    feature = JSONField(default=list)
+    features = JSONField(default=list)
 
     class Meta:
         db_table = 'basket_product'
@@ -882,5 +882,5 @@ class Book(Base):
 
 @receiver(post_softdelete, sender=Media)
 def submission_delete(sender, instance, **kwargs):
-    if instance.file:
-        instance.file.delete(False)
+    if instance.image:
+        instance.image.delete(False)

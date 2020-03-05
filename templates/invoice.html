@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://api.mehrtakhfif.com/static/css/iran-sans.css" rel="stylesheet">
+    <style>
+        h1, h2, h3, h4, h5, h6 {
+            margin: 0;
+            padding: 0;
+        }
+
+        .center {
+            text-align: center;
+        }
+
+        .right {
+            text-align: right;
+        }
+
+        .flex {
+            /*display: flex*/
+        }
+
+        .column {
+            /*flex-direction: column;*/
+        }
+
+        .center {
+            justify-content: center;
+            align-items: center;
+        }
+
+        .flex1 {
+            flex: 1
+        }
+
+        .rtl {
+            direction: rtl;
+        }
+
+        .ltr {
+            direction: ltr;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        body > div {
+            flex-direction: column;
+            padding: 1cm 2cm;
+            text-align: initial;
+            position: relative;
+        }
+    </style>
+    <style>
+        @font-face {
+            font-family: IRANSans;
+            font-style: normal;
+            font-weight: 900;
+            src: url('https://api.mehrtakhfif.com/static/fonts/eot/IRANSansWeb(FaNum)_Black.eot');
+            src: url('https://api.mehrtakhfif.com/static/fonts/eot/IRANSansWeb(FaNum)_Black.eot?#iefix') format('embedded-opentype'), /* IE6-8 */ url('https://api.mehrtakhfif.com/static/fonts/woff2/IRANSansWeb(FaNum)_Black.woff2') format('woff2'), /* FF39+,Chrome36+, Opera24+*/ url('https://api.mehrtakhfif.com/static/fonts/woff/IRANSansWeb(FaNum)_Black.woff') format('woff'), /* FF3.6+, IE9, Chrome6+, Saf5.1+*/ url('https://api.mehrtakhfif.com/static/fonts/ttf/IRANSansWeb(FaNum)_Black.ttf') format('truetype');
+        }
+
+        @font-face {
+            font-family: IRANSans;
+            font-style: normal;
+            font-weight: bold;
+            src: url('https://api.mehrtakhfif.com/static/fonts/eot/IRANSansWeb(FaNum)_Bold.eot');
+            src: url('https://api.mehrtakhfif.com/static/fonts/eot/IRANSansWeb(FaNum)_Bold.eot?#iefix') format('embedded-opentype'), /* IE6-8 */ url('https://api.mehrtakhfif.com/static/fonts/woff2/IRANSansWeb(FaNum)_Bold.woff2') format('woff2'), /* FF39+,Chrome36+, Opera24+*/ url('https://api.mehrtakhfif.com/static/fonts/woff/IRANSansWeb(FaNum)_Bold.woff') format('woff'), /* FF3.6+, IE9, Chrome6+, Saf5.1+*/ url('https://api.mehrtakhfif.com/static/fonts/ttf/IRANSansWeb(FaNum)_Bold.ttf') format('truetype');
+        }
+
+        @font-face {
+            font-family: IRANSans;
+            font-style: normal;
+            font-weight: 500;
+            src: url('https://api.mehrtakhfif.com/static/fonts/eot/IRANSansWeb(FaNum)_Medium.eot');
+            src: url('https://api.mehrtakhfif.com/static/fonts/eot/IRANSansWeb(FaNum)_Medium.eot?#iefix') format('embedded-opentype'), /* IE6-8 */ url('https://api.mehrtakhfif.com/static/fonts/woff2/IRANSansWeb(FaNum)_Medium.woff2') format('woff2'), /* FF39+,Chrome36+, Opera24+*/ url('https://api.mehrtakhfif.com/static/fonts/woff/IRANSansWeb(FaNum)_Medium.woff') format('woff'), /* FF3.6+, IE9, Chrome6+, Saf5.1+*/ url('https://api.mehrtakhfif.com/static/fonts/ttf/IRANSansWeb(FaNum)_Medium.ttf') format('truetype');
+        }
+
+        @font-face {
+            font-family: IRANSans;
+            font-style: normal;
+            font-weight: 300;
+            src: url('https://api.mehrtakhfif.com/static/fonts/eot/IRANSansWeb(FaNum)_Light.eot');
+            src: url('https://api.mehrtakhfif.com/static/fonts/eot/IRANSansWeb(FaNum)_Light.eot?#iefix') format('embedded-opentype'), /* IE6-8 */ url('https://api.mehrtakhfif.com/static/fonts/woff2/IRANSansWeb(FaNum)_Light.woff2') format('woff2'), /* FF39+,Chrome36+, Opera24+*/ url('https://api.mehrtakhfif.com/static/fonts/woff/IRANSansWeb(FaNum)_Light.woff') format('woff'), /* FF3.6+, IE9, Chrome6+, Saf5.1+*/ url('https://api.mehrtakhfif.com/static/fonts/ttf/IRANSansWeb(FaNum)_Light.ttf') format('truetype');
+        }
+
+        @font-face {
+            font-family: IRANSans;
+            font-style: normal;
+            font-weight: 200;
+            src: url('https://api.mehrtakhfif.com/static/fonts/eot/IRANSansWeb(FaNum)_UltraLight.eot');
+            src: url('https://api.mehrtakhfif.com/static/fonts/eot/IRANSansWeb(FaNum)_UltraLight.eot?#iefix') format('embedded-opentype'), /* IE6-8 */ url('https://api.mehrtakhfif.com/static/fonts/woff2/IRANSansWeb(FaNum)_UltraLight.woff2') format('woff2'), /* FF39+,Chrome36+, Opera24+*/ url('https://api.mehrtakhfif.com/static/fonts/woff/IRANSansWeb(FaNum)_UltraLight.woff') format('woff'), /* FF3.6+, IE9, Chrome6+, Saf5.1+*/ url('https://api.mehrtakhfif.com/static/fonts/ttf/IRANSansWeb(FaNum)_UltraLight.ttf') format('truetype');
+        }
+
+        @font-face {
+            font-family: IRANSans;
+            font-style: normal;
+            font-weight: normal;
+            src: url('https://api.mehrtakhfif.com/static/fonts/eot/IRANSansWeb(FaNum).eot');
+            src: url('https://api.mehrtakhfif.com/static/fonts/eot/IRANSansWeb(FaNum).eot?#iefix') format('embedded-opentype'), /* IE6-8 */ url('https://api.mehrtakhfif.com/static/fonts/woff2/IRANSansWeb(FaNum).woff2') format('woff2'), /* FF39+,Chrome36+, Opera24+*/ url('https://api.mehrtakhfif.com/static/fonts/woff/IRANSansWeb(FaNum).woff') format('woff'), /* FF3.6+, IE9, Chrome6+, Saf5.1+*/ url('https://api.mehrtakhfif.com/static/fonts/ttf/IRANSansWeb(FaNum).ttf') format('truetype');
+        }
+
+        * {
+            font-family: IRANSans, serif !important;
+        }
+
+        .ltr:not([ltr]) {
+            font-family: sans-serif !important;
+        }
+
+    </style>
+</head>
+<body class="iran-sans rtl flex center" style="">
+<div class="flex column" style="text-align: center">
+    <a href="https://www.mehrtakhfif.com" style="color:#000;display:block;margin-bottom: 1cm;text-decoration: none;">
+        <div class="flex center" style="direction:rtl;padding-bottom: 3mm">
+            <img src="https://api.mehrtakhfif.com/static/mtIcon.png" width="60"/>
+            <img src="https://api.mehrtakhfif.com/static/mtTypo.png" width="200"/>
+        </div>
+        www.MehrTakhfif.com
+    </a>
+    <div class="center" style="text-align: center">
+        <div class="flex1 rtl"
+             style="
+             font-family: IRANSans, serif !important;
+        text-align:center;
+        font-size: 23px;
+    font-weight: 500;
+    color: #373737;
+    margin-top: 1cm;
+    border-bottom: 3px solid #ea4253;
+    padding-bottom: 0.2cm;
+    padding-right: 2mm;
+    padding-left: 2mm;
+    display: initial;
+line-height: 2">
+            تور یک روزه دریاچه الیمالات و ساحل محمودآباد با آژانس کانون گشت با ۲۳% تخفیف
+        </div>
+    </div>
+    <div class="center" style="margin-top: 2cm;text-align: center">
+        <div class="center" dir="rtl" style="text-align: center">
+            <span style="font-family: IRANSans, serif !important;">خریدار:</span>
+            <span style="font-family: IRANSans, serif !important;font-size: 20px;font-weight: 500;">ایمان صفارحمیدی</span>
+        </div>
+        <div class="center" dir="rtl" style="margin-top:0.5cm;font-size: 16px;font-weight: 600">
+            <span style="font-family: IRANSans, serif !important;font-size:17px;font-weight: 500;padding-left: 2px">قیمت محصول :</span>
+            <span style="font-family: IRANSans, serif !important;font-size: 24px;font-weight: 500;">562,555</span>
+            <span style="font-family: IRANSans, serif !important;font-weight: 400;font-size: 14px;">تومان</span>
+        </div>
+    </div>
+    <div class="row column" style="padding-top: 0.5cm;text-align: center">
+        <h3 class="center"
+            style="font-family: IRANSans, serif !important;direction:rtl;margin-bottom:1.2cm;font-weight: 500;font-size: 22px; text-align: center">
+            کد خریداری
+            شده:</h3>
+        <p style="border-top:2px solid #ea4253;"/>
+        <div style="display:block;text-align:center;
+        -webkit-border-radius: 5px;border-radius:5px;
+        padding: 6mm 6mm; font-weight: 500;font-size: xx-large;">
+            <span class="center ltr">554544848</span>
+        </div>
+        <p style="border-top:2px solid #ea4253;"/>
+    </div>
+    <div class="flex column" dir="rtl" style="padding-top:2cm; text-align: right">
+        <p class="flex"
+           style="font-family: IRANSans, serif !important;text-align:right;display:block;font-weight: 500;font-size: 17px;align-items: flex-end;">
+            توضیحات:</p>
+        <p class="right"
+           style="font-family: IRANSans, serif !important;text-align:right; display:block;font-size: 16px;font-weight: 500; align-items: flex-end;">
+            توضیحات
+            محصول</p>
+        <p class="right"
+           style="font-family: IRANSans, serif !important;text-align:right;display:block;font-size: 16px;font-weight: 500; align-items: flex-end;">
+            توضیحات
+            استورج</p>
+    </div>
+</div>
+</body>
+</html>

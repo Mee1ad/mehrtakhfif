@@ -7,8 +7,10 @@ from django.db.models import F
 
 class BasketView(LoginRequired):
     def get(self, request):
-        return JsonResponse(get_basket(request.user, request.lang))
+        basket_id = request.GET.get('basket_id', None)
+        return JsonResponse(get_basket(request.user, request.lang, basket_id))
 
+    @pysnooper.snoop()
     def post(self, request):
         data = load_data(request)
         try:
@@ -18,11 +20,18 @@ class BasketView(LoginRequired):
             basket = Basket.objects.create(user=request.user, created_by=request.user, updated_by=request.user)
         except AssertionError:
             return JsonResponse({}, status=401)
-        basket_count = self.add_to_basket(basket, data['products'], data['override'], data['add'])
+        basket_count = self.add_to_basket(basket, data['products'], data['override'], data['add'], request.lang)
         res = {'new_basket_count': basket_count, **get_basket(request.user, request.lang)}
         res = JsonResponse(res)
         res.set_signed_cookie('new_basket_count', basket_count, TOKEN_SALT)
         return res
+
+    def patch(self, request):
+        data = load_data(request)
+        print(data)
+        assert BasketProduct.objects.filter(pk=data['basket_product_id'],
+                                            basket_id=data['basket_id']).update(count=data['count'])
+        return JsonResponse(get_basket(request.user, request.lang))
 
     @pysnooper.snoop()
     def delete(self, request):
@@ -41,10 +50,17 @@ class BasketView(LoginRequired):
         except (AssertionError, Basket.DoesNotExist):
             return JsonResponse(default_response['bad'], status=400)
 
-    def add_to_basket(self, basket, products, override, can_add):
+    def add_to_basket(self, basket, products, override, can_add, lang):
+        # {"id": 1, "count": 5, "features": [{"fid": 16, "fvid": [1, 2]}]}
         for product in products:
             pk = int(product['id'])
             count = int(product['count'])
+            features = product['features']
+            # feature_list = []
+            # for feature in product['features']:
+            #     f = Feature.objects.get(pk=feature['fid'])
+            #     value = [item for item in f.value if item['id'] in feature['fvid']]
+            #     feature_list.append({'name': f.name[lang], 'value': value})
             try:
                 product = BasketProduct.objects.filter(basket=basket, storage_id=pk). \
                     select_related('storage')
@@ -59,7 +75,7 @@ class BasketView(LoginRequired):
                 product = Storage.objects.filter(id=pk)
                 if product.exists():
                     BasketProduct.objects.create(basket=basket, storage_id=pk, count=count,
-                                                 box=product.first().product.box, )
+                                                 box=product.first().product.box, features=features)
                     continue
             except AssertionError:
                 product.update(count=count)
@@ -98,6 +114,7 @@ class GetProducts(View):
             basket_products.append(obj)
 
         products = BasketProductSchema(language=request.lang).dump(basket_products, many=True)
+
         profit = calculate_profit(products)
         return JsonResponse({'products': products, 'summary': profit, 'address_required': address_required})
 

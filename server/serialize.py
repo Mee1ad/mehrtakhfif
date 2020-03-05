@@ -4,7 +4,7 @@ import pysnooper
 from secrets import token_hex
 from datetime import date
 from django.utils import timezone
-from server.models import BasketProduct, FeatureStorage, CostumeHousePrice, Book, Comment, Invoice
+from server.models import BasketProduct, FeatureStorage, CostumeHousePrice, Book, Comment, Invoice, Feature
 import time
 
 
@@ -159,7 +159,7 @@ class BaseSchema(Schema):
 
     def get_media_link(self, obj):
         if obj.media is not None:
-            return HOST + obj.media.file.url
+            return HOST + obj.media.image.url
         return None
 
     def get_thumbnail(self, obj):
@@ -196,7 +196,7 @@ class UserSchema(BaseSchema):
             'id', 'email', 'first_name', 'last_name', 'gender', 'username', 'meli_code', 'wallet_money', 'vip',
             'active_address', 'shaba', 'birthday', 'is_staff')
 
-    avatar = fields.Function(lambda o: HOST + o.avatar.file.url if hasattr(o.avatar, 'file') else "")
+    avatar = fields.Function(lambda o: HOST + o.avatar.image.url if hasattr(o.avatar, 'file') else "")
 
 
 class AddressSchema(BaseSchema):
@@ -226,7 +226,7 @@ class MediaSchema(Schema):
 
     id = fields.Int()
     type = fields.Function(lambda o: o.get_type_display())
-    file = fields.Method("get_image")
+    image = fields.Method("get_image")
     title = fields.Method("get_title")
     box = fields.Function(lambda o: o.box_id)
 
@@ -322,7 +322,7 @@ class MinProductSchema(BaseSchema):
         additional = ('id', 'permalink', 'rate')
 
     name = fields.Method("get_name")
-    thumbnail = fields.Function(lambda o: HOST + o.thumbnail.file.url)
+    thumbnail = fields.Function(lambda o: HOST + o.thumbnail.image.url)
     default_storage = fields.Method("get_min_storage")
     code = fields.Method("get_code")
 
@@ -367,16 +367,34 @@ class BasketProductSchema(BaseSchema):
         additional = ('count',)
 
     product = fields.Method("get_min_product")
-    feature = fields.Method("get_basket_feature")
+    features = fields.Method("get_feature")
 
-    def get_basket_feature(self, obj):
-        features = []
-        for feature in obj.feature:
-            fs = obj.storage.featurestorage_set.get(feature_id=feature['fid'])
-            fname = obj.storage.feature.get(pk=feature['fid']).name[self.lang]
-            price = next(item['price'] for item in fs.value if item['fvid'] == feature['fvid'])
-            features.append({"name": fname, "price": price})
-        return features
+    def test(self, obj):
+        print(obj.feature)
+
+    def get_feature(self, obj):
+        res = []
+        for feature in obj.features:
+            feature_id = feature['fid']
+            fvid_list = feature['fvid']
+            f = Feature.objects.get(pk=feature_id)
+            fs = FeatureStorage.objects.get(storage_id=obj.storage_id, feature_id=feature_id)
+            feature_list = []
+            for fvid in fvid_list:
+                feature_name = next(i[self.lang] for i in f.value if i['id'] == fvid)
+                feature_price = next(i['price'] for i in fs.value if i['fvid'] == fvid)
+                feature_list.append({'id': feature_id, 'fvid': fvid, 'name': feature_name, 'price': feature_price})
+
+            # for item in f.value:
+            #     print(item)
+            #     if item['id'] in feature['fvid']:
+            #         print(feature['fvid'])
+            #         price = next(i['price'] for i in fs.value if i['fvid'] in feature['fvid'])
+            #         value_list.append({'id': item['id'], 'name': item[self.lang], 'price': price})
+
+            res.append({'name': f.name[self.lang], "type": f.get_type_display(), "value": feature_list})
+
+        return res
 
 
 class InvoiceSchema(BaseSchema):
@@ -445,7 +463,7 @@ class CommentSchema(BaseSchema):
         additional = ('id', 'text', 'approved', 'rate')
 
     user = fields.Function(lambda o: {"name": o.user.first_name + " " + o.user.last_name,
-                                      "avatar": HOST + o.user.avatar.file.url})
+                                      "avatar": HOST + o.user.avatar.image.url})
     type = fields.Function(lambda o: o.get_type_display())
     reply_count = fields.Method('get_reply_count')
     created_at = fields.Function(lambda o: o.created_at.timestamp())
@@ -518,7 +536,7 @@ class SpecialProductSchema(BaseSchema):
     default_storage = fields.Method('get_min_storage')
     # media = fields.Method('get_media')
     description = fields.Method('get_description')
-    thumbnail = fields.Function(lambda o: HOST + o.thumbnail.file.url)
+    thumbnail = fields.Function(lambda o: HOST + o.thumbnail.image.url)
     permalink = fields.Function(lambda o: o.storage.product.permalink)
 
     def get_label_name(self, obj):

@@ -1,6 +1,7 @@
 import difflib
 import json
 import math
+import traceback
 import hashlib
 import uuid
 import magic
@@ -251,16 +252,30 @@ def calculate_profit(products):
     total_price = sum([product['product']['default_storage']['final_price'] * product['count'] for product in products])
     discount_price = sum(
         [product['product']['default_storage']['discount_price'] * product['count'] for product in products])
-    feature_price = sum([sum([feature['price'] for feature in product['feature']]) * product['count']
-                         for product in products])
-    discount_price += feature_price
-    total_price += feature_price
+    # feature_price = sum([sum([feature['price'] for feature in product['feature']]) * product['count']
+    #                      for product in products])
+    discount_price = 0
+    total_price = 0
+    for product in products:
+        discount_price += product['discount_price']
+        total_price += product['final_price']
+        # try:
+        #     feature_storage = FeatureStorage.objects.get(storage_id=storage_id, feature_id=feature['id'])
+        #     prices = sum([item['price'] for item in feature_storage.value if item['fvid'] in feature['fvid']])
+        #     print(prices)
+        # except KeyError:
+        #     continue
+
     profit = total_price - discount_price
     return {'total_price': total_price, 'discount_price': discount_price, 'profit': profit, 'shopping_cost': 0}
 
 
-def get_basket(user, lang, basket=None):
-    basket = basket or Basket.objects.filter(user=user).order_by('-id').first()
+def get_basket(user, lang, basket_id=None):
+    basket = None
+    if basket_id:
+        basket = Basket.objects.get(pk=basket_id)
+    if not basket:
+        basket = basket or Basket.objects.filter(user=user).order_by('-id').first()
     if basket is None:
         return {}
     basket_products = BasketProduct.objects.filter(basket=basket).select_related(*BasketProduct.related)
@@ -274,6 +289,15 @@ def get_basket(user, lang, basket=None):
                 address_required = True
         basket_dict = BasketSchema(lang).dump(basket)
         basket_dict['products'] = BasketProductSchema().dump(basket_products, many=True)
+        for product in basket_dict['products']:
+            price = 0
+            for feature in product['features']:
+                for value in feature['value']:
+                    price += value['price']
+            product['item_final_price'] = product['product']['default_storage']['final_price'] + price
+            product['item_discount_price'] = product['product']['default_storage']['discount_price'] + price
+            product['final_price'] = product['count'] * product['item_final_price']
+            product['discount_price'] = product['count'] * product['item_discount_price']
         profit = calculate_profit(basket_dict['products'])
     else:
         basket_dict = {}
