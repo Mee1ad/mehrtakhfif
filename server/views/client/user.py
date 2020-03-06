@@ -9,9 +9,6 @@ import pysnooper
 
 class Profile(LoginRequired):
     def get(self, request):
-        from django.template.loader import render_to_string
-        rendered = render_to_string('invoice.html', {'foo': 'bar'})
-        send_email("django html test", "soheilravasani@gmail.com", html_message=rendered)
         return JsonResponse({'user': UserSchema().dump(request.user)})
 
     def put(self, request):
