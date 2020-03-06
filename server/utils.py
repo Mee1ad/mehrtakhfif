@@ -11,7 +11,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core import serializers
 from django.db.models import F
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives
 from django.views import View
 from django_celery_beat.models import PeriodicTask, IntervalSchedule
 from datetime import datetime
@@ -202,10 +202,16 @@ def send_sms(code, to):
     return requests.post('http://ippanel.com/api/select', data=json.dumps(data))
 
 
-def send_email(subject, to, mail='support@mehrtakhfif.com', message=None, html_message=None):
+def send_email(subject, to, from_email='support@mehrtakhfif.com', message=None, html_content=None, attach=None):
     if type(to) != list:
         to = [to]
-    send_mail(subject, message, mail, to, fail_silently=False, html_message=html_message)
+    msg = EmailMultiAlternatives(subject, message, from_email, to)
+    msg.attach_alternative(html_content, "text/html")
+    if html_content:
+        msg.content_subtype = "html"
+        # msg.attach_file('Document.pdf')
+        msg.attach_file(attach)
+    msg.send()
 
 
 def get_categories(language, box_id=None, category=None):
