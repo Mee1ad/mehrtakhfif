@@ -408,7 +408,7 @@ class InvoiceSchema(BaseSchema):
 class InvoiceStorageSchema(BaseSchema):
     class Meta:
         additional = ('count', 'discount_price', 'final_price', 'discount_percent', 'vip_discount_price',
-                      'vip_discount_percent', 'invoice_id')
+                      'vip_discount_percent', 'invoice_id', 'invoice_description')
 
     storage = fields.Method("get_storage")
     box = fields.Method("get_box")

@@ -170,6 +170,7 @@ class CallBack(View):
             invoice.save()
         except Exception as e:
             print(e)
+        self.send_invoice(invoice)
         return HttpResponseRedirect("https://mehrtakhfif.com")
 
     @pysnooper.snoop()
@@ -197,9 +198,24 @@ class CallBack(View):
         PeriodicTask.objects.filter(name=task_name).update(enabled=False, description=description)
         InvoiceStorage.objects.bulk_create(invoice_products)
 
-    def send_invoice(self):
-        rendered = render_to_string('invoice.html',
-                                    {'title': '', 'user': '', 'price': '', 'code': '', 'description': '',
-                                     'product_description': '', 'storage_description': ''})
-        pdfkit.from_string(rendered, 'out2.pdf')
-        send_email("django html test", "soheilravasani@gmail.com", html_message=rendered)
+    def send_invoice(self, invoice, lang):
+        user = invoice.user
+        digital_products = InvoiceStorage.objects.filter(invoice=invoice, storage__product__type=1)
+        date = timezone.now().strftime("%Y-%m-%d")
+        pdf_list = []
+        all_renders = ""
+        for product in digital_products:
+            storage = product.storage
+            # todo code is hardcode
+            rendered = render_to_string('invoice.html',
+                                        {'title': storage.title[lang], 'user': user.first_name + user.last_name,
+                                         'price': storage.discount_price, 'code': 'ABC123',
+                                         'product_description': storage.product.invoice_description,
+                                         'storage_description': storage.invoice_description})
+            # todo handle linux route with try except
+            pdf_dir = os.path.join(BASE_DIR, f'media\\invoice\\{date}\\{invoice.id}-{product.pk}.pdf')
+            pdfkit.from_string(rendered, pdf_dir)
+            pdf_list.append(pdf_dir)
+            all_renders += rendered
+        if user.email:
+            send_email("صورتحساب خرید", user.email, html_content=rendered, attach=pdf_list)

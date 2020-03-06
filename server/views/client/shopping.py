@@ -29,6 +29,7 @@ class BasketView(LoginRequired):
     def patch(self, request):
         data = load_data(request)
         basket = Basket.objects.filter(user=request.user).order_by('-id').first()
+        # todo remove assertion
         assert BasketProduct.objects.filter(storage_id=data['storage_id'], basket=basket).update(count=data['count'])
         return JsonResponse(get_basket(request.user, request.lang))
 
