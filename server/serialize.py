@@ -392,7 +392,7 @@ class BasketProductSchema(BaseSchema):
             #         price = next(i['price'] for i in fs.value if i['fvid'] in feature['fvid'])
             #         value_list.append({'id': item['id'], 'name': item[self.lang], 'price': price})
 
-            res.append({'name': f.name[self.lang], "type": f.get_type_display(), "value": feature_list})
+            res.append({'id': f.pk, 'name': f.name[self.lang], "type": f.get_type_display(), "value": feature_list})
 
         return res
 

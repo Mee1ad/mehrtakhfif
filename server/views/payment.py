@@ -1,4 +1,6 @@
-import requests
+import pdfkit
+import os
+from mehr_takhfif.settings import BASE_DIR
 from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
 from django.views import View
 import operator
@@ -196,5 +198,8 @@ class CallBack(View):
         InvoiceStorage.objects.bulk_create(invoice_products)
 
     def send_invoice(self):
-        rendered = render_to_string('test.html', {'foo': 'bar'})
+        rendered = render_to_string('invoice.html',
+                                    {'title': '', 'user': '', 'price': '', 'code': '', 'description': '',
+                                     'product_description': '', 'storage_description': ''})
+        pdfkit.from_string(rendered, 'out2.pdf')
         send_email("django html test", "soheilravasani@gmail.com", html_message=rendered)

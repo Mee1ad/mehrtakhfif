@@ -298,6 +298,7 @@ def get_basket(user, lang, basket_id=None):
             product['item_discount_price'] = product['product']['default_storage']['discount_price'] + price
             product['final_price'] = product['count'] * product['item_final_price']
             product['discount_price'] = product['count'] * product['item_discount_price']
+            product['discount_percent'] = product['product']['default_storage']['discount_percent']
         profit = calculate_profit(basket_dict['products'])
     else:
         basket_dict = {}
