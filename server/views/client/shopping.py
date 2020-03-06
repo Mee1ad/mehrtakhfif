@@ -38,11 +38,11 @@ class BasketView(LoginRequired):
         storage_id = request.GET.get('storage_id', None)
         basket_id = request.GET.get('basket_id', None)
         summary = request.GET.get('summary', None)
+
+        basket_product_id = request.GET.get('basket_product_id', None)
         try:
-            basket = Basket.objects.get(pk=basket_id, user=request.user)
-            assert BasketProduct.objects.filter(basket__user=request.user, basket_id=basket.id,
-                                                storage_id=storage_id).exists()
-            BasketProduct.objects.filter(basket_id=basket.id, storage_id=storage_id).delete()
+            basket = Basket.objects.filter(user=request.user).order_by('-id').first()
+            BasketProduct.objects.filter(pk=basket_product_id, basket=basket).delete()
             res = {}
             if summary:
                 res = get_basket(request.user, request.lang)
