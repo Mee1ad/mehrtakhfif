@@ -263,6 +263,7 @@ def calculate_profit(products):
     discount_price = 0
     total_price = 0
     for product in products:
+        print(product)
         discount_price += product['discount_price']
         total_price += product['final_price']
         # try:

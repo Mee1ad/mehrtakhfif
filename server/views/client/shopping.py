@@ -103,15 +103,27 @@ class GetProducts(View):
         address_required = False
         for storage, item in zip(storages, basket):
             item = next(item for item in basket if item['id'] == storage.pk)  # search in dictionary
-            obj = type('Basket', (object,), {})()
+            obj = type('BasketProduct', (object,), {})()
             obj.count = item['count']
             obj.product = storage.product
-            if obj.product.type == 'product' and not address_required:
-                address_required = True
+            # obj.storage = storage
+            obj.features = item['features']
+            # if obj.product.type == 'product' and not address_required:
+            #     address_required = True
             obj.product.default_storage = storage
             basket_products.append(obj)
 
         products = BasketProductSchema(language=request.lang).dump(basket_products, many=True)
+        for product in products:
+            price = 0
+            for feature in product['features']:
+                for value in feature['value']:
+                    price += value['price']
+            product['item_final_price'] = product['product']['default_storage']['final_price'] + price
+            product['item_discount_price'] = product['product']['default_storage']['discount_price'] + price
+            product['final_price'] = product['count'] * product['item_final_price']
+            product['discount_price'] = product['count'] * product['item_discount_price']
+            product['discount_percent'] = product['product']['default_storage']['discount_percent']
 
         profit = calculate_profit(products)
         return JsonResponse({'products': products, 'summary': profit, 'address_required': address_required})

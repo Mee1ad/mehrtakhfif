@@ -503,7 +503,7 @@ class BasketProduct(models.Model):
 
     id = models.BigAutoField(auto_created=True, primary_key=True)
     storage = models.ForeignKey(Storage, on_delete=PROTECT)
-    basket = models.ForeignKey(Basket, on_delete=PROTECT)
+    basket = models.ForeignKey(Basket, on_delete=PROTECT, null=True, blank=True)
     count = models.IntegerField(default=1)
     box = models.ForeignKey(Box, on_delete=PROTECT)
     features = JSONField(default=list)
@@ -607,6 +607,7 @@ class InvoiceStorage(models.Model):
         return f"{self.storage}"
 
     id = models.BigAutoField(auto_created=True, primary_key=True)
+    key = models.CharField(max_length=31, unique=True, null=True)
     box = models.ForeignKey(Box, on_delete=CASCADE)
     storage = models.ForeignKey(Storage, on_delete=PROTECT)
     invoice = models.ForeignKey(Invoice, on_delete=PROTECT)
@@ -773,6 +774,19 @@ class Ad(models.Model):
         db_table = 'ad'
         ordering = ['-id']
 
+
+class ShortLink(models.Model):
+    def __str__(self):
+        return self.shortlink
+
+    id = models.BigAutoField(auto_created=True, primary_key=True)
+    link = models.URLField()
+    shortlink = models.URLField()
+    accessed_time = models.IntegerField(default=0)
+
+    class Meta:
+        db_table = 'shortlink'
+        ordering = ['-id']
 
 # ---------- Tourism ---------- #
 

@@ -1,4 +1,4 @@
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 
 from server.serialize import *
 from server.utils import *
@@ -9,7 +9,13 @@ import pysnooper
 
 class Profile(LoginRequired):
     def get(self, request):
-        return JsonResponse({'user': UserSchema().dump(request.user)})
+        test_file = 'C:/Users/sohei/Documents/Python/mehr_takhfif/templates/test.pdf'
+        with open(test_file, 'rb') as fh:
+            response = HttpResponse(fh.read(), content_type="application/vnd.ms-excel")
+            response['Content-Disposition'] = 'inline; filename=' + os.path.basename(test_file)
+            return response
+        return HttpResponse(response)
+        # return JsonResponse({'user': UserSchema().dump(request.user)})
 
     def put(self, request):
         data = load_data(request)
@@ -212,3 +218,7 @@ class MyTransactions(LoginRequired):
 class WalletView(LoginRequired):
     def get(self, request):
         pass
+
+
+class ShortLinkView:
+    pass
