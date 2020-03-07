@@ -213,7 +213,7 @@ class CallBack(View):
                                          'product_description': storage.product.invoice_description,
                                          'storage_description': storage.invoice_description})
             # todo handle linux route with try except
-            pdf_dir = os.path.join(BASE_DIR, f'media\\invoice\\{date}\\{invoice.id}-{product.pk}.pdf')
+
             pdfkit.from_string(rendered, pdf_dir)
             pdf_list.append(pdf_dir)
             all_renders += rendered

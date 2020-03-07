@@ -48,35 +48,22 @@ class BasketView(LoginRequired):
         except (AssertionError, Basket.DoesNotExist):
             return JsonResponse(default_response['bad'], status=400)
 
-    def add_to_basket(self, basket, products, override, can_add):
+    def add_to_basket(self, basket, products):
         # {"id": 1, "count": 5, "features": [{"fid": 16, "fvid": [1, 2]}]}
         for product in products:
             pk = int(product['id'])
             count = int(product['count'])
             features = product['features']
-            # feature_list = []
-            # for feature in product['features']:
-            #     f = Feature.objects.get(pk=feature['fid'])
-            #     value = [item for item in f.value if item['id'] in feature['fvid']]
-            #     feature_list.append({'name': f.name[lang], 'value': value})
             try:
-                product = BasketProduct.objects.filter(basket=basket, storage_id=pk). \
+                basket_product = BasketProduct.objects.filter(basket=basket, storage_id=pk, features=features).\
                     select_related('storage')
-                if product:
-                    available_count = product.first().storage.available_count_for_sale
-                    assert available_count >= count
-                    if can_add:
-                        product.update(count=F('count') + count)
-                    if override:
-                        product.update(count=count)
-                    continue
-                product = Storage.objects.filter(id=pk)
-                if product.exists():
-                    BasketProduct.objects.create(basket=basket, storage_id=pk, count=count,
-                                                 box=product.first().product.box, features=features)
-                    continue
-            except AssertionError:
-                product.update(count=count)
+                storage = basket_product.first().storage
+                assert storage.available_count_for_sale >= count and storage.max_count_for_sale >= count
+                basket_product.update(count=count)
+            except AttributeError:
+                BasketProduct.objects.create(basket=basket, storage_id=pk, count=count,
+                                             box=basket_product.first().product.box, features=features)
+
         basket.count = basket.products.all().count()
         basket.save()
         return basket.count

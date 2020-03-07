@@ -339,13 +339,19 @@ class SliderSchema(BaseSchema):
 
 class StorageSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'final_price', 'transportation_price', 'max_count_for_sale', 'priority',
+        additional = ('id', 'final_price', 'transportation_price', 'priority',
                       'discount_price', 'vip_discount_price', 'discount_percent', 'vip_discount_percent')
 
     title = fields.Method('get_title')
     deadline = fields.Function(lambda o: o.deadline.timestamp())
     default = fields.Function(lambda o: o == o.product.default_storage)
     features = FeatureField()
+    max_count_for_sale = fields.Method("get_max_count_for_sale")
+
+    def get_max_count_for_sale(self, obj):
+        if obj.available_count_for_sale >= obj.max_count_for_sale:
+            return obj.max_count_for_sale
+        return obj.available_count_for_sale
 
 
 class MinStorageSchema(BaseSchema):

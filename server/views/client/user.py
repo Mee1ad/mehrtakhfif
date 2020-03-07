@@ -1,21 +1,15 @@
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, FileResponse
 
 from server.serialize import *
 from server.utils import *
 from server.utils import LoginRequired
-from mehr_takhfif.settings import HOST
+from mehr_takhfif.settings import INVOICE_ROOT
 import pysnooper
 
 
 class Profile(LoginRequired):
     def get(self, request):
-        test_file = 'C:/Users/sohei/Documents/Python/mehr_takhfif/templates/test.pdf'
-        with open(test_file, 'rb') as fh:
-            response = HttpResponse(fh.read(), content_type="application/vnd.ms-excel")
-            response['Content-Disposition'] = 'inline; filename=' + os.path.basename(test_file)
-            return response
-        return HttpResponse(response)
-        # return JsonResponse({'user': UserSchema().dump(request.user)})
+        return JsonResponse({'user': UserSchema().dump(request.user)})
 
     def put(self, request):
         data = load_data(request)
@@ -220,5 +214,10 @@ class WalletView(LoginRequired):
         pass
 
 
-class ShortLinkView:
-    pass
+class ShortLinkView(View):
+    @pysnooper.snoop()
+    def get(self, request, key):
+        name = InvoiceStorage.objects.get(key=key).storage.product.name['fa']
+        file = INVOICE_ROOT + "/456.pdf"
+        return FileResponse(open(file, 'rb'), as_attachment=True, filename='test.pdf', content_type='application/pdf')
+
