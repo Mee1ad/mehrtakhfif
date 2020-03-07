@@ -5,6 +5,7 @@ from server.utils import *
 from server.utils import LoginRequired
 from mehr_takhfif.settings import INVOICE_ROOT
 import pysnooper
+from django.db.utils import IntegrityError
 
 
 class Profile(LoginRequired):
@@ -214,11 +215,7 @@ class WalletView(LoginRequired):
         pass
 
 
-import io
-
-
 class ShortLinkView(View):
-    @pysnooper.snoop()
     def get(self, request, key):
         name = InvoiceStorage.objects.get(key=key).storage.product.permalink
         file = open(f"{INVOICE_ROOT}/{key}.pdf", "rb")

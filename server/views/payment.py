@@ -9,11 +9,15 @@ from django_celery_beat.models import PeriodicTask
 from server.serialize import *
 import pytz
 from datetime import datetime
-from server.utils import get_basket, add_one_off_job, sync_storage, add_minutes, send_email
+from server.utils import get_basket, add_one_off_job, sync_storage, add_minutes, send_email, send_sms
 import pysnooper
 import json
 import zeep
 from django.template.loader import render_to_string
+import random
+import string
+from django.db.utils import IntegrityError
+from mehr_takhfif.settings import INVOICE_ROOT, SHORTLINK
 
 ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'disable': False},
                 {'id': 2, 'key': 'melli', 'name': 'ملی', 'hide': True, 'disable': True},
@@ -27,7 +31,7 @@ ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'dis
 bp = {'terminal_id': 5290645, 'username': "takh252", 'password': "71564848",
       'ipg_url': "https://bpm.shaparak.ir/pgwchannel/startpay.mellat",
       'callback': 'https://api.mehrtakhfif.com/payment/callback'}  # mellat
-# client = zeep.Client(wsdl="https://bpm.shaparak.ir/pgwchannel/services/pgw?wsdl")
+client = zeep.Client(wsdl="https://bpm.shaparak.ir/pgwchannel/services/pgw?wsdl")
 
 saddad = {'merchant_id': None, 'terminal_id': None, 'terminal_key': None,
           'payment_request': 'https://sadad.shaparak.ir/VPG/api/v0/Request/PaymentRequest',
@@ -37,6 +41,7 @@ pecco = {'pin': '4MuVGr1FaB6P7S43Ggh5', 'terminal_id': '44481453',
          'payment_request': 'https://pec.shaparak.ir/NewIPGServices/Sale/SaleService.asmx'}  # parsian
 
 callback = HOST + "/callback"
+strings = string.ascii_letters + "0123456789"
 
 
 class IPG(View):
@@ -46,7 +51,7 @@ class IPG(View):
 
 class PaymentRequest(View):
     def get(self, request, basket_id):
-        return JsonResponse({"url": "http://api.mt.com/payment/callback"})
+        # return JsonResponse({"url": "http://api.mt.com/payment/callback"})
         # ipg_id = request.GET.get('ipg_id', 1)
         user = request.user
         assert Basket.objects.filter(pk=basket_id, user=user).exists()
@@ -146,7 +151,7 @@ class CallBack(View):
         # return HttpResponseRedirect("http://mt.com:3000/shopping/fail")
         digital = Invoice.objects.get(pk=102).storages.filter(product__type=1).exists()
         return HttpResponseRedirect("http://mt.com:3000/shopping/invoice?id=102&d=" + str(digital).lower())
-
+    @pysnooper.snoop()
     def post(self, request):
         data = request.body.decode().split('&')
         data_dict = {}
@@ -180,7 +185,7 @@ class CallBack(View):
                                            saleOrderId=sale_order_id, saleReferenceId=sale_ref_id)
         if r == '0':
             return True
-
+    @pysnooper.snoop()
     def submit_invoice_storages(self, invoice_id):
         invoice = Invoice.objects.filter(pk=invoice_id).select_related(*Invoice.select).first()
         basket = invoice.basket
@@ -197,14 +202,21 @@ class CallBack(View):
         description = f'{timezone.now()}: canceled by system'
         PeriodicTask.objects.filter(name=task_name).update(enabled=False, description=description)
         InvoiceStorage.objects.bulk_create(invoice_products)
-
+    @pysnooper.snoop()
     def send_invoice(self, invoice, lang):
         user = invoice.user
         digital_products = InvoiceStorage.objects.filter(invoice=invoice, storage__product__type=1)
-        date = timezone.now().strftime("%Y-%m-%d")
         pdf_list = []
         all_renders = ""
+        sms_content = "محصولات دیجیتال خریداری شده از مهرتخفیف:"
         for product in digital_products:
+            while product.key is None:
+                key = ''.join(random.sample(strings, 6))
+                product.key = key
+                try:
+                    product.save()
+                except IntegrityError:
+                    product.refresh_from_db()
             storage = product.storage
             # todo code is hardcode
             rendered = render_to_string('invoice.html',
@@ -212,10 +224,13 @@ class CallBack(View):
                                          'price': storage.discount_price, 'code': 'ABC123',
                                          'product_description': storage.product.invoice_description,
                                          'storage_description': storage.invoice_description})
-            # todo handle linux route with try except
-
-            pdfkit.from_string(rendered, pdf_dir)
-            pdf_list.append(pdf_dir)
+            pdf = INVOICE_ROOT + f'/{key}.pdf'
+            pdfkit.from_string(rendered, pdf)
+            pdf_list.append(pdf)
             all_renders += rendered
+            sms_content += f'\n{storage.invoice_title}\n{SHORTLINK}/{key}'
+        sms = f"سفارش شما با شماره Mt-{invoice.pk} با موفقیت ثبت شد برای مشاهده صورتحساب و جزئیات خرید به پنل کاربری مراجعه کنید\nhttps://mehrtakhfif.com/orders"
+        send_sms(invoice.user.phone, content=sms)
+        send_sms(invoice.user.phone, content=sms_content)
         if user.email:
-            send_email("صورتحساب خرید", user.email, html_content=rendered, attach=pdf_list)
+            send_email("صورتحساب خرید", user.email, html_content=all_renders, attach=pdf_list)

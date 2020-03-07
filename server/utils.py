@@ -192,16 +192,18 @@ def to_obj(body):
 
 # Utils
 
-def send_sms(code, to):
+def send_sms(to, code=None, content=None):
     # +985000125475
-    data = {"op": 'pattern', "user": '09379118854', "pass": 'Mojirzg6654', 'fromNum': '+98100020400',
-            'toNum': to, 'patternCode': "gs3vltcvoi", 'inputData': [{'code': code}]}
-    # data = {"op": 'send', "uname": '09379118854', "pass": 'Mojirzg6654', 'from': '+98100020400',
-    #         'to': to, 'message': f'کد: {code}\nمهرتخفیف'}
+    if code:
+        data = {"op": 'pattern', "user": '09379118854', "pass": 'Mojirzg6654', 'fromNum': '+98100020400',
+                'toNum': to, 'patternCode': "gs3vltcvoi", 'inputData': [{'code': code}]}
+    if content:
+        data = {"op": 'send', "uname": '09379118854', "pass": 'Mojirzg6654', 'from': '+98100020400',
+                'to': to, 'message': content}
 
     return requests.post('http://ippanel.com/api/select', data=json.dumps(data))
 
-
+@pysnooper.snoop()
 def send_email(subject, to, from_email='support@mehrtakhfif.com', message=None, html_content=None, attach=None):
     if type(to) != list:
         to = [to]
@@ -209,8 +211,7 @@ def send_email(subject, to, from_email='support@mehrtakhfif.com', message=None, 
     msg.attach_alternative(html_content, "text/html")
     if html_content:
         msg.content_subtype = "html"
-        # msg.attach_file('Document.pdf')
-        msg.attach_file(attach)
+        [msg.attach_file(a) for a in attach]
     msg.send()
 
 

@@ -21,6 +21,7 @@ ALLOWED_HOSTS = ALLOWED_HOSTS
 
 HOST = HOST
 IP = IP
+SHORTLINK = "https://mhrt.ir"
 
 AUTH_USER_MODEL = 'server.User'
 
