@@ -220,7 +220,9 @@ import io
 class ShortLinkView(View):
     @pysnooper.snoop()
     def get(self, request, key):
-        name = InvoiceStorage.objects.get(key=key).storage.product.name['fa']
-        file = open(f"{INVOICE_ROOT}/456.pdf", "rb")
-        return FileResponse(file, filename='test6.pdf')
+        name = InvoiceStorage.objects.get(key=key).storage.product.permalink
+        file = open(f"{INVOICE_ROOT}/{key}.pdf", "rb")
+        res = FileResponse(file)
+        res['Content-Disposition'] = f'attachment; filename="MehrTakhfif-{name}.pdf"'
+        return res
 
