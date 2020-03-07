@@ -91,31 +91,6 @@ class PaymentRequest(View):
         else:
             raise ValueError("can not get ipg page")
 
-    def ipg_api(self):
-        pass
-        # encrypt(PKCS7, ECB(TripleDes) = > base64
-        # sign_data = des_encrypt(f'{saddad["terminal_id"]};{invoice.pk};{amount}')
-        # additional_data = None  # json
-        # Type = [Amount, Percentage]
-        # multiplexing_data = {'Type': 'Percentage', 'MultiplexingRows': [{'IbanNumber': 1, 'Value': 50}]}
-        # return JsonResponse({'token': 'test token', 'description': 'test description',
-        #                      'redirect_url':})
-
-        # r = requests.post(url, data={'MerchantId': merchant_id, 'TerminalId': terminal_id, 'Amount': amount,
-        #                              'OrderId': invoice_id, 'LocalDateTime': datetime, 'ReturnUrl': return_url,
-        #                              'SignData': sign_data, 'AdditionalData': additional_data,
-        #                              'MultiplexingData': multiplexing_data})
-        # res = r.json()
-        # return JsonResponse({'res_code': res['ResCode'], 'token': res['Token'], 'description': res['Description'],
-        #                      'redirect_url': 'https://sadad.shaparak.ir/VPG/Purchase'})
-        #
-        # url = pecco['payment_request']
-        # request_data = {'LoginAccount': pecco['pin'], 'Amount': amount, 'OrderId': invoice.id,
-        #                 'CallBackUrl': 'http://localhost/callback', 'AdditionalData': None}
-        # r = requests.post(url=pecco['payment_request'], data=request_data)
-        # print(r.status_code)
-        # print(r.content)
-
     @pysnooper.snoop()
     def create_invoice(self, request, basket=None):
         user = request.user
@@ -230,7 +205,7 @@ class CallBack(View):
             all_renders += rendered
             sms_content += f'\n{storage.invoice_title}\n{SHORTLINK}/{key}'
         sms = f"سفارش شما با شماره Mt-{invoice.pk} با موفقیت ثبت شد برای مشاهده صورتحساب و جزئیات خرید به پنل کاربری مراجعه کنید\nhttps://mehrtakhfif.com/orders"
-        send_sms(invoice.user.phone, content=sms)
-        send_sms(invoice.user.phone, content=sms_content)
+        send_sms(invoice.user.username, content=sms)
+        send_sms(invoice.user.username, content=sms_content)
         if user.email:
             send_email("صورتحساب خرید", user.email, html_content=all_renders, attach=pdf_list)
