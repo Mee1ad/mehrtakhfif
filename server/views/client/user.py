@@ -223,5 +223,10 @@ class ShortLinkView(View):
         name = InvoiceStorage.objects.get(key=key).storage.product.name['fa']
         file = INVOICE_ROOT + "/456.pdf"
         file2 = open(file, 'rb')
-        file2.seek(io.SEEK_SET)
-        return FileResponse(file2, as_attachment=True, filename='test.pdf', content_type='application/pdf')
+        # file2.seek(io.SEEK_SET)
+        # return FileResponse(file2, as_attachment=True, filename='test.pdf', content_type='application/pdf')
+
+        response = HttpResponse()
+        response.content = file2
+        response["Content-Disposition"] = "attachment; filename=tessst.pdf"
+        return response
