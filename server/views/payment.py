@@ -75,7 +75,7 @@ class PaymentRequest(View):
     def behpardakht_api(self, invoice_id):
         invoice = Invoice.objects.get(pk=invoice_id)
         # todo debug
-        invoice.amount = 1000
+        invoice.amount = 5000
 
         local_date = timezone.now().strftime("%Y%m%d")
         local_time = pytz.timezone("Iran").localize(datetime.now()).strftime("%H%M%S")
