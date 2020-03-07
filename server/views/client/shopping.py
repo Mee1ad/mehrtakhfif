@@ -101,29 +101,21 @@ class GetProducts(View):
         storages = Storage.objects.filter(id__in=storage_ids).select_related('product')
         basket_products = []
         address_required = False
-        for storage, item in zip(storages, basket):
-            item = next(item for item in basket if item['id'] == storage.pk)  # search in dictionary
+        for item in basket:
+            print('hey')
+            storage = next(storage for storage in storages if item['id'] == storage.pk)  # search
             obj = type('BasketProduct', (object,), {})()
             obj.count = item['count']
             obj.product = storage.product
-            # obj.storage = storage
+            obj.storage_id = storage.pk
             obj.features = item['features']
-            # if obj.product.type == 'product' and not address_required:
-            #     address_required = True
+            if obj.product.type == 'product' and not address_required:
+                address_required = True
             obj.product.default_storage = storage
             basket_products.append(obj)
 
         products = BasketProductSchema(language=request.lang).dump(basket_products, many=True)
-        for product in products:
-            price = 0
-            for feature in product['features']:
-                for value in feature['value']:
-                    price += value['price']
-            product['item_final_price'] = product['product']['default_storage']['final_price'] + price
-            product['item_discount_price'] = product['product']['default_storage']['discount_price'] + price
-            product['final_price'] = product['count'] * product['item_final_price']
-            product['discount_price'] = product['count'] * product['item_discount_price']
-            product['discount_percent'] = product['product']['default_storage']['discount_percent']
+        products = add_feature_price(products)
 
         profit = calculate_profit(products)
         return JsonResponse({'products': products, 'summary': profit, 'address_required': address_required})

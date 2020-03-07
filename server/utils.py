@@ -263,7 +263,6 @@ def calculate_profit(products):
     discount_price = 0
     total_price = 0
     for product in products:
-        print(product)
         discount_price += product['discount_price']
         total_price += product['final_price']
         # try:
@@ -275,6 +274,20 @@ def calculate_profit(products):
 
     profit = total_price - discount_price
     return {'total_price': total_price, 'discount_price': discount_price, 'profit': profit, 'shopping_cost': 0}
+
+
+def add_feature_price(products):
+    for product in products:
+        price = 0
+        for feature in product['features']:
+            for value in feature['value']:
+                price += value['price']
+        product['item_final_price'] = product['product']['default_storage']['final_price'] + price
+        product['item_discount_price'] = product['product']['default_storage']['discount_price'] + price
+        product['final_price'] = product['count'] * product['item_final_price']
+        product['discount_price'] = product['count'] * product['item_discount_price']
+        product['discount_percent'] = product['product']['default_storage']['discount_percent']
+    return products
 
 
 def get_basket(user, lang, basket_id=None):
@@ -296,16 +309,7 @@ def get_basket(user, lang, basket_id=None):
                 address_required = True
         basket_dict = BasketSchema(lang).dump(basket)
         basket_dict['products'] = BasketProductSchema().dump(basket_products, many=True)
-        for product in basket_dict['products']:
-            price = 0
-            for feature in product['features']:
-                for value in feature['value']:
-                    price += value['price']
-            product['item_final_price'] = product['product']['default_storage']['final_price'] + price
-            product['item_discount_price'] = product['product']['default_storage']['discount_price'] + price
-            product['final_price'] = product['count'] * product['item_final_price']
-            product['discount_price'] = product['count'] * product['item_discount_price']
-            product['discount_percent'] = product['product']['default_storage']['discount_percent']
+        basket_dict['products'] = add_feature_price(basket_dict['products'])
         profit = calculate_profit(basket_dict['products'])
     else:
         basket_dict = {}
