@@ -98,16 +98,16 @@ class Search(View):
     #  py manage.py search_index --rebuild
     def get(self, request):
         q = request.GET.get('q', '')
-        sv = SearchVector(KeyTextTransform('fa', 'product__name'), weight='A')  # + \
+        sv = SearchVector(KeyTextTransform('fa', 'name'), weight='A')  # + \
         # SearchVector(KeyTextTransform('fa', 'product__category__name'), weight='B')
         sq = SearchQuery(q)
         rank = SearchRank(sv, sq, weights=[0.2, 0.4, 0.6, 0.8])
-        product = Storage.objects.select_related(*Storage.select).annotate(rank=rank) \
-            .filter(rank__gt=0).order_by('-rank')
-        for p in product:
-            print(p.rank)
-        product = StorageSchema(request.lang).dump(product, many=True)
-        return JsonResponse({'products': product})
+        product = Product.objects.annotate(rank=rank).filter(rank__gt=0).order_by('-rank')\
+            .values_list(KeyTextTransform('fa', 'name'), 'thumbnail__image')
+        print(product)
+        products = []
+        [products.append({"name": p[0], "thumbnail": HOST + p[1]}) for p in product]
+        return JsonResponse({'products': products})
 
 
 class ElasticSearch(View):

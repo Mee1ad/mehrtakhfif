@@ -50,6 +50,7 @@ class IPG(View):
 
 
 class PaymentRequest(View):
+    @pysnooper.snoop()
     def get(self, request, basket_id):
         # return JsonResponse({"url": "http://api.mt.com/payment/callback"})
         # ipg_id = request.GET.get('ipg_id', 1)
@@ -68,7 +69,9 @@ class PaymentRequest(View):
         invoice = self.create_invoice(request)
         self.reserve_storage(basket, invoice)
 
-        res = {"url": f"{bp['ipg_url']}?RefId={self.behpardakht_api(invoice.pk)}"}
+        # res = {"url": f"{bp['ipg_url']}?RefId={self.behpardakht_api(invoice.pk)}"}
+        # todo debug
+        res = {"url": f"{bp['ipg_url']}?RefId=12345"}
         return JsonResponse(res)
 
     @pysnooper.snoop()

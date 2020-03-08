@@ -21,7 +21,7 @@ home = [
     path('box_with_category', try_except(BoxWithCategory.as_view()), name='box_with_category'),
     path('menu', try_except(GetMenu.as_view()), name='menu'),
     path('search', try_except(ElasticSearch.as_view()), name='search'),
-    # path('search2', Search.as_view(), name='search2'),
+    path('search2', Search.as_view(), name='search2'),
     path('ads', try_except(GetAds.as_view()), name='ads'),
 ]
 

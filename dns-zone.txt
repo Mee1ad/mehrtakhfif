@@ -33,6 +33,7 @@ ns2.box	                    TXT	    "v=spf1 -all"
 _dmarc.ns2.box        	    TXT	    "v=DMARC1; p=reject"
 www	                        TXT	    "v=spf1 -all"
 _dmarc.www	                TXT	    "v=DMARC1; p=reject"
+@                           TXT     "google-site-verification=WNPVP6pDiZdgx3o0HNvQ-viODSEVCJ0827I0SL3X5zw"
 
 ;SRV Records - 2
 _caldavs._tcp	            SRV	    0 0 443 box.mehrtakhfif.com
