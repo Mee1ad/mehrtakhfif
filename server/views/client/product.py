@@ -11,7 +11,7 @@ class ProductView(View):
         product = Product.objects.filter(permalink=permalink).prefetch_related(*Product.prefetch).first()
         if product is None:
             return JsonResponse({}, status=404)
-        storages = product.storage_set.filter(start_time__lte=timezone.now())
+        storages = product.storage_set.filter(start_time__lte=timezone.now(), deadline__gte=timezone.now())
         product = ProductSchema(lang).dump(product)
         product['category'] = self.get_category(product['category'])
         product['storages'] = StorageSchema(lang).dump(storages, many=True)
