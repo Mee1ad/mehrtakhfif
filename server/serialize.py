@@ -189,6 +189,16 @@ class BaseSchema(Schema):
             return ["esfand-98", "esfand-99"]
         return None
 
+    def get_max_count_for_sale(self, obj):
+        if obj.available_count_for_sale >= obj.max_count_for_sale:
+            return obj.max_count_for_sale
+        return obj.available_count_for_sale
+
+    def get_min_count_alert(self, obj):
+        if obj.available_count_for_sale <= obj.min_count_alert:
+            return obj.available_count_for_sale
+        return None
+
 
 class UserSchema(BaseSchema):
     class Meta:
@@ -347,19 +357,17 @@ class StorageSchema(BaseSchema):
     default = fields.Function(lambda o: o == o.product.default_storage)
     features = FeatureField()
     max_count_for_sale = fields.Method("get_max_count_for_sale")
-
-    def get_max_count_for_sale(self, obj):
-        if obj.available_count_for_sale >= obj.max_count_for_sale:
-            return obj.max_count_for_sale
-        return obj.available_count_for_sale
+    min_count_alert = fields.Method("get_min_count_alert")
 
 
 class MinStorageSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'final_price', 'discount_price', 'discount_percent', 'max_count_for_sale')
+        additional = ('id', 'final_price', 'discount_price', 'discount_percent')
 
     title = fields.Method('get_title')
     deadline = fields.Function(lambda o: o.deadline.timestamp())
+    max_count_for_sale = fields.Method("get_max_count_for_sale")
+    min_count_alert = fields.Method("get_min_count_alert")
 
 
 class BasketProductSchemaOld(BaseSchema):

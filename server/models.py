@@ -430,6 +430,7 @@ class Storage(Base):
     transportation_price = models.IntegerField(default=0)
     available_count_for_sale = models.IntegerField(verbose_name='Available count for sale')
     max_count_for_sale = models.IntegerField(default=1)
+    min_count_alert = models.PositiveSmallIntegerField(default=5)
     priority = models.IntegerField(default=0)
     tax = models.IntegerField(default=0)
     discount_percent = models.PositiveSmallIntegerField(verbose_name='Discount price percent')
