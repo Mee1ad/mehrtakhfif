@@ -775,19 +775,6 @@ class Ad(models.Model):
         ordering = ['-id']
 
 
-class ShortLink(models.Model):
-    def __str__(self):
-        return self.shortlink
-
-    id = models.BigAutoField(auto_created=True, primary_key=True)
-    link = models.URLField()
-    shortlink = models.URLField()
-    accessed_time = models.IntegerField(default=0)
-
-    class Meta:
-        db_table = 'shortlink'
-        ordering = ['-id']
-
 # ---------- Tourism ---------- #
 
 

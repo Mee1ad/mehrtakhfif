@@ -359,6 +359,7 @@ class MinStorageSchema(BaseSchema):
         additional = ('id', 'final_price', 'discount_price', 'discount_percent', 'max_count_for_sale')
 
     title = fields.Method('get_title')
+    deadline = fields.Function(lambda o: o.deadline.timestamp())
 
 
 class BasketProductSchemaOld(BaseSchema):
