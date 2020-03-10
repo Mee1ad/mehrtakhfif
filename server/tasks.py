@@ -12,7 +12,6 @@ from django_celery_results.models import TaskResult
 import random
 from mehr_takhfif.settings import RANDOM_DATA, INVOICE_ROOT, STATIC_ROOT, SHORTLINK
 import pdfkit
-from django.db.utils import IntegrityError
 from django.template.loader import render_to_string
 
 
@@ -54,7 +53,7 @@ def send_invoice(invoice_id, lang, **kwargs):
             product.key = key
             try:
                 product.save()
-            except IntegrityError:
+            except Exception:
                 product.refresh_from_db()
         discount_code = storage.discount_code.filter(invoice=None).first()
         discount_code.invoice_id = invoice_id
