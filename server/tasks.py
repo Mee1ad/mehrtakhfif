@@ -13,6 +13,7 @@ import random
 from mehr_takhfif.settings import RANDOM_DATA, INVOICE_ROOT, STATIC_ROOT, SHORTLINK
 import pdfkit
 from django.template.loader import render_to_string
+import pysnooper
 
 
 @shared_task
@@ -38,6 +39,7 @@ def task_postrun_handler(task_id=None, **kwargs):
 
 
 @shared_task
+@pysnooper.snoop()
 def send_invoice(invoice_id, lang, **kwargs):
     digital_products = InvoiceStorage.objects.filter(invoice_id=invoice_id, storage__product__type=1)
     user = digital_products.first().invoice.user
