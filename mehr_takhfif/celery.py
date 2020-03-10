@@ -18,9 +18,4 @@ app = Celery('mehr_takhfif')
 app.config_from_object('mehr_takhfif.celeryconfig')
 
 # Load task modules from all registered Django app configs.
-# app.autodiscover_tasks()
-
-from django.apps import apps
-
-app.config_from_object(settings)
-app.autodiscover_tasks(lambda: [n.name for n in apps.get_app_configs()])
+app.autodiscover_tasks()
