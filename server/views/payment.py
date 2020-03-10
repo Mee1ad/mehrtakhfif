@@ -124,6 +124,7 @@ class PaymentRequest(View):
 
 class CallBack(View):
 
+    # todo remove after debug
     def get(self, request):
         # return HttpResponseRedirect("http://mt.com:3000/shopping/fail")
         digital = Invoice.objects.get(pk=102).storages.filter(product__type=1).exists()
@@ -149,7 +150,7 @@ class CallBack(View):
         invoice.final_amount = data_dict['FinalAmount']
         invoice.basket.sync = 'done'
         invoice.basket.save()
-        self.submit_invoice_storages(invoice_id)
+        # self.submit_invoice_storages(invoice_id)
         task_name = f'{invoice.id}: send invoice'
         kwargs = {"invoice_id": invoice.pk, "lang": request.lang}
         invoice.email_task = add_one_off_job(name=task_name, kwargs=kwargs, interval=0,
