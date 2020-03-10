@@ -79,5 +79,8 @@ def send_invoice(invoice_id, lang, **kwargs):
           f"\nhttps://mehrtakhfif.com/invoice/{product.invoice_id}"
     # send_sms(invoice.user.username, content=sms)
     # send_sms(invoice.user.username, content=sms_content)
+    res = 'sms sent'
     if user.email:
         send_email("صورتحساب خرید", user.email, html_content=all_renders, attach=pdf_list)
+        res += ', email sent'
+    return res
