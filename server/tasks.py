@@ -64,7 +64,7 @@ def send_invoice(invoice_id, lang, **kwargs):
             data['storage_description'] = storage.invoice_description[lang]
         rendered = ""
         for c in range(product.count):
-            discount_code = storage.discount_code.get(invoice=None)
+            discount_code = storage.discount_code.filter(invoice=None).first()
             discount_code.invoice_id = invoice_id
             discount_code.save()
             data['code'] = discount_code.code
