@@ -39,7 +39,6 @@ def task_postrun_handler(task_id=None, **kwargs):
 
 
 @shared_task
-@pysnooper.snoop()
 def send_invoice(invoice_id, lang, **kwargs):
     digital_products = InvoiceStorage.objects.filter(invoice_id=invoice_id, storage__product__type=1)
     user = digital_products.first().invoice.user
@@ -57,17 +56,18 @@ def send_invoice(invoice_id, lang, **kwargs):
                 product.save()
             except Exception:
                 product.refresh_from_db()
-        discount_code = storage.discount_code.filter(invoice=None).first()
-        discount_code.invoice_id = invoice_id
-        discount_code.save()
         data = {'title': storage.invoice_title[lang], 'user': user.first_name + user.last_name,
-                'price': storage.discount_price, 'code': discount_code.code}
+                'price': storage.discount_price}
         if storage.product.invoice_description[lang]:
             data['product_description'] = storage.product.invoice_description[lang]
         if storage.invoice_description[lang]:
             data['storage_description'] = storage.invoice_description[lang]
         rendered = ""
         for c in range(product.count):
+            discount_code = storage.discount_code.get(invoice=None)
+            discount_code.invoice_id = invoice_id
+            discount_code.save()
+            data['code'] = discount_code.code
             rendered += render_to_string('invoice.html', data)
         pdf = INVOICE_ROOT + f'/{filename}.pdf'
         css = STATIC_ROOT + 'css/pdf_style.css'
