@@ -82,7 +82,7 @@ class OrderProduct(LoginRequired):
 
 class Trips(LoginRequired):
     def get(self, request):
-        books = user_data_with_pagination(Book, BooksSchema, request)
+        books = user_data_with_pagination(Booking, BooksSchema, request)
         return JsonResponse(books)
 
 
@@ -217,9 +217,8 @@ class WalletView(LoginRequired):
 
 class ShortLinkView(View):
     def get(self, request, key):
-        name = InvoiceStorage.objects.get(key=key).storage.product.permalink
-        file = open(f"{INVOICE_ROOT}/{key}.pdf", "rb")
+        filename = InvoiceStorage.objects.get(key=key).filename
+        file = open(f"{INVOICE_ROOT}/{filename}.pdf", "rb")
         res = FileResponse(file)
-        res['Content-Disposition'] = f'attachment; filename="MehrTakhfif-{name}.pdf"'
+        res['Content-Disposition'] = f'attachment; filename="MehrTakhfif-{filename[::-1].split("-", 1)[1][::-1]}.pdf"'
         return res
-

@@ -4,7 +4,7 @@ import pysnooper
 from secrets import token_hex
 from datetime import date
 from django.utils import timezone
-from server.models import BasketProduct, FeatureStorage, CostumeHousePrice, Book, Comment, Invoice, Feature
+from server.models import BasketProduct, FeatureStorage, CostumeHousePrice, Booking, Comment, Invoice, Feature
 import time
 
 
@@ -643,7 +643,7 @@ class HouseSchema(BaseSchema):
         weekend = [3, 4]
         prices = []
         costume_prices = CostumeHousePrice.objects.filter(house=obj)
-        bookings = Book.objects.filter(house=obj, confirm=True).values('start_date', 'end_date')
+        bookings = Booking.objects.filter(house=obj, confirm=True).values('start_date', 'end_date')
         for day in range(obj.future_booking_time):
             price = dict()
             price['date'] = today + timezone.timedelta(days=day)

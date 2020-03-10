@@ -394,19 +394,6 @@ class Product(Base):
         ordering = ['-updated_at']
 
 
-class DiscountCode(Base):
-    box = models.ForeignKey(Box, on_delete=PROTECT)
-    product = models.ForeignKey(Product, on_delete=PROTECT, null=True, blank=True)
-    special_product = models.ForeignKey("SpecialProduct", on_delete=PROTECT, null=True, blank=True)
-    special_offer = models.ForeignKey("SpecialOffer", on_delete=PROTECT, null=True, blank=True)
-    available = models.BooleanField(default=True)
-    code = models.CharField(max_length=32)
-
-    class Meta:
-        db_table = 'discount_code'
-        ordering = ['-id']
-
-
 class Storage(Base):
     select = ['product', 'product__thumbnail']
     prefetch = ['product__media', 'feature']
@@ -421,17 +408,17 @@ class Storage(Base):
 
     product = models.ForeignKey(Product, on_delete=PROTECT)
     features = models.ManyToManyField(Feature, blank=True, through='FeatureStorage')
-    available_count = models.BigIntegerField(verbose_name='Available count')
-    sold_count = models.BigIntegerField(default=0, verbose_name='Sold count')
+    available_count = models.PositiveIntegerField(verbose_name='Available count')
+    sold_count = models.PositiveIntegerField(default=0, verbose_name='Sold count')
     start_price = models.BigIntegerField(verbose_name='Start price')
     final_price = models.BigIntegerField(verbose_name='Final price')
     discount_price = models.BigIntegerField(verbose_name='Discount price')
     vip_discount_price = models.BigIntegerField(verbose_name='Discount vip price')
     transportation_price = models.IntegerField(default=0)
-    available_count_for_sale = models.IntegerField(verbose_name='Available count for sale')
-    max_count_for_sale = models.IntegerField(default=1)
+    available_count_for_sale = models.PositiveIntegerField(verbose_name='Available count for sale')
+    max_count_for_sale = models.PositiveSmallIntegerField(default=1)
     min_count_alert = models.PositiveSmallIntegerField(default=5)
-    priority = models.IntegerField(default=0)
+    priority = models.PositiveSmallIntegerField(default=0)
     tax = models.IntegerField(default=0)
     discount_percent = models.PositiveSmallIntegerField(verbose_name='Discount price percent')
     vip_discount_percent = models.PositiveSmallIntegerField(verbose_name='Discount vip price percent')
@@ -577,7 +564,9 @@ class Invoice(Base):
     suspended_by = models.ForeignKey(User, on_delete=CASCADE, blank=True, null=True, verbose_name='Suspended by',
                                      related_name='invoice_suspended_by')
     user = models.ForeignKey(User, on_delete=CASCADE)
-    task = models.OneToOneField(PeriodicTask, on_delete=CASCADE, null=True, blank=True)
+    sync_task = models.ForeignKey(PeriodicTask, on_delete=CASCADE, null=True, blank=True,
+                                  related_name='invoice_sync_task')
+    email_task = models.ForeignKey(PeriodicTask, on_delete=CASCADE, null=True, blank=True)
     basket = models.OneToOneField(to=Basket, on_delete=PROTECT, related_name='invoice_to_basket')
     storages = models.ManyToManyField(Storage, through='InvoiceStorage')
     payed_at = models.DateTimeField(blank=True, null=True, verbose_name='Payed at')
@@ -608,7 +597,8 @@ class InvoiceStorage(models.Model):
         return f"{self.storage}"
 
     id = models.BigAutoField(auto_created=True, primary_key=True)
-    key = models.CharField(max_length=31, unique=True, null=True)
+    key = models.CharField(max_length=31, unique=True, null=True, db_index=True)
+    filename = models.CharField(max_length=255, null=True, blank=True)
     box = models.ForeignKey(Box, on_delete=CASCADE)
     storage = models.ForeignKey(Storage, on_delete=PROTECT)
     invoice = models.ForeignKey(Invoice, on_delete=PROTECT)
@@ -623,6 +613,18 @@ class InvoiceStorage(models.Model):
     # todo change to invoice_storage
     class Meta:
         db_table = 'invoice_product'
+        ordering = ['-id']
+
+
+class DiscountCode(Base):
+    box = models.ForeignKey(Box, on_delete=PROTECT)
+    storage = models.ForeignKey(Storage, on_delete=PROTECT, related_name='discount_code')
+    qr_code = models.ForeignKey(Media, on_delete=PROTECT)
+    invoice = models.ForeignKey(Invoice, on_delete=PROTECT, null=True, blank=True)
+    code = models.CharField(max_length=32)
+
+    class Meta:
+        db_table = 'discount_code'
         ordering = ['-id']
 
 
@@ -859,7 +861,7 @@ class CostumeHousePrice(Base):
         ordering = ['-id']
 
 
-class Book(Base):
+class Booking(Base):
     def __str__(self):
         return f"{self.house}"
 

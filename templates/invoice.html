@@ -58,13 +58,13 @@
     </style>
 </head>
 <body class="iran-sans rtl flex center" style="">
-<div class="flex column" style="text-align: center">
+<div class="flex column break-after" style="text-align: center; margin: 20px 0 10%">
     <a href="https://www.mehrtakhfif.com" style="color:#000;display:block;margin-bottom: 1cm;text-decoration: none;">
         <div class="flex center" style="direction:rtl;padding-bottom: 3mm">
             <img src="https://api.mehrtakhfif.com/static/mtIcon.png" width="60"/>
             <img src="https://api.mehrtakhfif.com/static/mtTypo.png" width="200"/>
         </div>
-        www.MehrTakhfif.com
+        www.mehrtakhfif.com
     </a>
     <div class="center" style="text-align: center">
         <div class="flex1 rtl"
@@ -108,16 +108,20 @@ line-height: 2">
         </div>
         <p style="border-top:2px solid #ea4253;"/>
     </div>
-    <div class="flex column" dir="rtl" style="padding-top:2cm; text-align: right">
+    <div class="flex column" dir="rtl" style="text-align: right">
+        {% if product_description %}
         <p class="right"
            style="font-family: IRANSans, serif !important;text-align:right; display:block;font-size: 16px;font-weight: 500; align-items: flex-end;">
-            توضیحات
-            محصول:{{ product_description }}</p>
+            توضیحات: {{ product_description }} </p>
+        {% endif %}
+        {% if storage_description %}
         <p class="right"
            style="font-family: IRANSans, serif !important;text-align:right;display:block;font-size: 16px;font-weight: 500; align-items: flex-end;">
-            توضیحات
-            استورج:{{ storage_description }}</p>
+             توضیحات: {{ storage_description }}</p>
+        {% endif %}
     </div>
 </div>
+{#<p style="border-top:2px solid #ea4253; margin: 20px 0 10%" class="break-after"/>#}
+
 </body>
 </html>

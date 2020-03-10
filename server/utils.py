@@ -203,7 +203,7 @@ def send_sms(to, code=None, content=None):
 
     return requests.post('http://ippanel.com/api/select', data=json.dumps(data))
 
-@pysnooper.snoop()
+
 def send_email(subject, to, from_email='support@mehrtakhfif.com', message=None, html_content=None, attach=None):
     if type(to) != list:
         to = [to]
@@ -349,7 +349,11 @@ def sync_storage(basket_id, op):
         count = basket_product.count
         storage.available_count = op(F('available_count'), count)
         storage.available_count_for_sale = op(F('available_count_for_sale'), count)
-        storage.sold_count = op(F('sold_count'), count)
+        if op == sub:
+            storage.sold_count = add(F('sold_count'), count)
+        if op == add:
+            storage.sold_count = sub(F('sold_count'), count)
+
         storage.save()
 
 
