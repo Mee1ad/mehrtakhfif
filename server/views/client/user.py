@@ -216,10 +216,12 @@ class WalletView(LoginRequired):
 
 
 class ShortLinkView(View):
-    @pysnooper.snoop()
     def get(self, request, key):
-        filename = InvoiceStorage.objects.get(key=key).filename
-        file = open(f"{INVOICE_ROOT}/{filename}.pdf", "rb")
-        res = FileResponse(file)
-        res['Content-Disposition'] = f'attachment; filename="MehrTakhfif-{filename[::-1].split("-", 1)[1][::-1]}.pdf"'
-        return res
+        filename = f"{INVOICE_ROOT}/p-31-52.pdf"
+        return FileResponse(open(filename, "rb"), as_attachment=True, filename='hello.pdf')
+
+        # filename = InvoiceStorage.objects.get(key=key).filename
+        # file = open(f"{INVOICE_ROOT}/{filename}.pdf", "rb")
+        # res = FileResponse(file)
+        # res['Content-Disposition'] = f'attachment; filename="MehrTakhfif-{filename[::-1].split("-", 1)[1][::-1]}.pdf"'
+        # return res
