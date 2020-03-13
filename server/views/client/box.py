@@ -23,36 +23,29 @@ class GetSpecialProduct(View):
 
 class BoxDetail(View):
     def get(self, request):
-        pass
-
+        try:
+            permalink = request.GET.get('b')
+            box = Box.objects.filter(permalink=permalink).first()
+            max_price = Storage.objects.filter(product__box=box).aggregate(Max('discount_price'))['discount_price__max']
+            min_price = Storage.objects.filter(product__box=box).aggregate(Min('discount_price'))['discount_price__min']
+            categories = get_categories(request.lang, box_id=box.id)
+            brands = Brand.objects.all()
+            return JsonResponse({'box': BoxSchema(request.lang).dump(box), 'max_price': max_price,
+                                 'brands': BrandSchema(request.lang).dump(brands, many=True), 'min_price': min_price,
+                                 'categories': categories})
+        except Exception as e:
+            print(e)
+            return JsonResponse({}, status=400)
 
 
 class BoxView(View):
     def get(self, request):
-        b_permalink = request.GET.get('b', None)
-        if b_permalink:
-            params = filter_params(request.GET)
-            box = Box.objects.get(permalink=b_permalink)
-            products = Product.objects.filter(verify=True, box=box, **params['filter']).order_by(params['order'])
-            pg = get_pagination(products, request.step, request.page, MinProductSchema)
-            return JsonResponse(pg)
-        bd_permalink = request.GET.get('bd', None)
-        if bd_permalink:
-            try:
-                box = Box.objects.filter(permalink=bd_permalink).first()
-                max_price = Storage.objects.filter(product__box=box).aggregate(Max('discount_price'))[
-                    'discount_price__max']
-                min_price = Storage.objects.filter(product__box=box).aggregate(Min('discount_price'))[
-                    'discount_price__min']
-                categories = get_categories(request.lang, box_id=box.id)
-                brands = Brand.objects.all()
-                return JsonResponse({'box': BoxSchema(request.lang).dump(box), 'max_price': max_price,
-                                     'brands': BrandSchema(request.lang).dump(brands, many=True),
-                                     'min_price': min_price,
-                                     'categories': categories})
-            except Exception as e:
-                print(e)
-                return JsonResponse({}, status=400)
+        permalink = request.GET.get('b', None)
+        params = filter_params(request.GET)
+        box = Box.objects.get(permalink=permalink)
+        products = Product.objects.filter(verify=True, box=box, **params['filter']).order_by(params['order'])
+        pg = get_pagination(products, request.step, request.page, MinProductSchema)
+        return JsonResponse(pg)
 
 
 class GetFeature(View):
