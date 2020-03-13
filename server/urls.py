@@ -26,11 +26,11 @@ home = [
 ]
 
 box = [
-    path('box/<str:permalink>', try_except(BoxView.as_view()), name='box'),
+    path('q', try_except(BoxView.as_view()), name='box'),
     # path('special_offer/<str:name>', GetSpecialOffer.as_view(), name='special_offer'),
     # path('special_product/<str:permalink>', GetSpecialProduct.as_view(), name='special_product'),
     path('best_seller/<str:permalink>', try_except(BestSeller.as_view()), name='best_seller'),
-    path('box_detail/<str:permalink>', try_except(BoxDetail.as_view()), name='box_detail'),
+    path('box_detail', try_except(BoxDetail.as_view()), name='box_detail'),
     path('features', try_except(GetFeature.as_view()), name='features'),
     path('tag/<str:permalink>', try_except(TagView.as_view()), name='tag'),
     path('category/<str:permalink>', try_except(CategoryView.as_view()), name='category'),
