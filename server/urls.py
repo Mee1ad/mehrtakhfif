@@ -13,7 +13,7 @@ from server.views.payment import *
 app_name = 'server'
 
 home = [
-    path('slider', try_except(GetSlider.as_view()), name='slider'),
+    path('slider/<str:slider_type>', try_except(GetSlider.as_view()), name='slider'),
     path('special_offer', try_except(GetSpecialOffer.as_view()), name='special_offer'),
     path('box_special_product', try_except(BoxesGetSpecialProduct.as_view()), name='box_special_product'),
     path('special_product', try_except(GetSpecialProduct.as_view()), name='special_product'),
