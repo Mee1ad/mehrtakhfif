@@ -318,7 +318,7 @@ class ProductSchema(BaseSchema):
     house = fields.Method("get_house")
     tag = TagField()
     media = MediaField()
-    thumbnail = fields.Function(lambda o: {'title': o.thumbnail.title, 'url': HOST + o.thumbnail.image.url})
+    thumbnail = fields.Method("get_thumbnail")
     short_description = fields.Method("get_short_description")
     description = fields.Method("get_description")
     properties = fields.Method("get_properties")
@@ -332,7 +332,7 @@ class MinProductSchema(BaseSchema):
         additional = ('id', 'permalink', 'rate')
 
     name = fields.Method("get_name")
-    thumbnail = fields.Function(lambda o: {'title': o.thumbnail.title, 'url': HOST + o.thumbnail.image.url})
+    thumbnail = fields.Method("get_thumbnail")
     default_storage = fields.Method("get_min_storage")
     code = fields.Method("get_code")
 
@@ -551,7 +551,7 @@ class SpecialProductSchema(BaseSchema):
     default_storage = fields.Method('get_min_storage')
     # media = fields.Method('get_media')
     description = fields.Method('get_description')
-    thumbnail = fields.Function(lambda o: {'title': o.thumbnail.title, 'url': HOST + o.thumbnail.image.url})
+    thumbnail = fields.Method("get_thumbnail")
     permalink = fields.Function(lambda o: o.storage.product.permalink)
 
     def get_label_name(self, obj):
