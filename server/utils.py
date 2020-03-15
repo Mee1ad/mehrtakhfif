@@ -190,6 +190,21 @@ def to_obj(body):
     return obj
 
 
+def reduce_image_quality(number):
+    from PIL import Image, ImageFilter
+    foo = Image.open(f"F:/Download/Photos/takhfifan/{number}.jpg")
+    x, y = foo.size
+    # x, y = int(x / 5), int(y / 5)
+
+    wpercent = (60 / x)
+    hsize = int((y * wpercent))
+    foo = foo.resize((60, hsize), Image.ANTIALIAS)
+
+    # foo = foo.resize((x, y), Image.ANTIALIAS)
+    foo = foo.filter(ImageFilter.GaussianBlur(1.6))
+    foo.save(f"C:/Users/sohei/Documents/Python/mehr_takhfif/server/foo{number}.jpg", optimize=True, quality=80)
+
+
 # Utils
 
 def send_sms(to, code=None, content=None):
