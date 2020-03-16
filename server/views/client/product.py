@@ -2,6 +2,7 @@ from django.http import JsonResponse
 from server.models import *
 from server.serialize import *
 from server.utils import View, get_pagination, load_data
+import pysnooper
 
 
 class ProductView(View):
@@ -60,7 +61,7 @@ class CommentView(View):
         elif post_permalink:
             post = BlogPost.objects.get(permalink=product_permalink)
             filterby = {"blog_post": post}
-        filterby = {"type": comment_type, **filterby}
+        filterby = {"type": int(comment_type), **filterby}
         comments = Comment.objects.filter(**filterby, approved=True).exclude(reply_to__isnull=False)
         return JsonResponse(get_pagination(comments, request.step, request.page, CommentSchema))
 

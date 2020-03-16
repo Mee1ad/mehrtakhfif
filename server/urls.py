@@ -70,7 +70,7 @@ user = [
     path('wishlist', try_except(WishlistView.as_view()), name='wishlist'),
     path('avatar', try_except(Avatar.as_view()), name='avatar'),
     path('address', try_except(AddressView.as_view()), name='address'),
-    path('user_comments', try_except(CommentView.as_view()), name='user_comments')
+    path('user_comments', try_except(UserCommentView.as_view()), name='user_comments')
 ]
 
 auth = [

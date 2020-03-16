@@ -543,7 +543,7 @@ class Comment(Base):
     satisfied = models.BooleanField(null=True, blank=True)
     approved = models.BooleanField(default=False)
     user = models.ForeignKey(User, on_delete=CASCADE)
-    reply_to = models.ForeignKey('self', on_delete=CASCADE, blank=True, null=True)
+    reply_to = models.ForeignKey('self', on_delete=CASCADE, blank=True, null=True, related_name="replys")
     suspend = models.BooleanField(default=False)
     type = models.PositiveSmallIntegerField(choices=[(1, 'q-a'), (2, 'rate')])
     product = models.ForeignKey(Product, on_delete=CASCADE, null=True, blank=True)

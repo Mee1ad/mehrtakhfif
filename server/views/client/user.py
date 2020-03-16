@@ -169,7 +169,7 @@ class AddressView(LoginRequired):
         return JsonResponse({})
 
 
-class CommentView(LoginRequired):
+class UserCommentView(LoginRequired):
     def get(self, request):
         return JsonResponse(user_data_with_pagination(Comment, CommentSchema, request))
 

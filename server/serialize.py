@@ -484,6 +484,9 @@ class CommentSchema(BaseSchema):
     created_at = fields.Function(lambda o: o.created_at.timestamp())
     purchase_at = fields.Method("get_purchase_time")
     satisfied = fields.Method("get_satisfied")
+    first_reply = fields.Method("get_first_reply")
+
+
 
     def is_rate(self, obj):
         if obj.get_type_display() == 'rate':
@@ -499,14 +502,20 @@ class CommentSchema(BaseSchema):
         if not self.is_rate(obj):
             return None
         try:
-            return Invoice.objects.get(user=obj.user, status='payed',
-                                       storages__product=obj.product).payed_at.timestamp()
+            return Invoice.objects.filter(user=obj.user, status=2,
+                                          storages__product=obj.product).order_by('id').first().payed_at.timestamp()
         except Invoice.DoesNotExist:
             return None
 
     def get_reply_count(self, obj):
         comments = Comment.objects.filter(product=obj.product, type=obj.type, reply_to=obj)
         return comments.count()
+
+    def get_first_reply(self, obj):
+        if obj.type == 1 and self.get_reply_count(obj) >= 1:
+            comment = obj.replys.order_by('id').first()
+            return CommentSchema().dump(comment)
+        return None
 
 
 class MenuSchema(BasketSchema):
