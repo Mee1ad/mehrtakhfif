@@ -10,24 +10,6 @@ from django.db.utils import IntegrityError
 
 class Profile(LoginRequired):
     def get(self, request):
-        reduce_image_quality(1)
-        reduce_image_quality(2)
-        reduce_image_quality(3)
-        reduce_image_quality(4)
-        reduce_image_quality(5)
-        reduce_image_quality(6)
-        reduce_image_quality(7)
-        reduce_image_quality(8)
-        reduce_image_quality(9)
-        reduce_image_quality(10)
-        reduce_image_quality(11)
-        reduce_image_quality(12)
-        reduce_image_quality(13)
-        reduce_image_quality(14)
-        reduce_image_quality(15)
-        reduce_image_quality(16)
-        reduce_image_quality(17)
-        reduce_image_quality(18)
         return JsonResponse({'user': UserSchema().dump(request.user)})
 
     def put(self, request):

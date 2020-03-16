@@ -252,6 +252,8 @@ def get_categories(language, box_id=None, category=None):
 
 
 def get_pagination(query, step, page, serializer, language="fa"):
+    if step > 100:
+        step = 10
     try:
         count = query.count()
     except TypeError:
