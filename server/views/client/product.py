@@ -47,14 +47,19 @@ class RelatedProduct(View):
 
 class CommentView(View):
     def get(self, request):
-        product_id = request.GET.get('product_id', None)
-        post_id = request.GET.get('post_id', None)
+        product_permalink = request.GET.get('prp', None)
+        post_permalink = request.GET.get('pop', None)
         comment_id = request.GET.get('comment_id', None)
         comment_type = request.GET.get('type', None)
         if comment_id:
             comments = Comment.objects.filter(reply_to_id=comment_id)
             return JsonResponse(get_pagination(comments, request.step, request.page, CommentSchema))
-        filterby = {"product_id": product_id} if product_id else {"blog_post_id": post_id}
+        if product_permalink:
+            product = Product.objects.get(permalink=product_permalink)
+            filterby = {"product": product}
+        elif post_permalink:
+            post = BlogPost.objects.get(permalink=product_permalink)
+            filterby = {"blog_post": post}
         filterby = {"type": comment_type, **filterby}
         comments = Comment.objects.filter(**filterby, approved=True).exclude(reply_to__isnull=False)
         return JsonResponse(get_pagination(comments, request.step, request.page, CommentSchema))
