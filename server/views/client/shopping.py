@@ -60,8 +60,8 @@ class BasketView(LoginRequired):
                 assert storage.available_count_for_sale >= count and storage.max_count_for_sale >= count
                 basket_product.update(count=count)
             except AttributeError:
-                BasketProduct.objects.create(basket=basket, storage_id=pk, count=count,
-                                             box=basket_product.first().product.box, features=features)
+                box = Storage.objects.get(pk=pk).product.box
+                BasketProduct.objects.create(basket=basket, storage_id=pk, count=count, box=box, features=features)
 
         basket.count = basket.products.all().count()
         basket.save()
