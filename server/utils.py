@@ -90,13 +90,11 @@ def upload(request, titles, media_type, box=None):
             file_format = os.path.splitext(file.name)[-1]
             mimetype = get_mimetype(file).split('/')[0]
             if (mimetype == 'image' and file_format not in image_formats) or \
-                    (mimetype == 'audio' and file_format not in audio_formats) or \
-                    (mimetype != 'image' and mimetype != 'audio'):
+                    (mimetype != 'image'):
                 return False
-
-            if media_type == 'avatar' and title == str:
-                file.name = f"{title['user_id']} {datetime.now().strftime('%Y-%m-%d, %H-%M-%S')}{file_format}"
-            media = Media(file=file, box_id=box, created_by_id=1, type=types[media_type],
+            if media_type == 'avatar' and type(title) == dict:
+                file.name = f"{title['user_id']} {timezone.now().strftime('%Y-%m-%d, %H-%M-%S')}{file_format}"
+            media = Media(image=file, box_id=box, created_by_id=1, type=types[media_type],
                           title=title, updated_by=request.user)
             media.save()
             media_list.append(media)

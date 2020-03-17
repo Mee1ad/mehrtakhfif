@@ -127,6 +127,8 @@ access-token: {{access-token}}
 
 --WebAppBoundary--
 Content-Disposition: form-data; name="file"; filename="fmb.jpg"
+Content-Type: video/mp4
+
 
 < F:\Download\Photos\fmb.jpg
 ###

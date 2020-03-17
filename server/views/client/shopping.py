@@ -20,7 +20,7 @@ class BasketView(LoginRequired):
             basket = Basket.objects.create(user=request.user, created_by=request.user, updated_by=request.user)
         except AssertionError:
             return JsonResponse({}, status=401)
-        basket_count = self.add_to_basket(basket, data['products'], data['override'], data['add'])
+        basket_count = self.add_to_basket(basket, data['products'])
         res = {'new_basket_count': basket_count, **get_basket(request.user, request.lang)}
         res = JsonResponse(res)
         res.set_signed_cookie('new_basket_count', basket_count, TOKEN_SALT)
@@ -30,17 +30,16 @@ class BasketView(LoginRequired):
         data = load_data(request)
         basket = Basket.objects.filter(user=request.user).order_by('-id').first()
         # todo remove assertion
-        assert BasketProduct.objects.filter(storage_id=data['storage_id'], basket=basket).update(count=data['count'])
+        assert BasketProduct.objects.filter(id=data['basket_product_id'], basket=basket).update(count=data['count'])
         return JsonResponse(get_basket(request.user, request.lang))
 
-    @pysnooper.snoop()
     def delete(self, request):
-        storage_id = request.GET.get('storage_id', None)
+        basket_product_id = request.GET.get('basket_product_id', None)
         basket_id = request.GET.get('basket_id', None)
         summary = request.GET.get('summary', None)
         try:
             basket = Basket.objects.filter(user=request.user).order_by('-id').first()
-            BasketProduct.objects.filter(basket=basket, storage_id=storage_id).delete()
+            BasketProduct.objects.filter(basket=basket, id=basket_product_id).delete()
             res = {}
             if summary:
                 res = get_basket(request.user, request.lang)

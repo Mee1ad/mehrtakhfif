@@ -37,7 +37,7 @@ class Avatar(LoginRequired):
         title = {"user_id": f"{user.id}"}
         media = upload(request, [title], 'avatar')
         if media:
-            user.avatar = media
+            user.avatar = media[0]
             user.save()
             if pre_avatar_id:
                 Media.objects.filter(pk=pre_avatar_id).delete()
