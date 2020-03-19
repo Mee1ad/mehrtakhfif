@@ -59,7 +59,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'debug_toolbar.middleware.DebugToolbarMiddleware',
-] + MY_MIDDLEWARE
+]
 
 DISALLOWED_USER_AGENTS = [compile('PostmanRuntime')] if not DEBUG else []
 
