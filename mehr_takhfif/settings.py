@@ -45,7 +45,7 @@ INSTALLED_APPS = [
     'django_celery_beat',
     # 'django.contrib.admindocs',
     # 'django_elasticsearch_dsl'
-]
+] + MY_INSTALLED_APPS
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -59,7 +59,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'debug_toolbar.middleware.DebugToolbarMiddleware',
-]
+] + MY_MIDDLEWARE
 
 DISALLOWED_USER_AGENTS = [compile('PostmanRuntime')] if not DEBUG else []
 
