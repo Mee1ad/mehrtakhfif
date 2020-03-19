@@ -153,7 +153,7 @@ class AddressView(LoginRequired):
 
 class UserCommentView(LoginRequired):
     def get(self, request):
-        return JsonResponse(user_data_with_pagination(Comment, CommentSchema, request))
+        return JsonResponse(user_data_with_pagination(Comment, UserCommentSchema, request))
 
 
 class GetState(LoginRequired):

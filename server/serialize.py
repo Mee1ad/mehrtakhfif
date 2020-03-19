@@ -486,8 +486,6 @@ class CommentSchema(BaseSchema):
     satisfied = fields.Method("get_satisfied")
     first_reply = fields.Method("get_first_reply")
 
-
-
     def is_rate(self, obj):
         if obj.get_type_display() == 'rate':
             return True
@@ -516,6 +514,11 @@ class CommentSchema(BaseSchema):
             comment = obj.replys.order_by('id').first()
             return CommentSchema().dump(comment)
         return None
+
+
+class UserCommentSchema(CommentSchema):
+    product = fields.Method("get_min_product")
+
 
 
 class MenuSchema(BasketSchema):
