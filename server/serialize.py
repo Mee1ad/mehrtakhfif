@@ -589,7 +589,7 @@ class WishListSchema(BaseSchema):
         additional = ('id', 'notify')
 
     product = fields.Method("get_min_product")
-    type = fields.Function(lambda o: o.get_type_display())
+    # type = fields.Function(lambda o: o.get_type_display())
 
 
 class NotifyUserSchema(Schema):

@@ -306,12 +306,12 @@ Content-Disposition: form-data; name="data"
 
 {"box_id": 6, "type": "thumbnail", "titles": [{"fa": "نام دسته بندی"}, {"fa": "2نام دسته بندی"}]}
 --WebAppBoundary--
-Content-Disposition: form-data; name="file"; filename="fmb.jpg"
+Content-Disposition: form-data; name="file"; filename="takh1.jpg"
 
-< F:\Download\Photos\fmb.jpg
+< F:\Download\Photos\takh1.jpg
 --WebAppBoundary--
-Content-Disposition: form-data; name="file"; filename="gram.jpg"
+Content-Disposition: form-data; name="file"; filename="takh2.jpg"
 
-< F:\Download\Photos\gram.jpg
+< F:\Download\Photos\takh2.jpg
 
 ###

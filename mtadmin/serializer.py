@@ -177,7 +177,7 @@ class MediaASchema(BaseAdminSchema):
     class Meta:
         additional = ('title',)
 
-    url = fields.Function(lambda o: HOST + o.file.url)
+    url = fields.Function(lambda o: HOST + o.image.url)
     type = fields.Function(lambda o: o.get_type_display())
 
 

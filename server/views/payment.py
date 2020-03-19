@@ -156,7 +156,7 @@ class CallBack(View):
         invoice.email_task = add_one_off_job(name=task_name, kwargs=kwargs, interval=0,
                                              task='server.tasks.send_invoice')
         invoice.save()
-        return HttpResponseRedirect("https://mehrtakhfif.com")
+        return HttpResponseRedirect(f"https://mehrtakhfif.com/invoice/{invoice_id}")
 
     @pysnooper.snoop()
     def verify(self, invoice_id, sale_ref_id):

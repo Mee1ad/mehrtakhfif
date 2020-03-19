@@ -53,6 +53,8 @@ class BasketView(LoginRequired):
             pk = int(product['id'])
             count = int(product['count'])
             features = product['features']
+            # todo validate features
+            # https://github.com/alecthomas/voluptuous
             try:
                 basket_product = BasketProduct.objects.filter(basket=basket, storage_id=pk, features=features).\
                     select_related('storage')
