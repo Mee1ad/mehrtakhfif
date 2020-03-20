@@ -2,7 +2,7 @@ from django.db.models import Max, Min
 from django.http import JsonResponse
 from server.utils import *
 from server.serialize import BoxSchema, FeatureSchema, MinProductSchema, BrandSchema
-
+import pysnooper
 
 class GetSpecialOffer(View):
     def get(self, request, name):
@@ -39,11 +39,11 @@ class BoxDetail(View):
 
 
 class BoxView(View):
+    @pysnooper.snoop()
     def get(self, request):
-        permalink = request.GET.get('b', None)
-        params = filter_params(request.GET)
-        box = Box.objects.get(permalink=permalink)
-        products = Product.objects.filter(verify=True, box=box, **params['filter']).order_by(params['order'])
+        params = filter_params(request.GET, request.lang)
+        products = Product.objects.annotate(**params['rank']).\
+            filter(verify=True, **params['filter']).order_by(params['order'])
         pg = get_pagination(products, request.step, request.page, MinProductSchema)
         return JsonResponse(pg)
 

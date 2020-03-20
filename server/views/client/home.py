@@ -1,5 +1,3 @@
-from django.contrib.postgres.fields.jsonb import KeyTextTransform
-from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
 from django.http import JsonResponse
 
 from server.documents import *
@@ -92,20 +90,6 @@ class GetAds(View):
     def get(self, request):
         return JsonResponse({'ads': AdSchema(request.lang).dump(
             Ad.objects.select_related(*Ad.select).all(), many=True)})
-
-
-class Search(View):
-    #  py manage.py search_index --rebuild
-    def get(self, request):
-        q = request.GET.get('q', '')
-        sv = SearchVector(KeyTextTransform('fa', 'name'), weight='A')  # + \
-        # SearchVector(KeyTextTransform('fa', 'product__category__name'), weight='B')
-        sq = SearchQuery(q)
-        rank = SearchRank(sv, sq, weights=[0.2, 0.4, 0.6, 0.8])
-        products = Product.objects.annotate(rank=rank).order_by('-rank')
-        print(products[0])
-        products = MinProductSchema(language=request.lang).dump(products, many=True)
-        return JsonResponse({'products': products})
 
 
 class ElasticSearch(View):

@@ -24,6 +24,8 @@ from server.models import *
 import requests
 from server.serialize import MediaSchema
 from server.serialize import BoxCategoriesSchema, BasketSchema, BasketProductSchema, MinProductSchema
+from django.contrib.postgres.fields.jsonb import KeyTextTransform
+from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
 
 default_step = 12
 default_page = 1
@@ -101,26 +103,37 @@ def upload(request, titles, media_type, box=None):
     return media_list
 
 
-def filter_params(params):
+def filter_params(params, lang):
     if not params:
-        return {'filter': {}, 'order': '-created_at'}
+        return {'filter': {}, 'query': '', 'order': '-created_at'}
     ds = 'default_storage__'
     dis = 'discount'
     valid_orders = {'cheap': f'{ds}{dis}_price', 'expensive': f'-{ds}{dis}_price',
                     'best_seller': f'{ds}sold_count', 'popular': '-created_at',
                     'discount': f'{ds}{dis}discount_percent'}
     filter_by = {}
+    box_permalink = params.get('b', None)
+    q = params.get('q', None)
+    rank = {}
     orderby = params.get('o', '-created_at')
     category = params.get('cat', None)
     available = params.get('available', None)
     brand = params.getlist('brand', None)
     min_price = params.get('min_price', None)
     max_price = params.get('max_price', None)
+    if box_permalink:
+        try:
+            filter_by['box'] = Box.objects.get(permalink=box_permalink)
+        except Box.DoesNotExist:
+            pass
     if category:
         filter_by['category__permalink'] = category
     if orderby != '-created_at':
         valid_key = valid_orders[orderby]
         orderby = valid_key
+    if q:
+        rank = {'rank': get_rank(q, lang)}
+        orderby = '-rank'
     if available:
         filter_by[f'{ds}available_count_for_sale__gt'] = 0
     if min_price and max_price:
@@ -146,7 +159,15 @@ def filter_params(params):
     #         continue
     #     filter_by[key + '__in'] = value
 
-    return {'filter': filter_by, 'order': orderby}
+    return {'filter': filter_by, 'rank': rank, 'order': orderby}
+
+
+def get_rank(q, lang):
+    sv = SearchVector(KeyTextTransform(lang, 'name'), weight='A')  # + \
+    # SearchVector(KeyTextTransform('fa', 'product__category__name'), weight='B')
+    sq = SearchQuery(q)
+    rank = SearchRank(sv, sq, weights=[0.2, 0.4, 0.6, 0.8])
+    return rank
 
 
 def load_location(location):

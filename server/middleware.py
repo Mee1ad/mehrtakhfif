@@ -71,7 +71,7 @@ class AuthMiddleware:
 
         # set new basket count in cookie
         response = self.get_response(request)
-        if app_name == 'server' and new_basket_count and 200 <= response.status_code <= 299:
+        if app_name == 'server' and new_basket_count and 200 <= response.status_code <= 299 and request.method == 'GET':
             try:
                 res = json.loads(response.content)
                 res['new_basket_count'] = new_basket_count
