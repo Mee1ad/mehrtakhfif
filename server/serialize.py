@@ -184,11 +184,6 @@ class BaseSchema(Schema):
             new_value.append({'name': item[self.lang], 'id': item['id']})
         return new_value
 
-    def get_code(self, obj):
-        if obj.type == 1:
-            return ["esfand-98", "esfand-99"]
-        return None
-
     def get_max_count_for_sale(self, obj):
         if obj.available_count_for_sale >= obj.max_count_for_sale:
             return obj.max_count_for_sale
@@ -323,7 +318,6 @@ class ProductSchema(BaseSchema):
     description = fields.Method("get_description")
     properties = fields.Method("get_properties")
     details = fields.Method("get_details")
-    code = fields.Method("get_code")
     location = fields.Function(lambda o: {"lat": o.location['lat'], 'lng': o.location['lng']} if o.location else {})
 
 
@@ -334,7 +328,6 @@ class MinProductSchema(BaseSchema):
     name = fields.Method("get_name")
     thumbnail = fields.Method("get_thumbnail")
     default_storage = fields.Method("get_min_storage")
-    code = fields.Method("get_code")
 
 
 class SliderSchema(BaseSchema):
@@ -518,7 +511,6 @@ class CommentSchema(BaseSchema):
 
 class UserCommentSchema(CommentSchema):
     product = fields.Method("get_min_product")
-
 
 
 class MenuSchema(BasketSchema):

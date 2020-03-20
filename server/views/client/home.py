@@ -102,11 +102,9 @@ class Search(View):
         # SearchVector(KeyTextTransform('fa', 'product__category__name'), weight='B')
         sq = SearchQuery(q)
         rank = SearchRank(sv, sq, weights=[0.2, 0.4, 0.6, 0.8])
-        product = Product.objects.annotate(rank=rank).filter(rank__gt=0).order_by('-rank')\
-            .values_list(KeyTextTransform('fa', 'name'), 'thumbnail__image')
-        print(product)
-        products = []
-        [products.append({"name": p[0], "thumbnail": HOST + p[1]}) for p in product]
+        products = Product.objects.annotate(rank=rank).order_by('-rank')
+        print(products[0])
+        products = MinProductSchema(language=request.lang).dump(products, many=True)
         return JsonResponse({'products': products})
 
 

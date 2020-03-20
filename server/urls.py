@@ -20,8 +20,8 @@ home = [
     path('best_seller', try_except(BestSeller.as_view()), name='best_seller'),
     path('box_with_category', try_except(BoxWithCategory.as_view()), name='box_with_category'),
     path('menu', try_except(GetMenu.as_view()), name='menu'),
-    path('search', try_except(ElasticSearch.as_view()), name='search'),
-    path('search2', Search.as_view(), name='search2'),
+    path('suggest', try_except(ElasticSearch.as_view()), name='suggest'),
+    path('search', Search.as_view(), name='search'),
     path('ads', try_except(GetAds.as_view()), name='ads'),
 ]
 

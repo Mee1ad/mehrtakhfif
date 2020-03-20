@@ -142,6 +142,7 @@ class CallBack(View):
         if not ref_id:
             return HttpResponseRedirect("https://mehrtakhfif.com")
         # todo debug
+        # todo https://memoryleaks.ir/unlimited-charge-of-mytehran-account/
         # assert self.verify(invoice_id, ref_id)
         invoice = Invoice.objects.get(pk=invoice_id, reference_id=data_dict['RefId'])
         invoice.status = 2

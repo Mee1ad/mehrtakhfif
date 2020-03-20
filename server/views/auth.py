@@ -26,7 +26,7 @@ class Login(View):
         data = load_data(request, check_token=False)
         cookie_age = 30 * 60
         username = data['username']
-        password = data['password']
+        password = data.get('password', None)
         try:  # Login
             user = User.objects.get(username=username)
             if user.is_ban:
