@@ -21,24 +21,31 @@ class GetSpecialProduct(View):
         return JsonResponse({'special_product': special_products})
 
 
-class BoxDetail(View):
+class FilterDetail(View):
     def get(self, request):
-        try:
-            permalink = request.GET.get('b')
-            box = Box.objects.filter(permalink=permalink).first()
-            max_price = Storage.objects.filter(product__box=box).aggregate(Max('discount_price'))['discount_price__max']
-            min_price = Storage.objects.filter(product__box=box).aggregate(Min('discount_price'))['discount_price__min']
-            categories = get_categories(request.lang, box_id=box.id)
-            brands = Brand.objects.all()
-            return JsonResponse({'box': BoxSchema(request.lang).dump(box), 'max_price': max_price,
-                                 'brands': BrandSchema(request.lang).dump(brands, many=True), 'min_price': min_price,
-                                 'categories': categories})
-        except Exception as e:
-            print(e)
-            return JsonResponse({}, status=400)
+        permalink = request.GET.get('b', None)
+        q = request.GET.get('q', {})
+        box = {}
+        product_box = {}
+        rank = {}
+        res = {'box': None}
+        if q:
+            rank = get_rank(q, request.lang, 'product__name')
+            rank = {'rank': rank}
+        if permalink:
+            res['box'] = Box.objects.filter(permalink=permalink).first()
+            box = {'box': res['box']}
+            product_box = {'product__box': res['box']}
+            res['box'] = BoxSchema(request.lang).dump(res['box'])
+        max_price = Storage.objects.annotate(**rank).filter(**product_box).aggregate(Max('discount_price'))['discount_price__max']
+        min_price = Storage.objects.annotate(**rank).filter(**product_box).aggregate(Min('discount_price'))['discount_price__min']
+        categories = get_categories(request.lang, box.get('box', None))
+        brands = Brand.objects.filter(**box)
+        return JsonResponse({'max_price': max_price, 'brands': BrandSchema(request.lang).dump(brands, many=True),
+                             'min_price': min_price, 'categories': categories, **res})
 
 
-class BoxView(View):
+class Filter(View):
     @pysnooper.snoop()
     def get(self, request):
         params = filter_params(request.GET, request.lang)

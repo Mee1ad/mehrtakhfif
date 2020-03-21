@@ -162,8 +162,8 @@ def filter_params(params, lang):
     return {'filter': filter_by, 'rank': rank, 'order': orderby}
 
 
-def get_rank(q, lang):
-    sv = SearchVector(KeyTextTransform(lang, 'name'), weight='A')  # + \
+def get_rank(q, lang, field_name='name'):
+    sv = SearchVector(KeyTextTransform(lang, field_name), weight='A')  # + \
     # SearchVector(KeyTextTransform('fa', 'product__category__name'), weight='B')
     sq = SearchQuery(q)
     rank = SearchRank(sv, sq, weights=[0.2, 0.4, 0.6, 0.8])

@@ -9,6 +9,7 @@ from server.views.client.shopping import *
 from server.views.client.tourism import *
 from server.views.client.user import *
 from server.views.payment import *
+from django.views.decorators.cache import cache_page
 
 app_name = 'server'
 
@@ -19,17 +20,17 @@ home = [
     path('special_product', try_except(GetSpecialProduct.as_view()), name='special_product'),
     path('best_seller', try_except(BestSeller.as_view()), name='best_seller'),
     path('box_with_category', try_except(BoxWithCategory.as_view()), name='box_with_category'),
-    path('menu', try_except(GetMenu.as_view()), name='menu'),
+    path('menu', cache_page(60 * 5)(try_except(GetMenu.as_view())), name='menu'),
     path('suggest', try_except(ElasticSearch.as_view()), name='suggest'),
     path('ads', try_except(GetAds.as_view()), name='ads'),
 ]
 
 box = [
-    path('filter', try_except(BoxView.as_view()), name='box'),
+    path('filter', try_except(Filter.as_view()), name='filter'),
     # path('special_offer/<str:name>', GetSpecialOffer.as_view(), name='special_offer'),
     # path('special_product/<str:permalink>', GetSpecialProduct.as_view(), name='special_product'),
     path('best_seller/<str:permalink>', try_except(BestSeller.as_view()), name='best_seller'),
-    path('box_detail', try_except(BoxDetail.as_view()), name='box_detail'),
+    path('filter_detail', try_except(FilterDetail.as_view()), name='filter_detail'),
     path('features', try_except(GetFeature.as_view()), name='features'),
     path('tag/<str:permalink>', try_except(TagView.as_view()), name='tag'),
     path('category/<str:permalink>', try_except(CategoryView.as_view()), name='category'),

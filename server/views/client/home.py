@@ -82,6 +82,7 @@ class BoxWithCategory(View):
 
 class GetMenu(View):
     def get(self, request):
+        print('shit')
         menu = Menu.objects.select_related(*Menu.select).all()
         return JsonResponse({'menu': MenuSchema(request.lang).dump(menu, many=True)})
 

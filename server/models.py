@@ -335,6 +335,7 @@ class Tag(Base):
 
 class Brand(Base):
     name = JSONField(default=multilanguage)
+    box = models.ForeignKey(Box, on_delete=CASCADE)
 
     class Meta:
         db_table = 'brand'

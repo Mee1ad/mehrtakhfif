@@ -9,6 +9,7 @@ $TTL 120        ; 2 minutes default TTL
 www                IN        A      37.152.182.220
 api                IN        A      37.152.182.220
 kibana             IN        A      37.152.182.220
+flower             IN        A      37.152.182.220
 box                IN        A      193.176.241.44
 autoconfig         IN        A      193.176.241.44
 autodiscover       IN        A      193.176.241.44
