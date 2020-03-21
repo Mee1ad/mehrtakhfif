@@ -26,23 +26,29 @@ class FilterDetail(View):
         permalink = request.GET.get('b', None)
         q = request.GET.get('q', {})
         box = {}
-        product_box = {}
         rank = {}
         res = {'box': None}
+        order_by = []
         if q:
-            rank = get_rank(q, request.lang, 'product__name')
+            rank = get_rank(q, request.lang)
             rank = {'rank': rank}
+            order_by = ['-rank']
         if permalink:
             res['box'] = Box.objects.filter(permalink=permalink).first()
             box = {'box': res['box']}
-            product_box = {'product__box': res['box']}
             res['box'] = BoxSchema(request.lang).dump(res['box'])
-        max_price = Storage.objects.annotate(**rank).filter(**product_box).aggregate(Max('discount_price'))['discount_price__max']
-        min_price = Storage.objects.annotate(**rank).filter(**product_box).aggregate(Min('discount_price'))['discount_price__min']
-        categories = get_categories(request.lang, box.get('box', None))
-        brands = Brand.objects.filter(**box)
-        return JsonResponse({'max_price': max_price, 'brands': BrandSchema(request.lang).dump(brands, many=True),
-                             'min_price': min_price, 'categories': categories, **res})
+        products = Product.objects.annotate(**rank).filter(**box).order_by(*order_by).\
+            select_related('brand', 'default_storage')
+        prices = products.aggregate(max=Max('default_storage__discount_price'),
+                                    min=Min('default_storage__discount_price'))
+        # categories = [product.category for product in products.order_by('category_id').distinct('category_id')]
+        categories = Category.objects.filter(pk__in=products.order_by('category_id').distinct('category_id').
+                                             values_list('category_id', flat=True))
+        print(categories)
+        categories = get_categories(request.lang, categories=categories)
+        brands = [product.brand for product in products.order_by('brand_id').distinct('brand_id')]
+        return JsonResponse({'max_price': prices['max'], 'min_price': prices['min'], **res,
+                             'brands': BrandSchema(request.lang).dump(brands, many=True), 'categories': categories})
 
 
 class Filter(View):

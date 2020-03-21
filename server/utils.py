@@ -162,8 +162,8 @@ def filter_params(params, lang):
     return {'filter': filter_by, 'rank': rank, 'order': orderby}
 
 
-def get_rank(q, lang, field_name='name'):
-    sv = SearchVector(KeyTextTransform(lang, field_name), weight='A')  # + \
+def get_rank(q, lang):
+    sv = SearchVector(KeyTextTransform(lang, 'name'), weight='A')  # + \
     # SearchVector(KeyTextTransform('fa', 'product__category__name'), weight='B')
     sq = SearchQuery(q)
     rank = SearchRank(sv, sq, weights=[0.2, 0.4, 0.6, 0.8])
@@ -234,23 +234,26 @@ def send_email(subject, to, from_email='support@mehrtakhfif.com', message=None, 
     msg.send()
 
 
-def get_categories(language, box_id=None, category=None):
-    if category is None and box_id:
-        category = Category.objects.filter(box_id=box_id)
-    else:
-        category = Category.objects.all()
-    if len(category) == 0:
+def get_categories(language, box_id=None, categories=None):
+    if box_id:
+        categories = Category.objects.filter(box_id=box_id)
+    if categories is None:
+        categories = Category.objects.all()
+    if len(categories) == 0:
         return []
-    new_cats = [*category]
+    new_cats = [*categories]
     remove_index = []
-    for cat, index in zip(category, range(len(category))):
+    for cat, index in zip(categories, range(len(categories))):
         if cat.parent is None:
             continue
-        parent_index = new_cats.index(category.filter(pk=cat.parent_id).first())
-        if not hasattr(new_cats[parent_index], 'child'):
-            new_cats[parent_index].child = []
-        new_cats[parent_index].child.append(cat)
-        remove_index.append(cat)
+        try:
+            parent_index = new_cats.index(categories.filter(pk=cat.parent_id).first())
+            if not hasattr(new_cats[parent_index], 'child'):
+                new_cats[parent_index].child = []
+            new_cats[parent_index].child.append(cat)
+            remove_index.append(cat)
+        except ValueError:  # for filterDetail when parent is not in result of query
+            pass
     new_cats = [x for x in new_cats if x not in remove_index]
     return BoxCategoriesSchema(language=language).dump(new_cats, many=True)
 

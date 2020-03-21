@@ -377,7 +377,7 @@ class Product(Base):
 
     category = models.ForeignKey(Category, on_delete=CASCADE)
     box = models.ForeignKey(Box, on_delete=PROTECT)
-    brand = models.ForeignKey(Brand, on_delete=PROTECT)
+    brand = models.ForeignKey(Brand, on_delete=PROTECT, null=True, blank=True)
     thumbnail = models.ForeignKey(Media, on_delete=PROTECT, related_name='product_thumbnail')
     city = models.ForeignKey(City, on_delete=CASCADE, null=True, blank=True)
     default_storage = models.OneToOneField(null=True, blank=True, to="Storage", on_delete=CASCADE,
