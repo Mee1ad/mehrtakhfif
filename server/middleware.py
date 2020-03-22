@@ -1,4 +1,4 @@
-from mehr_takhfif.settings import TOKEN_SALT, ADMIN
+from mehr_takhfif.settings import TOKEN_SALT, ADMIN, DEFAULT_COOKIE_DOMAIN
 from server.utils import default_step, default_page, res_code, set_csrf_cookie, check_csrf_token
 from mtadmin.utils import get_roll
 from server.models import User, Basket
@@ -76,7 +76,8 @@ class AuthMiddleware:
                 res = json.loads(response.content)
                 res['new_basket_count'] = new_basket_count
                 response.content = json.dumps(res)
-                response.set_signed_cookie('basket_count', new_basket_count, salt=TOKEN_SALT)
+                response.set_signed_cookie('basket_count', new_basket_count, salt=TOKEN_SALT,
+                                           domain=DEFAULT_COOKIE_DOMAIN)
             # except AttributeError:
             except Exception:
                 pass
