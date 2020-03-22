@@ -9,13 +9,14 @@ from server.utils import *
 from server.serialize import UserSchema
 import pysnooper
 from secrets import token_hex
+from mehr_takhfif.settings import DEFAULT_COOKIE_DOMAIN
 
 
 class Backend(ModelBackend):
     @staticmethod
     def get_user_from_cookie(request):
         try:
-            client_token = request.get_signed_cookie('token', False, salt=TOKEN_SALT)
+            client_token = request.get_signed_cookie('token', False, salt=TOKEN_SALT, domain=DEFAULT_COOKIE_DOMAIN)
             return User.objects.get(token=client_token, is_ban=False)
         except Exception:
             return None
