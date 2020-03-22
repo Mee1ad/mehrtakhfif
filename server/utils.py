@@ -19,7 +19,7 @@ import pysnooper
 from operator import add, sub
 from secrets import token_hex
 from server.error import *
-from mehr_takhfif.settings import CSRF_SALT, TOKEN_SALT, MEDIA_ROOT
+from mehr_takhfif.settings import CSRF_SALT, TOKEN_SALT, DEFAULT_COOKIE_DOMAIN
 from server.models import *
 import requests
 from server.serialize import MediaSchema
@@ -422,7 +422,7 @@ def get_token_from_cookie(request):
 def set_csrf_cookie(response):
     random_text = uuid.uuid4().hex
     token = hashlib.sha3_224(random_text.encode()).hexdigest()
-    response.set_signed_cookie('csrf_cookie', token, max_age=15778800, expires=15778800, domain="mt.com")  # 6 month
+    response.set_signed_cookie('csrf_cookie', token, max_age=15778800, expires=15778800, domain=DEFAULT_COOKIE_DOMAIN)  # 6 month
     return response
 
 

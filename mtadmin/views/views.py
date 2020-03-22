@@ -63,8 +63,9 @@ class TableFilter(AdminView):
         return JsonResponse({'data': filters})
 
 
-class AdminInfo(AdminView):
-    def get(self, request):
-        user = request.user
+class CheckLoginToken(AdminView):
+    def post(self, request):
+        data = json.loads(request.body)
+        user = User.objects.get(pk=request.user.pk, admin_token=data['admin_token'])
         boxes = BoxSchema().dump(get_box_permission(user), many=True)
         return JsonResponse({'roll': get_roll(user), 'boxes': boxes})
