@@ -5,6 +5,13 @@ from server.serialize import *
 from server.utils import *
 
 
+class Test(View):
+    def get(self, request):
+        res = JsonResponse({'message': 'success'})
+        res.set_signed_cookie('aryan', 'aryan is baghala', domain=DEFAULT_COOKIE_DOMAIN)
+        return res
+
+
 class GetSlider(View):
     def get(self, request, slider_type):
         slider = Slider.objects.select_related(*Slider.select).all()

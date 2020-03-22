@@ -14,6 +14,7 @@ from django.views.decorators.cache import cache_page
 app_name = 'server'
 
 home = [
+    path('test', try_except(Test.as_view()), name='test'),
     path('slider/<str:slider_type>', try_except(GetSlider.as_view()), name='slider'),
     path('special_offer', try_except(GetSpecialOffer.as_view()), name='special_offer'),
     path('box_special_product', try_except(BoxesGetSpecialProduct.as_view()), name='box_special_product'),
