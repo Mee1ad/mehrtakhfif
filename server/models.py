@@ -16,6 +16,10 @@ from django_celery_results.models import TaskResult
 from mehr_takhfif.settings import HOST, MEDIA_ROOT
 import datetime
 import pysnooper
+from PIL import Image, ImageFilter
+
+media_types = [(1, 'image'), (2, 'thumbnail'), (4, 'slider'), (5, 'ads'), (6, 'avatar'), (7, 'media')]
+has_placeholder = {1: 'image', 2: 'thumbnail', 4: 'slider', 5: 'ads', 7: 'media'}
 
 
 def multilanguage():
@@ -92,11 +96,21 @@ def upload_to(instance, filename):
         return f'avatar/{filename}'
     date = timezone.now().strftime("%Y-%m-%d")
     time = timezone.now().strftime("%H-%M-%S-%f")[:-4]
-    if instance.type == 2:  # thumbnail
+    if instance.type == list(set(has_placeholder.keys())):
         time = f'{time}-has-pl'
     # file_type = re.search('\\w+', instance.type)[0]
     file_format = os.path.splitext(instance.image.name)[-1]
     return f'boxes/{instance.box_id}/{date}/{instance.get_type_display()}/{time}{file_format}'
+
+
+def reduce_image_quality(img):
+    with Image.open(img) as img:
+        x, y = img.size
+        width = (60 / x)
+        height = int((y * width))
+        pl = img.resize((60, height), Image.ANTIALIAS)
+        pl = pl.filter(ImageFilter.GaussianBlur(1.6))
+    return pl
 
 
 class MyManager(models.Manager):
@@ -240,17 +254,6 @@ class Box(Base):
         permissions = [("has_access", "Can manage that box")]
 
 
-def reduce_image_quality(img):
-    from PIL import Image, ImageFilter
-    img = Image.open(img)
-    x, y = img.size
-    width = (60 / x)
-    height = int((y * width))
-    pl = img.resize((60, height), Image.ANTIALIAS)
-    pl = pl.filter(ImageFilter.GaussianBlur(1.6))
-    return pl
-
-
 class Media(Base):
     def __str__(self):
         try:
@@ -259,16 +262,15 @@ class Media(Base):
             return self.title['user_id']
 
     def save(self, *args, **kwargs):
-        sizes = {'thumbnail': (350, 217)}
-        im = Image.open(self.image)
-        width, height = im.size
-        # if (width, height) != sizes[self.get_type_display()]:
-        #     raise ValidationError
+        sizes = {'thumbnail': (600, 372), 'media': (1280, 794)}
+        with Image.open(self.image) as im:
+            width, height = im.size
+            if (width, height) != sizes[self.get_type_display()]:
+                raise ValidationError
         super().save(*args, **kwargs)
-        if self.get_type_display() == 'thumbnail':
+        if self.get_type_display() in list(set(has_placeholder.values())):
             pl = reduce_image_quality(self.image.path)
             name = self.image.name.replace('has-pl', 'pl')
-            print(name)
             pl.save(f'{MEDIA_ROOT}/{name}', optimize=True, quality=80)
 
     image = models.FileField(upload_to=upload_to)
