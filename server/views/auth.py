@@ -8,6 +8,7 @@ from django.db.models import ProtectedError
 from server.utils import *
 from server.serialize import UserSchema
 import pysnooper
+from secrets import token_hex
 
 
 class Backend(ModelBackend):
@@ -29,9 +30,10 @@ class Login(View):
         password = data.get('password', None)
         try:  # Login
             user = User.objects.get(username=username)
+            is_admin = hasattr(user, 'box') or user.box_permission.all().count() > 0
             if user.is_ban:
                 return JsonResponse({'message': 'user is banned'}, status=res_code['banned'])
-            if password is None:  # otp
+            if password is None and not is_admin:  # otp
                 if user.privacy_agreement:  # 202 need activation code (login)
                     return set_token(user, self.send_activation(user))
                 # res = JsonResponse({}, status=251) # please agree privacy policy (signup)
@@ -40,6 +42,10 @@ class Login(View):
             if not user.is_active:  # incomplete signup
                 raise User.DoesNotExist  # redirect to signup
             assert user.check_password(password)
+            if is_admin:
+                user.admin_token = token_hex()
+                user.save()
+                return set_token(user, self.send_activation(user))
             login(request, user, backend='django.contrib.auth.backends.ModelBackend')
             res = {'user': UserSchema().dump(user)}
             basket = Basket.objects.filter(user=user).order_by('-id')
@@ -136,6 +142,8 @@ class Activate(View):
             user.save()
             login(request, user, backend='django.contrib.auth.backends.ModelBackend')
             res = {'user': UserSchema().dump(user)}  # signup without password
+            if hasattr(user, 'box') or user.box_permission.all().count() > 0:
+                res['admin_token'] = user.admin_token
             basket = Basket.objects.filter(user=user).order_by('-id')
             if basket.exists():
                 res['basket_count'] = basket.first().products.all().count()

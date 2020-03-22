@@ -44,7 +44,6 @@ class FilterDetail(View):
         # categories = [product.category for product in products.order_by('category_id').distinct('category_id')]
         categories = Category.objects.filter(pk__in=products.order_by('category_id').distinct('category_id').
                                              values_list('category_id', flat=True))
-        print(categories)
         categories = get_categories(request.lang, categories=categories)
         brands = [product.brand for product in products.order_by('brand_id').distinct('brand_id')]
         return JsonResponse({'max_price': prices['max'], 'min_price': prices['min'], **res,
