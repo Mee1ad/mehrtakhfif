@@ -44,7 +44,7 @@ def send_invoice(invoice_id, lang, **kwargs):
     user = digital_products.first().invoice.user
     pdf_list = []
     all_renders = ""
-    sms_content = "محصولات دیجیتال خریداری شده از مهرتخفیف:"
+    sms_content = ""
     for product in digital_products:
         storage = product.storage
         filename = f'{storage.product.permalink}-{product.pk}'
@@ -75,10 +75,8 @@ def send_invoice(invoice_id, lang, **kwargs):
         pdf_list.append(pdf)
         all_renders += rendered
         sms_content += f'\n{storage.invoice_title[lang]}\n{SHORTLINK}/{key}'
-    sms = f"سفارش شما با شماره Mt-{invoice_id} با موفقیت ثبت شد برای مشاهده صورتحساب و جزئیات خرید به پنل کاربری مراجعه کنید" \
-          f"\nhttps://mehrtakhfif.com/invoice/{product.invoice_id}"
-    # send_sms(invoice.user.username, content=sms)
-    # send_sms(invoice.user.username, content=sms_content)
+    send_sms(user.username, pattern="f0ozn1ee5k", input_data=[{'order_id': f"Mt-{invoice_id}"}])
+    send_sms(user.username, pattern="dj0l65mq3x", input_data=[{'products': sms_content}])
     res = 'sms sent'
     if user.email:
         send_email("صورتحساب خرید", user.email, html_content=all_renders, attach=pdf_list)

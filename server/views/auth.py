@@ -85,13 +85,9 @@ class Login(View):
         user.activation_expire = add_minutes(activation_expire)
         user.save()
         # todo debug
-        # send_sms(user.username, user.activation_code)
+        # send_sms(user.username, input_data=[{'code': user.activation_code}])
         res = {'code': user.activation_code, 'resend_timeout': resend_timeout, 'timeout': activation_expire}
         return JsonResponse(res, status=res_code['activate'])
-
-    @staticmethod
-    def send_sms(phone, code):
-        pass  # TODO: send sms
 
     @staticmethod
     def check_password(user):
@@ -155,8 +151,8 @@ class Activate(View):
             user.save()
             login(request, user, backend='django.contrib.auth.backends.ModelBackend')
             res = {'user': UserSchema().dump(user)}  # signup without password
-            if hasattr(user, 'box') or user.box_permission.all().count() > 0:
-                res['admin_token'] = user.admin_token
+            if user.groups.all().count() > 0:
+                res['user']['admin_token'] = user.admin_token
             basket = Basket.objects.filter(user=user).order_by('-id')
             if basket.exists():
                 res['basket_count'] = basket.first().products.all().count()

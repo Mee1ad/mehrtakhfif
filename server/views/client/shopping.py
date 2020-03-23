@@ -28,9 +28,13 @@ class BasketView(LoginRequired):
 
     def patch(self, request):
         data = load_data(request)
+        pk = data['basket_product_id']
+        count = data['count']
         basket = Basket.objects.filter(user=request.user).order_by('-id').first()
-        # todo remove assertion
-        assert BasketProduct.objects.filter(id=data['basket_product_id'], basket=basket).update(count=data['count'])
+        # todo remove assertion after debug
+        storage = BasketProduct.objects.filter(basket=basket, pk=pk).select_related('storage').first().storage
+        assert storage.available_count_for_sale >= count and storage.max_count_for_sale >= count
+        assert BasketProduct.objects.filter(id=pk, basket=basket).update(count=data['count'])
         return JsonResponse(get_basket(request.user, request.lang))
 
     def delete(self, request):

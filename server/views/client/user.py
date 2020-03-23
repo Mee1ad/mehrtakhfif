@@ -10,7 +10,10 @@ from django.db.utils import IntegrityError
 
 class Profile(LoginRequired):
     def get(self, request):
-        return JsonResponse({'user': UserSchema().dump(request.user)})
+        res = {'user': UserSchema().dump(request.user)}
+        if request.user.groups.all().count() > 0:
+            res['user']['admin_token'] = request.user.admin_token
+        return JsonResponse(res)
 
     def put(self, request):
         data = load_data(request)
