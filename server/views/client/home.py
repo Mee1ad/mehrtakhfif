@@ -7,9 +7,12 @@ from server.utils import *
 
 class Test(View):
     def get(self, request):
-        res = JsonResponse({'message': 'success'})
-        res.set_signed_cookie('aryan', 'aryan is baghala', domain=DEFAULT_COOKIE_DOMAIN)
-        return res
+        from django.contrib.sessions.backends.db import SessionStore as OriginalSessionStore
+        a = request.get_signed_cookie('aryan3')
+        b = request.get_signed_cookie('aryan4', salt=TOKEN_SALT)
+        print(a)
+        print(b)
+        return JsonResponse({'message': 'success'})
 
 
 class GetSlider(View):

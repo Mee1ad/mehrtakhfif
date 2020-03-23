@@ -25,7 +25,7 @@ class AdminActivate(AdminView):
         data = load_data(request)
         # TODO: get csrf code
         try:
-            client_token = request.get_signed_cookie('token', False, salt=TOKEN_SALT)
+            client_token = get_signed_cookie(request, 'token', False)
             code = data['code']
             user = User.objects.get(Q(activation_code=code, token=client_token, is_ban=False,
                                       activation_expire__gte=timezone.now()), (Q(is_staff=True) | Q(is_superuser=True)))

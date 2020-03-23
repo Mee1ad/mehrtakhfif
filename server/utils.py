@@ -411,23 +411,23 @@ def check_access_token(token, user, model=None, pk=None):
 def set_token(user, response):
     user.token = get_access_token(user)
     user.save()
-    response.set_signed_cookie('token', user.token, TOKEN_SALT, max_age=7200, expires=7200)
+    response = set_signed_cookie(response, 'token', user.token, max_age=7200, expires=7200)
     return response
 
 
 def get_token_from_cookie(request):
-    return request.get_signed_cookie('token', False, salt=TOKEN_SALT)
+    return get_signed_cookie(request, 'token', False)
 
 
 def set_csrf_cookie(response):
     random_text = uuid.uuid4().hex
     token = hashlib.sha3_224(random_text.encode()).hexdigest()
-    response.set_signed_cookie('csrf_cookie', token, max_age=15778800, expires=15778800, domain=DEFAULT_COOKIE_DOMAIN)  # 6 month
+    response = set_signed_cookie(response, 'csrf_cookie', token, max_age=15778800, expires=15778800,)
     return response
 
 
 def check_csrf_token(request):
-    csrf_cookie = request.get_signed_cookie('csrf_cookie', False)
+    csrf_cookie = get_signed_cookie(request, 'csrf_cookie', False)
 
     def double_check_token(minute):
         time = add_minutes(minute).strftime("%Y-%m-%d-%H-%M")
@@ -476,6 +476,16 @@ def products_availability_check(products, step, page):
                 break
             continue
     return available_products
+
+
+def set_signed_cookie(res, key, value, salt=TOKEN_SALT, domain=DEFAULT_COOKIE_DOMAIN, **kwargs):
+    return res.set_signed_cookie(key, value, salt=salt, domain=domain, **kwargs)
+
+
+def get_signed_cookie(req, key, error=None, salt=TOKEN_SALT):
+    if error:
+        return req.get_signed_cookie(key, error, salt=salt)
+    return req.get_signed_cookie(key, salt=salt)
 
 
 # def available_products2(products):

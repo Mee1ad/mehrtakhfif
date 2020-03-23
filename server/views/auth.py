@@ -16,7 +16,7 @@ class Backend(ModelBackend):
     @staticmethod
     def get_user_from_cookie(request):
         try:
-            client_token = request.get_signed_cookie('token', False, salt=TOKEN_SALT, domain=DEFAULT_COOKIE_DOMAIN)
+            client_token = get_signed_cookie(request, 'token', False)
             return User.objects.get(token=client_token, is_ban=False)
         except Exception:
             return None
@@ -99,7 +99,7 @@ class PrivacyPolicy(View):
 
     @staticmethod
     def get_user(request):
-        client_token = request.get_signed_cookie('token', False, salt=TOKEN_SALT)
+        client_token = get_signed_cookie(request, 'token', False)
         return User.objects.get(token=client_token)
 
 
@@ -134,7 +134,7 @@ class Activate(View):
         data = load_data(request)
         # TODO: get csrf code
         try:
-            client_token = request.get_signed_cookie('token', False, salt=TOKEN_SALT)
+            client_token = get_signed_cookie(request, 'token', False)
             code = data['code']
             user = User.objects.get(activation_code=code, token=client_token, is_ban=False,
                                     activation_expire__gte=timezone.now())

@@ -246,7 +246,7 @@ class Box(Base):
     objects = MyManager()
     name = JSONField(default=multilanguage)
     permalink = models.CharField(max_length=255, db_index=True, unique=True)
-    admin = models.OneToOneField(User, on_delete=PROTECT)
+    owner = models.OneToOneField(User, on_delete=PROTECT)
 
     class Meta:
         db_table = 'box'

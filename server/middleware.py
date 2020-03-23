@@ -1,5 +1,5 @@
 from mehr_takhfif.settings import TOKEN_SALT, ADMIN, DEFAULT_COOKIE_DOMAIN
-from server.utils import default_step, default_page, res_code, set_csrf_cookie, check_csrf_token
+from server.utils import default_step, default_page, res_code, set_csrf_cookie, check_csrf_token, set_signed_cookie, get_signed_cookie
 from mtadmin.utils import get_roll
 from server.models import User, Basket
 from django.http import JsonResponse, HttpResponseNotFound
@@ -57,7 +57,7 @@ class AuthMiddleware:
                     basket = Basket.objects.filter(user=request.user).order_by('-id')
                     if basket.exists():
                         db_basket_count = basket.first().products.all().count()
-                        user_basket_count = request.get_signed_cookie('basket_count', False, salt=TOKEN_SALT)
+                        user_basket_count = get_signed_cookie(request, 'basket_count', False)
                         assert db_basket_count == int(user_basket_count)
                         request.basket = basket
                 except AssertionError:
@@ -71,16 +71,15 @@ class AuthMiddleware:
 
         # set new basket count in cookie
         response = self.get_response(request)
-        if app_name == 'server' and new_basket_count and 200 <= response.status_code <= 299 and request.method == 'GET':
-            try:
-                res = json.loads(response.content)
-                res['new_basket_count'] = new_basket_count
-                response.content = json.dumps(res)
-                response.set_signed_cookie('basket_count', new_basket_count, salt=TOKEN_SALT,
-                                           domain=DEFAULT_COOKIE_DOMAIN)
-            # except AttributeError:
-            except Exception:
-                pass
-        if request.method in token_requests:
-            return set_csrf_cookie(response)
+        # if app_name == 'server' and new_basket_count and 200 <= response.status_code <= 299 and request.method == 'GET':
+        #     try:
+        #         res = json.loads(response.content)
+        #         res['new_basket_count'] = new_basket_count
+        #         response.content = json.dumps(res)
+        #         response = set_signed_cookie(response, 'basket_count', new_basket_count)
+        #     # except AttributeError:
+        #     except Exception:
+        #         pass
+        # if request.method in token_requests:
+        #     return set_csrf_cookie(response)
         return response

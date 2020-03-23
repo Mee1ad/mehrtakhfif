@@ -22,7 +22,7 @@ Content-Type: Application/json
 {
 	"text": "راضی  بودی؟7",
 	"type": 2,
-	"product_id": 23,
+	"product_permalink": "p_30",
     "rate": 10,
     "satisfied": false
 }
@@ -33,7 +33,9 @@ Content-Type: Application/json
 {
 	"text": "راضی  بودی؟",
 	"type": 2,
-	"product_id": 23
+	"product_permalink": "p_30",
+    "first_name": "reza",
+    "last_name": "babaei"
 }
 ### type 1 answer
 POST {{host}}/comment
@@ -43,7 +45,7 @@ Content-Type: Application/json
 	"text": "راضی  بودی؟",
 	"type": 1,
     "reply_to_id": 49,
-	"product_id": 23
+	"product_permalink": "p_30"
 }
 ###
 

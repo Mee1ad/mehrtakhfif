@@ -71,14 +71,26 @@ class CommentView(View):
         rate = data.get('rate', None)
         satisfied = data.get('satisfied', None)
         cm_type = data['type']
-        product_id = data.get('product_id')
-        blog_post_id = data.get('blog_post_id')
-        post = {"product_id": product_id} if product_id else {"blog_post_id": blog_post_id}
+        product_permalink = data.get('product_permalink')
+        if product_permalink:
+            product = Product.objects.get(permalink=product_permalink)
+            post = {"product": product}
+        blog_post_permalink = data.get('blog_post_permalink')
+        if blog_post_permalink:
+            blog_post = BlogPost.objects.get(permalink=blog_post_permalink)
+            post = {"blog_post": blog_post}
+        user = request.user
+        res = {}
+        if user.first_name is None or user.last_name is None:
+            user.first_name = data['first_name']
+            user.last_name = data['last_name']
+            user.save()
+            res['user'] = UserSchema().dump(user)
         if reply_to_id:
             assert Comment.objects.filter(pk=reply_to_id).exists()
         Comment.objects.create(text=data['text'], user=request.user, reply_to_id=reply_to_id, type=cm_type,
-                               rate=rate, satisfied=satisfied, **post)
-        return JsonResponse({}, status=201)
+                               rate=rate, satisfied=satisfied, created_by=user, updated_by=user, **post)
+        return JsonResponse(res, status=201)
 
     def delete(self, request):
         pk = request.GET.get('id', None)
