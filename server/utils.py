@@ -213,11 +213,11 @@ def to_obj(body):
 
 # Utils
 
-def send_sms(to, code=None, content=None):
+def send_sms(to, code=None, pattern="gs3vltcvoi", content=None):
     # +985000125475
     if code:
         data = {"op": 'pattern', "user": '09379118854', "pass": 'Mojirzg6654', 'fromNum': '+98100020400',
-                'toNum': to, 'patternCode': "gs3vltcvoi", 'inputData': [{'code': code}]}
+                'toNum': to, 'patternCode': pattern, 'inputData': [{'code': code}]}
     if content:
         data = {"op": 'send', "uname": '09379118854', "pass": 'Mojirzg6654', 'from': '+98100020400',
                 'to': to, 'message': content}

@@ -72,6 +72,7 @@ class CommentView(View):
         satisfied = data.get('satisfied', None)
         cm_type = data['type']
         product_permalink = data.get('product_permalink')
+        post = {}
         if product_permalink:
             product = Product.objects.get(permalink=product_permalink)
             post = {"product": product}
@@ -88,6 +89,7 @@ class CommentView(View):
             res['user'] = UserSchema().dump(user)
         if reply_to_id:
             assert Comment.objects.filter(pk=reply_to_id).exists()
+        assert post or reply_to_id
         Comment.objects.create(text=data['text'], user=request.user, reply_to_id=reply_to_id, type=cm_type,
                                rate=rate, satisfied=satisfied, created_by=user, updated_by=user, **post)
         return JsonResponse(res, status=201)

@@ -28,7 +28,6 @@ class SessionStore(OriginalSessionStore):
     def _get_new_session_key(self):
         while True:
             session_key = get_random_string(40, random_data)
-            print(len(session_key))
             if not self.exists(session_key):
                 break
         return session_key
@@ -85,7 +84,8 @@ class Login(View):
         user.activation_code = random.randint(10000, 99999)
         user.activation_expire = add_minutes(activation_expire)
         user.save()
-        Login.send_sms(user.username, user.activation_code)
+        # todo debug
+        # send_sms(user.username, user.activation_code)
         res = {'code': user.activation_code, 'resend_timeout': resend_timeout, 'timeout': activation_expire}
         return JsonResponse(res, status=res_code['activate'])
 
