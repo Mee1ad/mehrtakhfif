@@ -10,6 +10,8 @@ from server.serialize import UserSchema
 import pysnooper
 from secrets import token_hex
 from mehr_takhfif.settings import DEFAULT_COOKIE_DOMAIN
+from django.contrib.sessions.backends.db import SessionStore as OriginalSessionStore
+from django.utils.crypto import get_random_string
 
 
 class Backend(ModelBackend):
@@ -20,6 +22,16 @@ class Backend(ModelBackend):
             return User.objects.get(token=client_token, is_ban=False)
         except Exception:
             return None
+
+
+class SessionStore(OriginalSessionStore):
+    def _get_new_session_key(self):
+        while True:
+            session_key = get_random_string(40, random_data)
+            print(len(session_key))
+            if not self.exists(session_key):
+                break
+        return session_key
 
 
 class Login(View):

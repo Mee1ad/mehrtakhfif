@@ -7,11 +7,8 @@ from server.utils import *
 
 class Test(View):
     def get(self, request):
-        from django.contrib.sessions.backends.db import SessionStore as OriginalSessionStore
-        a = request.get_signed_cookie('aryan3')
-        b = request.get_signed_cookie('aryan4', salt=TOKEN_SALT)
-        print(a)
-        print(b)
+        from django.contrib.auth import login
+        login(request, request.user, backend='django.contrib.auth.backends.ModelBackend')
         return JsonResponse({'message': 'success'})
 
 

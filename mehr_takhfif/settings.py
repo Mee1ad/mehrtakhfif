@@ -2,14 +2,12 @@ import os
 from django.utils.timezone import activate
 from re import compile
 from .settings_var import *
-import string
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 INVOICE_ROOT = os.path.join(BASE_DIR, 'invoice')
 
-RANDOM_DATA = string.ascii_letters + "0123456789"
 
 SECRET_KEY = '#)@^eytrqed7)ka1qa0gcg$vx9&0ocru_xwqjlq%9e7baob_bn'
 SALT = 'we\w[34=-otl34e[rl][qwe;w328474/*2342+-325(*^&%><>.'
@@ -124,8 +122,8 @@ DATABASES = DATABASES
 
 CACHES = CACHES
 CACHE_TTL = 60 * 15
-SESSION_ENGINE = "django.contrib.sessions.backends.cache"
-
+# SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+SESSION_ENGINE = "server.views.auth"  # custom session key
 # Password validation
 # https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators
 

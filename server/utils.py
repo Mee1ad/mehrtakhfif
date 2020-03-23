@@ -26,7 +26,9 @@ from server.serialize import MediaSchema
 from server.serialize import BoxCategoriesSchema, BasketSchema, BasketProductSchema, MinProductSchema
 from django.contrib.postgres.fields.jsonb import KeyTextTransform
 from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
+import string
 
+random_data = string.ascii_lowercase + string.digits
 default_step = 12
 default_page = 1
 default_response = {'ok': {'message': 'ok'}, 'bad': {'message': 'bad request'}}
@@ -422,7 +424,7 @@ def get_token_from_cookie(request):
 def set_csrf_cookie(response):
     random_text = uuid.uuid4().hex
     token = hashlib.sha3_224(random_text.encode()).hexdigest()
-    response = set_signed_cookie(response, 'csrf_cookie', token, max_age=15778800, expires=15778800,)
+    response = set_signed_cookie(response, 'csrf_cookie', token, max_age=15778800, expires=15778800, )
     return response
 
 
@@ -484,7 +486,7 @@ def set_signed_cookie(res, key, value, salt=TOKEN_SALT, domain=DEFAULT_COOKIE_DO
 
 
 def get_signed_cookie(req, key, error=None, salt=TOKEN_SALT):
-    if error:
+    if error is not None:
         return req.get_signed_cookie(key, error, salt=salt)
     return req.get_signed_cookie(key, salt=salt)
 

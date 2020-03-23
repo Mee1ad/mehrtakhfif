@@ -4,13 +4,13 @@ from celery import shared_task
 from celery.signals import task_postrun
 from server.models import Invoice
 from operator import add
-from server.utils import sync_storage, send_sms, send_email
+from server.utils import sync_storage, send_sms, send_email, random_data
 from django.utils import timezone
 from server.models import InvoiceStorage
 from django_celery_beat.models import PeriodicTask
 from django_celery_results.models import TaskResult
 import random
-from mehr_takhfif.settings import RANDOM_DATA, INVOICE_ROOT, STATIC_ROOT, SHORTLINK
+from mehr_takhfif.settings import INVOICE_ROOT, STATIC_ROOT, SHORTLINK
 import pdfkit
 from django.template.loader import render_to_string
 import pysnooper
@@ -50,7 +50,7 @@ def send_invoice(invoice_id, lang, **kwargs):
         filename = f'{storage.product.permalink}-{product.pk}'
         product.filename = filename
         while product.key is None:
-            key = ''.join(random.sample(RANDOM_DATA, 6))
+            key = ''.join(random.sample(random_data, 6))
             product.key = key
             try:
                 product.save()
