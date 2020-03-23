@@ -71,15 +71,15 @@ class AuthMiddleware:
 
         # set new basket count in cookie
         response = self.get_response(request)
-        # if app_name == 'server' and new_basket_count and 200 <= response.status_code <= 299 and request.method == 'GET':
-        #     try:
-        #         res = json.loads(response.content)
-        #         res['new_basket_count'] = new_basket_count
-        #         response.content = json.dumps(res)
-        #         response = set_signed_cookie(response, 'basket_count', new_basket_count)
-        #     # except AttributeError:
-        #     except Exception:
-        #         pass
-        # if request.method in token_requests:
-        #     return set_csrf_cookie(response)
+        if app_name == 'server' and new_basket_count and 200 <= response.status_code <= 299 and request.method == 'GET':
+            try:
+                res = json.loads(response.content)
+                res['new_basket_count'] = new_basket_count
+                response.content = json.dumps(res)
+                response = set_signed_cookie(response, 'basket_count', new_basket_count)
+            # except AttributeError:
+            except Exception:
+                pass
+        if request.method in token_requests:
+            return set_csrf_cookie(response)
         return response

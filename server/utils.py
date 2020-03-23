@@ -479,7 +479,8 @@ def products_availability_check(products, step, page):
 
 
 def set_signed_cookie(res, key, value, salt=TOKEN_SALT, domain=DEFAULT_COOKIE_DOMAIN, **kwargs):
-    return res.set_signed_cookie(key, value, salt=salt, domain=domain, **kwargs)
+    res.set_signed_cookie(key, value, salt=salt, domain=domain, **kwargs)
+    return res
 
 
 def get_signed_cookie(req, key, error=None, salt=TOKEN_SALT):
