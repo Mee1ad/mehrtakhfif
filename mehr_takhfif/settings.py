@@ -87,6 +87,7 @@ CORS_ALLOW_HEADERS = [
     'user-agent',
     'x-csrf-token',
     'x-requested-with',
+    'token'
 ]
 
 MESSAGE_STORAGE = 'django.contrib.messages.storage.cookie.CookieStorage'
