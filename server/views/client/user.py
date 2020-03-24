@@ -11,8 +11,8 @@ from django.db.utils import IntegrityError
 class Profile(LoginRequired):
     def get(self, request):
         res = {'user': UserSchema().dump(request.user)}
-        if request.user.groups.all().count() > 0:
-            res['user']['admin_token'] = request.user.admin_token
+        if request.user.is_staff:
+            res['user']['is_staff'] = request.user.is_staff
         return JsonResponse(res)
 
     def put(self, request):

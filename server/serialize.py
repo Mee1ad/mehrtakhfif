@@ -198,8 +198,8 @@ class BaseSchema(Schema):
 class UserSchema(BaseSchema):
     class Meta:
         additional = (
-            'id', 'email', 'first_name', 'last_name', 'gender', 'username', 'meli_code', 'wallet_money', 'vip',
-            'active_address', 'shaba', 'birthday', 'is_staff')
+            'id', 'email', 'first_name', 'last_name', 'gender', 'username', 'meli_code', 'vip',
+            'active_address', 'shaba', 'birthday')
 
     avatar = fields.Function(lambda o: HOST + o.avatar.image.url if hasattr(o.avatar, 'file') else "")
 
