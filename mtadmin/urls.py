@@ -26,5 +26,5 @@ urlpatterns = [
     path('admin/check_prices', error_handler(CheckPrices.as_view()), name='check_prices'),
     path('admin/generate_code', error_handler(GenerateCode.as_view()), name='generate_code'),
     path('admin/table_filter/<str:table>', error_handler(TableFilter.as_view()), name='table_filter'),
-    path('admin/roll', error_handler(CheckLoginToken.as_view()), name='get_roll'),
+    path('admin/roll', error_handler(CheckLoginToken.as_view()), name='roll'),
 ]
