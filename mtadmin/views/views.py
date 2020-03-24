@@ -64,7 +64,7 @@ class TableFilter(AdminView):
 
 
 class CheckLoginToken(AdminView):
-    def post(self, request):
+    def get(self, request):
         token = request.headers['admin_token']
         user = User.objects.get(pk=request.user.pk, admin_token=token)
         boxes = BoxSchema().dump(get_box_permission(user), many=True)
