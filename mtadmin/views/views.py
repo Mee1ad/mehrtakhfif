@@ -68,4 +68,6 @@ class CheckLoginToken(AdminView):
         data = json.loads(request.body)
         user = User.objects.get(pk=request.user.pk, admin_token=data['admin_token'])
         boxes = BoxSchema().dump(get_box_permission(user), many=True)
-        return JsonResponse({'roll': get_roll(user), 'boxes': boxes})
+        user['roll'] = get_roll(user)
+        res = {'user': UserSchema().dump(user), 'boxes': boxes}
+        return JsonResponse(res)
