@@ -75,7 +75,7 @@ def get_data(request):
               'rate', 'default_storage', 'sold_count', 'feature']
     [data.pop(k, None) for k in remove]
     boxes = request.user.box_permission.all()
-    if not data.get('box_id') in boxes.value_list('id', flat=True):
+    if not data.get('box_id') in boxes.values_list('id', flat=True):
         data['box_id'] = boxes.first().pk
     if request.method == "POST":
         data.pop('id', None)
