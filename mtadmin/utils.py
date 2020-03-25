@@ -55,7 +55,7 @@ def get_params(request):
     for key in keys:
         value = params.getlist(key)
         if key == 'b':
-            if value[0] in request.user.box_permission.all().value_list('id', flat=True):
+            if value[0] in request.user.box_permission.all().values_list('id', flat=True):
                 filterby['box_id'] = value[0]
         if key == 'o':
             orderby += value
