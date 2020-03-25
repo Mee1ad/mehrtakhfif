@@ -65,8 +65,8 @@ class AuthMiddleware:
         elif app_name == 'mtadmin':
             request.token = request.headers.get('access-token', None)
             try:
-                get_roll(request.user)
-            except AuthError:
+                assert request.user.is_staff
+            except AssertionError:
                 return JsonResponse({}, status=res_code['unauthorized'])
 
         # set new basket count in cookie

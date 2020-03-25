@@ -7,7 +7,8 @@ from mtadmin.serializer import *
 import pysnooper
 
 
-class CategoryView(AdminView):
+class CategoryView(TableView):
+    permission_required = 'server.view_category'
 
     def get(self, request):
         return JsonResponse(serialized_objects(request, Category, CategoryASchema, CategoryESchema))
@@ -24,7 +25,8 @@ class CategoryView(AdminView):
         return delete_base(request, Category)
 
 
-class BrandView(AdminView):
+class BrandView(TableView):
+    permission_required = 'server.view_brand'
 
     def get(self, request):
         return JsonResponse(serialized_objects(request, Brand, BrandSchema, BrandSchema))
@@ -41,7 +43,8 @@ class BrandView(AdminView):
         return delete_base(request, Brand)
 
 
-class FeatureView(AdminView):
+class FeatureView(TableView):
+    permission_required = 'server.view_feature'
 
     def get(self, request):
         return JsonResponse(serialized_objects(request, Feature, FeatureASchema, FeatureESchema))
@@ -58,7 +61,8 @@ class FeatureView(AdminView):
         return delete_base(request, Feature)
 
 
-class ProductView(AdminView):
+class ProductView(TableView):
+    permission_required = 'server.view_product'
 
     def get(self, request):
         return JsonResponse(serialized_objects(request, Product, ProductASchema, ProductESchema))
@@ -75,10 +79,11 @@ class ProductView(AdminView):
         return delete_base(request, Product)
 
 
-class StorageView(AdminView):
+class StorageView(TableView):
+    permission_required = 'server.view_storage'
 
     def get(self, request):
-        return JsonResponse(serialized_objects(request, Storage, StorageASchema, StorageESchema))
+        return JsonResponse(serialized_objects(request, Storage, StorageASchema, StorageESchema, 'product__box'))
 
     def post(self, request):
         storage = create_object(request, Storage, StorageASchema)
@@ -92,19 +97,24 @@ class StorageView(AdminView):
         return delete_base(request, Storage)
 
 
-class InvoiceView(AdminView):
+class InvoiceView(TableView):
+    permission_required = 'server.view_invoice'
+
     def get(self, request):
         return JsonResponse(serialized_objects(request, Invoice, InvoiceASchema, InvoiceESchema))
 
 
-class InvoiceStorageView(AdminView):
+class InvoiceStorageView(TableView):
+    permission_required = 'server.view_invoicestorage'
+
     def get(self, request):
         pk = request.GET.get('id', 0)
         storages = InvoiceStorage.objects.filter(invoice_id=pk)
         return JsonResponse({'data': InvoiceStorageSchema().dump(storages, many=True)})
 
 
-class MenuView(AdminView):
+class MenuView(TableView):
+    permission_required = 'server.view_menu'
 
     def get(self, request):
         return JsonResponse(serialized_objects(request, Menu, MenuASchema, MenuESchema))
@@ -121,7 +131,9 @@ class MenuView(AdminView):
         return delete_base(request, Menu)
 
 
-class TagView(AdminView):
+class TagView(TableView):
+    permission_required = 'server.view_tag'
+
     def get(self, request):
         pk = request.GET.get('id', None)
         params = get_params(request)
@@ -150,7 +162,8 @@ class TagView(AdminView):
         return delete_base(request, Tag)
 
 
-class SpecialOfferView(AdminView):
+class SpecialOfferView(TableView):
+    permission_required = 'server.view_specialoffer'
 
     def get(self, request):
         return JsonResponse(serialized_objects(request, SpecialOffer, SpecialOfferASchema, SpecialOfferESchema))
@@ -167,7 +180,8 @@ class SpecialOfferView(AdminView):
         return delete_base(request, SpecialOffer)
 
 
-class SpecialProductView(AdminView):
+class SpecialProductView(TableView):
+    permission_required = 'server.view_specialproduct'
 
     def get(self, request):
         return JsonResponse(serialized_objects(request, SpecialProduct, SpecialProductASchema, SpecialProductESchema))
@@ -184,7 +198,9 @@ class SpecialProductView(AdminView):
         return delete_base(request, SpecialProduct)
 
 
-class MediaView(AdminView):
+class MediaView(TableView):
+    permission_required = 'server.view_media'
+
     def get(self, request):
         return JsonResponse(serialized_objects(request, Media, MediaASchema, MediaESchema))
 
@@ -215,7 +231,9 @@ class MediaView(AdminView):
         return delete_base(request, Media)
 
 
-class CommentView(AdminView):
+class CommentView(TableView):
+    permission_required = 'server.view_comment'
+
     def get(self, request):
         return JsonResponse(serialized_objects(request, Comment, CommentASchema, CommentESchema))
 

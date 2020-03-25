@@ -4,7 +4,7 @@ import sys
 import traceback
 
 from django.core.exceptions import ObjectDoesNotExist
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
 from django.core.exceptions import PermissionDenied
 from server.utils import res_code
 from server.error import *
@@ -18,6 +18,7 @@ def try_except(func):
         try:
             return func(*args, **kwargs)
         except PermissionDenied:
+            return HttpResponseForbidden
             return JsonResponse({}, status=res_code['unauthorized'])
         except ObjectDoesNotExist:
             traceback.print_exc()

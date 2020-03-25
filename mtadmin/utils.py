@@ -1,13 +1,13 @@
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseForbidden
 from server.utils import get_pagination, get_token_from_cookie, set_token, check_access_token
 from server.error import AuthError
-from django.core.exceptions import ValidationError, FieldError
+from django.core.exceptions import ValidationError, FieldError, PermissionDenied
 from django.contrib.admin.utils import NestedObjects
 from server.models import *
 from mtadmin.serializer import tables
 from operator import attrgetter
 import json
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.views import View
 import pysnooper
 
@@ -15,16 +15,24 @@ import pysnooper
 rolls = ['superuser', 'backup', 'admin', 'accountants']
 
 
+class TableView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    pass
+
+
 class AdminView(LoginRequiredMixin, View):
     pass
 
 
-def serialized_objects(request, model, serializer, single_serializer=None):
+def serialized_objects(request, model, serializer, single_serializer=None, box_key='box'):
     pk = request.GET.get('id', None)
     params = get_params(request)
+    params['filter'][f'{box_key}__in'] = request.user.box_permission.all()
     if pk:
-        obj = model.objects.get(pk=pk)
-        return {"data": single_serializer().dump(obj)}
+        try:
+            obj = model.objects.get(pk=pk, **params['filter'])
+            return {"data": single_serializer().dump(obj)}
+        except model.DoesNotExist:
+            raise PermissionDenied
     try:
         query = model.objects.filter(**params['filter']).order_by(*params['order'])
         return get_pagination(query, request.step, request.page, serializer)
@@ -79,10 +87,6 @@ def get_roll(user):
         raise AuthError
 
 
-def get_box_permission(user):
-    return user.box_permission.all()
-
-
 def validate_box_id(user, box_id=None):
     roll = get_roll(user)
     if roll == 'admin':
@@ -97,10 +101,20 @@ def assign_default_value(product_id):
     Product.objects.filter(pk=product_id).update(default_storage=min(storages, key=attrgetter('discount_price')))
 
 
-def create_object(request, model, serializer):
+def create_object(request, model, serializer, box_key='box'):
+    if not request.user.has_perm(f'server.add_{model.__name__.lower()}'):
+        raise PermissionDenied
     # data = get_data(request)
     data = json.loads(request)
     user = request.user
+    if box_key == 'box':
+        boxes = user.box_permission.all()
+        if not data.get('box_id') in boxes.value_list('id', flat=True):
+            data['box_id'] = boxes.first().pk
+    if box_key == 'product__box':
+        if not Product.objects.filter(pk=data['product_id'], box__in=boxes).exists():
+            raise PermissionDenied
+
     rm = ['tags', 'media', 'features']
     m2m = {}
     for item in rm:
@@ -125,10 +139,13 @@ def create_object(request, model, serializer):
     return serialized_objects(request, model, serializer)
 
 
-def update_object(request, model):
+def update_object(request, model, box_key='box'):
+    if not request.user.has_perm(f'server.change_{model.__name__.lower()}'):
+        raise PermissionDenied
     # data = get_data(request)
     data = json.loads(request.body)
-    items = model.objects.filter(pk=data['id'])
+    box_check = get_box_permission(request.user, box_key)
+    items = model.objects.filter(pk=data['id'], **box_check)
     if model == Product:
         tags = Tag.objects.filter(pk__in=data['tags'])
         media = Media.objects.filter(pk__in=data['media'])
@@ -159,8 +176,16 @@ def delete_base(request, model):
     return prepare_for_delete(model, pk, request.user)
 
 
-def prepare_for_delete(model, pk, user):
-    item = model.objects.get(pk=pk)
+def get_box_permission(user, box_key='box'):
+    boxes = user.box_permission.all()
+    return {f'{box_key}__in': boxes}
+
+
+def prepare_for_delete(model, pk, user, box_key='box'):
+    if not user.has_perm(f'server.delete_{model.__name__.lower()}'):
+        raise PermissionDenied
+    box_check = get_box_permission(user, box_key)
+    item = model.objects.get(pk=pk, **box_check)
     collector = NestedObjects(using='default')
     collector.collect([item])
     data = collector.nested()
