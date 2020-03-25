@@ -514,6 +514,13 @@ class BasketProduct(models.Model):
     box = models.ForeignKey(Box, on_delete=PROTECT)
     features = JSONField(default=list)
 
+    def validate_features(self, features):
+        features = [{"fid": 16, "fvid": [1, 3]}]
+        for feature in features:
+            item = Feature.objects.filter(pk=feature['fid'])
+            assert item.exists()
+            ids = feature['fvid']
+
     class Meta:
         db_table = 'basket_product'
         ordering = ['-id']

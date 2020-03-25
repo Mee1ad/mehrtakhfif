@@ -54,6 +54,9 @@ def get_params(request):
         return {'filter': filterby, 'order': orderby}
     for key in keys:
         value = params.getlist(key)
+        if key == 'b':
+            if value[0] in request.user.box_permission.all().value_list('id', flat=True):
+                filterby['box_id'] = value[0]
         if key == 'o':
             orderby += value
             continue
@@ -71,8 +74,9 @@ def get_data(request):
     remove = ['created_at', 'created_by', 'updated_at', 'updated_by', 'deleted_by', 'income', 'profit',
               'rate', 'default_storage', 'sold_count', 'feature']
     [data.pop(k, None) for k in remove]
-    box_id = data.get('box_id', None)
-    data['box_id'] = validate_box_id(request.user, box_id)
+    boxes = request.user.box_permission.all()
+    if not data.get('box_id') in boxes.value_list('id', flat=True):
+        data['box_id'] = boxes.first().pk
     if request.method == "POST":
         data.pop('id', None)
     return data
@@ -87,14 +91,6 @@ def get_roll(user):
         raise AuthError
 
 
-def validate_box_id(user, box_id=None):
-    roll = get_roll(user)
-    if roll == 'admin':
-        return user.box.pk
-    if roll in rolls:
-        return box_id
-    raise ValidationError
-
 
 def assign_default_value(product_id):
     storages = Storage.objects.filter(product_id=product_id)
@@ -107,14 +103,10 @@ def create_object(request, model, serializer, box_key='box'):
     # data = get_data(request)
     data = json.loads(request)
     user = request.user
-    if box_key == 'box':
-        boxes = user.box_permission.all()
-        if not data.get('box_id') in boxes.value_list('id', flat=True):
-            data['box_id'] = boxes.first().pk
+    boxes = user.box_permission.all()
     if box_key == 'product__box':
         if not Product.objects.filter(pk=data['product_id'], box__in=boxes).exists():
             raise PermissionDenied
-
     rm = ['tags', 'media', 'features']
     m2m = {}
     for item in rm:
