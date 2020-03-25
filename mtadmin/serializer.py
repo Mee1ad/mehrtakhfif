@@ -74,11 +74,7 @@ class BaseAdminSchema(Schema):
 
     def get_media(self, obj):
         medias = obj.media.all()
-        media_list = []
-        for index, media in enumerate(medias):
-            media_list.append({'id': media.pk, 'title': {'fa': media.title['fa']},
-                               'type': media.get_type_display()})
-        return media_list
+        return MediaASchema().dump(medias, many=True)
 
     def get_tag(self, obj):
         tags = obj.tag.all()
@@ -118,7 +114,7 @@ class InvoiceStorageSchema(BaseSchema):
 
 
 class ProductASchema(BaseAdminSchema):
-    list_filter = [Box, Category]
+    list_filter = [Category]
 
     name = fields.Method("get_name")
     permalink = fields.Str()
@@ -177,7 +173,7 @@ class MediaASchema(BaseAdminSchema):
     class Meta:
         additional = ('title',)
 
-    url = fields.Function(lambda o: HOST + o.image.url)
+    image = fields.Function(lambda o: HOST + o.image.url)
     type = fields.Function(lambda o: o.get_type_display())
 
 

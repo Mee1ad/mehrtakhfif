@@ -56,10 +56,20 @@ class MailView(AdminView):
 
 class TableFilter(AdminView):
     def get(self, request, table):
-        if table == 'media':
+        box_id = request.GET.get('b')
+        user = request.user
+        no_box = ['tag', 'invoice', 'invoice_storage', 'comment']
+        check_user_permission(user, f'read_{table}')
+        check_box_permission(user, box_id)
+        box = {'box_id': box_id}
+        if table == 'storage':
+            box = {'product__box_id': box_id}
+        elif table in no_box:
+            box = {}
+        elif table == 'media':
             media = Media.objects.order_by('type').distinct('type')
             return JsonResponse({'types': [{'id': item.type, 'name': item.get_type_display()} for item in media]})
-        filters = get_table_filter(table)
+        filters = get_table_filter(table, box)
         return JsonResponse({'data': filters})
 
 

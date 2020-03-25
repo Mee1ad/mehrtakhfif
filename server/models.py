@@ -18,8 +18,8 @@ import datetime
 import pysnooper
 from PIL import Image, ImageFilter
 
-media_types = [(1, 'image'), (2, 'thumbnail'), (4, 'slider'), (5, 'ads'), (6, 'avatar'), (7, 'media')]
-has_placeholder = {1: 'image', 2: 'thumbnail', 4: 'slider', 5: 'ads', 7: 'media'}
+media_types = [(1, 'image'), (2, 'thumbnail'), (3, 'media'), (4, 'slider'), (5, 'ads'), (6, 'avatar')]
+has_placeholder = [1, 2, 3, 4, 5]
 
 
 def multilanguage():
@@ -96,7 +96,7 @@ def upload_to(instance, filename):
         return f'avatar/{filename}'
     date = timezone.now().strftime("%Y-%m-%d")
     time = timezone.now().strftime("%H-%M-%S-%f")[:-4]
-    if instance.type == list(set(has_placeholder.keys())):
+    if instance.type in has_placeholder:
         time = f'{time}-has-pl'
     # file_type = re.search('\\w+', instance.type)[0]
     file_format = os.path.splitext(instance.image.name)[-1]
@@ -268,7 +268,7 @@ class Media(Base):
             if (width, height) != sizes[self.get_type_display()]:
                 raise ValidationError
         super().save(*args, **kwargs)
-        if self.get_type_display() in list(set(has_placeholder.values())):
+        if self.type in has_placeholder:
             pl = reduce_image_quality(self.image.path)
             name = self.image.name.replace('has-pl', 'pl')
             pl.save(f'{MEDIA_ROOT}/{name}', optimize=True, quality=80)
@@ -277,8 +277,9 @@ class Media(Base):
     video = models.URLField()
     audio = models.URLField()
     title = JSONField(default=multilanguage)
-    type = models.PositiveSmallIntegerField(choices=[(1, 'image'), (2, 'thumbnail'),
-                                                     (4, 'slider'), (5, 'ads'), (6, 'avatar'), (7, 'media')])
+    # todo fix type number order
+    type = models.PositiveSmallIntegerField(choices=[(1, 'image'), (2, 'thumbnail'), (3, 'media'),
+                                                     (4, 'slider'), (5, 'ads'), (6, 'avatar')])
     box = models.ForeignKey(Box, on_delete=models.CASCADE, null=True, blank=True)
 
     class Meta:
@@ -514,12 +515,18 @@ class BasketProduct(models.Model):
     box = models.ForeignKey(Box, on_delete=PROTECT)
     features = JSONField(default=list)
 
-    def validate_features(self, features):
-        features = [{"fid": 16, "fvid": [1, 3]}]
-        for feature in features:
-            item = Feature.objects.filter(pk=feature['fid'])
-            assert item.exists()
-            ids = feature['fvid']
+    def validate_features(self):
+        # features = [{"fid": 16, "fvid": [1, 3]}]
+        for feature in self.features:
+            try:
+                item = Feature.objects.get(pk=feature['fid'])
+                ids = [v.get('id') for v in item.value]
+                if not set(feature['fvid']).issubset(ids):
+                    raise ValidationError('invalid feature_value_id')
+            except Feature.DoesNotExist:
+                raise ValidationError('invalid feature_id')
+            except Exception:
+                raise ValidationError('invalid data')
 
     class Meta:
         db_table = 'basket_product'

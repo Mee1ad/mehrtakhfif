@@ -1,4 +1,4 @@
-from django.http import JsonResponse, HttpResponseForbidden
+from django.http import JsonResponse, HttpResponseForbidden, HttpResponseBadRequest
 from server.utils import get_pagination, get_token_from_cookie, set_token, check_access_token
 from server.error import AuthError
 from django.core.exceptions import ValidationError, FieldError, PermissionDenied
@@ -11,7 +11,6 @@ from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMix
 from django.views import View
 import pysnooper
 
-
 rolls = ['superuser', 'backup', 'admin', 'accountants']
 
 
@@ -23,25 +22,27 @@ class AdminView(LoginRequiredMixin, View):
     pass
 
 
-def serialized_objects(request, model, serializer, single_serializer=None, box_key='box'):
+@pysnooper.snoop()
+def serialized_objects(request, model, serializer, single_serializer=None, box_key='box_id', error_null_box=True):
     pk = request.GET.get('id', None)
-    params = get_params(request)
-    params['filter'][f'{box_key}__in'] = request.user.box_permission.all()
+    params = get_params(request, box_key)
     if pk:
         try:
-            obj = model.objects.get(pk=pk, **params['filter'])
+            box_check = get_box_permission(request.user, box_key) if error_null_box else {}
+            obj = model.objects.get(pk=pk, **params['filter'], **box_check)
             return {"data": single_serializer().dump(obj)}
         except model.DoesNotExist:
             raise PermissionDenied
     try:
+        if error_null_box and not params['filter'].get(box_key):
+            raise PermissionDenied
         query = model.objects.filter(**params['filter']).order_by(*params['order'])
         return get_pagination(query, request.step, request.page, serializer)
     except (FieldError, ValueError):
-        query = model.objects.all()
-        return get_pagination(query, request.step, request.page, serializer)
+        raise FieldError
 
 
-def get_params(request):
+def get_params(request, box_key=None):
     remove_param = ['s', 'p', 'delay', 'error']
     filterby = {}
     orderby = []
@@ -55,15 +56,17 @@ def get_params(request):
     for key in keys:
         value = params.getlist(key)
         if key == 'b':
-            if value[0] in request.user.box_permission.all().values_list('id', flat=True):
-                filterby['box_id'] = value[0]
+            if int(value[0]) in request.user.box_permission.all().values_list('id', flat=True):
+                filterby[f'{box_key}'] = value[0]
+                continue
+            raise PermissionDenied
         if key == 'o':
             orderby += value
             continue
         if len(value) == 1:
             filterby[key] = value[0]
             continue
-        filterby[key + '__in'] = value
+        filterby[key.replace('[]', '__in')] = value
     return {'filter': filterby, 'order': orderby}
 
 
@@ -75,8 +78,8 @@ def get_data(request):
               'rate', 'default_storage', 'sold_count', 'feature']
     [data.pop(k, None) for k in remove]
     boxes = request.user.box_permission.all()
-    if not data.get('box_id') in boxes.values_list('id', flat=True):
-        data['box_id'] = boxes.first().pk
+    if data.get('box_id') not in boxes.values_list('id', flat=True):
+        raise PermissionDenied
     if request.method == "POST":
         data.pop('id', None)
     return data
@@ -89,7 +92,6 @@ def get_roll(user):
         return user.groups.first().name
     except AttributeError:
         raise AuthError
-
 
 
 def assign_default_value(product_id):
@@ -169,8 +171,22 @@ def delete_base(request, model):
 
 
 def get_box_permission(user, box_key='box'):
-    boxes = user.box_permission.all()
-    return {f'{box_key}__in': boxes}
+    boxes_id = user.box_permission.all().values_list('id', flat=True)
+    return {f'{box_key}__in': boxes_id}
+
+
+def check_box_permission(user, box_id):
+    try:
+        box_id = int(box_id)
+    except Exception:
+        pass
+    if box_id not in user.box_permission.all().values_list('id', flat=True):
+        raise PermissionDenied
+
+
+def check_user_permission(user, permission):
+    if not user.has_perm(f'server.{permission}'):
+        raise PermissionDenied
 
 
 def prepare_for_delete(model, pk, user, box_key='box'):
@@ -215,13 +231,13 @@ def delete_object(request, model, pk):
     return False
 
 
-def get_model_filter(model):
-    filter_list = model.objects.extra(select={'name': "name->>'fa'"}).values('id', 'name')
+def get_model_filter(model, box):
+    filter_list = model.objects.filter(**box).extra(select={'name': "name->>'fa'"}).values('id', 'name')
     return {'name': model.__name__.lower(), 'filters': list(filter_list)}
 
 
-def get_table_filter(table):
+def get_table_filter(table, box):
     schema = tables.get(table, None)
     list_filter = schema.list_filter
-    filters = [get_model_filter(model) for model in list_filter]
+    filters = [get_model_filter(model, box) for model in list_filter]
     return filters

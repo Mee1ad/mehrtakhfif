@@ -87,7 +87,6 @@ def get_mimetype(image):
 def upload(request, titles, media_type, box=None):
     image_formats = ['.jpeg', '.jpg', '.gif', '.png']
     audio_formats = ['.jpeg', '.jpg', '.gif', '.png']
-    types = {'image': 1, 'thumbnail': 2, 'slider': 3, 'ads': 4, 'avatar': 7}
     media_list = []
     for file, title in zip(request.FILES.getlist('file'), titles):
         if file is not None:
@@ -98,7 +97,7 @@ def upload(request, titles, media_type, box=None):
                 return False
             if media_type == 'avatar' and type(title) == dict:
                 file.name = f"{title['user_id']} {timezone.now().strftime('%Y-%m-%d, %H-%M-%S')}{file_format}"
-            media = Media(image=file, box_id=box, created_by_id=1, type=types[media_type],
+            media = Media(image=file, box_id=box, created_by_id=1, type=media_type,
                           title=title, updated_by=request.user)
             media.save()
             media_list.append(media)
@@ -120,7 +119,7 @@ def filter_params(params, lang):
     orderby = params.get('o', '-created_at')
     category = params.get('cat', None)
     available = params.get('available', None)
-    brand = params.getlist('brand', None)
+    brand = params.getlist('brand[]', None)
     min_price = params.get('min_price', None)
     max_price = params.get('max_price', None)
     if box_permalink:
@@ -141,10 +140,7 @@ def filter_params(params, lang):
     if min_price and max_price:
         filter_by[f'{ds}{dis}_price__range'] = (min_price, max_price)
     if brand:
-        if len(brand) == 1:
-            filter_by['brand'] = brand[0]
-        else:
-            filter_by['brand__in'] = brand
+        filter_by['brand__in'] = brand
 
     # keys = params.keys()
     # for key in keys:

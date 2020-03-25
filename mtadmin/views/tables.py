@@ -101,7 +101,7 @@ class InvoiceView(TableView):
     permission_required = 'server.view_invoice'
 
     def get(self, request):
-        return JsonResponse(serialized_objects(request, Invoice, InvoiceASchema, InvoiceESchema))
+        return JsonResponse(serialized_objects(request, Invoice, InvoiceASchema, InvoiceESchema, error_null_box=False))
 
 
 class InvoiceStorageView(TableView):
@@ -203,19 +203,19 @@ class MediaView(TableView):
 
     def get(self, request):
         return JsonResponse(serialized_objects(request, Media, MediaASchema, MediaESchema))
-
+    @pysnooper.snoop()
     def post(self, request):
         data = json.loads(request.POST.get('data'))
         titles = data['titles']
-        box_id = data['box_id']
+        box_id = data.get('box_id')
+        if box_id not in request.user.box_permission.all().values_list('id', flat=True):
+            raise PermissionDenied
         media_type = data['type']
-        box_id = validate_box_id(request.user, box_id)
         media = upload(request, titles, media_type, box_id)
         if media:
             return JsonResponse({'media': MediaASchema().dump(media, many=True)})
         return JsonResponse({}, status=res_code['bad_request'])
 
-    @pysnooper.snoop()
     def patch(self, request):
         import time
         time.sleep(5)
@@ -235,7 +235,7 @@ class CommentView(TableView):
     permission_required = 'server.view_comment'
 
     def get(self, request):
-        return JsonResponse(serialized_objects(request, Comment, CommentASchema, CommentESchema))
+        return JsonResponse(serialized_objects(request, Comment, CommentASchema, CommentESchema, error_null_box=False))
 
     def patch(self, request):
         data = get_data(request)
