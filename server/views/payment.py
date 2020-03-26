@@ -14,6 +14,7 @@ import pysnooper
 import json
 import zeep
 
+from django.core.exceptions import ValidationError
 import random
 import string
 
@@ -54,7 +55,8 @@ class PaymentRequest(View):
         # return JsonResponse({"url": "http://api.mt.com/payment/callback"})
         # ipg_id = request.GET.get('ipg_id', 1)
         user = request.user
-        assert Basket.objects.filter(pk=basket_id, user=user).exists()
+        if not Basket.objects.filter(pk=basket_id, user=user).exists():
+            raise ValidationError('invalid basket_id')
         try:
             invoice = Invoice.objects.get(user=user, basket_id=basket_id, status=1)
             assert invoice.expire >= timezone.now()
@@ -141,9 +143,9 @@ class CallBack(View):
         ref_id = data_dict.get('SaleReferenceId', None)
         if not ref_id:
             return HttpResponseRedirect("https://mehrtakhfif.com")
-        # todo debug
         # todo https://memoryleaks.ir/unlimited-charge-of-mytehran-account/
-        # assert self.verify(invoice_id, ref_id)
+        if not self.verify(invoice_id, ref_id):
+            raise ValidationError('payment failed')
         invoice = Invoice.objects.get(pk=invoice_id, reference_id=data_dict['RefId'])
         invoice.status = 2
         invoice.payed_at = timezone.now()

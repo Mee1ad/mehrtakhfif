@@ -23,7 +23,6 @@ class AdminLogin(AdminView):
 class AdminActivate(AdminView):
     def post(self, request):
         data = load_data(request)
-        # TODO: get csrf code
         try:
             client_token = get_signed_cookie(request, 'token', False)
             code = data['code']

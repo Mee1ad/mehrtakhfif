@@ -6,8 +6,9 @@ from mehr_takhfif.settings import SECRET_KEY
 
 UserModel = get_user_model()
 
+
 class ModelBackend:
-      
+
     def authenticate(self, token):
         try:
             data = hsdecode(token, SECRET_KEY)
@@ -91,5 +92,3 @@ class ModelBackend:
         except UserModel.DoesNotExist:
             return None
         return user if self.user_can_authenticate(user) else None
-
-

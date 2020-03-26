@@ -10,7 +10,6 @@ class BasketView(LoginRequired):
         basket_id = request.GET.get('basket_id', None)
         return JsonResponse(get_basket(request.user, request.lang, basket_id))
 
-    @pysnooper.snoop()
     def post(self, request):
         data = load_data(request)
         try:
@@ -31,7 +30,6 @@ class BasketView(LoginRequired):
         pk = data['basket_product_id']
         count = data['count']
         basket = Basket.objects.filter(user=request.user).order_by('-id').first()
-        # todo remove assertion after debug
         storage = BasketProduct.objects.filter(basket=basket, pk=pk).select_related('storage').first().storage
         assert storage.available_count_for_sale >= count and storage.max_count_for_sale >= count
         assert BasketProduct.objects.filter(id=pk, basket=basket).update(count=data['count'])
@@ -57,8 +55,6 @@ class BasketView(LoginRequired):
             pk = int(product['id'])
             count = int(product['count'])
             features = product['features']
-            # todo validate features
-            # https://github.com/alecthomas/voluptuous
             try:
                 basket_product = BasketProduct.objects.filter(basket=basket, storage_id=pk, features=features).\
                     select_related('storage')
@@ -67,7 +63,9 @@ class BasketView(LoginRequired):
                 basket_product.update(count=count)
             except AttributeError:
                 box = Storage.objects.get(pk=pk).product.box
-                BasketProduct.objects.create(basket=basket, storage_id=pk, count=count, box=box, features=features)
+                basket_product = BasketProduct(basket=basket, storage_id=pk, count=count, box=box, features=features)
+                basket_product.validate_features()
+                basket_product.save()
 
         basket.count = basket.products.all().count()
         basket.save()

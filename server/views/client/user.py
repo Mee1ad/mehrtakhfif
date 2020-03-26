@@ -112,7 +112,6 @@ class AddressView(LoginRequired):
     def post(self, request):
         data = load_data(request)
         try:
-            assert City.objects.filter(pk=data['city_id'], state_id=data['state_id'])
             address_count = Address.objects.filter(user=request.user).count()
             address = Address(state_id=data['state_id'], city_id=data['city_id'], postal_code=data['postal_code'],
                               address=data['address'], location=load_location(data['location']), user=request.user,

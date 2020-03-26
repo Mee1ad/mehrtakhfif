@@ -6,7 +6,6 @@ from django.http import JsonResponse, HttpResponseForbidden, HttpResponseBadRequ
 from django.core.exceptions import FieldDoesNotExist, ValidationError, PermissionDenied, FieldError
 from django.db.utils import IntegrityError
 from server.utils import res_code
-from server.error import *
 
 
 def error_handler(func):
@@ -29,7 +28,4 @@ def error_handler(func):
         except (FieldDoesNotExist, ValidationError):
             traceback.print_exc()
             return JsonResponse({'message': 'fields name is incorrect'}, status=res_code['bad_request'])
-        except AuthError:
-            traceback.print_exc()
-            return JsonResponse({'message': 'authentication failed'}, status=res_code['forbidden'])
     return wrapper

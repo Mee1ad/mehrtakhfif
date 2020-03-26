@@ -97,7 +97,7 @@ def upload_to(instance, filename):
     date = timezone.now().strftime("%Y-%m-%d")
     time = timezone.now().strftime("%H-%M-%S-%f")[:-4]
     if instance.type in has_placeholder:
-        time = f'{time}-has-pl'
+        time = f'{time}-has-ph'
     # file_type = re.search('\\w+', instance.type)[0]
     file_format = os.path.splitext(instance.image.name)[-1]
     return f'boxes/{instance.box_id}/{date}/{instance.get_type_display()}/{time}{file_format}'
@@ -108,9 +108,19 @@ def reduce_image_quality(img):
         x, y = img.size
         width = (60 / x)
         height = int((y * width))
-        pl = img.resize((60, height), Image.ANTIALIAS)
-        pl = pl.filter(ImageFilter.GaussianBlur(1.6))
-    return pl
+        ph = img.resize((60, height), Image.ANTIALIAS)
+        ph = ph.filter(ImageFilter.GaussianBlur(1.6))
+    return ph
+
+
+def is_list_of_dict(data):
+    if type(data) is list:
+        for d in data:
+            if type(d) is dict:
+                continue
+            raise ValidationError('list item is not dict')
+        return True
+    raise ValidationError('data is not list')
 
 
 class MyManager(models.Manager):
@@ -155,7 +165,6 @@ class User(AbstractUser):
     suspend_expire_date = models.DateTimeField(blank=True, null=True, verbose_name='Suspend expire date')
     activation_code = models.CharField(max_length=127, null=True, blank=True)
     activation_expire = models.DateTimeField(null=True, blank=True)
-    admin_token = models.CharField(max_length=255, unique=True, null=True, blank=True)
     token = models.CharField(max_length=255, unique=True, null=True, blank=True)
     token_expire = models.DateTimeField(auto_now_add=True)
 
@@ -223,6 +232,14 @@ class Address(models.Model):
     def __str__(self):
         return self.city.name
 
+    def validation(self):
+        if not City.objects.filter(pk=self.city.pk, state=self.state).exists():
+            raise ValidationError('invalid value for state and city')
+
+    def save(self, *args, **kwargs):
+        self.validation()
+        super().save(*args, **kwargs)
+
     id = models.BigAutoField(auto_created=True, primary_key=True)
     state = models.ForeignKey(State, on_delete=PROTECT)
     city = models.ForeignKey(City, on_delete=PROTECT)
@@ -232,7 +249,6 @@ class Address(models.Model):
     address = models.TextField()
     location = JSONField(null=True)
     user = models.ForeignKey(User, blank=True, null=True, on_delete=models.CASCADE)
-    active = models.BooleanField(default=False)
 
     class Meta:
         db_table = 'address'
@@ -263,24 +279,31 @@ class Media(Base):
 
     def save(self, *args, **kwargs):
         sizes = {'thumbnail': (600, 372), 'media': (1280, 794)}
-        with Image.open(self.image) as im:
-            width, height = im.size
-            if (width, height) != sizes[self.get_type_display()]:
-                raise ValidationError
+        try:
+            with Image.open(self.image) as im:
+                width, height = im.size
+                if (width, height) != sizes[self.get_type_display()]:
+                    raise ValidationError('invalid size for image')
+        except ValueError:
+            pass
+        self.validation()
         super().save(*args, **kwargs)
         if self.type in has_placeholder:
-            pl = reduce_image_quality(self.image.path)
-            name = self.image.name.replace('has-pl', 'pl')
-            pl.save(f'{MEDIA_ROOT}/{name}', optimize=True, quality=80)
+            ph = reduce_image_quality(self.image.path)
+            name = self.image.name.replace('has-ph', 'ph')
+            ph.save(f'{MEDIA_ROOT}/{name}', optimize=True, quality=80)
 
     image = models.FileField(upload_to=upload_to)
     video = models.URLField()
     audio = models.URLField()
     title = JSONField(default=multilanguage)
-    # todo fix type number order
-    type = models.PositiveSmallIntegerField(choices=[(1, 'image'), (2, 'thumbnail'), (3, 'media'),
-                                                     (4, 'slider'), (5, 'ads'), (6, 'avatar')])
+    type = models.PositiveSmallIntegerField(choices=[(1, 'image'), (2, 'thumbnail'), (3, 'media'), (4, 'slider'),
+                                                     (5, 'ads'), (6, 'avatar'), (7, 'audio'), (8, 'video')])
     box = models.ForeignKey(Box, on_delete=models.CASCADE, null=True, blank=True)
+
+    def validation(self):
+        if self.type > 8:
+            raise ValidationError('invalid type')
 
     class Meta:
         db_table = 'media'
@@ -310,6 +333,14 @@ class Category(Base):
 class Feature(Base):
     def __str__(self):
         return f"{self.id}"
+
+    def validation(self):
+        if self.type > 3:
+            raise ValidationError('invalid type')
+
+    def save(self, *args, **kwargs):
+        self.validation()
+        super().save(*args, **kwargs)
 
     name = JSONField(default=multilanguage)
     type = models.PositiveSmallIntegerField(default=1, choices=((1, 'bool'), (2, 'single'), (3, 'multi')))
@@ -508,15 +539,7 @@ class BasketProduct(models.Model):
     def __str__(self):
         return f"{self.id}"
 
-    id = models.BigAutoField(auto_created=True, primary_key=True)
-    storage = models.ForeignKey(Storage, on_delete=PROTECT)
-    basket = models.ForeignKey(Basket, on_delete=PROTECT, null=True, blank=True)
-    count = models.IntegerField(default=1)
-    box = models.ForeignKey(Box, on_delete=PROTECT)
-    features = JSONField(default=list)
-
-    def validate_features(self):
-        # features = [{"fid": 16, "fvid": [1, 3]}]
+    def validation(self):
         for feature in self.features:
             try:
                 item = Feature.objects.get(pk=feature['fid'])
@@ -527,6 +550,20 @@ class BasketProduct(models.Model):
                 raise ValidationError('invalid feature_id')
             except Exception:
                 raise ValidationError('invalid data')
+
+    def save(self, *args, **kwargs):
+        self.validation()
+        super().save(*args, **kwargs)
+
+
+    id = models.BigAutoField(auto_created=True, primary_key=True)
+    storage = models.ForeignKey(Storage, on_delete=PROTECT)
+    basket = models.ForeignKey(Basket, on_delete=PROTECT, null=True, blank=True)
+    count = models.IntegerField(default=1)
+    box = models.ForeignKey(Box, on_delete=PROTECT)
+    features = JSONField(default=list)
+
+
 
     class Meta:
         db_table = 'basket_product'
@@ -565,8 +602,13 @@ class Comment(Base):
     def __str__(self):
         return f"{self.user}"
 
-    def clean(self):
-        Comment.objects.filter(user=self.user, type=self.type)
+    def validation(self):
+        if self.rate > 10 or self.type > 2:
+            raise ValidationError('invalid value for rate or type')
+
+    def save(self, *args, **kwargs):
+        self.validation()
+        super().save(*args, **kwargs)
 
     _safedelete_policy = SOFT_DELETE_CASCADE
     id = models.BigAutoField(auto_created=True, primary_key=True)
@@ -580,6 +622,7 @@ class Comment(Base):
     type = models.PositiveSmallIntegerField(choices=[(1, 'q-a'), (2, 'rate')])
     product = models.ForeignKey(Product, on_delete=CASCADE, null=True, blank=True)
     blog_post = models.ForeignKey(BlogPost, on_delete=CASCADE, null=True, blank=True)
+
 
     class Meta:
         db_table = 'comments'

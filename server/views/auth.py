@@ -12,6 +12,7 @@ from secrets import token_hex
 from mehr_takhfif.settings import DEFAULT_COOKIE_DOMAIN
 from django.contrib.sessions.backends.db import SessionStore as OriginalSessionStore
 from django.utils.crypto import get_random_string
+from django.core.exceptions import PermissionDenied
 
 
 class Backend(ModelBackend):
@@ -53,7 +54,8 @@ class Login(View):
                 raise User.DoesNotExist  # redirect to signup
             if not user.is_active:  # incomplete signup
                 raise User.DoesNotExist  # redirect to signup
-            assert user.check_password(password)
+            if not user.check_password(password):
+                raise ValidationError('invalid password')
             if is_staff:
                 return set_token(user, self.send_activation(user))
             login(request, user, backend='django.contrib.auth.backends.ModelBackend')
@@ -78,7 +80,8 @@ class Login(View):
     def send_activation(user):
         resend_timeout = 0.5
         activation_expire = 2
-        assert timezone.now() > add_minutes(resend_timeout - activation_expire, time=user.activation_expire)
+        if timezone.now() < add_minutes(resend_timeout - activation_expire, time=user.activation_expire):
+            raise PermissionDenied
         user.activation_code = random.randint(10000, 99999)
         user.activation_expire = add_minutes(activation_expire)
         user.save()

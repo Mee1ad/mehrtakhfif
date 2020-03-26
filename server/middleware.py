@@ -1,11 +1,12 @@
 from mehr_takhfif.settings import TOKEN_SALT, ADMIN, DEFAULT_COOKIE_DOMAIN
-from server.utils import default_step, default_page, res_code, set_csrf_cookie, check_csrf_token, set_signed_cookie, get_signed_cookie
+from server.utils import default_step, default_page, res_code, set_csrf_cookie, check_csrf_token, set_signed_cookie, \
+    get_signed_cookie
 from server.models import User, Basket
+from django.core.exceptions import PermissionDenied
 from django.http import JsonResponse, HttpResponseNotFound
 import json
 from django.urls import resolve
 import time
-from server.error import AuthError
 import pysnooper
 
 
@@ -52,21 +53,20 @@ class AuthMiddleware:
             new_basket_count = None
             if request.user.is_authenticated:
                 db_basket_count = None
-                try:
-                    basket = Basket.objects.filter(user=request.user).order_by('-id')
-                    if basket.exists():
-                        db_basket_count = basket.first().products.all().count()
-                        user_basket_count = get_signed_cookie(request, 'basket_count', False)
-                        assert db_basket_count == int(user_basket_count)
-                        request.basket = basket
-                except AssertionError:
-                    new_basket_count = db_basket_count
+
+                basket = Basket.objects.filter(user=request.user).order_by('-id')
+                if basket.exists():
+                    db_basket_count = basket.first().products.all().count()
+                    user_basket_count = get_signed_cookie(request, 'basket_count', False)
+                    if not db_basket_count == int(user_basket_count):
+                        new_basket_count = db_basket_count
+                    request.basket = basket
+
         elif app_name == 'mtadmin':
             request.token = request.headers.get('access-token', None)
-            try:
-                assert request.user.is_staff
-            except AssertionError:
-                return JsonResponse({}, status=res_code['unauthorized'])
+
+            if not request.user.is_staff:
+                raise PermissionDenied
 
         # set new basket count in cookie
         response = self.get_response(request)
@@ -76,8 +76,7 @@ class AuthMiddleware:
                 res['new_basket_count'] = new_basket_count
                 response.content = json.dumps(res)
                 response = set_signed_cookie(response, 'basket_count', new_basket_count)
-            # except AttributeError:
-            except Exception:
+            except AttributeError:
                 pass
         if request.method in token_requests:
             return set_csrf_cookie(response)

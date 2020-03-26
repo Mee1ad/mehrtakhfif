@@ -1,6 +1,5 @@
 from django.http import JsonResponse, HttpResponseForbidden, HttpResponseBadRequest
 from server.utils import get_pagination, get_token_from_cookie, set_token, check_access_token
-from server.error import AuthError
 from django.core.exceptions import ValidationError, FieldError, PermissionDenied
 from django.contrib.admin.utils import NestedObjects
 from server.models import *
@@ -71,8 +70,8 @@ def get_params(request, box_key=None):
 
 
 def get_data(request):
-    token = get_token_from_cookie(request)
-    assert check_access_token(token, request.user)
+    # token = get_token_from_cookie(request)
+    # assert check_access_token(token, request.user)
     data = json.loads(request.body)
     remove = ['created_at', 'created_by', 'updated_at', 'updated_by', 'deleted_by', 'income', 'profit',
               'rate', 'default_storage', 'sold_count', 'feature']
@@ -91,7 +90,7 @@ def get_roll(user):
             return 'superuser'
         return user.groups.first().name
     except AttributeError:
-        raise AuthError
+        raise PermissionDenied
 
 
 def assign_default_value(product_id):

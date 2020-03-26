@@ -18,7 +18,6 @@ from datetime import datetime
 import pysnooper
 from operator import add, sub
 from secrets import token_hex
-from server.error import *
 from mehr_takhfif.settings import CSRF_SALT, TOKEN_SALT, DEFAULT_COOKIE_DOMAIN
 from server.models import *
 import requests
@@ -27,6 +26,7 @@ from server.serialize import BoxCategoriesSchema, BasketSchema, BasketProductSch
 from django.contrib.postgres.fields.jsonb import KeyTextTransform
 from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
 import string
+from django.core.exceptions import PermissionDenied
 
 random_data = string.ascii_lowercase + string.digits
 default_step = 12
@@ -39,26 +39,19 @@ pattern = {'phone': r'^(09[0-9]{9})$', 'email': r'^(([^<>()\[\]\\.,;:\s@"]+(\.[^
            [[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$',
            'postal_code': r'^\d{5}[ -]?\d{5}$', 'fullname': r'^[آ-یA-z]{2,}( [آ-یA-z]{2,})+([آ-یA-z]|[ ]?)$',
            'address': r'(([^ -_]+)[\n -]+){2}.+', 'location': r'\.*', 'bool': r'^(true|false)$',
-           'name': r'^[ آ-یA-z]+$', 'first_name': r'^[ آ-یA-z]+$', 'last_name': r'^[ آ-یA-z]+$',
-           'id': r'^\d+$', 'language': r'^\w{2}$', 'type': r'^[1-2]$'}
-ids = ['id', 'city_id', 'state_id', 'product_id', 'house_id']
-bools = ['gender', 'set_default', 'notify']
+           'name': r'^[ آ-یA-z]+$', 'first_name': r'^[ آ-یA-z]+$', 'last_name': r'^[ آ-یA-z]+$', 'language': r'^\w{2}$'}
 
 
 # Data
 
 def validation(data):
     for key in data:
-        if key in ids:
-            assert re.search(pattern['id'], str(data[key]))
-            continue
-        if key in bools:
-            assert type(data[key]) == bool or data[key] is None
-            continue
         if key == 'basket':
             assert len(key) < 20
         try:
             assert re.search(pattern[key], str(data[key]))
+        except AssertionError:
+            raise ValidationError(f'invalid value for {key}')
         except KeyError:
             pass
 
@@ -432,34 +425,14 @@ def check_csrf_token(request):
         try:
             token = hashlib.sha3_224((csrf_cookie + time + CSRF_SALT).encode()).hexdigest()
         except TypeError:
-            raise AuthError
+            raise PermissionDenied
         print(request.headers)
         if token == request.headers['X-Csrf-Token']:
             return True
 
     if double_check_token(0) or double_check_token(-1):
         return True
-    raise AuthError
-
-
-def des_encrypt(data='test', key=os.urandom(16)):
-    backend = default_backend()
-    text = data.encode()
-    padder = padding.PKCS7(algorithms.TripleDES.block_size).padder()
-    cipher = Cipher(algorithms.TripleDES(key), modes.ECB(), backend=backend)
-    encryptor = cipher.encryptor()
-    encrypted_text = encryptor.update(padder.update(text) + padder.finalize()) + encryptor.finalize()
-    decrypted_text = des_decrypt(encrypted_text, key)
-    assert text == decrypted_text
-    return encrypted_text
-
-
-def des_decrypt(encrypted_text, key):
-    backend = default_backend()
-    unpadder = padding.PKCS7(algorithms.TripleDES.block_size).unpadder()
-    cipher = Cipher(algorithms.TripleDES(key), modes.ECB(), backend=backend)
-    decryptor = cipher.decryptor()
-    return unpadder.update(decryptor.update(encrypted_text) + decryptor.finalize()) + unpadder.finalize()
+    raise PermissionDenied
 
 
 def products_availability_check(products, step, page):
