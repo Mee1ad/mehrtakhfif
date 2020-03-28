@@ -7,12 +7,13 @@ from mtadmin.decorator import error_handler
 app_name = 'mtadmin'
 
 urlpatterns = [
-    # path('test', Test.as_view(), name='test'),
+    path('test', error_handler(Test.as_view()), name='test'),
     path('category', error_handler(CategoryView.as_view()), name='category'),
     path('feature', error_handler(FeatureView.as_view()), name='feature'),
     path('menu', error_handler(MenuView.as_view()), name='menu'),
     path('brand', error_handler(BrandView.as_view()), name='brand'),
     path('product', error_handler(ProductView.as_view()), name='product'),
+    path('storage/<int:pk>', error_handler(ProductStorage.as_view()), name='storage'),
     path('invoice', error_handler(InvoiceView.as_view()), name='invoice'),
     path('invoice_product', error_handler(InvoiceStorageView.as_view()), name='invoice_product'),
     path('special_offer', error_handler(SpecialOfferView.as_view()), name='special_offer'),

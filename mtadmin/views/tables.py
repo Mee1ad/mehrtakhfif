@@ -5,6 +5,7 @@ from server.utils import *
 from mtadmin.utils import *
 from mtadmin.serializer import *
 import pysnooper
+from django.db.utils import IntegrityError
 
 
 class CategoryView(TableView):
@@ -47,7 +48,7 @@ class FeatureView(TableView):
     permission_required = 'server.view_feature'
 
     def get(self, request):
-        return JsonResponse(serialized_objects(request, Feature, FeatureASchema, FeatureESchema))
+        return JsonResponse(serialized_objects(request, Feature, FeatureASchema, FeatureASchema))
 
     def post(self, request):
         items = create_object(request, Feature, FeatureASchema)
@@ -71,12 +72,27 @@ class ProductView(TableView):
         items = create_object(request, Product, ProductESchema)
         return JsonResponse(items, status=201)
 
-    def put(self, request):
-        update_object(request, Product)
-        return JsonResponse({})
+    def patch(self, request):
+        data = json.loads(request.body)
+        pk = data['id']
+        permalink = data['permalink']
+        if Product.objects.filter(pk=pk).update(permalink=permalink):
+            return JsonResponse({})
+        return HttpResponseBadRequest()
 
     def delete(self, request):
         return delete_base(request, Product)
+
+
+class ProductStorage(TableView):
+    permission_required = ['server.view_storage', 'server.view_product']
+
+    def get(self, request, pk):
+        storages = Storage.objects.filter(product_id=pk)
+        product = storages.first().product
+        data = StorageESchema().dump(storages, many=True)
+        return JsonResponse({"product": {"id": product.id, "name": product.name, "permalink": product.permalink},
+                             "data": data})
 
 
 class StorageView(TableView):
@@ -136,13 +152,13 @@ class TagView(TableView):
 
     def get(self, request):
         pk = request.GET.get('id', None)
-        params = get_params(request)
+        contain = request.GET.get('contain')
         if pk:
             obj = Tag.objects.get(pk=pk)
             return JsonResponse({"data": TagESchema().dump(obj)})
         try:
-            query = Tag.objects.annotate(contain=SearchVector(KeyTextTransform(request.lang, 'name')), ). \
-                filter(**params['filter']).order_by(*params['order'])
+            query = Tag.objects.annotate(new_name=SearchVector(KeyTextTransform(request.lang, 'name')), ). \
+                filter(new_name__contains=contain)
             res = get_pagination(query, request.step, request.page, TagASchema)
         except (FieldError, ValueError):
             query = Tag.objects.all()
@@ -151,7 +167,7 @@ class TagView(TableView):
         return JsonResponse(res)
 
     def post(self, request):
-        items = create_object(request, Tag, TagASchema)
+        items = create_object(request, Tag, TagASchema, TagASchema, return_item=True, error_null_box=False)
         return JsonResponse(items, status=201)
 
     def put(self, request):
@@ -203,6 +219,7 @@ class MediaView(TableView):
 
     def get(self, request):
         return JsonResponse(serialized_objects(request, Media, MediaASchema, MediaESchema))
+
     @pysnooper.snoop()
     def post(self, request):
         data = json.loads(request.POST.get('data'))

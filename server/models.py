@@ -17,6 +17,7 @@ from mehr_takhfif.settings import HOST, MEDIA_ROOT
 import datetime
 import pysnooper
 from PIL import Image, ImageFilter
+from django.db.models import Q
 
 media_types = [(1, 'image'), (2, 'thumbnail'), (3, 'media'), (4, 'slider'), (5, 'ads'), (6, 'avatar')]
 has_placeholder = [1, 2, 3, 4, 5]
@@ -358,6 +359,15 @@ class Tag(Base):
     def __str__(self):
         return f"{self.name['fa']}"
 
+    def validation(self):
+        if Tag.objects.filter(Q(name__en=self.name['en']) | Q(name__fa=self.name['fa']) |
+                              Q(name__ar=self.name['ar'])).count() > 0:
+            raise ValidationError('duplicate tag')
+
+    def save(self, *args, **kwargs):
+        self.validation()
+        super().save(*args, **kwargs)
+
     permalink = models.CharField(max_length=255, db_index=True, unique=True)
     name = JSONField(default=multilanguage)
 
@@ -555,15 +565,12 @@ class BasketProduct(models.Model):
         self.validation()
         super().save(*args, **kwargs)
 
-
     id = models.BigAutoField(auto_created=True, primary_key=True)
     storage = models.ForeignKey(Storage, on_delete=PROTECT)
     basket = models.ForeignKey(Basket, on_delete=PROTECT, null=True, blank=True)
     count = models.IntegerField(default=1)
     box = models.ForeignKey(Box, on_delete=PROTECT)
     features = JSONField(default=list)
-
-
 
     class Meta:
         db_table = 'basket_product'
@@ -622,7 +629,6 @@ class Comment(Base):
     type = models.PositiveSmallIntegerField(choices=[(1, 'q-a'), (2, 'rate')])
     product = models.ForeignKey(Product, on_delete=CASCADE, null=True, blank=True)
     blog_post = models.ForeignKey(BlogPost, on_delete=CASCADE, null=True, blank=True)
-
 
     class Meta:
         db_table = 'comments'
@@ -692,11 +698,10 @@ class InvoiceStorage(models.Model):
 
 
 class DiscountCode(Base):
-    box = models.ForeignKey(Box, on_delete=PROTECT)
     storage = models.ForeignKey(Storage, on_delete=PROTECT, related_name='discount_code')
-    qr_code = models.ForeignKey(Media, on_delete=PROTECT)
+    qr_code = models.ForeignKey(Media, on_delete=PROTECT, null=True, blank=True)
     invoice = models.ForeignKey(Invoice, on_delete=PROTECT, null=True, blank=True)
-    code = models.CharField(max_length=32)
+    code = models.CharField(max_length=32, default="")
 
     class Meta:
         db_table = 'discount_code'

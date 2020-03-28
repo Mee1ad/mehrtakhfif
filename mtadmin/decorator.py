@@ -6,6 +6,8 @@ from django.http import JsonResponse, HttpResponseForbidden, HttpResponseBadRequ
 from django.core.exceptions import FieldDoesNotExist, ValidationError, PermissionDenied, FieldError
 from django.db.utils import IntegrityError
 from server.utils import res_code
+import os
+import sys
 
 
 def error_handler(func):
@@ -13,9 +15,14 @@ def error_handler(func):
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except FieldError:
+        except (FieldError, TypeError):
             return HttpResponseBadRequest()
+        except ValidationError as e:
+            res = HttpResponseBadRequest()
+            res['error'] = str(e)[1:-1]
+            return res
         except PermissionDenied:
+            traceback.print_exc()
             return HttpResponseForbidden()
         except AssertionError:
             traceback.print_exc()

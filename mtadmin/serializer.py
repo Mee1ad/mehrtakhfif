@@ -25,6 +25,15 @@ def related_objects(objects):
     return res
 
 
+# ManyToMany Relations
+
+class FeatureField(fields.Field):
+    def _serialize(self, value, attr, obj, **kwargs):
+        features = FeatureStorage.objects.filter(storage=obj)
+        return FeatureStorageASchema().dump(features, many=True)
+
+
+# Serializer
 class BaseAdminSchema(Schema):
     """
     E = Edit
@@ -84,6 +93,13 @@ class BaseAdminSchema(Schema):
         return tag_list
 
 
+class BoxASchema(Schema):
+    class Meta:
+        additional = ('id', 'permalink')
+
+    name = fields.Dict()
+
+
 class InvoiceASchema(Schema):
     class Meta:
         additional = ('id', 'basket_id', 'amount', 'status', 'final_price')
@@ -120,7 +136,7 @@ class ProductASchema(BaseAdminSchema):
     permalink = fields.Str()
     box = fields.Method("get_box")
     category = fields.Method("get_category")
-    storages = fields.Method("get_storage")
+    # storages = fields.Method("get_storage")
     city = fields.Nested(CitySchema)
 
 
@@ -131,6 +147,7 @@ class ProductESchema(ProductASchema, ProductSchema):
     media = fields.Method("get_media")
     tag = fields.Method("get_tag")
     thumbnail = fields.Nested("MediaASchema")
+    default_storage_id = fields.Int()
     name = fields.Dict()
     properties = fields.Dict()
     details = fields.Dict()
@@ -152,7 +169,7 @@ class StorageESchema(StorageASchema, StorageSchema):
     class Meta:
         additional = StorageSchema.Meta.additional + StorageASchema.Meta.additional + ('gender', 'disable')
 
-    product = fields.Method("get_product")
+    features = FeatureField()
 
 
 class CommentASchema(BaseAdminSchema):
@@ -190,15 +207,20 @@ class CategoryESchema(CategoryASchema, CategorySchema):
 
 
 class FeatureASchema(BaseAdminSchema):
-    pass
+    name = fields.Dict()
+    value = fields.Dict()
+    type = fields.Function(lambda o: o.get_type_display())
 
 
-class FeatureESchema(FeatureASchema, FeatureSchema):
-    pass
+class FeatureStorageASchema(Schema):
+    id = fields.Int()
+    feature = fields.Nested(FeatureASchema)
+    value = fields.Function(lambda o: o.value)
 
 
-class TagASchema(BaseAdminSchema):
-    name = fields.Method("get_name")
+class TagASchema(Schema):
+    id = fields.Int()
+    name = fields.Dict()
 
 
 class TagESchema(TagASchema, TagSchema):

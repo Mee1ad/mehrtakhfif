@@ -64,7 +64,7 @@ class BasketView(LoginRequired):
             except AttributeError:
                 box = Storage.objects.get(pk=pk).product.box
                 basket_product = BasketProduct(basket=basket, storage_id=pk, count=count, box=box, features=features)
-                basket_product.validate_features()
+                basket_product.validation()
                 basket_product.save()
 
         basket.count = basket.products.all().count()

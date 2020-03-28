@@ -1,9 +1,17 @@
 from django.core.mail import send_mail
 
 from mtadmin.utils import *
-from server.utils import get_access_token
+from server.utils import get_access_token, random_data
 import json
 from mtadmin.serializer import *
+from django.utils.crypto import get_random_string
+import pysnooper
+
+
+class Test(AdminView):
+    def get(self, request):
+        raise ValidationError('invaliiiiiiiiid')
+        return JsonResponse({})
 
 
 class Token(AdminView):
@@ -33,14 +41,22 @@ class CheckPrices(AdminView):
         return JsonResponse({})
 
 
-# todo
 class GenerateCode(AdminView):
     def post(self, request):
         data = json.loads(request.body)
-        product = data.get('start_price')
-        special_product = data.get('special_product')
-        special_offer = data.get('special_offer')
-        price = data.get['price']
+        storage_id = data['storage_id']
+        count = data['count']
+        code_len = data.get('len', 5)
+        storage = Storage.objects.get(pk=storage_id)
+        prefix = data.get('prefix', storage.title['fa'][:2])
+        codes = [prefix + '-' + get_random_string(code_len, random_data) for c in range(count)]
+        while len(set(codes)) < count:
+            codes = list(set(codes))
+            codes += [prefix + '-' + get_random_string(code_len, random_data) for c in range(count - len(set(codes)))]
+        user = request.user
+        items = [DiscountCode(code=code, storage=storage, created_by=user, updated_by=user) for code in codes]
+        DiscountCode.objects.bulk_create(items)
+        return JsonResponse({})
 
 
 class MailView(AdminView):
@@ -76,7 +92,7 @@ class TableFilter(AdminView):
 class CheckLoginToken(AdminView):
     def get(self, request):
         user = request.user
-        boxes = BoxSchema().dump(user.box_permission.all(), many=True)
+        boxes = BoxASchema().dump(user.box_permission.all(), many=True)
         roll = get_roll(user)
         user = UserSchema().dump(user)
         user['roll'] = roll

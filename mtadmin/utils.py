@@ -98,11 +98,11 @@ def assign_default_value(product_id):
     Product.objects.filter(pk=product_id).update(default_storage=min(storages, key=attrgetter('discount_price')))
 
 
-def create_object(request, model, serializer, box_key='box'):
+def create_object(request, model, serializer, single_serializer=None, box_key='box', return_item=False, error_null_box=True):
     if not request.user.has_perm(f'server.add_{model.__name__.lower()}'):
         raise PermissionDenied
     # data = get_data(request)
-    data = json.loads(request)
+    data = json.loads(request.body)
     user = request.user
     boxes = user.box_permission.all()
     if box_key == 'product__box':
@@ -129,7 +129,10 @@ def create_object(request, model, serializer, box_key='box'):
         item.feature_set.add(*features)
         if model == Storage:
             assign_default_value(obj.product_id)
-    return serialized_objects(request, model, serializer)
+    if return_item:
+        request.GET._mutable = True
+        request.GET['id'] = obj.pk
+    return serialized_objects(request, model, serializer, single_serializer, error_null_box=error_null_box)
 
 
 def update_object(request, model, box_key='box'):
@@ -171,7 +174,9 @@ def delete_base(request, model):
 
 def get_box_permission(user, box_key='box'):
     boxes_id = user.box_permission.all().values_list('id', flat=True)
-    return {f'{box_key}__in': boxes_id}
+    if boxes_id:
+        return {f'{box_key}__in': boxes_id}
+    return {}
 
 
 def check_box_permission(user, box_id):

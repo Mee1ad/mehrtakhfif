@@ -181,7 +181,7 @@ class BaseSchema(Schema):
     def get_feature_value(self, obj):
         new_value = []
         for item, index in zip(obj.value, range(len(obj.value))):
-            new_value.append({'name': item[self.lang], 'id': item['id']})
+            new_value.append({'name': item['name'][self.lang], 'id': item['id']})
         return new_value
 
     def get_max_count_for_sale(self, obj):
@@ -389,7 +389,7 @@ class BasketProductSchema(BaseSchema):
             fs = FeatureStorage.objects.get(storage_id=obj.storage_id, feature_id=feature_id)
             feature_list = []
             for fvid in fvid_list:
-                feature_name = next(i[self.lang] for i in f.value if i['id'] == fvid)
+                feature_name = next(i['name'][self.lang] for i in f.value if i['id'] == fvid)
                 feature_price = next(i['price'] for i in fs.value if i['fvid'] == fvid)
                 feature_list.append({'id': feature_id, 'fvid': fvid, 'name': feature_name, 'price': feature_price})
 
