@@ -140,13 +140,19 @@ class ProductASchema(BaseAdminSchema):
     city = fields.Nested(CitySchema)
 
 
+class BrandASchema(Schema):
+    id = fields.Int()
+    name = fields.Dict()
+
+
 class ProductESchema(ProductASchema, ProductSchema):
     class Meta:
-        additional = ProductSchema.Meta.additional + ('disable', 'verify', 'brand')
+        additional = ProductSchema.Meta.additional + ('disable', 'verify')
 
     media = fields.Method("get_media")
     tag = fields.Method("get_tag")
     thumbnail = fields.Nested("MediaASchema")
+    brand = fields.Nested(BrandASchema)
     default_storage_id = fields.Int()
     name = fields.Dict()
     properties = fields.Dict()
@@ -224,10 +230,6 @@ class TagASchema(Schema):
 
 
 class TagESchema(TagASchema, TagSchema):
-    pass
-
-
-class BrandASchema(BaseAdminSchema, BrandSchema):
     pass
 
 

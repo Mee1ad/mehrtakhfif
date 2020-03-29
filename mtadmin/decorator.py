@@ -16,6 +16,7 @@ def error_handler(func):
         try:
             return func(*args, **kwargs)
         except (FieldError, TypeError):
+            traceback.print_exc()
             return HttpResponseBadRequest()
         except ValidationError as e:
             res = HttpResponseBadRequest()
@@ -32,7 +33,7 @@ def error_handler(func):
             pattern = r'(\((\w+)\))='
             field = re.search(pattern, str(e))[2]
             return JsonResponse({'type': 'duplicate', 'field': field}, status=res_code['integrity'])
-        except (FieldDoesNotExist, ValidationError):
+        except FieldDoesNotExist:
             traceback.print_exc()
             return JsonResponse({'message': 'fields name is incorrect'}, status=res_code['bad_request'])
     return wrapper

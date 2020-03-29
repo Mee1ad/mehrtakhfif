@@ -5,7 +5,8 @@ from django.contrib.postgres.fields import JSONField, ArrayField
 from django.contrib.postgres.indexes import GinIndex
 from django.core.validators import *
 from django.db import models
-from django.db.models import CASCADE, PROTECT, SET_NULL
+from django.db.models import CASCADE, PROTECT, SET_NULL, Q
+from django.db.utils import IntegrityError
 from safedelete.signals import post_softdelete
 from django.dispatch import receiver
 from django.utils import timezone
@@ -17,7 +18,6 @@ from mehr_takhfif.settings import HOST, MEDIA_ROOT
 import datetime
 import pysnooper
 from PIL import Image, ImageFilter
-from django.db.models import Q
 
 media_types = [(1, 'image'), (2, 'thumbnail'), (3, 'media'), (4, 'slider'), (5, 'ads'), (6, 'avatar')]
 has_placeholder = [1, 2, 3, 4, 5]
@@ -360,9 +360,10 @@ class Tag(Base):
         return f"{self.name['fa']}"
 
     def validation(self):
-        if Tag.objects.filter(Q(name__en=self.name['en']) | Q(name__fa=self.name['fa']) |
-                              Q(name__ar=self.name['ar'])).count() > 0:
-            raise ValidationError('duplicate tag')
+        if Tag.objects.filter((Q(name__en=self.name['en']) & ~Q(name__en="")) |
+                              (Q(name__fa=self.name['fa']) & ~Q(name__fa="")) |
+                              (Q(name__ar=self.name['ar']) & ~Q(name__ar=""))).count() > 0:
+            raise IntegrityError("DETAIL:  Key (tag)=() already exists.")
 
     def save(self, *args, **kwargs):
         self.validation()
@@ -427,7 +428,7 @@ class Product(Base):
     default_storage = models.OneToOneField(null=True, blank=True, to="Storage", on_delete=CASCADE,
                                            related_name='product_default_storage')
     tag = models.ManyToManyField(Tag)
-    media = models.ManyToManyField(Media)
+    media = models.ManyToManyField(Media, through='ProductMedia')
     income = models.BigIntegerField(default=0)
     profit = models.BigIntegerField(default=0)
     rate = models.PositiveSmallIntegerField(default=0)
@@ -454,6 +455,22 @@ class Product(Base):
         ordering = ['-updated_at']
 
 
+class ProductMedia(models.Model):
+    related = ['storage']
+
+    def __str__(self):
+        return f"{self.id}"
+
+    id = models.BigAutoField(auto_created=True, primary_key=True)
+    product = models.ForeignKey(Product, on_delete=PROTECT)
+    media = models.ForeignKey(Media, on_delete=PROTECT)
+    priority = models.PositiveSmallIntegerField(null=True)
+
+    class Meta:
+        db_table = 'product_media'
+        ordering = ['-id']
+
+
 class Storage(Base):
     select = ['product', 'product__thumbnail']
     prefetch = ['product__media', 'feature']
@@ -467,7 +484,7 @@ class Storage(Base):
         super().save(*args, **kwargs)
 
     product = models.ForeignKey(Product, on_delete=PROTECT)
-    features = models.ManyToManyField(Feature, blank=True, through='FeatureStorage')
+    features = models.ManyToManyField(Feature, through='FeatureStorage')
     available_count = models.PositiveIntegerField(verbose_name='Available count')
     sold_count = models.PositiveIntegerField(default=0, verbose_name='Sold count')
     start_price = models.BigIntegerField(verbose_name='Start price')

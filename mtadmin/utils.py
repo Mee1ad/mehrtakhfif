@@ -21,8 +21,7 @@ class AdminView(LoginRequiredMixin, View):
     pass
 
 
-@pysnooper.snoop()
-def serialized_objects(request, model, serializer, single_serializer=None, box_key='box_id', error_null_box=True):
+def serialized_objects(request, model, serializer=None, single_serializer=None, box_key='box_id', error_null_box=True):
     pk = request.GET.get('id', None)
     params = get_params(request, box_key)
     if pk:
@@ -98,7 +97,7 @@ def assign_default_value(product_id):
     Product.objects.filter(pk=product_id).update(default_storage=min(storages, key=attrgetter('discount_price')))
 
 
-def create_object(request, model, serializer, single_serializer=None, box_key='box', return_item=False, error_null_box=True):
+def create_object(request, model, box_key='box', return_item=False, serializer=None):
     if not request.user.has_perm(f'server.add_{model.__name__.lower()}'):
         raise PermissionDenied
     # data = get_data(request)
@@ -120,9 +119,9 @@ def create_object(request, model, serializer, single_serializer=None, box_key='b
     if model == Product:
         product = obj
         tags = Tag.objects.filter(pk__in=m2m['tags'])
-        media = Media.objects.filter(pk__in=m2m['media'])
+        p_medias = [ProductMedia(product=product, media_id=pk, priority=m2m['media'].index(pk)) for pk in m2m['media']]
+        ProductMedia.objects.bulk_create(p_medias)
         product.tag.add(*tags)
-        product.media.add(*media)
     if model == Category or model == Storage:
         item = obj
         features = Feature.objects.filter(pk__in=m2m['features'])
@@ -132,7 +131,8 @@ def create_object(request, model, serializer, single_serializer=None, box_key='b
     if return_item:
         request.GET._mutable = True
         request.GET['id'] = obj.pk
-    return serialized_objects(request, model, serializer, single_serializer, error_null_box=error_null_box)
+        return serialized_objects(request, model, single_serializer=serializer)
+    return {'id': obj.pk}
 
 
 def update_object(request, model, box_key='box'):

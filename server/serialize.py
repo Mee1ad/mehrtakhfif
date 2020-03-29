@@ -4,7 +4,8 @@ import pysnooper
 from secrets import token_hex
 from datetime import date
 from django.utils import timezone
-from server.models import BasketProduct, FeatureStorage, CostumeHousePrice, Booking, Comment, Invoice, Feature
+from server.models import BasketProduct, FeatureStorage, CostumeHousePrice, Booking, Comment, Invoice, Feature,\
+    ProductMedia
 import time
 
 
@@ -13,8 +14,8 @@ import time
 
 class MediaField(fields.Field):
     def _serialize(self, value, attr, obj, **kwargs):
-        media = value.all()
-        return MediaSchema().dump(media, many=True)
+        media = ProductMedia.objects.filter(product=obj).order_by('priority')
+        return ProductMediaSchema().dump(media, many=True)
 
 
 class FeatureField(fields.Field):
@@ -70,7 +71,8 @@ class BaseSchema(Schema):
         return self.get(obj.name)
 
     def get_brand(self, obj):
-        return {"id": obj.brand_id, "name": self.get(obj.brand.name)}
+        if obj.brand:
+            return {"id": obj.brand_id, "name": self.get(obj.brand.name)}
 
     def get_title(self, obj):
         return self.get(obj.title)
@@ -319,6 +321,12 @@ class ProductSchema(BaseSchema):
     properties = fields.Method("get_properties")
     details = fields.Method("get_details")
     location = fields.Function(lambda o: {"lat": o.location['lat'], 'lng': o.location['lng']} if o.location else {})
+
+
+class ProductMediaSchema(BaseSchema):
+    id = fields.Int()
+    order = fields.Int()
+    media = fields.Method("get_media")
 
 
 class MinProductSchema(BaseSchema):

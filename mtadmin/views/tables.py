@@ -15,8 +15,8 @@ class CategoryView(TableView):
         return JsonResponse(serialized_objects(request, Category, CategoryASchema, CategoryESchema))
 
     def post(self, request):
-        last_items = create_object(request, Category, CategoryASchema)
-        return JsonResponse(last_items, status=201)
+        pk = create_object(request, Category)
+        return JsonResponse(pk, status=201)
 
     def put(self, request):
         update_object(request, Category)
@@ -33,8 +33,8 @@ class BrandView(TableView):
         return JsonResponse(serialized_objects(request, Brand, BrandSchema, BrandSchema))
 
     def post(self, request):
-        last_items = create_object(request, Brand, BrandSchema)
-        return JsonResponse(last_items, status=201)
+        pk = create_object(request, Brand)
+        return JsonResponse(pk, status=201)
 
     def put(self, request):
         update_object(request, Brand)
@@ -51,8 +51,8 @@ class FeatureView(TableView):
         return JsonResponse(serialized_objects(request, Feature, FeatureASchema, FeatureASchema))
 
     def post(self, request):
-        items = create_object(request, Feature, FeatureASchema)
-        return JsonResponse(items, status=201)
+        pk = create_object(request, Feature)
+        return JsonResponse(pk, status=201)
 
     def put(self, request):
         update_object(request, Feature)
@@ -69,8 +69,12 @@ class ProductView(TableView):
         return JsonResponse(serialized_objects(request, Product, ProductASchema, ProductESchema))
 
     def post(self, request):
-        items = create_object(request, Product, ProductESchema)
-        return JsonResponse(items, status=201)
+        pk = create_object(request, Product, ProductESchema)
+        return JsonResponse(pk, status=201)
+
+    def put(self, request):
+        update_object(request, Product)
+        return JsonResponse({})
 
     def patch(self, request):
         data = json.loads(request.body)
@@ -102,8 +106,8 @@ class StorageView(TableView):
         return JsonResponse(serialized_objects(request, Storage, StorageASchema, StorageESchema, 'product__box'))
 
     def post(self, request):
-        storage = create_object(request, Storage, StorageASchema)
-        return JsonResponse(storage, status=201)
+        pk = create_object(request, Storage)
+        return JsonResponse(pk, status=201)
 
     def put(self, request):
         update_object(request, Storage)
@@ -136,8 +140,8 @@ class MenuView(TableView):
         return JsonResponse(serialized_objects(request, Menu, MenuASchema, MenuESchema))
 
     def post(self, request):
-        items = create_object(request, Menu, MenuASchema)
-        return JsonResponse(items, status=201)
+        pk = create_object(request, Menu)
+        return JsonResponse(pk, status=201)
 
     def put(self, request):
         update_object(request, Menu)
@@ -167,7 +171,7 @@ class TagView(TableView):
         return JsonResponse(res)
 
     def post(self, request):
-        items = create_object(request, Tag, TagASchema, TagASchema, return_item=True, error_null_box=False)
+        items = create_object(request, Tag, return_item=True, serializer=TagASchema)
         return JsonResponse(items, status=201)
 
     def put(self, request):
@@ -185,8 +189,8 @@ class SpecialOfferView(TableView):
         return JsonResponse(serialized_objects(request, SpecialOffer, SpecialOfferASchema, SpecialOfferESchema))
 
     def post(self, request):
-        items = create_object(request, SpecialOffer, SpecialOfferASchema)
-        return JsonResponse(items, status=201)
+        pk = create_object(request, SpecialOffer)
+        return JsonResponse(pk, status=201)
 
     def put(self, request):
         update_object(request, SpecialOffer)
@@ -203,8 +207,8 @@ class SpecialProductView(TableView):
         return JsonResponse(serialized_objects(request, SpecialProduct, SpecialProductASchema, SpecialProductESchema))
 
     def post(self, request):
-        items = create_object(request, SpecialProduct, SpecialProductASchema)
-        return JsonResponse(items, status=201)
+        pk = create_object(request, SpecialProduct)
+        return JsonResponse(pk, status=201)
 
     def put(self, request):
         update_object(request, SpecialProduct)
