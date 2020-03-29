@@ -10,13 +10,14 @@ class BasketView(LoginRequired):
         basket_id = request.GET.get('basket_id', None)
         return JsonResponse(get_basket(request.user, request.lang, basket_id))
 
+    @pysnooper.snoop()
     def post(self, request):
         data = load_data(request)
         try:
             assert request.user.is_authenticated
             basket = Basket.objects.filter(user=request.user).order_by('-id').first()
-        except Basket.DoesNotExist:
-            basket = Basket.objects.create(user=request.user, created_by=request.user, updated_by=request.user)
+            if not basket:
+                basket = Basket.objects.create(user=request.user, created_by=request.user, updated_by=request.user)
         except AssertionError:
             return JsonResponse({}, status=401)
         basket_count = self.add_to_basket(basket, data['products'])

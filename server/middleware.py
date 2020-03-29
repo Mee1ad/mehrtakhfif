@@ -20,10 +20,10 @@ class AuthMiddleware:
         path = request.path_info
         route = resolve(path).route
         app_name = resolve(path).app_name
-        token_requests = ['POST', 'PUT', 'PATCH', 'DELETE']
-        allow_without_token = ['login']
+        token_requests = ['POST', 'PUT', 'PATCH']
+        allow_without_token = ['login', 'activate', 'resend_code', 'reset_password', 'privacy_policy', 'test']
         if request.method in token_requests and route not in allow_without_token:
-            # check_csrf_token(request)
+            check_csrf_token(request)
             pass
         # Debug
         if ADMIN:
@@ -66,7 +66,9 @@ class AuthMiddleware:
             request.token = request.headers.get('access-token', None)
 
             if not request.user.is_staff:
-                raise PermissionDenied
+                # todo debug
+                pass
+                # raise PermissionDenied
 
         # set new basket count in cookie
         response = self.get_response(request)

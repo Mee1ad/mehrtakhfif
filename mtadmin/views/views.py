@@ -7,12 +7,25 @@ from mtadmin.serializer import *
 from django.utils.crypto import get_random_string
 import pysnooper
 from server.utils import *
+from django.contrib.auth import login
 
 
-class Test(AdminView):
+class Test(View):
     def get(self, request):
-        raise ValidationError('invaliiiiiiiiid')
-        return JsonResponse({})
+        # user = User.objects.get(pk=1)
+        # login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+        print(request.headers)
+        res = JsonResponse({'test': 'fuck'})
+        res.set_signed_cookie('test1', 'test1', domain='mt.com')
+        res.set_signed_cookie('test2', 'test2', domain='.mt.com')
+        res.set_signed_cookie('test3', 'test3', domain='api.mt.com')
+        res.set_signed_cookie('test4', 'test4', domain='admin.mt.com')
+        return res
+
+    def post(self, request):
+        print(request.headers)
+        print(request.headers['X-Csrf-Token'])
+        return JsonResponse({"message": "wubalubadubdubbbbbbb"})
 
 
 class Token(AdminView):

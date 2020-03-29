@@ -420,13 +420,14 @@ def set_csrf_cookie(response):
 def check_csrf_token(request):
     csrf_cookie = get_signed_cookie(request, 'csrf_cookie', False)
 
+    @pysnooper.snoop()
     def double_check_token(minute):
         time = add_minutes(minute).strftime("%Y-%m-%d-%H-%M")
         try:
             token = hashlib.sha3_224((csrf_cookie + time + CSRF_SALT).encode()).hexdigest()
+            a = request.headers['X-Csrf-Token']
         except TypeError:
             raise PermissionDenied
-        print(request.headers)
         if token == request.headers['X-Csrf-Token']:
             return True
 
