@@ -205,7 +205,7 @@ class UserSchema(BaseSchema):
             'id', 'email', 'first_name', 'last_name', 'gender', 'username', 'meli_code', 'vip',
             'active_address', 'shaba', 'birthday')
 
-    avatar = fields.Function(lambda o: HOST + o.avatar.image.url if hasattr(o, 'avatar') else "")
+    avatar = fields.Function(lambda o: HOST + o.avatar.image.url if hasattr(o.avatar, 'image') else "")
 
 
 class AddressSchema(BaseSchema):

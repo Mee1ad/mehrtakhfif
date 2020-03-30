@@ -19,8 +19,8 @@ from mehr_takhfif import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
-    path('admin/', include('mtadmin.urls')),
-    path('superuser/', admin.site.urls),
+    # path('admin/', include('mtadmin.urls')),
+    path('admin/', admin.site.urls),
     path('', include('server.urls')),
     # path('admin/doc/', include('django.contrib.admindocs.urls')),
 ]
