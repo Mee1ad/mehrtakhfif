@@ -8,10 +8,9 @@ import pysnooper
 from django.db.utils import IntegrityError
 from django.contrib.auth import login
 
-class Profile(View):
+
+class Profile(LoginRequired):
     def get(self, request):
-        # user = User.objects.get(pk=1)
-        # login(request, user)
         res = {'user': UserSchema().dump(request.user)}
         if request.user.is_staff:
             res['user']['is_staff'] = request.user.is_staff
