@@ -13,8 +13,9 @@ from django.contrib.auth import login
 class Test(View):
     def get(self, request):
         # user = User.objects.get(pk=1)
-        # login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-        print(request.headers)
+        # login(request, user)
+        # return JsonResponse({})
+        # print(request.headers['cookie'])
         res = JsonResponse({'test': 'fuck'})
         res.set_signed_cookie('test1', 'test1', domain='mt.com')
         res.set_signed_cookie('test2', 'test2', domain='.mt.com')
@@ -89,7 +90,7 @@ class TableFilter(AdminView):
         box_id = request.GET.get('b')
         user = request.user
         no_box = ['tag', 'invoice', 'invoice_storage', 'comment']
-        check_user_permission(user, f'read_{table}')
+        check_user_permission(user, f'view_{table}')
         check_box_permission(user, box_id)
         box = {'box_id': box_id}
         if table == 'storage':
@@ -106,7 +107,8 @@ class TableFilter(AdminView):
 class CheckLoginToken(AdminView):
     def get(self, request):
         user = request.user
-        boxes = BoxASchema().dump(user.box_permission.all(), many=True)
+        permissions = user.box_permission.all()
+        boxes = BoxASchema().dump(permissions, many=True)
         roll = get_roll(user)
         user = UserSchema().dump(user)
         user['roll'] = roll

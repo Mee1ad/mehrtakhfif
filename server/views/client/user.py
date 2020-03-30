@@ -6,10 +6,12 @@ from server.utils import LoginRequired
 from mehr_takhfif.settings import INVOICE_ROOT
 import pysnooper
 from django.db.utils import IntegrityError
+from django.contrib.auth import login
 
-
-class Profile(LoginRequired):
+class Profile(View):
     def get(self, request):
+        # user = User.objects.get(pk=1)
+        # login(request, user)
         res = {'user': UserSchema().dump(request.user)}
         if request.user.is_staff:
             res['user']['is_staff'] = request.user.is_staff

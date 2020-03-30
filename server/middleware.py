@@ -8,6 +8,7 @@ import json
 from django.urls import resolve
 import time
 import pysnooper
+from django.contrib.auth import login
 
 
 class AuthMiddleware:
@@ -22,7 +23,7 @@ class AuthMiddleware:
         app_name = resolve(path).app_name
         token_requests = ['POST', 'PUT', 'PATCH']
         allow_without_token = ['login', 'activate', 'resend_code', 'reset_password', 'privacy_policy', 'test']
-        if request.method in token_requests and route not in allow_without_token:
+        if request.method in token_requests and route not in allow_without_token and app_name != 'admin':
             check_csrf_token(request)
             pass
         # Debug
@@ -80,6 +81,6 @@ class AuthMiddleware:
                 response = set_signed_cookie(response, 'basket_count', new_basket_count)
             except AttributeError:
                 pass
-        if request.method in token_requests:
+        if request.method in token_requests and app_name != 'admin':
             return set_csrf_cookie(response)
         return response

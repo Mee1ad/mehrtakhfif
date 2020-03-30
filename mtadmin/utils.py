@@ -119,6 +119,8 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
     if model == Product:
         product = obj
         tags = Tag.objects.filter(pk__in=m2m['tags'])
+        [print(m) for m in m2m['media']]
+        [print(m2m['media'].index(m)) for m in m2m['media']]
         p_medias = [ProductMedia(product=product, media_id=pk, priority=m2m['media'].index(pk)) for pk in m2m['media']]
         ProductMedia.objects.bulk_create(p_medias)
         product.tag.add(*tags)
@@ -144,12 +146,14 @@ def update_object(request, model, box_key='box'):
     items = model.objects.filter(pk=data['id'], **box_check)
     if model == Product:
         tags = Tag.objects.filter(pk__in=data['tags'])
-        media = Media.objects.filter(pk__in=data['media'])
         product = items.first()
         product.tag.clear()
         product.tag.add(*tags)
         product.media.clear()
-        product.media.add(*media)
+        [print(m) for m in data['media']]
+        [print(data['media'].index(m)) for m in data['media']]
+        p_medias = [ProductMedia(product=product, media_id=pk, priority=data['media'].index(pk)) for pk in data['media']]
+        ProductMedia.objects.bulk_create(p_medias)
         data.pop('tags')
         data.pop('media')
     if model == Category or model == Storage:
@@ -190,6 +194,7 @@ def check_box_permission(user, box_id):
 
 def check_user_permission(user, permission):
     if not user.has_perm(f'server.{permission}'):
+        print(f'{user} has not permission for server.{permission}')
         raise PermissionDenied
 
 

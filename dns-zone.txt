@@ -8,6 +8,8 @@ $TTL 120        ; 2 minutes default TTL
 @                  IN        A      37.152.182.220
 www                IN        A      37.152.182.220
 api                IN        A      37.152.182.220
+admin              IN        A      37.152.182.220
+static             IN        A      37.152.182.220
 kibana             IN        A      37.152.182.220
 flower             IN        A      37.152.182.220
 box                IN        A      193.176.241.44

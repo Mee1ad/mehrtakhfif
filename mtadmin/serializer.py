@@ -149,7 +149,7 @@ class ProductESchema(ProductASchema, ProductSchema):
     class Meta:
         additional = ProductSchema.Meta.additional + ('disable', 'verify')
 
-    media = fields.Method("get_media")
+    # media = fields.Method("get_media")
     tag = fields.Method("get_tag")
     thumbnail = fields.Nested("MediaASchema")
     brand = fields.Nested(BrandASchema)

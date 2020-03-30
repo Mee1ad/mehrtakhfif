@@ -4,7 +4,7 @@ import pysnooper
 from secrets import token_hex
 from datetime import date
 from django.utils import timezone
-from server.models import BasketProduct, FeatureStorage, CostumeHousePrice, Booking, Comment, Invoice, Feature,\
+from server.models import BasketProduct, FeatureStorage, CostumeHousePrice, Booking, Comment, Invoice, Feature, \
     ProductMedia
 import time
 
@@ -15,7 +15,8 @@ import time
 class MediaField(fields.Field):
     def _serialize(self, value, attr, obj, **kwargs):
         media = ProductMedia.objects.filter(product=obj).order_by('priority')
-        return ProductMediaSchema().dump(media, many=True)
+        medias = ProductMediaSchema().dump(media, many=True)
+        return [m['media'] for m in medias]
 
 
 class FeatureField(fields.Field):
@@ -90,7 +91,8 @@ class BaseSchema(Schema):
         return self.get(obj.description)
 
     def get_properties(self, obj):
-        return self.get(obj.properties)
+        if obj.properties:
+            return self.get(obj.properties)
 
     def get_details(self, obj):
         return self.get(obj.details)
@@ -203,7 +205,7 @@ class UserSchema(BaseSchema):
             'id', 'email', 'first_name', 'last_name', 'gender', 'username', 'meli_code', 'vip',
             'active_address', 'shaba', 'birthday')
 
-    avatar = fields.Function(lambda o: HOST + o.avatar.image.url if hasattr(o.avatar, 'file') else "")
+    avatar = fields.Function(lambda o: HOST + o.avatar.image.url if hasattr(o, 'avatar') else "")
 
 
 class AddressSchema(BaseSchema):
@@ -324,8 +326,6 @@ class ProductSchema(BaseSchema):
 
 
 class ProductMediaSchema(BaseSchema):
-    id = fields.Int()
-    order = fields.Int()
     media = fields.Method("get_media")
 
 

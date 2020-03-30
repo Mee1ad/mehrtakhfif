@@ -80,13 +80,15 @@ class Login(View):
     def send_activation(user):
         resend_timeout = 0.5
         activation_expire = 2
-        if timezone.now() < add_minutes(resend_timeout - activation_expire, time=user.activation_expire):
-            raise PermissionDenied
+        # todo debug
+        # if timezone.now() < add_minutes(resend_timeout - activation_expire, time=user.activation_expire):
+        #     raise PermissionDenied
         user.activation_code = random.randint(10000, 99999)
         user.activation_expire = add_minutes(activation_expire)
         user.save()
         # todo debug
         # send_sms(user.username, input_data=[{'code': user.activation_code}])
+        # todo debug
         res = {'code': user.activation_code, 'resend_timeout': resend_timeout, 'timeout': activation_expire}
         return JsonResponse(res, status=res_code['activate'])
 

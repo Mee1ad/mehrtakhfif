@@ -137,10 +137,8 @@ class User(AbstractUser):
     def __str__(self):
         return self.username
 
-    first_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='First name',
-                                  validators=[validate_slug])
-    last_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='Last name',
-                                 validators=[validate_slug])
+    first_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='First name')
+    last_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='Last name')
     username = models.CharField(max_length=150, unique=True)
     language = models.CharField(max_length=7, default='fa')
     email = models.CharField(max_length=255, blank=True, null=True, validators=[validate_email])
