@@ -137,7 +137,7 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
     return {'id': obj.pk}
 
 
-def update_object(request, model, box_key='box'):
+def update_object(request, model, box_key='box', return_item=False, serializer=None):
     if not request.user.has_perm(f'server.change_{model.__name__.lower()}'):
         raise PermissionDenied
     # data = get_data(request)
@@ -165,6 +165,10 @@ def update_object(request, model, box_key='box'):
         if model == Storage:
             assign_default_value(item.product_id)
     items.update(**data)
+    if return_item:
+        request.GET._mutable = True
+        request.GET['id'] = items.first().pk
+        return serialized_objects(request, model, single_serializer=serializer)
 
 
 def delete_base(request, model):

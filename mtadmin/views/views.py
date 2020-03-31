@@ -12,16 +12,25 @@ from django.contrib.auth import login
 
 class Test(View):
     def get(self, request):
-        # user = User.objects.get(pk=1)
-        # login(request, user)
-        # return JsonResponse({})
-        # print(request.headers['cookie'])
-        res = JsonResponse({'test': 'fuck'})
-        res.set_signed_cookie('test1', 'test1', domain='mt.com')
-        res.set_signed_cookie('test2', 'test2', domain='.mt.com')
-        res.set_signed_cookie('test3', 'test3', domain='api.mt.com')
-        res.set_signed_cookie('test4', 'test4', domain='admin.mt.com')
-        return res
+        @pysnooper.snoop()
+        def get_child_count(category, sibling=0, childes=None):
+            sibling_categories = Category.objects.filter(parent_id=category.pk)
+            if not childes:
+                childes = list(sibling_categories)
+            childes += list(sibling_categories)
+            sibling_count = sibling_categories.count()
+            if sibling_count == 0:
+                return sibling
+            for sibl in sibling_categories:
+                new_childes = get_child_count(sibl, childes=childes)
+                if new_childes:
+                    sibling_count += new_childes['child_count']
+            childes = list(set(childes))
+            return {'child_count': sibling_count, 'childes': CategoryASchema().dump(childes, many=True)}
+
+        category = Category.objects.get(pk=1)
+        a = get_child_count(category)
+        return JsonResponse(a)
 
     def post(self, request):
         print(request.headers)

@@ -10,9 +10,33 @@ from django.db.utils import IntegrityError
 
 class CategoryView(TableView):
     permission_required = 'server.view_category'
-
+    # todo - bug pk=1 childs product with parent product are both 18
     def get(self, request):
-        return JsonResponse(serialized_objects(request, Category, CategoryASchema, CategoryESchema))
+        categories = Category.objects.filter(parent__isnull=True)
+
+        def get_child_count(category, sibling=0, childes=None):
+            sibling_categories = Category.objects.filter(parent_id=category.pk)
+            if not childes:
+                childes = list(sibling_categories)
+            childes += list(sibling_categories)
+            sibling_count = sibling_categories.count()
+            if sibling_count == 0:
+                return sibling
+            for sibl in sibling_categories:
+                new_childes = get_child_count(sibl, childes=childes)
+                if new_childes:
+                    sibling_count += new_childes['count']
+            return {'count': sibling_count, 'childes': list(set(childes))}
+
+        for category in categories:
+            children = get_child_count(category)
+            if children == 0:
+                children = {'count': 0, 'childes': []}
+            category.child_count = children['count']
+            category.category_child_product_count = Product.objects.filter(category__in=children['childes']).count()
+            category.product_count = Product.objects.filter(category=category).count()
+
+        return JsonResponse(get_pagination(categories, request.step, request.page, CategoryASchema))
 
     def post(self, request):
         pk = create_object(request, Category)
@@ -30,15 +54,15 @@ class BrandView(TableView):
     permission_required = 'server.view_brand'
 
     def get(self, request):
-        return JsonResponse(serialized_objects(request, Brand, BrandSchema, BrandSchema))
+        return JsonResponse(serialized_objects(request, Brand, BrandASchema, BrandASchema))
 
     def post(self, request):
-        pk = create_object(request, Brand)
+        pk = create_object(request, Brand, return_item=True, serializer=BrandASchema)
         return JsonResponse(pk, status=201)
 
     def put(self, request):
-        update_object(request, Brand)
-        return JsonResponse({})
+        item = update_object(request, Brand, return_item=True, serializer=BrandASchema)
+        return JsonResponse({"data": item})
 
     def delete(self, request):
         return delete_base(request, Brand)

@@ -140,8 +140,7 @@ class ProductASchema(BaseAdminSchema):
     city = fields.Nested(CitySchema)
 
 
-class BrandASchema(Schema):
-    id = fields.Int()
+class BrandASchema(BrandSchema, BaseAdminSchema):
     name = fields.Dict()
 
 
@@ -152,7 +151,7 @@ class ProductESchema(ProductASchema, ProductSchema):
     # media = fields.Method("get_media")
     tag = fields.Method("get_tag")
     thumbnail = fields.Nested("MediaASchema")
-    brand = fields.Nested(BrandASchema)
+    brand = fields.Function(lambda o: BrandASchema().dump(o.brand))
     default_storage_id = fields.Int()
     name = fields.Dict()
     properties = fields.Dict()
@@ -204,8 +203,9 @@ class MediaESchema(MediaASchema, MediaSchema):
     pass
 
 
-class CategoryASchema(BaseAdminSchema):
-    pass
+class CategoryASchema(BaseAdminSchema, CategorySchema):
+    class Meta:
+        additional = CategorySchema.Meta.additional + ('child_count', 'category_child_product_count', 'product_count')
 
 
 class CategoryESchema(CategoryASchema, CategorySchema):

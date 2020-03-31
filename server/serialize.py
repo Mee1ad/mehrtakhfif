@@ -301,6 +301,7 @@ class TagSchema(BaseSchema):
 class BrandSchema(BaseSchema):
     id = fields.Int()
     name = fields.Method('get_name')
+    permalink = fields.Str()
 
 
 class ProductSchema(BaseSchema):

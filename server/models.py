@@ -378,6 +378,7 @@ class Tag(Base):
 
 class Brand(Base):
     name = JSONField(default=multilanguage)
+    permalink = models.CharField(max_length=255, db_index=True, unique=True, null=True)
     box = models.ForeignKey(Box, on_delete=CASCADE)
 
     class Meta:
