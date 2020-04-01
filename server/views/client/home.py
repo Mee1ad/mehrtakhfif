@@ -71,19 +71,20 @@ class BestSeller(View):
 class BoxWithCategory(View):
     def get(self, request):
         box_permalink = request.GET.get('box_permalink', None)
-        if box_permalink:
-            box_id = Box.objects.filter(permalink=box_permalink).first().pk
-            categories = get_categories(request.lang, box_id)
-            res = {'categories': categories}
-        else:
-            boxes = Box.objects.all()
-            box_list = []
-            for box in boxes:
-                categories = get_categories(request.lang, box.id)
-                box = BoxSchema(language=request.lang).dump(box)
-                box['categories'] = categories
-                box_list.append(box)
-            res = {'boxes': box_list}
+        box_id = request.GET.get('box_id', None)
+        filter_param = {'permalink': box_permalink} if box_permalink else {'pk': box_id}
+        box_id = Box.objects.filter(**filter_param).first().pk
+        categories = get_categories(request.lang, box_id)
+        res = {'categories': categories}
+        # else:
+        #     boxes = Box.objects.all()
+        #     box_list = []
+        #     for box in boxes:
+        #         categories = get_categories(request.lang, box.id)
+        #         box = BoxSchema(language=request.lang).dump(box)
+        #         box['categories'] = categories
+        #         box_list.append(box)
+        #     res = {'boxes': box_list}
         return JsonResponse(res)
 
 

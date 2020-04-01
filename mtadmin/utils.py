@@ -23,14 +23,14 @@ class AdminView(LoginRequiredMixin, View):
 
 def serialized_objects(request, model, serializer=None, single_serializer=None, box_key='box_id', error_null_box=True):
     pk = request.GET.get('id', None)
-    params = get_params(request, box_key)
     if pk:
         try:
             box_check = get_box_permission(request.user, box_key) if error_null_box else {}
-            obj = model.objects.get(pk=pk, **params['filter'], **box_check)
+            obj = model.objects.get(pk=pk, **box_check)
             return {"data": single_serializer().dump(obj)}
         except model.DoesNotExist:
             raise PermissionDenied
+    params = get_params(request, box_key)
     try:
         if error_null_box and not params['filter'].get(box_key):
             raise PermissionDenied
@@ -179,14 +179,14 @@ def delete_base(request, model):
         return JsonResponse({}, status=400)
     return prepare_for_delete(model, pk, request.user)
 
-
+# todo remove
 def get_box_permission(user, box_key='box'):
     boxes_id = user.box_permission.all().values_list('id', flat=True)
     if boxes_id:
         return {f'{box_key}__in': boxes_id}
     return {}
 
-
+# todo remove
 def check_box_permission(user, box_id):
     try:
         box_id = int(box_id)
@@ -198,7 +198,6 @@ def check_box_permission(user, box_id):
 
 def check_user_permission(user, permission):
     if not user.has_perm(f'server.{permission}'):
-        print(f'{user} has not permission for server.{permission}')
         raise PermissionDenied
 
 

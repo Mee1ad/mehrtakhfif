@@ -207,9 +207,12 @@ class CategoryASchema(BaseAdminSchema, CategorySchema):
     class Meta:
         additional = CategorySchema.Meta.additional + ('child_count', 'category_child_product_count', 'product_count')
 
+    parent = fields.Function(lambda o: o.parent_id)
 
-class CategoryESchema(CategoryASchema, CategorySchema):
-    pass
+
+class CategoryESchema(CategoryASchema):
+    class Meta:
+        additional = CategoryASchema.Meta.additional + ('box_id',)
 
 
 class FeatureASchema(BaseAdminSchema):

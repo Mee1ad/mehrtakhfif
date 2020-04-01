@@ -10,26 +10,25 @@ from django.db.utils import IntegrityError
 
 class CategoryView(TableView):
     permission_required = 'server.view_category'
-    # todo - bug pk=1 childs product with parent product are both 18
+
     def get(self, request):
-        categories = Category.objects.filter(parent__isnull=True)
-
-        def get_child_count(category, sibling=0, childes=None):
-            sibling_categories = Category.objects.filter(parent_id=category.pk)
-            if not childes:
-                childes = list(sibling_categories)
-            childes += list(sibling_categories)
-            sibling_count = sibling_categories.count()
-            if sibling_count == 0:
-                return sibling
-            for sibl in sibling_categories:
-                new_childes = get_child_count(sibl, childes=childes)
-                if new_childes:
-                    sibling_count += new_childes['count']
-            return {'count': sibling_count, 'childes': list(set(childes))}
-
+        params = get_params(request, 'box_id')
+        box_id = params['filter'].get('box_id')
+        parent_id = params['filter'].get('parent_id')
+        pk = request.GET.get('id', None)
+        if pk:
+            data = serialized_objects(request, Category, single_serializer=CategoryESchema, box_key='box_id')
+            return JsonResponse(data)
+        if box_id is None and parent_id is None:
+            raise PermissionDenied
+        if parent_id:
+            box_id = Category.objects.get(parent_id=parent_id).pk
+            box_permissions = request.user.box_permission.all().values_list('id', flat=True)
+            if box_id not in box_permissions:
+                raise PermissionDenied
+        categories = Category.objects.filter(**params['filter']).order_by(*params['order'])
         for category in categories:
-            children = get_child_count(category)
+            children = self.get_child_count(category)
             if children == 0:
                 children = {'count': 0, 'childes': []}
             category.child_count = children['count']
@@ -48,6 +47,20 @@ class CategoryView(TableView):
 
     def delete(self, request):
         return delete_base(request, Category)
+
+    def get_child_count(self, category, sibling=0, childes=None):
+        sibling_categories = Category.objects.filter(parent_id=category.pk)
+        if not childes:
+            childes = list(sibling_categories)
+        childes += list(sibling_categories)
+        sibling_count = sibling_categories.count()
+        if sibling_count == 0:
+            return sibling
+        for sibl in sibling_categories:
+            new_childes = self.get_child_count(sibl, childes=childes)
+            if new_childes:
+                sibling_count += new_childes['count']
+        return {'count': sibling_count, 'childes': list(set(childes))}
 
 
 class BrandView(TableView):
