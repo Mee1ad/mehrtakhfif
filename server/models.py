@@ -5,7 +5,7 @@ from django.contrib.postgres.fields import JSONField, ArrayField
 from django.contrib.postgres.indexes import GinIndex
 from django.core.validators import *
 from django.db import models
-from django.db.models import CASCADE, PROTECT, SET_NULL, Q
+from django.db.models import CASCADE, PROTECT, SET_NULL, Q, F
 from django.db.utils import IntegrityError
 from safedelete.signals import post_softdelete
 from django.dispatch import receiver
@@ -18,6 +18,9 @@ from mehr_takhfif.settings import HOST, MEDIA_ROOT
 import datetime
 import pysnooper
 from PIL import Image, ImageFilter
+from django.contrib.postgres.fields import ArrayField
+from django.db.models.query import QuerySet
+from operator import attrgetter
 
 media_types = [(1, 'image'), (2, 'thumbnail'), (3, 'media'), (4, 'slider'), (5, 'ads'), (6, 'avatar')]
 has_placeholder = [1, 2, 3, 4, 5]
@@ -124,18 +127,78 @@ def is_list_of_dict(data):
     raise ValidationError('data is not list')
 
 
-class MyManager(models.Manager):
-    def safe_delete(self, user_id, **kwargs):
-        try:
-            pass
-        except Exception:
-            pass
+class MyQuerySet(QuerySet):
+    def update(self, *args, **kwargs):
+        remove_list = ['id', 'box_id', 'tags', 'media', 'features']
+        model = self[0].__class__.__name__.lower()
+        validations = {'storage': self.storage_validation, 'category': self.category_validation,
+                       'product': self.product_validation}
+        kwargs = validations[model](**kwargs)
+        [kwargs.pop(item, None) for item in remove_list]
+        super().update(**kwargs)
+
+    def assign_default_value(self, product_id):
+        storages = Storage.objects.filter(product_id=product_id)
+        Product.objects.filter(pk=product_id).update(default_storage=min(storages, key=attrgetter('discount_price')))
+
+    def permalink_validation(self, **kwargs):
+        pattern = '^[A-Za-z0-9\u0591-\u07FF\uFB1D-\uFDFD\uFE70-\uFEFC][A-Za-z0-9-\u0591-\u07FF\uFB1D-\uFDFD\uFE70-\uFEFC]*$'
+        permalink = kwargs.get('permalink')
+        if permalink and not re.match(pattern, permalink):
+            raise ValidationError("invalid permalink")
+
+    def category_validation(self, **kwargs):
+        self.permalink_validation(**kwargs)
+        pk = kwargs.get('id')
+        parent_id = kwargs.get('parent_id')
+        if (pk == parent_id and pk is not None) or Category.objects.filter(pk=parent_id, parent_id=pk).exists():
+            raise ValidationError("parent is invalid")
+        item = self.first()
+        features = Feature.objects.filter(pk__in=kwargs.get('features', []))
+        item.feature_set.clear()
+        item.feature_set.add(*features)
+        return kwargs
+
+    def storage_validation(self, **kwargs):
+        item = self.first()
+        features = Feature.objects.filter(pk__in=kwargs.get('features', []))
+        item.features.clear()
+        item.features.add(*features)
+        self.assign_default_value(item.product_id)
+        return kwargs
+
+    def product_validation(self, **kwargs):
+        self.permalink_validation(**kwargs)
+        default_storage_id = kwargs.get('default_storage_id')
+        pk = kwargs.get('id')
+        if default_storage_id:
+            new_default_storage = Storage.objects.filter(pk=default_storage_id)
+            Storage.objects.filter(product_id=pk, priority__lt=new_default_storage.first().priority) \
+                .order_by('priority').update(priority=F('priority') + 1)
+            new_default_storage.update(priority=0)
+        tags = Tag.objects.filter(pk__in=kwargs.get('tags', []))
+        product = self.first()
+        product.tags.clear()
+        product.tags.add(*tags)
+        product.media.clear()
+        p_medias = [ProductMedia(product=product, media_id=pk, priority=kwargs['media'].index(pk)) for pk in
+                    kwargs.get('media', [])]
+        ProductMedia.objects.bulk_create(p_medias)
+        [Storage.objects.filter(pk=pk).update(priority=kwargs['storages_id'].index(pk))
+         for pk in kwargs.get('storages_id', [])]
+        return kwargs
 
 
 class User(AbstractUser):
 
     def __str__(self):
         return self.username
+
+    def get_avatar(self):
+        try:
+            return HOST + self.avatar.image.url
+        except Exception:
+            pass
 
     first_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='First name')
     last_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='Last name')
@@ -152,6 +215,7 @@ class User(AbstractUser):
     is_superuser = models.BooleanField(default=False, verbose_name='Superuser')
     is_staff = models.BooleanField(default=False, verbose_name='Staff')
     is_vip = models.BooleanField(default=False)
+    is_supplier = models.BooleanField(default=False)
     privacy_agreement = models.BooleanField(default=False)
     default_address = models.OneToOneField(to="Address", on_delete=SET_NULL, null=True, blank=True,
                                            related_name="user_default_address")
@@ -185,6 +249,28 @@ class Base(SafeDeleteModel):
     updated_by = models.ForeignKey(User, on_delete=PROTECT, related_name="%(app_label)s_%(class)s_updated_by")
     deleted_by = models.ForeignKey(User, on_delete=PROTECT, null=True, blank=True,
                                    related_name="%(app_label)s_%(class)s_deleted_by")
+
+    def safe_delete(self, user_id):
+        i = 1
+        while True:
+            try:
+                self.permalink = f"{self.permalink}-deleted-{i}"
+                self.deleted_by_id = user_id
+                self.save()
+                break
+            except IntegrityError:
+                i += 1
+            except AttributeError:
+                self.deleted_by_id = user_id
+                self.save()
+                break
+        self.delete()
+
+    def get_name_fa(self):
+        try:
+            return self.name['fa']
+        except Exception:
+            pass
 
 
 class Client(models.Model):
@@ -258,10 +344,10 @@ class Box(Base):
     def __str__(self):
         return self.name['fa']
 
-    objects = MyManager()
     name = JSONField(default=multilanguage)
     permalink = models.CharField(max_length=255, db_index=True, unique=True)
     owner = models.OneToOneField(User, on_delete=PROTECT)
+    settings = JSONField(default=dict)
 
     class Meta:
         db_table = 'box'
@@ -277,7 +363,7 @@ class Media(Base):
             return self.title['user_id']
 
     def save(self, *args, **kwargs):
-        sizes = {'thumbnail': (600, 372), 'media': (1280, 794)}
+        sizes = {'thumbnail': (600, 374), 'media': (1280, 794)}
         try:
             with Image.open(self.image) as im:
                 width, height = im.size
@@ -310,16 +396,35 @@ class Media(Base):
 
 
 class Category(Base):
+    objects = MyQuerySet.as_manager()
     prefetch = ['feature_set']
 
     def __str__(self):
         return f"{self.name['fa']}"
 
+    def validation(self):
+        try:
+            self.permalink = self.permalink.lower()
+        except Exception:
+            pass
+        if self.parent is None and self.permalink is None:
+            raise ValidationError("if this is a foreign category you must specify a parent category")
+
+    def save(self, *args, **kwargs):
+        self.validation()
+        super().save(*args, **kwargs)
+
+    def get_media(self):
+        try:
+            return HOST + self.media.image.url
+        except Exception:
+            pass
+
     parent = models.ForeignKey("self", on_delete=CASCADE, null=True, blank=True)
     box = models.ForeignKey(Box, on_delete=CASCADE)
     name = JSONField(default=multilanguage)
-    permalink = models.CharField(max_length=255, db_index=True, unique=True)
-    priority = models.SmallIntegerField(default=0)
+    permalink = models.CharField(max_length=255, db_index=True)
+    priority = models.PositiveSmallIntegerField(default=0)
     disable = models.BooleanField(default=False)
     media = models.ForeignKey(Media, on_delete=CASCADE, null=True, blank=True)
 
@@ -344,6 +449,7 @@ class Feature(Base):
     name = JSONField(default=multilanguage)
     type = models.PositiveSmallIntegerField(default=1, choices=((1, 'bool'), (2, 'single'), (3, 'multi')))
     value = JSONField(default=feature_value)
+    # todo move manytomanyfield to category
     category = models.ManyToManyField(Category)
     box = models.ForeignKey(Box, on_delete=CASCADE, blank=True, null=True)
     icon = models.CharField(default='default', max_length=255)
@@ -354,14 +460,18 @@ class Feature(Base):
 
 
 class Tag(Base):
+    objects = MyQuerySet.as_manager()
+
     def __str__(self):
         return f"{self.name['fa']}"
 
     def validation(self):
+        self.permalink = self.permalink.lower()
+
         if Tag.objects.filter((Q(name__en=self.name['en']) & ~Q(name__en="")) |
                               (Q(name__fa=self.name['fa']) & ~Q(name__fa="")) |
                               (Q(name__ar=self.name['ar']) & ~Q(name__ar=""))).count() > 0:
-            raise IntegrityError("DETAIL:  Key (tag)=() already exists.")
+            raise IntegrityError("DETAIL:  Key (name)=() already exists.")
 
     def save(self, *args, **kwargs):
         self.validation()
@@ -377,9 +487,21 @@ class Tag(Base):
 
 
 class Brand(Base):
+    objects = MyQuerySet.as_manager()
+
+    def validation(self):
+        self.permalink = self.permalink.lower()
+        if Brand.objects.filter((Q(name__en=self.name['en']) & ~Q(name__en="")) |
+                                (Q(name__fa=self.name['fa']) & ~Q(name__fa="")) |
+                                (Q(name__ar=self.name['ar']) & ~Q(name__ar=""))).count() > 0:
+            raise IntegrityError("DETAIL:  Key (name)=() already exists.")
+
+    def save(self, *args, **kwargs):
+        self.validation()
+        super().save(*args, **kwargs)
+
     name = JSONField(default=multilanguage)
-    permalink = models.CharField(max_length=255, db_index=True, unique=True, null=True)
-    box = models.ForeignKey(Box, on_delete=CASCADE)
+    permalink = models.CharField(max_length=255, db_index=True, unique=True)
 
     class Meta:
         db_table = 'brand'
@@ -387,15 +509,24 @@ class Brand(Base):
 
 
 class Product(Base):
+    objects = MyQuerySet.as_manager()
     select = ['category', 'box', 'thumbnail']
-    prefetch = ['tag', 'media']
+    prefetch = ['tags', 'media']
     filter = {"verify": True, "disable": False}
+
+    def validation(self):
+        try:
+            self.permalink = self.permalink.lower()
+        except Exception:
+            pass
+
+    def save(self, *args, **kwargs):
+        print('heh')
+        self.validation()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.name['fa']}"
-
-    def get_name_fa(self):
-        return self.name['fa']
 
     def get_name_en(self):
         return self.name['en']
@@ -413,7 +544,10 @@ class Product(Base):
         return self.category.name['ar']
 
     def get_thumbnail(self):
-        return HOST + self.thumbnail.image.url
+        try:
+            return HOST + self.thumbnail.image.url
+        except Exception:
+            pass
 
     # def save(self):
     #     self.slug = slugify(self.title)
@@ -422,14 +556,14 @@ class Product(Base):
     category = models.ForeignKey(Category, on_delete=CASCADE)
     box = models.ForeignKey(Box, on_delete=PROTECT)
     brand = models.ForeignKey(Brand, on_delete=PROTECT, null=True, blank=True)
-    thumbnail = models.ForeignKey(Media, on_delete=PROTECT, related_name='product_thumbnail')
+    thumbnail = models.ForeignKey(Media, on_delete=PROTECT, related_name='product_thumbnail', null=True)
     city = models.ForeignKey(City, on_delete=CASCADE, null=True, blank=True)
     default_storage = models.OneToOneField(null=True, blank=True, to="Storage", on_delete=CASCADE,
                                            related_name='product_default_storage')
-    tag = models.ManyToManyField(Tag)
+    tags = models.ManyToManyField(Tag, through="ProductTag")
     media = models.ManyToManyField(Media, through='ProductMedia')
     income = models.BigIntegerField(default=0)
-    profit = models.BigIntegerField(default=0)
+    profit = models.PositiveIntegerField(default=0)
     rate = models.PositiveSmallIntegerField(default=0)
     disable = models.BooleanField(default=True)
     verify = models.BooleanField(default=False)
@@ -454,6 +588,17 @@ class Product(Base):
         ordering = ['-updated_at']
 
 
+class ProductTag(models.Model):
+    id = models.BigAutoField(auto_created=True, primary_key=True)
+    product = models.ForeignKey(Product, on_delete=PROTECT)
+    tag = models.ForeignKey(Tag, on_delete=PROTECT)
+    show = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = 'product_tag'
+        ordering = ['-id']
+
+
 class ProductMedia(models.Model):
     related = ['storage']
 
@@ -471,31 +616,40 @@ class ProductMedia(models.Model):
 
 
 class Storage(Base):
+    objects = MyQuerySet.as_manager()
     select = ['product', 'product__thumbnail']
     prefetch = ['product__media', 'feature']
 
     def __str__(self):
         return f"{self.product}"
 
-    def save(self, *args, **kwargs):
+    def validation(self):
+        if self.features_percent > 100 or self.discount_percent > 100 or self.vip_discount_percent:
+            raise ValidationError("percent can't be bigger than 100")
         if self.discount_price < self.start_price:
             raise ValidationError("discount price is less than start price")
+
+    def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
 
     product = models.ForeignKey(Product, on_delete=PROTECT)
-    features = models.ManyToManyField(Feature, through='FeatureStorage')
+    features = models.ManyToManyField(Feature, through='FeatureStorage', related_query_name="features")
+    items = models.ManyToManyField("self", through='Package', symmetrical=False)
+    features_percent = models.PositiveSmallIntegerField()
     available_count = models.PositiveIntegerField(verbose_name='Available count')
     sold_count = models.PositiveIntegerField(default=0, verbose_name='Sold count')
-    start_price = models.BigIntegerField(verbose_name='Start price')
-    final_price = models.BigIntegerField(verbose_name='Final price')
-    discount_price = models.BigIntegerField(verbose_name='Discount price')
-    vip_discount_price = models.BigIntegerField(verbose_name='Discount vip price')
-    transportation_price = models.IntegerField(default=0)
+    start_price = models.PositiveIntegerField(verbose_name='Start price')
+    final_price = models.PositiveIntegerField(verbose_name='Final price')
+    discount_price = models.PositiveIntegerField(verbose_name='Discount price')
+    vip_discount_price = models.PositiveIntegerField(verbose_name='Discount vip price')
+    transportation_price = models.PositiveIntegerField(default=0)
     available_count_for_sale = models.PositiveIntegerField(verbose_name='Available count for sale')
     max_count_for_sale = models.PositiveSmallIntegerField(default=1)
     min_count_alert = models.PositiveSmallIntegerField(default=5)
     priority = models.PositiveSmallIntegerField(default=0)
-    tax = models.IntegerField(default=0)
+    tax_type = models.PositiveSmallIntegerField(
+        choices=[(1, 'has_not'), (2, 'from_total_price'), (3, 'from_profit')])
+    tax = models.PositiveIntegerField(default=0)
     discount_percent = models.PositiveSmallIntegerField(verbose_name='Discount price percent')
     vip_discount_percent = models.PositiveSmallIntegerField(verbose_name='Discount vip price percent')
     gender = models.BooleanField(blank=True, null=True)
@@ -503,7 +657,7 @@ class Storage(Base):
     deadline = models.DateTimeField(default=next_month)
     start_time = models.DateTimeField(auto_now_add=True)
     title = JSONField(default=multilanguage)
-    supplier = models.ManyToManyField(User, through='StorageSupplier')
+    supplier = models.ForeignKey(User, on_delete=PROTECT)
     invoice_description = JSONField(default=multilanguage)
     invoice_title = JSONField(default=multilanguage)
 
@@ -512,14 +666,22 @@ class Storage(Base):
         ordering = ['-id']
 
 
-class StorageSupplier(models.Model):
-    id = models.AutoField(auto_created=True, primary_key=True)
-    user = models.ForeignKey(User, on_delete=PROTECT)
-    storage = models.ForeignKey(Storage, on_delete=PROTECT)
-    percent = models.PositiveSmallIntegerField()
+class Package(Base):
+    def validation(self):
+        if self.discount_percent > 100:
+            raise ValidationError("percent can't be bigger than 100")
+
+    def save(self, *args, **kwargs):
+        self.validation()
+        super().save(*args, **kwargs)
+
+    package = models.ForeignKey(Storage, on_delete=PROTECT, related_name="package")
+    package_item = models.ForeignKey(Storage, on_delete=PROTECT, related_name="package_item")
+    count = models.PositiveSmallIntegerField(default=1)
+    discount_percent = models.PositiveSmallIntegerField(default=0)
 
     class Meta:
-        db_table = 'storage_supplier'
+        db_table = 'package'
         ordering = ['-id']
 
 
@@ -547,7 +709,7 @@ class Basket(Base):
 
     user = models.ForeignKey(User, on_delete=CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
-    count = models.IntegerField(default=0)
+    count = models.PositiveIntegerField(default=0)
     products = models.ManyToManyField(Storage, through='BasketProduct')
     description = models.TextField(blank=True, null=True)
     # active = models.BooleanField(default=True)
@@ -584,7 +746,7 @@ class BasketProduct(models.Model):
     id = models.BigAutoField(auto_created=True, primary_key=True)
     storage = models.ForeignKey(Storage, on_delete=PROTECT)
     basket = models.ForeignKey(Basket, on_delete=PROTECT, null=True, blank=True)
-    count = models.IntegerField(default=1)
+    count = models.PositiveIntegerField(default=1)
     box = models.ForeignKey(Box, on_delete=PROTECT)
     features = JSONField(default=list)
 
@@ -608,6 +770,8 @@ class Blog(Base):
 
 
 class BlogPost(Base):
+    objects = MyQuerySet.as_manager()
+
     def __str__(self):
         return self.permalink
 
@@ -671,21 +835,31 @@ class Invoice(Base):
     special_offer_id = models.BigIntegerField(blank=True, null=True, verbose_name='Special offer id')
     address = models.ForeignKey(to=Address, null=True, blank=True, on_delete=PROTECT)
     description = models.TextField(max_length=255, blank=True, null=True)
-    amount = models.IntegerField()
-    final_price = models.IntegerField()
-    tax = models.IntegerField()
+    amount = models.PositiveIntegerField()
+    final_price = models.PositiveIntegerField()
     reference_id = models.CharField(max_length=127, null=True, blank=True)
-    sale_order_id = models.IntegerField(null=True, blank=True)
-    sale_reference_id = models.IntegerField(null=True, blank=True)
+    sale_order_id = models.BigIntegerField(null=True, blank=True)
+    sale_reference_id = models.BigIntegerField(null=True, blank=True)
     card_holder = models.CharField(max_length=31, null=True, blank=True)
-    final_amount = models.IntegerField(null=True, blank=True)
-    ipg = models.SmallIntegerField(default=1)
+    final_amount = models.PositiveIntegerField(null=True, blank=True)
+    ipg = models.PositiveSmallIntegerField(default=1)
     expire = models.DateTimeField(null=True, blank=True)
     status = models.PositiveSmallIntegerField(default=1, choices=((1, 'pending'), (2, 'payed'), (3, 'canceled'),
                                                                   (4, 'rejected')))
+    suppliers = models.ManyToManyField(User, through="InvoiceSuppliers", related_name='invoice_supplier')
 
     class Meta:
         db_table = 'invoice'
+        ordering = ['-id']
+
+
+class InvoiceSuppliers(models.Model):
+    invoice = models.ForeignKey(Invoice, on_delete=CASCADE)
+    supplier = models.ForeignKey(User, on_delete=CASCADE)
+    amount = models.PositiveIntegerField()
+
+    class Meta:
+        db_table = 'supplier_invoice'
         ordering = ['-id']
 
 
@@ -699,13 +873,14 @@ class InvoiceStorage(models.Model):
     box = models.ForeignKey(Box, on_delete=CASCADE)
     storage = models.ForeignKey(Storage, on_delete=PROTECT)
     invoice = models.ForeignKey(Invoice, on_delete=PROTECT)
-    count = models.SmallIntegerField(default=1)
-    tax = models.IntegerField(default=0)
-    final_price = models.BigIntegerField(verbose_name='Final price')
-    discount_price = models.BigIntegerField(verbose_name='Discount price', default=0)
+    count = models.PositiveIntegerField(default=1)
+    tax = models.PositiveIntegerField(default=0)
+    final_price = models.PositiveIntegerField(verbose_name='Final price')
+    discount_price = models.PositiveIntegerField(verbose_name='Discount price', default=0)
     discount_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount price percent')
-    vip_discount_price = models.BigIntegerField(verbose_name='Discount price', default=0)
+    vip_discount_price = models.PositiveIntegerField(verbose_name='Discount price', default=0)
     vip_discount_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount price percent')
+    details = JSONField(null=True, help_text="package/storage/product details")
 
     # todo change to invoice_storage
     class Meta:
@@ -735,7 +910,7 @@ class Menu(Base):
     media = models.ForeignKey(Media, on_delete=PROTECT, blank=True, null=True)
     url = models.CharField(max_length=25, null=True, blank=True)
     parent = models.ForeignKey("self", on_delete=CASCADE, null=True, blank=True)
-    priority = models.SmallIntegerField(default=0)
+    priority = models.PositiveSmallIntegerField(default=0)
     box = models.ForeignKey(Box, on_delete=PROTECT, null=True, blank=True)
 
     class Meta:
@@ -781,6 +956,14 @@ class SpecialOffer(Base):
     def __str__(self):
         return f"{self.name['fa']}"
 
+    def validation(self):
+        if self.discount_percent > 100 or self.vip_discount_percent > 100:
+            raise ValidationError("percent can't be bigger than 100")
+
+    def save(self, *args, **kwargs):
+        self.validation()
+        super().save(*args, **kwargs)
+
     box = models.ForeignKey(Box, on_delete=CASCADE, null=True, blank=True)
     category = models.ForeignKey(Category, on_delete=CASCADE, null=True, blank=True)
     media = models.ForeignKey(Media, on_delete=CASCADE)
@@ -788,12 +971,12 @@ class SpecialOffer(Base):
     product = models.ManyToManyField(Storage, related_name="special_offer_products", blank=True)
     not_accepted_products = models.ManyToManyField(Storage, related_name="special_offer_not_accepted_products",
                                                    blank=True)
-    peak_price = models.BigIntegerField(verbose_name='Peak price')
-    discount_price = models.IntegerField(default=0, verbose_name='Discount price')
-    vip_discount_price = models.IntegerField(default=0, verbose_name='Vip discount price')
-    least_count = models.IntegerField(default=1)
-    discount_percent = models.SmallIntegerField(default=0, verbose_name='Discount percent')
-    vip_discount_percent = models.SmallIntegerField(default=0, verbose_name='Vip discount percent')
+    peak_price = models.PositiveIntegerField(verbose_name='Peak price')
+    discount_price = models.PositiveIntegerField(default=0, verbose_name='Discount price')
+    vip_discount_price = models.PositiveIntegerField(default=0, verbose_name='Vip discount price')
+    least_count = models.PositiveSmallIntegerField(default=1)
+    discount_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount percent')
+    vip_discount_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Vip discount percent')
     code = models.CharField(max_length=65)
     start_date = models.DateTimeField(verbose_name='Start date')
     end_date = models.DateTimeField(verbose_name='End date')
@@ -876,23 +1059,6 @@ class Ad(models.Model):
 
 # ---------- Tourism ---------- #
 
-
-class HouseOwner(Base):
-    def __str__(self):
-        return f"{self.user}"
-
-    user = models.ForeignKey(User, on_delete=PROTECT, related_name='house_owner_user')
-    account_number = models.CharField(max_length=255)
-    account_name = models.CharField(max_length=255)
-    account_card = models.CharField(max_length=255)
-    account_shaba = models.CharField(max_length=255)
-    bank_name = models.CharField(max_length=255)
-
-    class Meta:
-        db_table = 'house_owner'
-        ordering = ['-id']
-
-
 class ResidenceType(Base):
     class Meta:
         db_table = 'residence_type'
@@ -908,11 +1074,22 @@ class HousePrice(Base):
     def __str__(self):
         return f'{self.weekday}'
 
-    person_price = models.IntegerField(default=0)
-    weekend = models.IntegerField(default=0)
-    weekday = models.IntegerField(default=0)
-    weekly_discount_percent = models.IntegerField(default=0)
-    monthly_discount_percent = models.IntegerField(default=0)
+    def validation(self):
+        if self.weekly_discount_percent > 100 or self.monthly_discount_percent > 100:
+            raise ValidationError("percent can't be bigger than 100")
+
+    def save(self, *args, **kwargs):
+        self.validation()
+        super().save(*args, **kwargs)
+
+    person_price = models.PositiveIntegerField(default=0)
+    eyd = models.PositiveIntegerField(default=0)
+    weekend = models.PositiveIntegerField(default=0)
+    weekday = models.PositiveIntegerField(default=0)
+    peak = models.PositiveIntegerField(default=0)
+    weekly_discount_percent = models.PositiveSmallIntegerField(default=0)
+    monthly_discount_percent = models.PositiveSmallIntegerField(default=0)
+    custom_price = JSONField(default=dict)
 
     class Meta:
         db_table = 'house_price'
@@ -925,12 +1102,12 @@ class House(Base):
 
     cancel_rules = JSONField(default=multilanguage, blank=True)
     rules = JSONField(default=multilanguage, blank=True)
-    owner = models.ForeignKey(HouseOwner, on_delete=CASCADE)
+    owner = models.ForeignKey(User, on_delete=CASCADE)
     state = models.ForeignKey(State, on_delete=PROTECT)
     city = models.ForeignKey(City, on_delete=PROTECT)
     price = models.OneToOneField(HousePrice, on_delete=PROTECT, null=True)
     product = models.OneToOneField(Product, on_delete=PROTECT)
-    house_feature = JSONField(blank=True)
+    facilities = JSONField(blank=True)
     capacity = JSONField()
     residence_type = models.ManyToManyField(ResidenceType)
     rent_type = JSONField(default=multilanguage, blank=True)
@@ -938,22 +1115,11 @@ class House(Base):
     bedroom = JSONField(blank=True)  # rooms, shared space, rakhte khab, description, ...
     safety = JSONField(blank=True)
     calender = JSONField(blank=True)
-    notify_before_arrival = models.IntegerField(default=0)  # days number
-    future_booking_time = models.IntegerField(default=7)  # future days with reserve availability
+    notify_before_arrival = models.PositiveSmallIntegerField(default=0)  # days number
+    future_booking_time = models.PositiveSmallIntegerField(default=7)  # future days with reserve availability
 
     class Meta:
         db_table = 'house'
-        ordering = ['-id']
-
-
-class CostumeHousePrice(Base):
-    house = models.ForeignKey(House, on_delete=PROTECT)
-    start_date = models.DateField(null=True, blank=True)
-    end_date = models.DateField(null=True, blank=True)
-    price = models.IntegerField(default=0)
-
-    class Meta:
-        db_table = 'costume_house_price'
         ordering = ['-id']
 
 
@@ -962,12 +1128,18 @@ class Booking(Base):
         return f"{self.house}"
 
     user = models.ForeignKey(User, on_delete=PROTECT, related_name='booking_user')
-    house = models.ForeignKey(House, on_delete=PROTECT)
+    house = models.ForeignKey(House, on_delete=PROTECT, null=True)
+    product = models.ForeignKey(Product, on_delete=PROTECT, null=True)
+    address = models.TextField(null=True)
+    location = JSONField(null=True)
+    status = models.PositiveSmallIntegerField(choices=[(1, 'pending'), (2, 'sent'), (3, 'deliver'), (4, 'reject')],
+                                              default=1)
     invoice = models.ForeignKey(Invoice, on_delete=PROTECT, null=True, blank=True)
     confirmation_date = models.DateTimeField(null=True, blank=True)
     confirmation_by = models.ForeignKey(User, on_delete=PROTECT, null=True, blank=True,
                                         related_name='booking_confirmation')
     confirm = models.BooleanField(default=False)
+    people_count = models.PositiveSmallIntegerField(default=0)
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
     cancel_at = models.DateTimeField(null=True, blank=True)
@@ -977,6 +1149,20 @@ class Booking(Base):
 
     class Meta:
         db_table = 'book'
+        ordering = ['-id']
+
+
+class Holiday(models.Model):
+    def __str__(self):
+        return self.occasion
+
+    id = models.AutoField(auto_created=True, primary_key=True)
+    day_off = models.BooleanField(default=False)
+    occasion = models.TextField(blank=True)
+    date = models.DateField()
+
+    class Meta:
+        db_table = 'holiday'
         ordering = ['-id']
 
 

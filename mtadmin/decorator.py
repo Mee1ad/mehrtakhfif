@@ -15,7 +15,7 @@ def error_handler(func):
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except (FieldError, TypeError):
+        except (FieldError, TypeError, KeyError):
             traceback.print_exc()
             return HttpResponseBadRequest()
         except ValidationError as e:

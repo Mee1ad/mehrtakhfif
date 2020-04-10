@@ -42,13 +42,19 @@ class BaseAdminSchema(Schema):
     id = fields.Int()
     created_at = fields.Function(lambda o: o.created_at.timestamp())
     created_by = fields.Function(lambda o:
-                                 {'id': o.created_by_id, 'name': f"{o.created_by.first_name} {o.created_by.last_name}"})
+                                 {'id': o.created_by_id, 'name': f"{o.created_by.first_name} {o.created_by.last_name}" if o.created_by.first_name else ""})
     updated_at = fields.Function(lambda o: o.updated_at.timestamp())
     updated_by = fields.Function(lambda o:
-                                 {'id': o.updated_by_id, 'name': f"{o.updated_by.first_name} {o.updated_by.last_name}"})
+                                 {'id': o.updated_by_id, 'name': f"{o.updated_by.first_name} {o.updated_by.last_name}" if o.created_by.first_name else ""})
 
     def get_name(self, obj):
         return obj.name
+
+    def get_brand(self, obj):
+        try:
+            return BrandASchema().dump(obj.brand)
+        except Exception:
+            return None
 
     def get_title(self, obj):
         return obj.title
@@ -86,7 +92,7 @@ class BaseAdminSchema(Schema):
         return MediaASchema().dump(medias, many=True)
 
     def get_tag(self, obj):
-        tags = obj.tag.all()
+        tags = obj.tags.all()
         tag_list = []
         for index, media in enumerate(tags):
             tag_list.append({'id': media.pk, 'name': {'fa': media.name['fa']}})
@@ -120,15 +126,6 @@ class InvoiceESchema(InvoiceASchema):
     suspended_at = fields.Function(lambda o: o.suspended_at.timestamp() if o.suspended_at else None)
 
 
-class InvoiceStorageSchema(BaseSchema):
-    class Meta:
-        additional = ('id', 'count', 'tax', 'final_price', 'discount_price', 'discount_percent',
-                      'vip_discount_price', 'vip_discount_percent', 'invoice_id')
-
-    storage = fields.Method("get_min_storage")
-    box = fields.Method("get_box")
-
-
 class ProductASchema(BaseAdminSchema):
     list_filter = [Category]
 
@@ -138,6 +135,7 @@ class ProductASchema(BaseAdminSchema):
     category = fields.Method("get_category")
     # storages = fields.Method("get_storage")
     city = fields.Nested(CitySchema)
+    thumbnail = fields.Nested("MediaASchema")
 
 
 class BrandASchema(BrandSchema, BaseAdminSchema):
@@ -150,8 +148,7 @@ class ProductESchema(ProductASchema, ProductSchema):
 
     # media = fields.Method("get_media")
     tag = fields.Method("get_tag")
-    thumbnail = fields.Nested("MediaASchema")
-    brand = fields.Function(lambda o: BrandASchema().dump(o.brand))
+    brand = fields.Method("get_brand")
     default_storage_id = fields.Int()
     name = fields.Dict()
     properties = fields.Dict()
@@ -162,19 +159,37 @@ class ProductESchema(ProductASchema, ProductSchema):
     short_description = fields.Dict()
 
 
-class StorageASchema(BaseAdminSchema):
+class PriceSchema(Schema):
     class Meta:
-        additional = ('sold_count', 'start_price', 'available_count_for_sale')
+        additional = ('weekday', 'weekend', 'person_price', 'weekly_discount_percent', 'monthly_discount_percent',
+                      'eyd', 'peak', 'custom_price')
+
+
+class HouseESchema(BaseAdminSchema, HouseSchema):
+    rules = fields.Dict()
+    cancel_rules = fields.Dict()
+    rent_type = fields.Dict()
+    # price = fields.Function(lambda o: PriceSchema().dump(o.price))
+    price = fields.Nested(PriceSchema)
+
+
+class StorageASchema(BaseAdminSchema, StorageSchema):
+    class Meta:
+        additional = ('sold_count', 'start_price', 'available_count_for_sale', 'tax')
 
     title = fields.Method("get_title")
     start_time = fields.Function(lambda o: o.start_time.timestamp())
 
 
-class StorageESchema(StorageASchema, StorageSchema):
+class StorageESchema(StorageASchema):
     class Meta:
-        additional = StorageSchema.Meta.additional + StorageASchema.Meta.additional + ('gender', 'disable')
+        additional = StorageASchema.Meta.additional + StorageSchema.Meta.additional + \
+                     ('disable', 'features_percent', 'available_count', 'invoice_description',
+                      'invoice_title')
 
+    supplier = fields.Function(lambda o: UserSchema().dump(o.supplier))
     features = FeatureField()
+    tax = fields.Function(lambda o: o.get_tax_type_display())
 
 
 class CommentASchema(BaseAdminSchema):
@@ -195,7 +210,7 @@ class MediaASchema(BaseAdminSchema):
     class Meta:
         additional = ('title',)
 
-    image = fields.Function(lambda o: HOST + o.image.url)
+    image = fields.Function(lambda o: HOST + o.image.url if o.image else None)
     type = fields.Function(lambda o: o.get_type_display())
 
 
@@ -206,8 +221,6 @@ class MediaESchema(MediaASchema, MediaSchema):
 class CategoryASchema(BaseAdminSchema, CategorySchema):
     class Meta:
         additional = CategorySchema.Meta.additional + ('child_count', 'category_child_product_count', 'product_count')
-
-    parent = fields.Function(lambda o: o.parent_id)
 
 
 class CategoryESchema(CategoryASchema):
@@ -232,8 +245,9 @@ class TagASchema(Schema):
     name = fields.Dict()
 
 
-class TagESchema(TagASchema, TagSchema):
-    pass
+class InvoiceProductSchema(Schema):
+    class Meta:
+        additional = ('id', 'count', 'final_price', 'discount_price', 'tax')
 
 
 class MenuASchema(BaseAdminSchema):

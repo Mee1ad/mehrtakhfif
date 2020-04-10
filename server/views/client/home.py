@@ -3,14 +3,7 @@ from django.http import JsonResponse
 from server.documents import *
 from server.serialize import *
 from server.utils import *
-
-
-class Test(View):
-    def get(self, request):
-        from django.contrib.auth import login
-        login(request, request.user, backend='django.contrib.auth.backends.ModelBackend')
-        return JsonResponse({'message': 'success'})
-
+import pysnooper
 
 class GetSlider(View):
     def get(self, request, slider_type):
@@ -74,7 +67,10 @@ class BoxWithCategory(View):
         box_id = request.GET.get('box_id', None)
         filter_param = {'permalink': box_permalink} if box_permalink else {'pk': box_id}
         box_id = Box.objects.filter(**filter_param).first().pk
-        categories = get_categories(request.lang, box_id)
+        is_admin = False
+        if request.headers.get('admin'):
+            is_admin = True
+        categories = get_categories(request.lang, box_id, is_admin=is_admin)
         res = {'categories': categories}
         # else:
         #     boxes = Box.objects.all()
@@ -111,3 +107,23 @@ class ElasticSearch(View):
             product = {'name': hit.name_fa, 'thumbnail': hit.thumbnail}
             products.append(product)
         return JsonResponse({'products': products})
+
+
+class ElasticSearch2(View):
+    def get(self, request):
+        q = request.GET.get('q', '')
+        lang = request.lang
+        p = ProductDocument.search()
+        c = CategoryDocument.search()
+        t = TagDocument.search()
+        p = p.query("multi_match", query=q, fields=['name_fa', 'category_fa'])
+        c = c.query("match", name_fa=q)
+        t = t.query("match", name_fa=q)
+        products, categories, tags = [], [], []
+        for hit in p[:3]:
+            products.append({'name': hit.name_fa, 'permalink': hit.permalink, 'thumbnail': hit.thumbnail})
+        for hit in c[:3]:
+            categories.append({'name': hit.name_fa, 'permalink': hit.permalink, 'media': hit.media})
+        for hit in t[:3]:
+            tags.append({'name': hit.name_fa, 'permalink': hit.permalink})
+        return JsonResponse({'products': products, 'categories': categories, 'tags': tags})

@@ -4,7 +4,7 @@ from mehr_takhfif.settings import BASE_DIR
 from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
 from django.views import View
 import operator
-from server.models import InvoiceStorage, Basket, DiscountCode
+from server.models import InvoiceStorage, Basket, DiscountCode, InvoiceSuppliers
 from django_celery_beat.models import PeriodicTask
 from server.serialize import *
 import pytz
@@ -78,15 +78,21 @@ class PaymentRequest(View):
     @pysnooper.snoop()
     def behpardakht_api(self, invoice_id):
         invoice = Invoice.objects.get(pk=invoice_id)
+        basket = get_basket(invoice.user, basket=invoice.basket, return_obj=True)
+        for basket_product in basket.basket_products:
+            shaba = basket_product.supplier.shaba
+            amount = basket_product.start_price
+
         # todo debug
         invoice.amount = 5000
 
         local_date = timezone.now().strftime("%Y%m%d")
         local_time = pytz.timezone("Iran").localize(datetime.now()).strftime("%H%M%S")
-        r = client.service.bpPayRequest(terminalId=bp['terminal_id'], userName=bp['username'],
-                                        userPassword=bp['password'], localTime=local_time,
-                                        localDate=local_date, orderId=invoice.id, amount=invoice.amount,
-                                        payerId=0, callBackUrl=bp['callback'])
+        r = client.service.bpCumulativeDynamicPayRequest(terminalId=bp['terminal_id'], userName=bp['username'],
+                                                         userPassword=bp['password'], localTime=local_time,
+                                                         localDate=local_date, orderId=invoice.id,
+                                                         amount=invoice.amount,
+                                                         payerId=0, callBackUrl=bp['callback'])
         if r[0:2] == "0,":
             ref_id = r[2:]
             invoice.reference_id = ref_id
@@ -103,10 +109,10 @@ class PaymentRequest(View):
         if basket['address_required']:
             address = user.default_address
 
-        invoice = Invoice(created_by=user, updated_by=user, user=user, amount=basket['summary']['discount_price'],
-                          type=1, address=address, tax=5, basket_id=basket['basket']['id'],
-                          final_price=basket['summary']['total_price'], expire=add_minutes(1))
-        invoice.save()
+        invoice = Invoice.objects.create(created_by=user, updated_by=user, user=user,
+                                         amount=basket['summary']['discount_price'],
+                                         type=1, address=address, tax=5, basket_id=basket['basket']['id'],
+                                         final_price=basket['summary']['total_price'], expire=add_minutes(1))
         return invoice
 
     @pysnooper.snoop()
@@ -173,10 +179,13 @@ class CallBack(View):
     @pysnooper.snoop()
     def submit_invoice_storages(self, invoice_id):
         invoice = Invoice.objects.filter(pk=invoice_id).select_related(*Invoice.select).first()
-        basket = invoice.basket
-        basket_products = BasketProduct.objects.filter(basket=basket)
+        basket = get_basket(invoice.user, basket=invoice.basket, return_obj=True)
         invoice_products = []
-        for product in basket_products:
+        for product in basket.basket_products:
+            supplier = product.supplier
+            amount = product.start_price
+            if not InvoiceSuppliers.objects.filter(invoice=invoice, supplier=supplier).update(amount=amount):
+                InvoiceSuppliers.objects.create(invoice=invoice, supplier=supplier, amount=amount)
             storage = product.storage
             invoice_products.append(
                 InvoiceStorage(storage=storage, invoice_id=invoice_id, count=product.count, tax=storage.tax,

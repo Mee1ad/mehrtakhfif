@@ -18,13 +18,14 @@ class AuthMiddleware:
         # One-time configuration and initialization.
 
     def __call__(self, request):
+        print(request.META.get('REMOTE_ADDR') or request.META.get('HTTP_X_FORWARDED_FOR'))
         path = request.path_info
         route = resolve(path).route
         app_name = resolve(path).app_name
         token_requests = ['POST', 'PUT', 'PATCH']
         allow_without_token = ['login', 'activate', 'resend_code', 'reset_password', 'privacy_policy', 'test']
         if request.method in token_requests and route not in allow_without_token and app_name != 'admin':
-            check_csrf_token(request)
+            # check_csrf_token(request)
             pass
         # Debug
         if ADMIN:
@@ -44,6 +45,7 @@ class AuthMiddleware:
         # assign request attributes
         request.step = int(request.GET.get('s', default_step))
         request.page = int(request.GET.get('p', default_page))
+        request.all = request.GET.get('all', False)
         try:
             request.lang = request.headers['language']
         except Exception:
@@ -79,8 +81,9 @@ class AuthMiddleware:
                 res['new_basket_count'] = new_basket_count
                 response.content = json.dumps(res)
                 response = set_signed_cookie(response, 'basket_count', new_basket_count)
-            except AttributeError:
+            except (AttributeError, json.decoder.JSONDecodeError):
                 pass
         if request.method in token_requests and app_name != 'admin':
-            return set_csrf_cookie(response)
+            # return set_csrf_cookie(response)
+            pass
         return response

@@ -4,9 +4,10 @@ import pysnooper
 from secrets import token_hex
 from datetime import date
 from django.utils import timezone
-from server.models import BasketProduct, FeatureStorage, CostumeHousePrice, Booking, Comment, Invoice, Feature, \
-    ProductMedia
-import time
+from server.models import BasketProduct, FeatureStorage, Booking, Comment, Invoice, Feature, \
+    ProductMedia, Holiday
+from jdatetime import date, timedelta
+from django.db.models import F
 
 
 # ManyToMany Relations
@@ -138,13 +139,16 @@ class BaseSchema(Schema):
         return None
 
     def get_min_storage(self, obj):
-        if hasattr(obj, 'house'):
+        try:
+            if hasattr(obj, 'house'):
+                return None
+            if hasattr(obj, 'default_storage'):
+                return MinStorageSchema(self.lang).dump(obj.default_storage)
+            if hasattr(obj, 'storage'):
+                return MinStorageSchema(self.lang).dump(obj.storage)
             return None
-        if hasattr(obj, 'default_storage'):
-            return MinStorageSchema(self.lang).dump(obj.default_storage)
-        if hasattr(obj, 'storage'):
-            return MinStorageSchema(self.lang).dump(obj.storage)
-        return None
+        except Exception:
+            pass
 
     def get_comment(self, obj):
         if obj.reply_to is not None:
@@ -205,7 +209,13 @@ class UserSchema(BaseSchema):
             'id', 'email', 'first_name', 'last_name', 'gender', 'username', 'meli_code', 'vip',
             'active_address', 'shaba', 'birthday')
 
-    avatar = fields.Function(lambda o: HOST + o.avatar.image.url if hasattr(o.avatar, 'image') else "")
+    avatar = fields.Method("get_avatar")
+
+    def get_avatar(self, obj):
+        try:
+            return HOST + obj.avatar.image.url
+        except Exception:
+            pass
 
 
 class AddressSchema(BaseSchema):
@@ -261,10 +271,16 @@ class BoxCategoriesSchema(BaseSchema):
     class Meta:
         additional = ('id', 'permalink')
 
-    name = fields.Method('get_name')
+    name = fields.Method('resolve_name_type')
     child = fields.Method('get_child')
     media = fields.Method("get_media_link")
     parent = fields.Function(lambda o: o.parent_id)
+
+    def resolve_name_type(self, obj):
+        try:
+            return obj.name if obj.is_admin else obj.name[self.lang]
+        except KeyError:
+            return obj.name['fa']
 
     def get_child(self, obj):
         if hasattr(obj, 'child'):
@@ -351,7 +367,7 @@ class SliderSchema(BaseSchema):
 
 class StorageSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'final_price', 'transportation_price', 'priority',
+        additional = ('id', 'final_price', 'transportation_price', 'priority', 'gender',
                       'discount_price', 'vip_discount_price', 'discount_percent', 'vip_discount_percent')
 
     title = fields.Method('get_title')
@@ -372,22 +388,13 @@ class MinStorageSchema(BaseSchema):
     min_count_alert = fields.Method("get_min_count_alert")
 
 
-class BasketProductSchemaOld(BaseSchema):
-    class Meta:
-        additional = ('count',)
-
-    storage = fields.Method("get_storage")
-
-
 class BasketProductSchema(BaseSchema):
     class Meta:
-        additional = ('count',)
+        additional = ('id', 'count', 'item_final_price', 'item_discount_price', 'final_price', 'discount_price',
+                      'discount_percent', 'tax', 'amer')
 
     product = fields.Method("get_min_product")
     features = fields.Method("get_feature")
-
-    def test(self, obj):
-        print(obj.feature)
 
     def get_feature(self, obj):
         res = []
@@ -395,23 +402,22 @@ class BasketProductSchema(BaseSchema):
             feature_id = feature['fid']
             fvid_list = feature['fvid']
             f = Feature.objects.get(pk=feature_id)
-            fs = FeatureStorage.objects.get(storage_id=obj.storage_id, feature_id=feature_id)
+            fs = FeatureStorage.objects.get(storage=obj.storage, feature_id=feature_id)
             feature_list = []
             for fvid in fvid_list:
                 feature_name = next(i['name'][self.lang] for i in f.value if i['id'] == fvid)
                 feature_price = next(i['price'] for i in fs.value if i['fvid'] == fvid)
                 feature_list.append({'id': feature_id, 'fvid': fvid, 'name': feature_name, 'price': feature_price})
-
-            # for item in f.value:
-            #     print(item)
-            #     if item['id'] in feature['fvid']:
-            #         print(feature['fvid'])
-            #         price = next(i['price'] for i in fs.value if i['fvid'] in feature['fvid'])
-            #         value_list.append({'id': item['id'], 'name': item[self.lang], 'price': price})
-
             res.append({'id': f.pk, 'name': f.name[self.lang], "type": f.get_type_display(), "value": feature_list})
 
         return res
+
+
+class BasketSchema(BaseSchema):
+    class Meta:
+        additional = ('id', 'description')
+
+    products = fields.Function(lambda o: BasketProductSchema().dump(o.basket_products, many=True))
 
 
 class InvoiceSchema(BaseSchema):
@@ -453,11 +459,6 @@ class InvoiceStorageSchema(BaseSchema):
                    "invoice_title": storage.invoice_title[self.lang]}
 
         return storage
-
-
-class BasketSchema(BaseSchema):
-    class Meta:
-        additional = ('id', 'description')
 
 
 class BlogSchema(BaseSchema):
@@ -622,11 +623,6 @@ class ResidenceTypeSchema(BaseSchema):
     cancel_rules = fields.Method("get_name")
 
 
-class PriceSchema(Schema):
-    class Meta:
-        additional = ('weekday', 'weekend', 'person_price', 'weekly_discount_percent', 'monthly_discount_percent')
-
-
 class CostumeHousePriceSchema(Schema):
     class Meta:
         additional = ('start_date', 'end_date', 'price')
@@ -640,7 +636,7 @@ class HouseSchema(BaseSchema):
     rules = fields.Method("get_rules")
     state = fields.Function(lambda o: o.state.name)
     city = fields.Function(lambda o: o.city.name)
-    house_feature = fields.Function(lambda o: o.house_feature)
+    facilities = fields.Function(lambda o: o.facilities)
     capacity = fields.Function(lambda o: o.capacity)
     rent_type = fields.Method('get_rent_type')
     residence_area = fields.Method('get_residence_area')
@@ -648,34 +644,78 @@ class HouseSchema(BaseSchema):
     safety = fields.Function(lambda o: o.safety)
     calender = fields.Function(lambda o: o.calender)
     residence_type = ResidenceTypeField()
-    prices = fields.Method("get_prices")
+
+    # prices = fields.Method("get_prices")
 
     @staticmethod
     def get_prices(obj):
+        def add_days(days):
+            return timezone.now() + timezone.timedelta(days=days)
+
         today = date.today()
-        weekend = [3, 4]
-        prices = []
-        costume_prices = CostumeHousePrice.objects.filter(house=obj)
+        weekend = [5, 6]
+        days_name = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه شنبه', 'چهارشنبه', 'پنجنشبه', 'جمعه']
+        months_name = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن',
+                       'اسفند']
+        index = -1
+        months = {'months': [], 'prev_month_days': (today.replace(day=1) - timedelta(days=1)).day,
+                  'first_day': today.weekday()}
+        # costume_prices = CostumeHousePrice.objects.filter(house=obj)
         bookings = Booking.objects.filter(house=obj, confirm=True).values('start_date', 'end_date')
+        holidays = Holiday.objects.filter(date__gte=add_days(0), date__lte=add_days(obj.future_booking_time))
         for day in range(obj.future_booking_time):
             price = dict()
-            price['date'] = today + timezone.timedelta(days=day)
+            price['day_off'] = False
+            price['date'] = today + timedelta(days=day)
+            price['day'] = price['date'].day
             weekday = price['date'].weekday()
-            if weekday not in weekend:
-                price['price'] = obj.price.weekday
-            else:
-                price['price'] = obj.price.weekend
-            for costume_price in costume_prices:
-                if costume_price.start_date <= price['date'] <= costume_price.end_date:
-                    price['price'] = costume_price.price
-                    break
+            price['weekday'] = days_name[weekday]
+            if price['date'].day == 1 or not months['months']:
+                index += 1
+                prices = []
+                months['months'].append({'month_name': months_name[price['date'].month - 1],
+                                         'month': price['date'].month,
+                                         'year': price['date'].year,
+                                         'days': prices})
+                if price['date'].day > 1:
+                    for d in range(price['date'].day - 1)[::-1]:
+                        old_date = today + timedelta(days=(d + 1) * -1)
+                        weekday = old_date.weekday()
+                        old_date = old_date.strftime("%Y-%m-%d")
+                        months['months'][index]['days'].append(
+                            {"date": old_date, "day": price['date'].day - d - 1,
+                             "weekday": days_name[weekday], "available": False})
+
             for booking in bookings:
                 price['available'] = True
                 if booking['start_date'] <= price['date'] <= booking['end_date']:
                     price['available'] = False
                     break
-            prices.append(price)
-        return prices
+            else:
+                if holidays.filter(date=price['date'].togregorian(), day_off=True).exists():
+                    price['price'] = obj.price.peak
+                    price['day_off'] = True
+                elif weekday in weekend:
+                    price['price'] = obj.price.weekend
+                else:
+                    price['price'] = obj.price.weekday
+                # for costume_price in costume_prices:
+                #     if costume_price.start_date <= price['date'] <= costume_price.end_date:
+                #         price['price'] = costume_price.price
+                #         break
+            price['date'] = price['date'].strftime("%Y-%m-%d")
+            months['months'][index]['days'].append(price)
+        last_date = today + timedelta(days=obj.future_booking_time)
+        last_day_of_month = (last_date.replace(month=last_date.month + 1, day=1) - timedelta(days=1)).day
+        print(last_day_of_month)
+        for d in range(last_day_of_month - last_date.day + 1):
+            today = last_date + timedelta(days=d)
+            weekday = today.weekday()
+            today = today.strftime("%Y-%m-%d")
+            months['months'][index]['days'].append(
+                {"date": today, "day": last_date.day + d,
+                 "weekday": days_name[weekday], "available": False})
+        return months
 
     def get_rules(self, obj):
         return self.get(obj.rules)

@@ -1,8 +1,9 @@
-from django.db.models import Max, Min
+from django.db.models import Max, Min, Q
 from django.http import JsonResponse
 from server.utils import *
 from server.serialize import BoxSchema, FeatureSchema, MinProductSchema, BrandSchema
 import pysnooper
+
 
 class GetSpecialOffer(View):
     def get(self, request, name):
@@ -37,7 +38,7 @@ class FilterDetail(View):
             res['box'] = Box.objects.filter(permalink=permalink).first()
             box = {'box': res['box']}
             res['box'] = BoxSchema(request.lang).dump(res['box'])
-        products = Product.objects.annotate(**rank).filter(**box).order_by(*order_by).\
+        products = Product.objects.annotate(**rank).filter(**box).order_by(*order_by). \
             select_related('brand', 'default_storage')
         prices = products.aggregate(max=Max('default_storage__discount_price'),
                                     min=Min('default_storage__discount_price'))
@@ -51,11 +52,13 @@ class FilterDetail(View):
 
 
 class Filter(View):
-    @pysnooper.snoop()
     def get(self, request):
         params = filter_params(request.GET, request.lang)
-        products = Product.objects.annotate(**params['rank']).\
-            filter(verify=True, **params['filter']).order_by(params['order'])
+        print(params)
+        query = Q(verify=True, **params['filter'])
+        if params['related']:
+            query = Q(verify=True, **params['filter']) | Q(verify=True, **params['related'])
+        products = Product.objects.annotate(**params['rank']).filter(query).order_by(params['order'])
         pg = get_pagination(products, request.step, request.page, MinProductSchema)
         return JsonResponse(pg)
 

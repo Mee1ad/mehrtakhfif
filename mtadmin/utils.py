@@ -2,6 +2,7 @@ from django.http import JsonResponse, HttpResponseForbidden, HttpResponseBadRequ
 from server.utils import get_pagination, get_token_from_cookie, set_token, check_access_token
 from django.core.exceptions import ValidationError, FieldError, PermissionDenied
 from django.contrib.admin.utils import NestedObjects
+from django.db.models import F
 from server.models import *
 from mtadmin.serializer import tables
 from operator import attrgetter
@@ -21,27 +22,33 @@ class AdminView(LoginRequiredMixin, View):
     pass
 
 
-def serialized_objects(request, model, serializer=None, single_serializer=None, box_key='box_id', error_null_box=True):
+def serialized_objects(request, model, serializer=None, single_serializer=None, box_key='box_id', error_null_box=True,
+                       params=None):
     pk = request.GET.get('id', None)
+    box_check = get_box_permission(request.user, box_key) if error_null_box and box_key else {}
     if pk:
         try:
-            box_check = get_box_permission(request.user, box_key) if error_null_box else {}
             obj = model.objects.get(pk=pk, **box_check)
             return {"data": single_serializer().dump(obj)}
         except model.DoesNotExist:
             raise PermissionDenied
-    params = get_params(request, box_key)
+    if not params:
+        params = get_params(request, box_key)
+        print(params)
     try:
         if error_null_box and not params['filter'].get(box_key):
             raise PermissionDenied
         query = model.objects.filter(**params['filter']).order_by(*params['order'])
-        return get_pagination(query, request.step, request.page, serializer)
+        if params.get('aggregate', None):
+            # todo tax
+            pass
+        return get_pagination(query, request.step, request.page, serializer, show_all=request.all)
     except (FieldError, ValueError):
         raise FieldError
 
 
-def get_params(request, box_key=None):
-    remove_param = ['s', 'p', 'delay', 'error']
+def get_params(request, box_key=None, date_key='created_at'):
+    remove_param = ['s', 'p', 'delay', 'error', 'all']
     filterby = {}
     orderby = []
     try:
@@ -53,6 +60,10 @@ def get_params(request, box_key=None):
         return {'filter': filterby, 'order': orderby}
     for key in keys:
         value = params.getlist(key)
+        if key == 'sd':
+            filterby[f'{date_key}__gte'] = value[0]
+        if key == 'ed':
+            filterby[f'{date_key}__lte'] = value[0]
         if key == 'b':
             if int(value[0]) in request.user.box_permission.all().values_list('id', flat=True):
                 filterby[f'{box_key}'] = value[0]
@@ -61,10 +72,11 @@ def get_params(request, box_key=None):
         if key == 'o':
             orderby += value
             continue
-        if len(value) == 1:
-            filterby[key] = value[0]
+        if re.search('\[\]', key):
+            filterby[key.replace('[]', '__in')] = value
             continue
-        filterby[key.replace('[]', '__in')] = value
+        filterby[key] = value[0]
+
     return {'filter': filterby, 'order': orderby}
 
 
@@ -73,7 +85,7 @@ def get_data(request):
     # assert check_access_token(token, request.user)
     data = json.loads(request.body)
     remove = ['created_at', 'created_by', 'updated_at', 'updated_by', 'deleted_by', 'income', 'profit',
-              'rate', 'default_storage', 'sold_count', 'feature']
+              'rate', 'default_storage', 'sold_count'] + ['feature', ]
     [data.pop(k, None) for k in remove]
     boxes = request.user.box_permission.all()
     if data.get('box_id') not in boxes.values_list('id', flat=True):
@@ -97,7 +109,7 @@ def assign_default_value(product_id):
     Product.objects.filter(pk=product_id).update(default_storage=min(storages, key=attrgetter('discount_price')))
 
 
-def create_object(request, model, box_key='box', return_item=False, serializer=None):
+def create_object(request, model, box_key='box', return_item=False, serializer=None, error_null_box=True):
     if not request.user.has_perm(f'server.add_{model.__name__.lower()}'):
         raise PermissionDenied
     # data = get_data(request)
@@ -115,25 +127,29 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
             data.pop(item)
         except KeyError:
             continue
+    # if (not m2m['media'] or not data.get('thumbnail_id', None)) and model == Product:
+    #     data['disable'] = True
     obj = model.objects.create(**data, created_by=user, updated_by=user)
     if model == Product:
         product = obj
         tags = Tag.objects.filter(pk__in=m2m['tags'])
-        [print(m) for m in m2m['media']]
-        [print(m2m['media'].index(m)) for m in m2m['media']]
         p_medias = [ProductMedia(product=product, media_id=pk, priority=m2m['media'].index(pk)) for pk in m2m['media']]
         ProductMedia.objects.bulk_create(p_medias)
-        product.tag.add(*tags)
+        product.tags.add(*tags)
     if model == Category or model == Storage:
         item = obj
-        features = Feature.objects.filter(pk__in=m2m['features'])
-        item.feature_set.add(*features)
-        if model == Storage:
-            assign_default_value(obj.product_id)
+        if 'features' in m2m:
+            features = Feature.objects.filter(pk__in=m2m['features'])
+            item.feature_set.add(*features)
+            if model == Storage:
+                item.priority = Product.objects.first(pk=item.product_id).count() - 1
+                item.save()
+                assign_default_value(obj.product_id)
     if return_item:
         request.GET._mutable = True
         request.GET['id'] = obj.pk
-        return serialized_objects(request, model, single_serializer=serializer)
+        return serialized_objects(request, model, single_serializer=serializer, box_key=box_key,
+                                  error_null_box=error_null_box)
     return {'id': obj.pk}
 
 
@@ -142,28 +158,9 @@ def update_object(request, model, box_key='box', return_item=False, serializer=N
         raise PermissionDenied
     # data = get_data(request)
     data = json.loads(request.body)
+    pk = data['id']
     box_check = get_box_permission(request.user, box_key)
-    items = model.objects.filter(pk=data['id'], **box_check)
-    if model == Product:
-        tags = Tag.objects.filter(pk__in=data['tags'])
-        product = items.first()
-        product.tag.clear()
-        product.tag.add(*tags)
-        product.media.clear()
-        [print(m) for m in data['media']]
-        [print(data['media'].index(m)) for m in data['media']]
-        p_medias = [ProductMedia(product=product, media_id=pk, priority=data['media'].index(pk)) for pk in data['media']]
-        ProductMedia.objects.bulk_create(p_medias)
-        data.pop('tags')
-        data.pop('media')
-    if model == Category or model == Storage:
-        item = items.first()
-        features = Feature.objects.filter(pk__in=data['features'])
-        data.pop('features')
-        item.feature_set.clear()
-        item.feature_set.add(*features)
-        if model == Storage:
-            assign_default_value(item.product_id)
+    items = model.objects.filter(pk=pk, **box_check)
     items.update(**data)
     if return_item:
         request.GET._mutable = True
@@ -179,21 +176,14 @@ def delete_base(request, model):
         return JsonResponse({}, status=400)
     return prepare_for_delete(model, pk, request.user)
 
-# todo remove
-def get_box_permission(user, box_key='box'):
+
+def get_box_permission(user, box_key='box', box_id=None):
     boxes_id = user.box_permission.all().values_list('id', flat=True)
     if boxes_id:
+        if box_id and (int(box_id) not in boxes_id):
+            raise PermissionDenied
         return {f'{box_key}__in': boxes_id}
-    return {}
-
-# todo remove
-def check_box_permission(user, box_id):
-    try:
-        box_id = int(box_id)
-    except Exception:
-        pass
-    if box_id not in user.box_permission.all().values_list('id', flat=True):
-        raise PermissionDenied
+    raise PermissionDenied
 
 
 def check_user_permission(user, permission):
@@ -229,9 +219,7 @@ def prepare_for_delete(model, pk, user, box_key='box'):
 
 
 def safe_delete(model, pk, user_id):
-    obj = model.objects.filter(pk=pk)
-    obj.update(deleted_by_id=user_id)
-    obj.delete()
+    model.objects.get(pk=pk).safe_delete(user_id)
 
 
 def delete_object(request, model, pk):

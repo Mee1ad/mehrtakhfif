@@ -10,7 +10,6 @@ class BasketView(LoginRequired):
         basket_id = request.GET.get('basket_id', None)
         return JsonResponse(get_basket(request.user, request.lang, basket_id))
 
-    @pysnooper.snoop()
     def post(self, request):
         data = load_data(request)
         try:
@@ -87,29 +86,26 @@ class GetProducts(View):
     def post(self, request):
         data = load_data(request)
         storage_ids = [item['id'] for item in data['basket']]
-        basket = data['basket']
+        products = data['basket']
+        basket = type('Basket', (), {})()
+        basket.basket_products = []
         assert not request.user.is_authenticated
         storages = Storage.objects.filter(id__in=storage_ids).select_related('product')
-        basket_products = []
         address_required = False
-        for item in basket:
-            print('hey')
+        for item in products:
             storage = next(storage for storage in storages if item['id'] == storage.pk)  # search
-            obj = type('BasketProduct', (object,), {})()
+            obj = type('BasketProduct', (), {})()
             obj.count = item['count']
             obj.product = storage.product
-            obj.storage_id = storage.pk
+            obj.storage = storage
             obj.features = item['features']
             if obj.product.type == 'product' and not address_required:
                 address_required = True
             obj.product.default_storage = storage
-            basket_products.append(obj)
+            basket.basket_products.append(obj)
 
-        products = BasketProductSchema(language=request.lang).dump(basket_products, many=True)
-        products = add_feature_price(products)
-
-        profit = calculate_profit(products)
-        return JsonResponse({'products': products, 'summary': profit, 'address_required': address_required})
+        basket = get_basket(request.user, request.lang, basket=basket, basket_products=basket.basket_products)
+        return JsonResponse(basket)
 
 
 class InvoiceView(View):

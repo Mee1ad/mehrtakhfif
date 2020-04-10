@@ -8,34 +8,7 @@ from django.utils.crypto import get_random_string
 import pysnooper
 from server.utils import *
 from django.contrib.auth import login
-
-
-class Test(View):
-    def get(self, request):
-        @pysnooper.snoop()
-        def get_child_count(category, sibling=0, childes=None):
-            sibling_categories = Category.objects.filter(parent_id=category.pk)
-            if not childes:
-                childes = list(sibling_categories)
-            childes += list(sibling_categories)
-            sibling_count = sibling_categories.count()
-            if sibling_count == 0:
-                return sibling
-            for sibl in sibling_categories:
-                new_childes = get_child_count(sibl, childes=childes)
-                if new_childes:
-                    sibling_count += new_childes['child_count']
-            childes = list(set(childes))
-            return {'child_count': sibling_count, 'childes': CategoryASchema().dump(childes, many=True)}
-
-        category = Category.objects.get(pk=1)
-        a = get_child_count(category)
-        return JsonResponse(a)
-
-    def post(self, request):
-        print(request.headers)
-        print(request.headers['X-Csrf-Token'])
-        return JsonResponse({"message": "wubalubadubdubbbbbbb"})
+from server.documents import SupplierDocument
 
 
 class Token(AdminView):
@@ -100,8 +73,7 @@ class TableFilter(AdminView):
         user = request.user
         no_box = ['tag', 'invoice', 'invoice_storage', 'comment']
         check_user_permission(user, f'view_{table}')
-        check_box_permission(user, box_id)
-        box = {'box_id': box_id}
+        box = get_box_permission(user, 'box_id')
         if table == 'storage':
             box = {'product__box_id': box_id}
         elif table in no_box:
@@ -123,3 +95,56 @@ class CheckLoginToken(AdminView):
         user['roll'] = roll
         res = {'user': user, 'boxes': boxes}
         return JsonResponse(res)
+
+
+class Search(AdminView):
+    def get(self, request):
+        # todo index condition and search for all (*)
+        q = request.GET.get('q', None)
+        model = request.GET.get('type', None)
+        switch = {'supplier': self.supplier}
+        return JsonResponse(switch[model](q))
+
+    def supplier(self, q):
+        items = []
+        s = SupplierDocument.search()
+        r = s.query("multi_match", query=q,
+                    fields=['first_name', 'last_name', 'username']).filter("term", is_supplier="true")[:5]
+        if r.count() == 0:
+            r = s.query("match_all").filter("term", is_supplier="true")[:5]
+
+        for hit in r:
+            supplier = {'id': hit.id, 'first_name': hit.first_name, 'last_name': hit.last_name,
+                        'username': hit.username,
+                        'avatar': hit.avatar}
+            items.append(supplier)
+        return {'suppliers': items}
+
+
+class BoxSettings(AdminView):
+
+    def get(self, request):
+        box_id = request.GET.get('b', None)
+        if box_id:
+            model = Box
+        box_check = get_box_permission(request.user, 'id', box_id)
+        box_settings = model.objects.filter(pk=box_id, **box_check).values('settings').first()
+        return JsonResponse(box_settings)
+
+    def patch(self, request):
+        data = json.loads(request.body)
+        box_id = data.get('b', None)
+        if box_id:
+            model = Box
+        box_check = get_box_permission(request.user, 'id', data['id'])
+        if model.objects.filter(pk=data['id'], **box_check).update(settings=data['settings']):
+            return JsonResponse({})
+        return HttpResponseBadRequest()
+
+
+class Supplier(AdminView):
+    def post(self, request):
+        data = json.dumps(request.body)
+        User.objects.create(username=data['username'], first_name=data['first_name'], last_name=data['last_name'],
+                            shaba=data['shaba'], is_supplier=True)
+        return JsonResponse({})

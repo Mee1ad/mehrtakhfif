@@ -27,9 +27,11 @@ from django.contrib.postgres.fields.jsonb import KeyTextTransform
 from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
 import string
 from django.core.exceptions import PermissionDenied
+from MyQR import myqr
+from mehr_takhfif.settings import BASE_DIR
 
 random_data = string.ascii_lowercase + string.digits
-default_step = 12
+default_step = 10
 default_page = 1
 default_response = {'ok': {'message': 'ok'}, 'bad': {'message': 'bad request'}}
 res_code = {'success': 200, 'bad_request': 400, 'unauthorized': 401, 'forbidden': 403, 'token_issue': 401,
@@ -98,17 +100,16 @@ def upload(request, titles, media_type, box=None):
 
 
 def filter_params(params, lang):
+    filters = {'filter': {'default_storage__isnull': False}, 'rank': {}, 'related': {}, 'query': '', 'order': '-created_at'}
     if not params:
-        return {'filter': {}, 'query': '', 'order': '-created_at'}
+        return filters
     ds = 'default_storage__'
     dis = 'discount'
     valid_orders = {'cheap': f'{ds}{dis}_price', 'expensive': f'-{ds}{dis}_price',
                     'best_seller': f'{ds}sold_count', 'popular': '-created_at',
                     'discount': f'{ds}{dis}discount_percent'}
-    filter_by = {}
     box_permalink = params.get('b', None)
     q = params.get('q', None)
-    rank = {}
     orderby = params.get('o', '-created_at')
     category = params.get('cat', None)
     available = params.get('available', None)
@@ -117,23 +118,26 @@ def filter_params(params, lang):
     max_price = params.get('max_price', None)
     if box_permalink:
         try:
-            filter_by['box'] = Box.objects.get(permalink=box_permalink)
+            filters['related'] = {'category_id__in': Category.objects.filter(box__permalink=box_permalink,
+                                                                             permalink=None).values_list('parent_id',
+                                                                                                         flat=True)}
+            filters['filter']['box'] = Box.objects.get(permalink=box_permalink)
         except Box.DoesNotExist:
             pass
     if category:
-        filter_by['category__permalink'] = category
+        filters['filter']['category__permalink'] = category
     if orderby != '-created_at':
         valid_key = valid_orders[orderby]
-        orderby = valid_key
+        filters['order'] = valid_key
     if q:
-        rank = {'rank': get_rank(q, lang)}
-        orderby = '-rank'
+        filters['rank'] = {'rank': get_rank(q, lang)}
+        filters['order'] = '-rank'
     if available:
-        filter_by[f'{ds}available_count_for_sale__gt'] = 0
+        filters['filter'][f'{ds}available_count_for_sale__gt'] = 0
     if min_price and max_price:
-        filter_by[f'{ds}{dis}_price__range'] = (min_price, max_price)
+        filters['filter'][f'{ds}{dis}_price__range'] = (min_price, max_price)
     if brand:
-        filter_by['brand__in'] = brand
+        filters['filter']['brand__in'] = brand
 
     # keys = params.keys()
     # for key in keys:
@@ -150,7 +154,7 @@ def filter_params(params, lang):
     #         continue
     #     filter_by[key + '__in'] = value
 
-    return {'filter': filter_by, 'rank': rank, 'order': orderby}
+    return filters
 
 
 def get_rank(q, lang):
@@ -165,6 +169,14 @@ def load_location(location):
     if location is not None:
         return {"lat": location[0], "lng": location[1]}
     return None
+
+
+def get_tax(tax_type, discount_price, start_price=None):
+    return int({
+                   1: 0,
+                   2: discount_price * 0.09,
+                   3: (discount_price - start_price) * 0.09
+               }[tax_type])
 
 
 # No Usage
@@ -200,6 +212,12 @@ def to_obj(body):
     return obj
 
 
+def create_qr(data, output):
+    version, level, qr_name = myqr.run(data, version=2, level='L', picture="F:\Download\Photos\mt\mehrtakhfifIcon.png",
+                                       colorized=True, contrast=1.0, brightness=1.0, save_name=f'{output}.png',
+                                       save_dir=MEDIA_ROOT + f'/qr/')
+
+
 # Utils
 
 def send_sms(to, pattern="gs3vltcvoi", content=None, input_data=None):
@@ -225,7 +243,7 @@ def send_email(subject, to, from_email='support@mehrtakhfif.com', message=None, 
     msg.send()
 
 
-def get_categories(language, box_id=None, categories=None):
+def get_categories(language, box_id=None, categories=None, is_admin=None):
     if box_id:
         categories = Category.objects.filter(box_id=box_id)
     if categories is None:
@@ -235,6 +253,7 @@ def get_categories(language, box_id=None, categories=None):
     new_cats = [*categories]
     remove_index = []
     for cat, index in zip(categories, range(len(categories))):
+        cat.is_admin = is_admin
         if cat.parent is None:
             continue
         try:
@@ -249,17 +268,18 @@ def get_categories(language, box_id=None, categories=None):
     return BoxCategoriesSchema(language=language).dump(new_cats, many=True)
 
 
-def get_pagination(query, step, page, serializer, language="fa"):
+def get_pagination(query, step, page, serializer, show_all=False, language="fa"):
     if step > 100:
         step = 10
     try:
         count = query.count()
     except TypeError:
         count = len(query)
+    query = query if show_all and count <= 500 else query[(page - 1) * step: step * page]
     try:
-        items = serializer(language=language).dump(query[(page - 1) * step: step * page], many=True)
+        items = serializer(language=language).dump(query, many=True)
     except TypeError:
-        items = serializer().dump(query[(page - 1) * step: step * page], many=True)
+        items = serializer().dump(query, many=True)
     return {'pagination': {'last_page': math.ceil(count / step), 'count': count},
             'data': items}
 
@@ -269,67 +289,54 @@ def user_data_with_pagination(model, serializer, request):
     return get_pagination(query, request.step, request.page, serializer)
 
 
-def calculate_profit(products):
-    # TypeError: default storage is list but have one member
-    total_price = sum([product['product']['default_storage']['final_price'] * product['count'] for product in products])
-    discount_price = sum(
-        [product['product']['default_storage']['discount_price'] * product['count'] for product in products])
-    # feature_price = sum([sum([feature['price'] for feature in product['feature']]) * product['count']
-    #                      for product in products])
-    discount_price = 0
-    total_price = 0
-    for product in products:
-        discount_price += product['discount_price']
-        total_price += product['final_price']
-        # try:
-        #     feature_storage = FeatureStorage.objects.get(storage_id=storage_id, feature_id=feature['id'])
-        #     prices = sum([item['price'] for item in feature_storage.value if item['fvid'] in feature['fvid']])
-        #     print(prices)
-        # except KeyError:
-        #     continue
-
-    profit = total_price - discount_price
-    return {'total_price': total_price, 'discount_price': discount_price, 'profit': profit, 'shopping_cost': 0}
-
-
-def add_feature_price(products):
-    for product in products:
-        price = 0
-        for feature in product['features']:
-            for value in feature['value']:
-                price += value['price']
-        product['item_final_price'] = product['product']['default_storage']['final_price'] + price
-        product['item_discount_price'] = product['product']['default_storage']['discount_price'] + price
-        product['final_price'] = product['count'] * product['item_final_price']
-        product['discount_price'] = product['count'] * product['item_discount_price']
-        product['discount_percent'] = product['product']['default_storage']['discount_percent']
-    return products
-
-
-def get_basket(user, lang, basket_id=None):
-    basket = None
+def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=None, return_obj=False, tax=False):
     if basket_id:
         basket = Basket.objects.get(pk=basket_id)
-    if not basket:
+    if not basket_id:
         basket = basket or Basket.objects.filter(user=user).order_by('-id').first()
     if basket is None:
         return {}
-    basket_products = BasketProduct.objects.filter(basket=basket).select_related(*BasketProduct.related)
-    address_required = False
-    profit = {}
-    if basket.products.all().count() > 0:
-        for basket_product in basket_products:
-            basket_product.product = basket_product.storage.product
-            basket_product.product.default_storage = basket_product.storage
-            if basket_product.product.type == 'product' and not address_required:
-                address_required = True
-        basket_dict = BasketSchema(lang).dump(basket)
-        basket_dict['products'] = BasketProductSchema().dump(basket_products, many=True)
-        basket_dict['products'] = add_feature_price(basket_dict['products'])
-        profit = calculate_profit(basket_dict['products'])
-    else:
-        basket_dict = {}
-    return {'basket': basket_dict, 'summary': profit, 'address_required': address_required}
+    basket_products = basket_products or \
+                      BasketProduct.objects.filter(basket=basket).select_related(*BasketProduct.related)
+    summary = {"total_price": 0, "discount_price": 0, "profit": 0, "shopping_cost": 0, "tax": 0}
+    for basket_product in basket_products:
+        storage = basket_product.storage
+        basket_product.product = storage.product
+        basket_product.product.default_storage = storage
+        basket_product.supplier = storage.supplier
+        address_required = False
+        if basket_product.product.type == 2 and not address_required:
+            address_required = True
+        basket_product.__dict__.update(
+            {'item_final_price': storage.final_price, 'discount_percent': storage.discount_percent,
+             'item_discount_price': storage.discount_price, 'start_price': storage.start_price})
+        for feature in basket_product.features:
+            feature_storage = FeatureStorage.objects.get(feature_id=feature['fid'], storage_id=storage.pk)
+            for value in feature['fvid']:
+                feature_price = next(
+                    storage['price'] for storage in feature_storage.value if storage['fvid'] == value)
+                basket_product.item_final_price += feature_price
+                basket_product.item_discount_price += feature_price
+                basket_product.start_price += feature_price
+        count = basket_product.count
+        basket_product.final_price = basket_product.item_final_price * count
+        summary['total_price'] += basket_product.final_price
+        basket_product.discount_price = basket_product.item_discount_price * count
+        summary['discount_price'] += basket_product.discount_price
+        summary['profit'] += basket_product.final_price - basket_product.discount_price
+        basket_product.start_price = basket_product.start_price * count
+        basket_product.tax = 0
+        basket_product.amer = ""
+        if tax:
+            basket_product.amer = storage.product.box.name['fa']
+            basket_product.tax = get_tax(storage.tax_type, basket_product.discount_price, basket_product.start_price)
+        basket.basket_products = basket_products
+    if return_obj:
+        basket.summary = summary
+        basket.address_required = address_required
+        return basket
+    basket = BasketSchema(language=lang).dump(basket)
+    return {'basket': basket, 'summary': summary, 'address_required': address_required}
 
 
 def sync_default_storage(storages, products):

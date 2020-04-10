@@ -241,6 +241,18 @@ class CityAdmin(admin.ModelAdmin):
         return mark_safe(f'<a href="{link}">{escape(obj.state.__str__())}</a>')
 
 
+class HolidayAdmin(SafeDeleteAdmin):
+    list_display = ('occasion', 'day_off')
+    list_filter = ('day_off',)
+    search_fields = ['occasion', ]
+    list_per_page = 10
+
+    # ordering = ('-created_at',)
+
+    def fa(self, obj):
+        return obj.name['fa']
+
+
 admin.site.register(User, UserAdmin)
 admin.site.register(Box, BoxAdmin)
 admin.site.register(Category, CategoryAdmin)
@@ -249,10 +261,8 @@ admin.site.register(Address)
 admin.site.register(Media, MediaAdmin)
 admin.site.register(Product, ProductAdmin)
 admin.site.register(House, HouseAdmin)
-admin.site.register(HouseOwner, HouseOwnerAdmin)
 admin.site.register(HousePrice, HousePriceAdmin)
 admin.site.register(ResidenceType, ResidenceTypeAdmin)
-admin.site.register(CostumeHousePrice)
 admin.site.register(Booking, BookAdmin)
 admin.site.register(Storage)
 admin.site.register(Basket)
@@ -273,5 +283,6 @@ admin.site.register(Ad)
 admin.site.register(State, StateAdmin)
 admin.site.register(City, CityAdmin)
 admin.site.register(Permission)
+admin.site.register(Holiday, HolidayAdmin)
 admin.site.site_header = "Mehr Takhfif"
 admin.site.site_title = "Mehr Takhfif"

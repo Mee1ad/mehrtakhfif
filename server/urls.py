@@ -23,6 +23,7 @@ home = [
     path('box_with_category', try_except(BoxWithCategory.as_view()), name='box_with_category'),
     path('menu', cache_page(60 * 5)(try_except(GetMenu.as_view())), name='menu'),
     path('suggest', try_except(ElasticSearch.as_view()), name='suggest'),
+    path('search', try_except(ElasticSearch2.as_view()), name='search'),
     path('ads', try_except(GetAds.as_view()), name='ads'),
 ]
 
@@ -70,7 +71,8 @@ user = [
     path('wishlist', try_except(WishlistView.as_view()), name='wishlist'),
     path('avatar', try_except(Avatar.as_view()), name='avatar'),
     path('address', try_except(AddressView.as_view()), name='address'),
-    path('user_comments', try_except(UserCommentView.as_view()), name='user_comments')
+    path('user_comments', try_except(UserCommentView.as_view()), name='user_comments'),
+    path('invoice_detail/<int:invoice_id>', try_except(InvoiceView.as_view()), name='invoice_detail')
 ]
 
 auth = [

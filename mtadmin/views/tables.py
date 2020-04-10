@@ -6,11 +6,13 @@ from mtadmin.utils import *
 from mtadmin.serializer import *
 import pysnooper
 from django.db.utils import IntegrityError
+from django.db.models import Sum
 
 
 class CategoryView(TableView):
     permission_required = 'server.view_category'
 
+    @pysnooper.snoop()
     def get(self, request):
         params = get_params(request, 'box_id')
         box_id = params['filter'].get('box_id')
@@ -22,10 +24,14 @@ class CategoryView(TableView):
         if box_id is None and parent_id is None:
             raise PermissionDenied
         if parent_id:
-            box_id = Category.objects.get(parent_id=parent_id).pk
+            params['filter'].pop('box_id', None)
+            box_id = Category.objects.get(pk=parent_id).box_id
             box_permissions = request.user.box_permission.all().values_list('id', flat=True)
+            print(box_permissions)
             if box_id not in box_permissions:
                 raise PermissionDenied
+        else:
+            params['filter']['parent_id'] = None
         categories = Category.objects.filter(**params['filter']).order_by(*params['order'])
         for category in categories:
             children = self.get_child_count(category)
@@ -35,15 +41,15 @@ class CategoryView(TableView):
             category.category_child_product_count = Product.objects.filter(category__in=children['childes']).count()
             category.product_count = Product.objects.filter(category=category).count()
 
-        return JsonResponse(get_pagination(categories, request.step, request.page, CategoryASchema))
+        return JsonResponse(get_pagination(categories, request.step, request.page, CategoryASchema, request.all))
 
     def post(self, request):
-        pk = create_object(request, Category)
-        return JsonResponse(pk, status=201)
+        item = create_object(request, Category, serializer=CategoryASchema, return_item=True)
+        return JsonResponse(item, status=201)
 
     def put(self, request):
-        update_object(request, Category)
-        return JsonResponse({})
+        item = update_object(request, Category, return_item=True, serializer=CategoryASchema)
+        return JsonResponse({"data": item})
 
     def delete(self, request):
         return delete_base(request, Category)
@@ -67,11 +73,11 @@ class BrandView(TableView):
     permission_required = 'server.view_brand'
 
     def get(self, request):
-        return JsonResponse(serialized_objects(request, Brand, BrandASchema, BrandASchema))
+        return JsonResponse(serialized_objects(request, Brand, BrandASchema, BrandASchema, error_null_box=False))
 
     def post(self, request):
-        pk = create_object(request, Brand, return_item=True, serializer=BrandASchema)
-        return JsonResponse(pk, status=201)
+        item = create_object(request, Brand, return_item=True, serializer=BrandASchema, error_null_box=False)
+        return JsonResponse(item, status=201)
 
     def put(self, request):
         item = update_object(request, Brand, return_item=True, serializer=BrandASchema)
@@ -113,34 +119,45 @@ class ProductView(TableView):
         update_object(request, Product)
         return JsonResponse({})
 
-    def patch(self, request):
-        data = json.loads(request.body)
-        pk = data['id']
-        permalink = data['permalink']
-        if Product.objects.filter(pk=pk).update(permalink=permalink):
-            return JsonResponse({})
-        return HttpResponseBadRequest()
-
     def delete(self, request):
         return delete_base(request, Product)
 
 
-class ProductStorage(TableView):
-    permission_required = ['server.view_storage', 'server.view_product']
+class HouseView(TableView):
+    permission_required = 'server.view_house'
 
-    def get(self, request, pk):
-        storages = Storage.objects.filter(product_id=pk)
-        product = storages.first().product
-        data = StorageESchema().dump(storages, many=True)
-        return JsonResponse({"product": {"id": product.id, "name": product.name, "permalink": product.permalink},
-                             "data": data})
+    def get(self, request):
+        return JsonResponse(serialized_objects(request, House, HouseESchema, HouseESchema, box_key='product__box'))
+
+    def post(self, request):
+        pk = create_object(request, House, HouseESchema)
+        return JsonResponse(pk, status=201)
+
+    def put(self, request):
+        update_object(request, House)
+        return JsonResponse({})
+
+    def delete(self, request):
+        return delete_base(request, House)
 
 
 class StorageView(TableView):
     permission_required = 'server.view_storage'
 
     def get(self, request):
-        return JsonResponse(serialized_objects(request, Storage, StorageASchema, StorageESchema, 'product__box'))
+        Storage.objects.filter(deadline__lt=timezone.now()).update(disable=True)
+        box_key = 'product__box'
+        params = get_params(request, box_key)
+        if not params['filter'].get(box_key):
+            box_check = get_box_permission(request.user, box_key)
+            params['filter'] = {**params['filter'], **box_check}
+        data = serialized_objects(request, Storage, StorageESchema, StorageESchema, box_key,
+                                  params=params, error_null_box=False)
+        product_id = request.GET.get('product_id')
+        product = Product.objects.get(pk=product_id)
+        return JsonResponse({"product": {"id": product.id, "name": product.name, "permalink": product.permalink,
+                                         "default_storage": {"id": product.default_storage_id}},
+                             "data": data})
 
     def post(self, request):
         pk = create_object(request, Storage)
@@ -196,19 +213,19 @@ class TagView(TableView):
         contain = request.GET.get('contain')
         if pk:
             obj = Tag.objects.get(pk=pk)
-            return JsonResponse({"data": TagESchema().dump(obj)})
+            return JsonResponse({"data": TagASchema().dump(obj)})
         try:
             query = Tag.objects.annotate(new_name=SearchVector(KeyTextTransform(request.lang, 'name')), ). \
                 filter(new_name__contains=contain)
-            res = get_pagination(query, request.step, request.page, TagASchema)
+            res = get_pagination(query, request.step, request.page, TagASchema, request.all)
         except (FieldError, ValueError):
             query = Tag.objects.all()
-            res = get_pagination(query, request.step, request.page, TagASchema)
+            res = get_pagination(query, request.step, request.page, TagASchema, request.all)
 
         return JsonResponse(res)
 
     def post(self, request):
-        items = create_object(request, Tag, return_item=True, serializer=TagASchema)
+        items = create_object(request, Tag, box_key=None, return_item=True, serializer=TagASchema)
         return JsonResponse(items, status=201)
 
     def put(self, request):
@@ -317,3 +334,13 @@ class CommentView(TableView):
         pk = int(request.GET.get('id', None))
         Comment.objects.filter(pk=pk).update(suspend=True)
         return JsonResponse({})
+
+
+class Tax(AdminView):
+    permission_required = 'server.view_invoice_storage'
+
+    def get(self, request):
+        # todo
+        params = get_params(request, date_key='invoice__payed_at')
+        # params['aggregate'] = {'tax': Sum('tax')}
+        return JsonResponse(serialized_objects(request, InvoiceStorage, InvoiceProductSchema))

@@ -7,10 +7,58 @@ from mehr_takhfif.settings import INVOICE_ROOT
 import pysnooper
 from django.db.utils import IntegrityError
 from django.contrib.auth import login
+import pytz
+from django.shortcuts import render_to_response
+import jdatetime
+import time
+from selenium import webdriver
+
+
+class Test(View):
+    @pysnooper.snoop()
+    def get(self, request):
+        driver = webdriver.Chrome('F:\Download\Compressed\chromedriver.exe')
+        driver.get("http://time.ir")
+        year = 1398
+        months_name = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن',
+                       'اسفند']
+        for y in range(1):
+            year += 1
+            month = 0
+            for m in range(12):
+                month += 1
+                ul = driver.find_element_by_class_name("list-unstyled")
+                lis = ul.find_elements_by_tag_name('li')
+                for li in lis:
+                    occasion = li.text
+                    tag = li.get_attribute('outerHTML')
+                    day = int(re.search('\d+', occasion[:2])[0])
+                    try:
+                        occasion = occasion[len(f"{day} "):].split(' [', 1)[0].split(months_name[m], 1)[1]
+                    except Exception:
+                        occasion = occasion[len(f"{day} "):].split(' [', 1)[0].split(months_name[m], 1)[0]
+                    day_off = True if re.search('eventHoliday', tag) else False
+                    try:
+                        holiday = Holiday.objects.get(date=jdatetime.datetime.strptime(f'{year}-{month}-{day}', '%Y-%m-%d').togregorian())
+                        holiday.occasion = holiday.occasion + ', ' + occasion
+                        holiday.save()
+                    except Holiday.DoesNotExist:
+                        Holiday.objects.create(day_off=day_off, occasion=occasion, date=jdatetime.datetime.strptime(f'{year}-{month}-{day}', '%Y-%m-%d').togregorian())
+                next_month = driver.find_element_by_xpath(
+                    '//*[@id="ctl00_cphTop_Sampa_Web_View_EventUI_EventCalendarSimple30cphTop_3732_ecEventCalendar_pnlNext"]/span')
+                next_month.click()
+                time.sleep(2)
+
+        driver.close()
+        return JsonResponse({"message": "Done"})
 
 
 class Profile(LoginRequired):
+
     def get(self, request):
+        h = House.objects.all().first()
+        return JsonResponse(HouseSchema().dump(h))
+
         res = {'user': UserSchema().dump(request.user)}
         if request.user.is_staff:
             res['user']['is_staff'] = request.user.is_staff
@@ -71,6 +119,15 @@ class Orders(LoginRequired):
                                  'status': invoice.get_status_display(), 'amount': invoice.amount})
         orders = user_data_with_pagination(Invoice, InvoiceSchema, request)
         return JsonResponse(orders)
+
+
+class InvoiceView(LoginRequired):
+    def get(self, request, invoice_id):
+        invoice = Invoice.objects.get(pk=invoice_id, status=2, user=request.user)
+        basket = get_basket(request.user, lang=request.lang, basket=invoice.basket, tax=True)
+        basket['user'] = request.user
+        basket['date'] = jdatetime.date.fromgregorian(date=invoice.payed_at).strftime("%Y/%m/%d")
+        return render_to_response('full_invoice.html', basket)
 
 
 class OrderProduct(LoginRequired):

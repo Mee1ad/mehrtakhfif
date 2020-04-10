@@ -41,7 +41,7 @@ class ProductView(View):
 class RelatedProduct(View):
     def get(self, request, permalink):
         product = Product.objects.get(permalink=permalink)
-        tags = product.tag.all()
+        tags = product.tags.all()
         products = Product.objects.filter(tag__in=tags).order_by('-id').distinct('id')
         return JsonResponse(get_pagination(products, request.step, request.page, MinProductSchema))
 

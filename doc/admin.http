@@ -44,7 +44,7 @@ Content-Type: Application/json
 
 
 ### Parameters => s for step, p for page, id for single item
-GET {{admin_host}}/token
+GET {{admin_host}}/test
 
 ### 2 Step request: first without token, second with obtaind token from first request
 DELETE {{admin_host}}/category?id=6
