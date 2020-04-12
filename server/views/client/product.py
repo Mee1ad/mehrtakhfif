@@ -14,7 +14,7 @@ class ProductView(View):
             return JsonResponse({}, status=404)
         storages = product.storage_set.filter(start_time__lte=timezone.now(), deadline__gte=timezone.now())
         product = ProductSchema(lang).dump(product)
-        product['category'] = self.get_category(product['category'])
+        product['category'] = [self.get_category(c) for c in product['category']]
         product['storages'] = StorageSchema(lang).dump(storages, many=True)
         purchased = False
         if user.is_authenticated:

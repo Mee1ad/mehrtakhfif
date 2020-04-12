@@ -79,10 +79,17 @@ class PaymentRequest(View):
     def behpardakht_api(self, invoice_id):
         invoice = Invoice.objects.get(pk=invoice_id)
         basket = get_basket(invoice.user, basket=invoice.basket, return_obj=True)
+        additional_data = []
         for basket_product in basket.basket_products:
-            shaba = basket_product.supplier.shaba
-            amount = basket_product.start_price
+            supplier = basket_product.supplier
+            for data in additional_data:
+                if supplier.deposit_id == data[0]:
+                    data[1] += basket_product.start_price
+                    break
+            else:
+                additional_data.append([supplier.deposit_id, basket_product.start_price, 0])
 
+        additional_data = ';'.join(','.join(str(x) for x in b) for b in additional_data)
         # todo debug
         invoice.amount = 5000
 

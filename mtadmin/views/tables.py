@@ -7,6 +7,7 @@ from mtadmin.serializer import *
 import pysnooper
 from django.db.utils import IntegrityError
 from django.db.models import Sum
+import json
 
 
 class CategoryView(TableView):
@@ -27,7 +28,6 @@ class CategoryView(TableView):
             params['filter'].pop('box_id', None)
             box_id = Category.objects.get(pk=parent_id).box_id
             box_permissions = request.user.box_permission.all().values_list('id', flat=True)
-            print(box_permissions)
             if box_id not in box_permissions:
                 raise PermissionDenied
         else:
@@ -143,9 +143,9 @@ class HouseView(TableView):
 
 class StorageView(TableView):
     permission_required = 'server.view_storage'
-
+    @pysnooper.snoop()
     def get(self, request):
-        Storage.objects.filter(deadline__lt=timezone.now()).update(disable=True)
+        Storage.objects.filter(deadline__lt=timezone.now(), disable=False).update(disable=True)
         box_key = 'product__box'
         params = get_params(request, box_key)
         if not params['filter'].get(box_key):
@@ -334,6 +334,35 @@ class CommentView(TableView):
         pk = int(request.GET.get('id', None))
         Comment.objects.filter(pk=pk).update(suspend=True)
         return JsonResponse({})
+
+
+class SupplierView(TableView):
+    permission_required = 'server.view_user'
+    rm_list = ['email', 'password', 'is_ban', 'is_active', 'is_verify', 'privacy_agreement', ]
+
+    def get(self, request):
+        params = get_params(request)
+        params['filter']['is_supplier'] = True
+        return JsonResponse(serialized_objects(request, User, SupplierESchema, SupplierESchema, error_null_box=False,
+                                               params=params))
+
+    def post(self, request):
+        data = get_data(request, require_box=False)
+        data['is_supplier'] = True
+        [data.pop(k, None) for k in self.rm_list]
+        item = create_object(request, User, serializer=SupplierESchema, error_null_box=False,
+                             data=data, return_item=True)
+        return JsonResponse(item, status=201)
+
+    def put(self, request):
+        data = get_data(request, require_box=False)
+        data['is_supplier'] = True
+        [data.pop(k, None) for k in self.rm_list]
+        item = update_object(request, User, serializer=SupplierESchema, data=data, return_item=True, require_box=False)
+        return JsonResponse({"data": item})
+
+    def delete(self, request):
+        return delete_base(request, Brand)
 
 
 class Tax(AdminView):

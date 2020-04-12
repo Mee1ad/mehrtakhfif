@@ -78,6 +78,7 @@ class TagDocument(Document):
 
 @registry.register_document
 class SupplierDocument(Document):
+    id = fields.IntegerField()
     first_name = fields.TextField(analyzer=ngram, attr='first_name')
     last_name = fields.TextField(analyzer=ngram, attr='last_name')
     username = fields.TextField(analyzer=ngram, attr='username')
@@ -94,4 +95,4 @@ class SupplierDocument(Document):
         model = User  # The model associated with this Document
 
         # The fields of the model you want to be indexed in Elasticsearch
-        fields = ['id', 'is_supplier']
+        fields = ['is_supplier']

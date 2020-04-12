@@ -140,11 +140,3 @@ class BoxSettings(AdminView):
         if model.objects.filter(pk=data['id'], **box_check).update(settings=data['settings']):
             return JsonResponse({})
         return HttpResponseBadRequest()
-
-
-class Supplier(AdminView):
-    def post(self, request):
-        data = json.dumps(request.body)
-        User.objects.create(username=data['username'], first_name=data['first_name'], last_name=data['last_name'],
-                            shaba=data['shaba'], is_supplier=True)
-        return JsonResponse({})

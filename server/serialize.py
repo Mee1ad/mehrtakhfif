@@ -109,8 +109,8 @@ class BaseSchema(Schema):
         return None
 
     def get_category(self, obj):
-        if obj.category is not None:
-            return CategorySchema(self.lang).dump(obj.category)
+        if obj.category.all():
+            return CategorySchema(self.lang).dump(obj.category.all(), many=True)
         return None
 
     def get_product(self, obj):
@@ -330,7 +330,7 @@ class ProductSchema(BaseSchema):
     type = fields.Function(lambda o: o.get_type_display())
     brand = fields.Method("get_brand")
     box = fields.Method("get_box")
-    category = fields.Method("get_category")
+    categories = fields.Method("get_category")
     house = fields.Method("get_house")
     tag = TagField()
     media = MediaField()
@@ -623,29 +623,8 @@ class ResidenceTypeSchema(BaseSchema):
     cancel_rules = fields.Method("get_name")
 
 
-class CostumeHousePriceSchema(Schema):
-    class Meta:
-        additional = ('start_date', 'end_date', 'price')
-
-
-class HouseSchema(BaseSchema):
-    class Meta:
-        additional = ('notify_before_arrival', 'future_booking_time')
-
-    cancel_rules = fields.Method("get_cancel_rules")
-    rules = fields.Method("get_rules")
-    state = fields.Function(lambda o: o.state.name)
-    city = fields.Function(lambda o: o.city.name)
-    facilities = fields.Function(lambda o: o.facilities)
-    capacity = fields.Function(lambda o: o.capacity)
-    rent_type = fields.Method('get_rent_type')
-    residence_area = fields.Method('get_residence_area')
-    bedroom = fields.Function(lambda o: o.bedroom)
-    safety = fields.Function(lambda o: o.safety)
-    calender = fields.Function(lambda o: o.calender)
-    residence_type = ResidenceTypeField()
-
-    # prices = fields.Method("get_prices")
+class HousePriceSchema(Schema):
+    price = fields.Method("get_prices")
 
     @staticmethod
     def get_prices(obj):
@@ -716,6 +695,25 @@ class HouseSchema(BaseSchema):
                 {"date": today, "day": last_date.day + d,
                  "weekday": days_name[weekday], "available": False})
         return months
+
+
+class HouseSchema(BaseSchema):
+    class Meta:
+        additional = ('notify_before_arrival', 'future_booking_time')
+
+    cancel_rules = fields.Method("get_cancel_rules")
+    rules = fields.Method("get_rules")
+    state = fields.Function(lambda o: o.state.name)
+    city = fields.Function(lambda o: o.city.name)
+    facilities = fields.Function(lambda o: o.facilities)
+    capacity = fields.Function(lambda o: o.capacity)
+    rent_type = fields.Method('get_rent_type')
+    residence_area = fields.Method('get_residence_area')
+    bedroom = fields.Function(lambda o: o.bedroom)
+    safety = fields.Function(lambda o: o.safety)
+    calender = fields.Function(lambda o: o.calender)
+    residence_type = ResidenceTypeField()
+    price = fields.Function(lambda o: HousePriceSchema().dump(o)['price'])
 
     def get_rules(self, obj):
         return self.get(obj.rules)

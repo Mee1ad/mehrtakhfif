@@ -100,7 +100,8 @@ def upload(request, titles, media_type, box=None):
 
 
 def filter_params(params, lang):
-    filters = {'filter': {'default_storage__isnull': False}, 'rank': {}, 'related': {}, 'query': '', 'order': '-created_at'}
+    filters = {'filter': {'default_storage__isnull': False}, 'rank': {}, 'related': {}, 'query': '',
+               'order': '-created_at'}
     if not params:
         return filters
     ds = 'default_storage__'
@@ -324,13 +325,14 @@ def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=Non
         basket_product.discount_price = basket_product.item_discount_price * count
         summary['discount_price'] += basket_product.discount_price
         summary['profit'] += basket_product.final_price - basket_product.discount_price
+        summary['mt_profit'] += basket_product.discount_price - basket_product.start_price
         basket_product.start_price = basket_product.start_price * count
         basket_product.tax = 0
         basket_product.amer = ""
         if tax:
             basket_product.amer = storage.product.box.name['fa']
             basket_product.tax = get_tax(storage.tax_type, basket_product.discount_price, basket_product.start_price)
-        basket.basket_products = basket_products
+    basket.basket_products = basket_products
     if return_obj:
         basket.summary = summary
         basket.address_required = address_required

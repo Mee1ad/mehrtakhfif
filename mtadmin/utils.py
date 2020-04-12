@@ -34,7 +34,6 @@ def serialized_objects(request, model, serializer=None, single_serializer=None, 
             raise PermissionDenied
     if not params:
         params = get_params(request, box_key)
-        print(params)
     try:
         if error_null_box and not params['filter'].get(box_key):
             raise PermissionDenied
@@ -80,15 +79,16 @@ def get_params(request, box_key=None, date_key='created_at'):
     return {'filter': filterby, 'order': orderby}
 
 
-def get_data(request):
+def get_data(request, require_box=True):
     # token = get_token_from_cookie(request)
     # assert check_access_token(token, request.user)
     data = json.loads(request.body)
     remove = ['created_at', 'created_by', 'updated_at', 'updated_by', 'deleted_by', 'income', 'profit',
-              'rate', 'default_storage', 'sold_count'] + ['feature', ]
+              'rate', 'default_storage', 'sold_count', 'is_superuser', 'is_staff', 'deposit_id',
+              'box_permission', 'wallet_credit', 'suspend_expire_date', 'activation_expire'] + ['feature', ]
     [data.pop(k, None) for k in remove]
     boxes = request.user.box_permission.all()
-    if data.get('box_id') not in boxes.values_list('id', flat=True):
+    if require_box and data.get('box_id') not in boxes.values_list('id', flat=True):
         raise PermissionDenied
     if request.method == "POST":
         data.pop('id', None)
@@ -109,17 +109,17 @@ def assign_default_value(product_id):
     Product.objects.filter(pk=product_id).update(default_storage=min(storages, key=attrgetter('discount_price')))
 
 
-def create_object(request, model, box_key='box', return_item=False, serializer=None, error_null_box=True):
+def create_object(request, model, box_key='box', return_item=False, serializer=None, error_null_box=True, data=None):
     if not request.user.has_perm(f'server.add_{model.__name__.lower()}'):
         raise PermissionDenied
     # data = get_data(request)
-    data = json.loads(request.body)
+    data = data or json.loads(request.body)
     user = request.user
     boxes = user.box_permission.all()
     if box_key == 'product__box':
         if not Product.objects.filter(pk=data['product_id'], box__in=boxes).exists():
             raise PermissionDenied
-    rm = ['tags', 'media', 'features']
+    rm = ['tags', 'media', 'features', 'categories']
     m2m = {}
     for item in rm:
         try:
@@ -127,15 +127,15 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
             data.pop(item)
         except KeyError:
             continue
-    # if (not m2m['media'] or not data.get('thumbnail_id', None)) and model == Product:
-    #     data['disable'] = True
     obj = model.objects.create(**data, created_by=user, updated_by=user)
     if model == Product:
         product = obj
         tags = Tag.objects.filter(pk__in=m2m['tags'])
+        categories = Category.objects.filter(pk__in=m2m['categories'])
         p_medias = [ProductMedia(product=product, media_id=pk, priority=m2m['media'].index(pk)) for pk in m2m['media']]
         ProductMedia.objects.bulk_create(p_medias)
         product.tags.add(*tags)
+        product.category.add(*categories)
     if model == Category or model == Storage:
         item = obj
         if 'features' in m2m:
@@ -153,19 +153,20 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
     return {'id': obj.pk}
 
 
-def update_object(request, model, box_key='box', return_item=False, serializer=None):
+def update_object(request, model, box_key='box', return_item=False, serializer=None, data=None, require_box=True):
     if not request.user.has_perm(f'server.change_{model.__name__.lower()}'):
         raise PermissionDenied
     # data = get_data(request)
-    data = json.loads(request.body)
+    data = data or json.loads(request.body)
     pk = data['id']
-    box_check = get_box_permission(request.user, box_key)
+    box_check = get_box_permission(request.user, box_key) if require_box else {}
     items = model.objects.filter(pk=pk, **box_check)
     items.update(**data)
+    print(items)
     if return_item:
         request.GET._mutable = True
         request.GET['id'] = items.first().pk
-        return serialized_objects(request, model, single_serializer=serializer)
+        return serialized_objects(request, model, single_serializer=serializer, error_null_box=require_box)
 
 
 def delete_base(request, model):

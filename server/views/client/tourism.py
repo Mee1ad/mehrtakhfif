@@ -5,11 +5,22 @@ from server.serialize import *
 from server.utils import View, load_data
 
 
+class HouseView(View):
+    def get(self, request):
+        pass
+        # houses = House.objects.filter(people__gte=)
+
+
 class BookingView(View):
     def post(self, request):
         data = load_data(request)
-        Booking.objects.create(user=request.user, house_id=data['house_id'], start_date=data['start_date'],
-                               end_date=data['end_date'])
+        house = House.objects.get(pk=data['house_id'])
+        price = HousePriceSchema().dump(house)['price']
+        start_date = data['start_date'].split('-')
+        end_date = data['end_date'].split('-')
+        end_year, end_month, end_day = end_date[0], end_date[1], end_date[2]
+        Booking.objects.create(user=request.user, house=house, invoice=invoice, people_count=data['people'],
+                               start_date=data['start_date'], end_date=data['end_date'])
         return JsonResponse({})
 
     def get(self, request):

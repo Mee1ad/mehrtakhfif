@@ -63,7 +63,10 @@ class BaseAdminSchema(Schema):
         return {'id': obj.box_id, 'name': obj.box.name}
 
     def get_category(self, obj):
-        return {'id': obj.category_id, 'name': obj.category.name}
+        cats = []
+        for cat in obj.category.all():
+            cats.append({'id': cat.pk, 'name': cat.name})
+        return cats
 
     def get_product(self, obj):
         try:
@@ -99,6 +102,11 @@ class BaseAdminSchema(Schema):
         return tag_list
 
 
+class SupplierESchema(BaseAdminSchema):
+    class Meta:
+        additional = ('id', 'username', 'first_name', 'last_name', 'shaba', 'is_verify')
+
+
 class BoxASchema(Schema):
     class Meta:
         additional = ('id', 'permalink')
@@ -132,7 +140,7 @@ class ProductASchema(BaseAdminSchema):
     name = fields.Method("get_name")
     permalink = fields.Str()
     box = fields.Method("get_box")
-    category = fields.Method("get_category")
+    categories = fields.Method("get_category")
     # storages = fields.Method("get_storage")
     city = fields.Nested(CitySchema)
     thumbnail = fields.Nested("MediaASchema")

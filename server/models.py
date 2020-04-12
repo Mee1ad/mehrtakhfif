@@ -18,8 +18,8 @@ from mehr_takhfif.settings import HOST, MEDIA_ROOT
 import datetime
 import pysnooper
 from PIL import Image, ImageFilter
-from django.contrib.postgres.fields import ArrayField
-from django.db.models.query import QuerySet
+from safedelete.managers import SafeDeleteQueryset
+from safedelete.config import DELETED_INVISIBLE
 from operator import attrgetter
 
 media_types = [(1, 'image'), (2, 'thumbnail'), (3, 'media'), (4, 'slider'), (5, 'ads'), (6, 'avatar')]
@@ -127,19 +127,21 @@ def is_list_of_dict(data):
     raise ValidationError('data is not list')
 
 
-class MyQuerySet(QuerySet):
+class MyQuerySet(SafeDeleteQueryset):
+    _safedelete_visibility = DELETED_INVISIBLE
+    _safedelete_visibility_field = 'pk'
+    _queryset_class = SafeDeleteQueryset
+
     def update(self, *args, **kwargs):
-        remove_list = ['id', 'box_id', 'tags', 'media', 'features']
+        if not self:
+            return True
+        remove_list = ['id', 'box_id', 'tags', 'media', 'features', 'categories']
         model = self[0].__class__.__name__.lower()
         validations = {'storage': self.storage_validation, 'category': self.category_validation,
                        'product': self.product_validation}
         kwargs = validations[model](**kwargs)
         [kwargs.pop(item, None) for item in remove_list]
         super().update(**kwargs)
-
-    def assign_default_value(self, product_id):
-        storages = Storage.objects.filter(product_id=product_id)
-        Product.objects.filter(pk=product_id).update(default_storage=min(storages, key=attrgetter('discount_price')))
 
     def permalink_validation(self, **kwargs):
         pattern = '^[A-Za-z0-9\u0591-\u07FF\uFB1D-\uFDFD\uFE70-\uFEFC][A-Za-z0-9-\u0591-\u07FF\uFB1D-\uFDFD\uFE70-\uFEFC]*$'
@@ -164,7 +166,8 @@ class MyQuerySet(QuerySet):
         features = Feature.objects.filter(pk__in=kwargs.get('features', []))
         item.features.clear()
         item.features.add(*features)
-        self.assign_default_value(item.product_id)
+        if item.manage:
+            item.assign_default_value(item.product_id)
         return kwargs
 
     def product_validation(self, **kwargs):
@@ -177,9 +180,12 @@ class MyQuerySet(QuerySet):
                 .order_by('priority').update(priority=F('priority') + 1)
             new_default_storage.update(priority=0)
         tags = Tag.objects.filter(pk__in=kwargs.get('tags', []))
+        categories = Category.objects.filter(pk__in=kwargs.get('categories', []))
         product = self.first()
         product.tags.clear()
         product.tags.add(*tags)
+        product.category.clear()
+        product.category.add(*categories)
         product.media.clear()
         p_medias = [ProductMedia(product=product, media_id=pk, priority=kwargs['media'].index(pk)) for pk in
                     kwargs.get('media', [])]
@@ -189,7 +195,44 @@ class MyQuerySet(QuerySet):
         return kwargs
 
 
-class User(AbstractUser):
+class Base(SafeDeleteModel):
+    # related_query_name = "%(app_label)s_%(class)ss" for many to many
+    class Meta:
+        abstract = True
+
+    _safedelete_policy = SOFT_DELETE_CASCADE
+    id = models.BigAutoField(auto_created=True, primary_key=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey('User', on_delete=PROTECT, related_name="%(app_label)s_%(class)s_created_by")
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey('User', on_delete=PROTECT, related_name="%(app_label)s_%(class)s_updated_by")
+    deleted_by = models.ForeignKey('User', on_delete=PROTECT, null=True, blank=True,
+                                   related_name="%(app_label)s_%(class)s_deleted_by")
+
+    def safe_delete(self, user_id):
+        i = 1
+        while True:
+            try:
+                self.permalink = f"{self.permalink}-deleted-{i}"
+                self.deleted_by_id = user_id
+                self.save()
+                break
+            except IntegrityError:
+                i += 1
+            except AttributeError:
+                self.deleted_by_id = user_id
+                self.save()
+                break
+        self.delete()
+
+    def get_name_fa(self):
+        try:
+            return self.name['fa']
+        except Exception:
+            pass
+
+
+class User(AbstractUser, Base):
 
     def __str__(self):
         return self.username
@@ -216,7 +259,9 @@ class User(AbstractUser):
     is_staff = models.BooleanField(default=False, verbose_name='Staff')
     is_vip = models.BooleanField(default=False)
     is_supplier = models.BooleanField(default=False)
+    is_verify = models.BooleanField(default=False)
     privacy_agreement = models.BooleanField(default=False)
+    deposit_id = models.PositiveSmallIntegerField(null=True, blank=True)
     default_address = models.OneToOneField(to="Address", on_delete=SET_NULL, null=True, blank=True,
                                            related_name="user_default_address")
     box_permission = models.ManyToManyField("Box")
@@ -236,43 +281,8 @@ class User(AbstractUser):
         ordering = ['-id']
 
 
-class Base(SafeDeleteModel):
-    # related_query_name = "%(app_label)s_%(class)ss" for many to many
-    class Meta:
-        abstract = True
-
-    _safedelete_policy = SOFT_DELETE_CASCADE
-    id = models.BigAutoField(auto_created=True, primary_key=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    created_by = models.ForeignKey(User, on_delete=PROTECT, related_name="%(app_label)s_%(class)s_created_by")
-    updated_at = models.DateTimeField(auto_now=True)
-    updated_by = models.ForeignKey(User, on_delete=PROTECT, related_name="%(app_label)s_%(class)s_updated_by")
-    deleted_by = models.ForeignKey(User, on_delete=PROTECT, null=True, blank=True,
-                                   related_name="%(app_label)s_%(class)s_deleted_by")
-
-    def safe_delete(self, user_id):
-        i = 1
-        while True:
-            try:
-                self.permalink = f"{self.permalink}-deleted-{i}"
-                self.deleted_by_id = user_id
-                self.save()
-                break
-            except IntegrityError:
-                i += 1
-            except AttributeError:
-                self.deleted_by_id = user_id
-                self.save()
-                break
-        self.delete()
-
-    def get_name_fa(self):
-        try:
-            return self.name['fa']
-        except Exception:
-            pass
-
-
+# todo limit options for disable and enable product and storage
+# todo disabling manual storage through enabling manage
 class Client(models.Model):
     id = models.BigAutoField(auto_created=True, primary_key=True)
     device_id = models.CharField(max_length=255)
@@ -521,7 +531,6 @@ class Product(Base):
             pass
 
     def save(self, *args, **kwargs):
-        print('heh')
         self.validation()
         super().save(*args, **kwargs)
 
@@ -535,7 +544,10 @@ class Product(Base):
         return self.name['ar']
 
     def get_category_fa(self):
-        return self.category.name['fa']
+        try:
+            return self.category.all().first().name['fa']
+        except Exception:
+            pass
 
     def get_category_en(self):
         return self.category.name['en']
@@ -553,7 +565,7 @@ class Product(Base):
     #     self.slug = slugify(self.title)
     #     super(Post, self).save()
 
-    category = models.ForeignKey(Category, on_delete=CASCADE)
+    category = models.ManyToManyField(Category, related_query_name="categories", related_name="categories")
     box = models.ForeignKey(Box, on_delete=PROTECT)
     brand = models.ForeignKey(Brand, on_delete=PROTECT, null=True, blank=True)
     thumbnail = models.ForeignKey(Media, on_delete=PROTECT, related_name='product_thumbnail', null=True)
@@ -623,6 +635,14 @@ class Storage(Base):
     def __str__(self):
         return f"{self.product}"
 
+    def assign_default_value(self, product_id):
+        storages = Storage.objects.filter(product_id=product_id, disable=False)
+        try:
+            Product.objects.filter(pk=product_id).update(
+                default_storage=min(storages, key=attrgetter('discount_price')))
+        except Exception:
+            pass
+
     def validation(self):
         if self.features_percent > 100 or self.discount_percent > 100 or self.vip_discount_percent:
             raise ValidationError("percent can't be bigger than 100")
@@ -631,6 +651,8 @@ class Storage(Base):
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
+        if self.manage:
+            self.assign_default_value(self.product_id)
 
     product = models.ForeignKey(Product, on_delete=PROTECT)
     features = models.ManyToManyField(Feature, through='FeatureStorage', related_query_name="features")
@@ -654,6 +676,7 @@ class Storage(Base):
     vip_discount_percent = models.PositiveSmallIntegerField(verbose_name='Discount vip price percent')
     gender = models.BooleanField(blank=True, null=True)
     disable = models.BooleanField(default=False)
+    manage = models.BooleanField(default=True)
     deadline = models.DateTimeField(default=next_month)
     start_time = models.DateTimeField(auto_now_add=True)
     title = JSONField(default=multilanguage)
@@ -1117,6 +1140,7 @@ class House(Base):
     calender = JSONField(blank=True)
     notify_before_arrival = models.PositiveSmallIntegerField(default=0)  # days number
     future_booking_time = models.PositiveSmallIntegerField(default=7)  # future days with reserve availability
+    max_guest = models.PositiveSmallIntegerField()
 
     class Meta:
         db_table = 'house'
