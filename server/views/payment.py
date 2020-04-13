@@ -32,7 +32,7 @@ ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'dis
 bp = {'terminal_id': 5290645, 'username': "takh252", 'password': "71564848",
       'ipg_url': "https://bpm.shaparak.ir/pgwchannel/startpay.mellat",
       'callback': 'https://api.mehrtakhfif.com/payment/callback'}  # mellat
-client = zeep.Client(wsdl="https://bpm.shaparak.ir/pgwchannel/services/pgw?wsdl")
+# client = zeep.Client(wsdl="https://bpm.shaparak.ir/pgwchannel/services/pgw?wsdl")
 
 saddad = {'merchant_id': None, 'terminal_id': None, 'terminal_key': None,
           'payment_request': 'https://sadad.shaparak.ir/VPG/api/v0/Request/PaymentRequest',
@@ -54,7 +54,7 @@ class PaymentRequest(View):
     def get(self, request, basket_id):
         # return JsonResponse({"url": "http://api.mt.com/payment/callback"})
         # ipg_id = request.GET.get('ipg_id', 1)
-        return JsonResponse({"behpardakht": self.behpardakht_api(106)})
+        return JsonResponse({"behpardakht": {"url": f"{bp['ipg_url']}?RefId={self.behpardakht_api(106)}"}})
 
         user = request.user
         if not Basket.objects.filter(pk=basket_id, user=user).exists():
