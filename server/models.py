@@ -130,6 +130,7 @@ def is_list_of_dict(data):
 def default_meals():
     return {'Breakfast': False, 'Lunch': False, 'Dinner': False}
 
+
 class MyQuerySet(SafeDeleteQueryset):
     _safedelete_visibility = DELETED_INVISIBLE
     _safedelete_visibility_field = 'pk'
@@ -278,6 +279,10 @@ class User(AbstractUser, Base):
     activation_expire = models.DateTimeField(null=True, blank=True)
     token = models.CharField(max_length=255, unique=True, null=True, blank=True)
     token_expire = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey('User', on_delete=PROTECT, related_name="%(app_label)s_%(class)s_created_by",
+                                   null=True)
+    updated_by = models.ForeignKey('User', on_delete=PROTECT, related_name="%(app_label)s_%(class)s_updated_by",
+                                   null=True)
 
     class Meta:
         db_table = 'user'
