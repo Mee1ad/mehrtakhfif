@@ -11,7 +11,7 @@ import pytz
 from django.shortcuts import render_to_response
 import jdatetime
 import time
-from selenium import webdriver
+# from selenium import webdriver
 
 
 class Test(View):
