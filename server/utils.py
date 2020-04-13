@@ -299,7 +299,7 @@ def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=Non
         return {}
     basket_products = basket_products or \
                       BasketProduct.objects.filter(basket=basket).select_related(*BasketProduct.related)
-    summary = {"total_price": 0, "discount_price": 0, "profit": 0, "shopping_cost": 0, "tax": 0}
+    summary = {"total_price": 0, "discount_price": 0, "profit": 0, "mt_profit": 0, "shopping_cost": 0, "tax": 0}
     for basket_product in basket_products:
         storage = basket_product.storage
         basket_product.product = storage.product

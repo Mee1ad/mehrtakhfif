@@ -32,7 +32,7 @@ ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'dis
 bp = {'terminal_id': 5290645, 'username': "takh252", 'password': "71564848",
       'ipg_url': "https://bpm.shaparak.ir/pgwchannel/startpay.mellat",
       'callback': 'https://api.mehrtakhfif.com/payment/callback'}  # mellat
-# client = zeep.Client(wsdl="https://bpm.shaparak.ir/pgwchannel/services/pgw?wsdl")
+client = zeep.Client(wsdl="https://bpm.shaparak.ir/pgwchannel/services/pgw?wsdl")
 
 saddad = {'merchant_id': None, 'terminal_id': None, 'terminal_key': None,
           'payment_request': 'https://sadad.shaparak.ir/VPG/api/v0/Request/PaymentRequest',
@@ -54,6 +54,8 @@ class PaymentRequest(View):
     def get(self, request, basket_id):
         # return JsonResponse({"url": "http://api.mt.com/payment/callback"})
         # ipg_id = request.GET.get('ipg_id', 1)
+        return JsonResponse({"behpardakht": self.behpardakht_api(106)})
+
         user = request.user
         if not Basket.objects.filter(pk=basket_id, user=user).exists():
             raise ValidationError('invalid basket_id')
@@ -90,8 +92,11 @@ class PaymentRequest(View):
                 additional_data.append([supplier.deposit_id, basket_product.start_price, 0])
 
         additional_data = ';'.join(','.join(str(x) for x in b) for b in additional_data)
+        additional_data += f';1,{basket.summary["mt_profit"]}, 0'
+
         # todo debug
-        invoice.amount = 5000
+        additional_data = '1,100,0;2,100,0'
+        invoice.amount = 200
 
         local_date = timezone.now().strftime("%Y%m%d")
         local_time = pytz.timezone("Iran").localize(datetime.now()).strftime("%H%M%S")

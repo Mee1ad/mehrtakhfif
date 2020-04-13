@@ -699,7 +699,7 @@ class HousePriceSchema(Schema):
 
 class HouseSchema(BaseSchema):
     class Meta:
-        additional = ('notify_before_arrival', 'future_booking_time')
+        additional = ('notify_before_arrival', 'future_booking_time', 'meals')
 
     cancel_rules = fields.Method("get_cancel_rules")
     rules = fields.Method("get_rules")

@@ -9,16 +9,21 @@ class ProductView(View):
     def get(self, request, permalink):
         lang = request.lang
         user = request.user
-        product = Product.objects.filter(permalink=permalink).prefetch_related(*Product.prefetch).first()
-        if product is None:
+        product_obj = Product.objects.filter(permalink=permalink).prefetch_related(*Product.prefetch).first()
+        if product_obj is None:
             return JsonResponse({}, status=404)
-        storages = product.storage_set.filter(start_time__lte=timezone.now(), deadline__gte=timezone.now())
-        product = ProductSchema(lang).dump(product)
-        product['category'] = [self.get_category(c) for c in product['category']]
-        product['storages'] = StorageSchema(lang).dump(storages, many=True)
         purchased = False
-        if user.is_authenticated:
-            purchased = self.purchase_status(user, storages)
+        product = ProductSchema(lang).dump(product_obj)
+        if product_obj.type < 3:
+            storages = product_obj.storage_set.filter(start_time__lte=timezone.now(), deadline__gte=timezone.now())
+            product['storages'] = StorageSchema(lang).dump(storages, many=True)
+            if user.is_authenticated:
+                purchased = self.purchase_status(user, storages)
+        if product_obj.type == 3:
+            product['house'] = HouseSchema(language=request.lang).dump(product_obj.house)
+            # todo get purchased status
+        product['categories'] = [self.get_category(c) for c in product['categories']]
+
         return JsonResponse({'product': product, 'purchased': purchased})
 
     def get_category(self, category):

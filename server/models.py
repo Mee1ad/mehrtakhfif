@@ -127,6 +127,9 @@ def is_list_of_dict(data):
     raise ValidationError('data is not list')
 
 
+def default_meals():
+    return {'Breakfast': False, 'Lunch': False, 'Dinner': False}
+
 class MyQuerySet(SafeDeleteQueryset):
     _safedelete_visibility = DELETED_INVISIBLE
     _safedelete_visibility_field = 'pk'
@@ -579,7 +582,7 @@ class Product(Base):
     rate = models.PositiveSmallIntegerField(default=0)
     disable = models.BooleanField(default=True)
     verify = models.BooleanField(default=False)
-    type = models.PositiveSmallIntegerField(choices=[(1, 'service'), (2, 'product')])
+    type = models.PositiveSmallIntegerField(choices=[(1, 'service'), (2, 'product'), (3, 'tourism'), (4, 'package')])
     permalink = models.CharField(max_length=255, db_index=True, unique=True)
 
     name = JSONField(default=multilanguage)
@@ -1125,12 +1128,13 @@ class House(Base):
 
     cancel_rules = JSONField(default=multilanguage, blank=True)
     rules = JSONField(default=multilanguage, blank=True)
+    product = models.OneToOneField(Product, on_delete=PROTECT)
     owner = models.ForeignKey(User, on_delete=CASCADE)
     state = models.ForeignKey(State, on_delete=PROTECT)
     city = models.ForeignKey(City, on_delete=PROTECT)
     price = models.OneToOneField(HousePrice, on_delete=PROTECT, null=True)
-    product = models.OneToOneField(Product, on_delete=PROTECT)
     facilities = JSONField(blank=True)
+    meals = JSONField(default=default_meals)
     capacity = JSONField()
     residence_type = models.ManyToManyField(ResidenceType)
     rent_type = JSONField(default=multilanguage, blank=True)
