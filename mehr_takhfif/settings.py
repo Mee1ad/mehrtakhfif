@@ -32,8 +32,8 @@ INSTALLED_APPS = [
     'django_celery_results',
     'django_celery_beat',
     # 'django.contrib.admindocs',
-    'django_elasticsearch_dsl',
-    'django.contrib.postgres',
+    # 'django_elasticsearch_dsl',
+    # 'django.contrib.postgres',
 ] + MY_INSTALLED_APPS
 
 MIDDLEWARE = [

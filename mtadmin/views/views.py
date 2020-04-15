@@ -99,7 +99,6 @@ class CheckLoginToken(AdminView):
 
 class Search(AdminView):
     def get(self, request):
-        # todo index condition and search for all (*)
         q = request.GET.get('q', None)
         model = request.GET.get('type', None)
         switch = {'supplier': self.supplier}

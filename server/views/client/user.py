@@ -56,9 +56,6 @@ class Test(View):
 class Profile(LoginRequired):
 
     def get(self, request):
-        h = House.objects.all().first()
-        return JsonResponse(HouseSchema().dump(h))
-
         res = {'user': UserSchema().dump(request.user)}
         if request.user.is_staff:
             res['user']['is_staff'] = request.user.is_staff

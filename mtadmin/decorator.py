@@ -19,6 +19,7 @@ def error_handler(func):
             traceback.print_exc()
             return HttpResponseBadRequest()
         except ValidationError as e:
+            print(str(e)[1:-1])
             res = HttpResponseBadRequest()
             res['error'] = str(e)[1:-1]
             return res

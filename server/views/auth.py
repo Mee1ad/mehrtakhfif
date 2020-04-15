@@ -55,7 +55,7 @@ class Login(View):
             if not user.is_active:  # incomplete signup
                 raise User.DoesNotExist  # redirect to signup
             if not user.check_password(password):
-                raise ValidationError('invalid password')
+                raise ValidationError('پسورد نامعتبر است')
             if is_staff:
                 return set_token(user, self.send_activation(user))
             login(request, user, backend='django.contrib.auth.backends.ModelBackend')

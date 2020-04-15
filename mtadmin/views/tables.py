@@ -164,7 +164,7 @@ class StorageView(TableView):
         return JsonResponse(pk, status=201)
 
     def put(self, request):
-        update_object(request, Storage)
+        update_object(request, Storage, require_box=False)
         return JsonResponse({})
 
     def delete(self, request):

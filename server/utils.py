@@ -53,7 +53,7 @@ def validation(data):
         try:
             assert re.search(pattern[key], str(data[key]))
         except AssertionError:
-            raise ValidationError(f'invalid value for {key}')
+            raise ValidationError(f'نامعتبر است {key}')
         except KeyError:
             pass
 

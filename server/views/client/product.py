@@ -6,6 +6,7 @@ import pysnooper
 
 
 class ProductView(View):
+    @pysnooper.snoop()
     def get(self, request, permalink):
         lang = request.lang
         user = request.user

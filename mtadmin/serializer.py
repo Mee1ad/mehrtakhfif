@@ -42,10 +42,12 @@ class BaseAdminSchema(Schema):
     id = fields.Int()
     created_at = fields.Function(lambda o: o.created_at.timestamp())
     created_by = fields.Function(lambda o:
-                                 {'id': o.created_by_id, 'name': f"{o.created_by.first_name} {o.created_by.last_name}" if o.created_by.first_name else ""})
+                                 {'id': o.created_by_id,
+                                  'name': f"{o.created_by.first_name} {o.created_by.last_name}" if o.created_by.first_name else ""})
     updated_at = fields.Function(lambda o: o.updated_at.timestamp())
     updated_by = fields.Function(lambda o:
-                                 {'id': o.updated_by_id, 'name': f"{o.updated_by.first_name} {o.updated_by.last_name}" if o.created_by.first_name else ""})
+                                 {'id': o.updated_by_id,
+                                  'name': f"{o.updated_by.first_name} {o.updated_by.last_name}" if o.created_by.first_name else ""})
 
     def get_name(self, obj):
         return obj.name
@@ -229,6 +231,15 @@ class MediaESchema(MediaASchema, MediaSchema):
 class CategoryASchema(BaseAdminSchema, CategorySchema):
     class Meta:
         additional = CategorySchema.Meta.additional + ('child_count', 'category_child_product_count', 'product_count')
+
+    parent = fields.Method("get_parent")
+
+    def get_parent(self, obj):
+        try:
+            parent = obj.parent
+            return {'id': parent.pk, 'name': parent.name, 'permalink': parent.permalink}
+        except Exception:
+            pass
 
 
 class CategoryESchema(CategoryASchema):
