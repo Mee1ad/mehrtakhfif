@@ -107,6 +107,12 @@ class GetProducts(View):
         basket = get_basket(request.user, request.lang, basket=basket, basket_products=basket.basket_products)
         return JsonResponse(basket)
 
+    def patch(self, request):
+        data = load_data(request)
+        basket = data['basket']
+        product = data['product']
+
+        return JsonResponse({'index': basket.index(product)})
 
 class InvoiceView(View):
     @pysnooper.snoop()

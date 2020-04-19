@@ -56,10 +56,38 @@ class Test(View):
 class Profile(LoginRequired):
 
     def get(self, request):
-        res = {'user': UserSchema().dump(request.user)}
-        if request.user.is_staff:
-            res['user']['is_staff'] = request.user.is_staff
-        return JsonResponse(res)
+        house = House.objects.get(pk=1)
+        price = HousePriceSchema().dump(house)['price']['months']
+        start_date = '1399-2-5'
+        end_date = '1400-8-8'
+        assert jdatetime.datetime.strptime(start_date, '%Y-%m-%d') <= jdatetime.datetime.strptime(end_date, '%Y-%m-%d')
+        start_date = ['1399', '1', '5']
+        end_date = ['1399', '1', '30']
+        start_year, start_month, start_day = int(start_date[0]), int(start_date[1]), int(start_date[2])
+        end_year, end_month, end_day = int(end_date[0]), int(end_date[1]), int(end_date[2])
+        assert end_year - start_year < 2
+        book_month = next(month for month in price if month['month'] == start_month and month['year'] == start_year)
+        amount = 0
+        if end_month != start_month:
+            days = book_month['days'][start_day - 1:]
+            current_index = price.index(book_month)
+            months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+            for month in months[start_month:end_month] or months[start_month:] + months[:end_month]:
+                current_index += 1
+                if month == end_month:
+                    days += price[current_index]['days'][:end_day]
+                    continue
+                days += price[current_index]['days']
+        else:
+            days = book_month['days'][start_day - 1:end_day]
+        for day in days:
+            amount += day['price']
+        return JsonResponse({'amount': amount})
+
+        # res = {'user': UserSchema().dump(request.user)}
+        # if request.user.is_staff:
+        #     res['user']['is_staff'] = request.user.is_staff
+        # return JsonResponse(res)
 
     def put(self, request):
         data = load_data(request)

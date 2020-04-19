@@ -155,7 +155,7 @@ class MyQuerySet(SafeDeleteQueryset):
                        'product': self.product_validation}
         kwargs = validations[model](**kwargs)
         [kwargs.pop(item, None) for item in remove_list]
-        super().update(**kwargs)
+        return super().update(**kwargs)
 
     def category_validation(self, **kwargs):
         permalink_validation(kwargs.get('permalink', 'pass'))
@@ -174,12 +174,18 @@ class MyQuerySet(SafeDeleteQueryset):
         if kwargs.get('is_manage', None):
             kwargs.pop('is_manage')
             return kwargs
-        kwargs = item.validation(kwargs)
+        try:
+            kwargs = item.validation(kwargs)
+        except KeyError:
+            if item.deadline < timezone.now() and kwargs['disable'] is False:
+                raise ValidationError("لطفا زمان ددلاین محصول رو افزایش دهید")
+            return {'disable': kwargs['disable']}
         features = Feature.objects.filter(pk__in=kwargs.get('features', []))
         item.features.clear()
         item.features.add(*features)
-        if kwargs['manage']:
-            item.assign_default_value(item.product_id)
+        # if kwargs['manage']:
+        #     item.assign_default_value(item.product_id)
+        # todo manage for storage or product
         return kwargs
 
     def product_validation(self, **kwargs):
@@ -209,6 +215,7 @@ class MyQuerySet(SafeDeleteQueryset):
         p_medias = [ProductMedia(product=product, media_id=pk, priority=kwargs['media'].index(pk)) for pk in
                     kwargs.get('media', [])]
         ProductMedia.objects.bulk_create(p_medias)
+        print(kwargs)
         return kwargs
 
 
@@ -598,7 +605,8 @@ class Product(Base):
     rate = models.PositiveSmallIntegerField(default=0)
     disable = models.BooleanField(default=True)
     verify = models.BooleanField(default=False)
-    type = models.PositiveSmallIntegerField(choices=[(1, 'service'), (2, 'product'), (3, 'tourism'), (4, 'package')])
+    type = models.PositiveSmallIntegerField(choices=[(1, 'service'), (2, 'product'), (3, 'tourism'), (4, 'package'),
+                                                     (5, 'package_item')])
     permalink = models.CharField(max_length=255, db_index=True, unique=True)
 
     name = JSONField(default=multilanguage)
@@ -683,9 +691,9 @@ class Storage(Base):
         supplier = User.objects.get(pk=my_dict.get('supplier_id'), is_supplier=True)
         if not supplier.is_verify:
             my_dict['disable'] = True
-        if my_dict['priority'] == 0 and my_dict['disable']:
+        if my_dict.get('priority', None) == 0 and my_dict['disable']:
             my_dict['manage'] = True
-        if my_dict['features_percent'] > 100 or my_dict['discount_percent'] > 100 or \
+        if my_dict.get('features_percent', 0) > 100 or my_dict['discount_percent'] > 100 or \
                 my_dict['vip_discount_percent'] > 100:
             raise ValidationError("درصد باید کوچکتر از 100 باشد")
         if my_dict['discount_price'] < my_dict['start_price']:
@@ -699,6 +707,7 @@ class Storage(Base):
             # todo debug
             pass
         self.full_clean()
+        print(self.__dict__)
         super().save(*args, **kwargs)
         if self.manage:
             self.assign_default_value(self.product_id)
@@ -901,10 +910,9 @@ class Invoice(Base):
     sync_task = models.ForeignKey(PeriodicTask, on_delete=CASCADE, null=True, blank=True,
                                   related_name='invoice_sync_task')
     email_task = models.ForeignKey(PeriodicTask, on_delete=CASCADE, null=True, blank=True)
-    basket = models.OneToOneField(to=Basket, on_delete=PROTECT, related_name='invoice_to_basket')
+    basket = models.OneToOneField(to=Basket, on_delete=PROTECT, related_name='invoice_basket', null=True)
     storages = models.ManyToManyField(Storage, through='InvoiceStorage')
     payed_at = models.DateTimeField(blank=True, null=True, verbose_name='Payed at')
-    type = models.PositiveSmallIntegerField(blank=True, null=True)
     special_offer_id = models.BigIntegerField(blank=True, null=True, verbose_name='Special offer id')
     address = models.ForeignKey(to=Address, null=True, blank=True, on_delete=PROTECT)
     description = models.TextField(max_length=255, blank=True, null=True)
@@ -1155,7 +1163,7 @@ class HousePrice(Base):
         self.validation()
         super().save(*args, **kwargs)
 
-    person_price = models.PositiveIntegerField(default=0)
+    guest = models.PositiveIntegerField(default=0)
     eyd = models.PositiveIntegerField(default=0)
     weekend = models.PositiveIntegerField(default=0)
     weekday = models.PositiveIntegerField(default=0)

@@ -19,10 +19,10 @@ def error_handler(func):
             traceback.print_exc()
             return HttpResponseBadRequest()
         except ValidationError as e:
-            print(str(e)[1:-1])
-            res = HttpResponseBadRequest()
-            res['error'] = str(e)[1:-1]
-            return res
+            print(str(e)[2:-2])
+            # res = HttpResponseBadRequest()
+            # res['error'] = str(e)[2:-2]
+            return JsonResponse({'type': 'validation', 'error': str(e)[2:-2]}, status=res_code['bad_request'])
         except PermissionDenied:
             traceback.print_exc()
             return HttpResponseForbidden()

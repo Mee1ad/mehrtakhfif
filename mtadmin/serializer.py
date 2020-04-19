@@ -171,7 +171,7 @@ class ProductESchema(ProductASchema, ProductSchema):
 
 class PriceSchema(Schema):
     class Meta:
-        additional = ('weekday', 'weekend', 'person_price', 'weekly_discount_percent', 'monthly_discount_percent',
+        additional = ('weekday', 'weekend', 'guest', 'weekly_discount_percent', 'monthly_discount_percent',
                       'eyd', 'peak', 'custom_price')
 
 
@@ -259,7 +259,7 @@ class FeatureStorageASchema(Schema):
     value = fields.Function(lambda o: o.value)
 
 
-class TagASchema(Schema):
+class TagASchema(TagSchema):
     id = fields.Int()
     name = fields.Dict()
 

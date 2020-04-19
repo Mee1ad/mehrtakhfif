@@ -86,6 +86,11 @@ class TableFilter(AdminView):
 
 
 class CheckLoginToken(AdminView):
+    def options(self, request, *args, **kwargs):
+        print(request.headers)
+        print(request.body)
+        return JsonResponse({"test": "ok"})
+
     def get(self, request):
         user = request.user
         permissions = user.box_permission.all()

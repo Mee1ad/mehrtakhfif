@@ -32,7 +32,6 @@ INSTALLED_APPS = [
     'django_celery_results',
     'django_celery_beat',
     # 'django.contrib.admindocs',
-    # 'django_elasticsearch_dsl',
     # 'django.contrib.postgres',
 ] + MY_INSTALLED_APPS
 
@@ -77,8 +76,10 @@ CORS_ALLOW_HEADERS = [
     'x-csrf-token',
     'x-requested-with',
     'token',
-    'admin'
+    'admin',
 ]
+
+CORS_EXPOSE_HEADERS = ['error']
 
 MESSAGE_STORAGE = 'django.contrib.messages.storage.cookie.CookieStorage'
 

@@ -160,11 +160,11 @@ class StorageView(TableView):
                              "data": data})
 
     def post(self, request):
-        pk = create_object(request, Storage)
+        pk = create_object(request, Storage, box_key='product__box', error_null_box=False)
         return JsonResponse(pk, status=201)
 
     def put(self, request):
-        update_object(request, Storage, require_box=False)
+        update_object(request, Storage, require_box=False, box_key='product__box')
         return JsonResponse({})
 
     def delete(self, request):
@@ -225,11 +225,11 @@ class TagView(TableView):
         return JsonResponse(res)
 
     def post(self, request):
-        items = create_object(request, Tag, box_key=None, return_item=True, serializer=TagASchema)
+        items = create_object(request, Tag, box_key=None, return_item=True, serializer=TagASchema, error_null_box=False)
         return JsonResponse(items, status=201)
 
     def put(self, request):
-        update_object(request, Tag)
+        update_object(request, Tag, require_box=False)
         return JsonResponse({})
 
     def delete(self, request):

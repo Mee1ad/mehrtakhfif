@@ -20,7 +20,7 @@ def try_except(func):
         except json.decoder.JSONDecodeError:
             traceback.print_exc()
             return HttpResponseServerError()
-        except (AssertionError, ObjectDoesNotExist, ValidationError, StopIteration, AttributeError):
+        except (AssertionError, ObjectDoesNotExist, ValidationError, StopIteration, AttributeError, KeyError):
             traceback.print_exc()
             return HttpResponseBadRequest()
         except Exception:

@@ -112,7 +112,7 @@ def assign_default_value(product_id):
 def create_object(request, model, box_key='box', return_item=False, serializer=None, error_null_box=True, data=None):
     if not request.user.has_perm(f'server.add_{model.__name__.lower()}'):
         raise PermissionDenied
-    data = data or get_data(request)
+    data = data or get_data(request, require_box=error_null_box)
     user = request.user
     boxes = user.box_permission.all()
     if box_key == 'product__box':
@@ -164,7 +164,6 @@ def update_object(request, model, box_key='box', return_item=False, serializer=N
     box_check = get_box_permission(request.user, box_key) if require_box else {}
     items = model.objects.filter(pk=pk, **box_check)
     items.update(**data)
-    print(items)
     if return_item:
         request.GET._mutable = True
         request.GET['id'] = items.first().pk

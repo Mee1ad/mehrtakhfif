@@ -68,6 +68,8 @@ class BaseSchema(Schema):
             return name[self.default_lang]
         except ValueError:
             return name[self.default_lang]
+        except KeyError:
+            return None
 
     def get_name(self, obj):
         return self.get(obj.name)
@@ -312,6 +314,7 @@ class FeatureStorageSchema(BaseSchema):
 class TagSchema(BaseSchema):
     id = fields.Int()
     name = fields.Method('get_name')
+    permalink = fields.Str()
 
 
 class BrandSchema(BaseSchema):
@@ -638,7 +641,7 @@ class HousePriceSchema(Schema):
                        'اسفند']
         index = -1
         months = {'months': [], 'prev_month_days': (today.replace(day=1) - timedelta(days=1)).day,
-                  'first_day': today.weekday()}
+                  'first_day': today.weekday(), 'guest_price': obj.price.guest}
         # costume_prices = CostumeHousePrice.objects.filter(house=obj)
         bookings = Booking.objects.filter(house=obj, confirm=True).values('start_date', 'end_date')
         holidays = Holiday.objects.filter(date__gte=add_days(0), date__lte=add_days(obj.future_booking_time))
@@ -686,7 +689,6 @@ class HousePriceSchema(Schema):
             months['months'][index]['days'].append(price)
         last_date = today + timedelta(days=obj.future_booking_time)
         last_day_of_month = (last_date.replace(month=last_date.month + 1, day=1) - timedelta(days=1)).day
-        print(last_day_of_month)
         for d in range(last_day_of_month - last_date.day + 1):
             today = last_date + timedelta(days=d)
             weekday = today.weekday()
