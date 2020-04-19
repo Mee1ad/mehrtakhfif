@@ -152,7 +152,7 @@ class MyQuerySet(SafeDeleteQueryset):
         remove_list = ['id', 'box_id', 'tags', 'media', 'features', 'categories']
         model = self[0].__class__.__name__.lower()
         validations = {'storage': self.storage_validation, 'category': self.category_validation,
-                       'product': self.product_validation}
+                       'product': self.product_validation, 'tag': self.tag_validation}
         kwargs = validations[model](**kwargs)
         [kwargs.pop(item, None) for item in remove_list]
         return super().update(**kwargs)
@@ -217,6 +217,10 @@ class MyQuerySet(SafeDeleteQueryset):
         ProductMedia.objects.bulk_create(p_medias)
         print(kwargs)
         return kwargs
+
+    def tag_validation(self, **kwargs):
+        item = self.first()
+        return item.validation(kwargs)
 
 
 class Base(SafeDeleteModel):
@@ -504,16 +508,18 @@ class Tag(Base):
     def __str__(self):
         return f"{self.name['fa']}"
 
-    def validation(self):
-        self.permalink = self.permalink.lower()
-
-        if Tag.objects.filter((Q(name__en=self.name['en']) & ~Q(name__en="")) |
-                              (Q(name__fa=self.name['fa']) & ~Q(name__fa="")) |
-                              (Q(name__ar=self.name['ar']) & ~Q(name__ar=""))).count() > 0:
+    def validation(self, kwargs):
+        print(kwargs)
+        permalink_validation(kwargs.get('permalink', 'pass'))
+        name = kwargs['name']
+        if Tag.objects.filter((Q(name__en=name['en']) & ~Q(name__en="") & ~Q(id=kwargs['id'])) |
+                              (Q(name__fa=name['fa']) & ~Q(name__fa="") & ~Q(id=kwargs['id'])) |
+                              (Q(name__ar=name['ar']) & ~Q(name__ar="") & ~Q(id=kwargs['id']))).count() > 0:
             raise IntegrityError("DETAIL:  Key (name)=() already exists.")
+        return kwargs
 
     def save(self, *args, **kwargs):
-        self.validation()
+        self.__dict__ = self.validation(self.__dict__)
         super().save(*args, **kwargs)
 
     permalink = models.CharField(max_length=255, db_index=True, unique=True)

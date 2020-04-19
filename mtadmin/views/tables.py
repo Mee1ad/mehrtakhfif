@@ -229,7 +229,7 @@ class TagView(TableView):
         return JsonResponse(items, status=201)
 
     def put(self, request):
-        update_object(request, Tag, require_box=False)
+        update_object(request, Tag, serializer=TagASchema, require_box=False, return_item=True)
         return JsonResponse({})
 
     def delete(self, request):
