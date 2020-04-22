@@ -36,7 +36,7 @@ default_page = 1
 default_response = {'ok': {'message': 'ok'}, 'bad': {'message': 'bad request'}}
 res_code = {'success': 200, 'bad_request': 400, 'unauthorized': 401, 'forbidden': 403, 'token_issue': 401,
             'integrity': 406, 'banned': 493,
-            'signup_with_pp': 251, 'invalid_password': 450, 'signup_with_pass': 201, 'activate': 202}
+            'signup_with_pp': 251, 'invalid_password': 450, 'signup_with_pass': 201, 'updated': 202}
 pattern = {'phone': r'^(09[0-9]{9})$', 'email': r'^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\
            [[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$',
            'postal_code': r'^\d{5}[ -]?\d{5}$', 'fullname': r'^[آ-یA-z]{2,}( [آ-یA-z]{2,})+([آ-یA-z]|[ ]?)$',

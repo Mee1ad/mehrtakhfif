@@ -10,6 +10,7 @@ import json
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.views import View
 import pysnooper
+from server.utils import res_code
 
 rolls = ['superuser', 'backup', 'admin', 'accountants']
 
@@ -150,9 +151,10 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
     if return_item:
         request.GET._mutable = True
         request.GET['id'] = obj.pk
-        return serialized_objects(request, model, single_serializer=serializer, box_key=box_key,
-                                  error_null_box=error_null_box)
-    return {'id': obj.pk}
+        items = serialized_objects(request, model, single_serializer=serializer, box_key=box_key,
+                                   error_null_box=error_null_box)
+        return JsonResponse({"data": items}, status=201)
+    return JsonResponse({'id': obj.pk})
 
 
 def update_object(request, model, box_key='box', return_item=False, serializer=None, data=None, require_box=True):
@@ -167,7 +169,9 @@ def update_object(request, model, box_key='box', return_item=False, serializer=N
     if return_item:
         request.GET._mutable = True
         request.GET['id'] = items.first().pk
-        return serialized_objects(request, model, single_serializer=serializer, error_null_box=require_box)
+        items = serialized_objects(request, model, single_serializer=serializer, error_null_box=require_box)
+        return JsonResponse({"data": items}, status=res_code['updated'])
+    return JsonResponse({})
 
 
 def delete_base(request, model):

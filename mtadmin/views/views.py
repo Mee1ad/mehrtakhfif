@@ -9,6 +9,9 @@ import pysnooper
 from server.utils import *
 from django.contrib.auth import login
 from server.documents import SupplierDocument
+import requests
+from mehr_takhfif.settings import ARVAN_API_KEY
+from time import sleep
 
 
 class Token(AdminView):
@@ -144,3 +147,46 @@ class BoxSettings(AdminView):
         if model.objects.filter(pk=data['id'], **box_check).update(settings=data['settings']):
             return JsonResponse({})
         return HttpResponseBadRequest()
+
+
+class Snapshot(AdminView):
+    url = "https://napi.arvancloud.com/ecc/v1"
+    region = "ir-thr-at1"
+    headers = {'Authorization': ARVAN_API_KEY}
+
+    def get(self, request):
+        return JsonResponse({'data': self.get_snapshots()})
+
+    def get_snapshots(self, name=None):
+        images = requests.get(self.url + f'/regions/{self.region}/images?type=server', headers=self.headers).json()
+        if name:
+            return [image for image in images['data'] if name == image['abrak'].split('_', 1)[0]]
+        return images['data']
+
+    # todo make it task
+    def post(self, request):
+        return HttpResponseForbidden()
+        res = {'failed': []}
+        servers = requests.get(self.url + f'/regions/{self.region}/servers', headers=self.headers).json()
+        for server in servers['data']:
+            data = {'name': server['name']}
+            new_snapshot = requests.post(self.url + f'/regions/{self.region}/servers/{server["id"]}/snapshot',
+                                         headers=self.headers, data=data)
+            if new_snapshot.status_code == 202:
+                images = self.get_snapshots(server['name'])
+                while images[0]['status'] != 'active':
+                    sleep(5)
+                    images = self.get_snapshots(server['name'])
+                last_item = -1
+                while len(images) > 2:
+                    if requests.delete(self.url + f'/regions/{self.region}/images/{images[last_item]["id"]}',
+                                       headers=self.headers).status_code == 200:
+                        images = self.get_snapshots(server['name'])
+                        continue
+                    if last_item == -1:
+                        last_item = -2
+                        continue
+                    res['failed'].append({'id': server['id'], 'name': server['name']})
+                    break
+        res['data'] = self.get_snapshots()
+        return JsonResponse(res)

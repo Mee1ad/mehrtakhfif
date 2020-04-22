@@ -5,7 +5,9 @@ from .settings_var import *
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+# todo move secure keys to settings var
 SECRET_KEY = '#)@^eytrqed7)ka1qa0gcg$vx9&0ocru_xwqjlq%9e7baob_bn'
+ARVAN_API_KEY = 'Apikey 9a3df5cf-f104-4d45-9012-94b7674dc944'
 SALT = 'we\w[34=-otl34e[rl][qwe;w328474/*2342+-325(*^&%><>.'
 TOKEN_SECRET = 'NRJu&@D-sqQa@2xEu6^yt8yjfd!*K4TawDD?v&LxChs2uJ7=9YvXF6pGEXNJHnPZ-gbHmnJf&D-9?y2g78YgKC?AX-FbHR6fgws_' \
                '&hGbAHuhE_TZh3yN?PGZky!Zx&uc'

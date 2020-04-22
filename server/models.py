@@ -133,7 +133,6 @@ def default_meals():
 
 
 def permalink_validation(permalink):
-    print(permalink)
     pattern = '^[A-Za-z0-9\u0591-\u07FF\uFB1D-\uFDFD\uFE70-\uFEFC][A-Za-z0-9-\u0591-\u07FF\uFB1D-\uFDFD\uFE70-\uFEFC]*$'
     permalink = permalink
     if permalink and not re.match(pattern, permalink):
@@ -152,7 +151,7 @@ class MyQuerySet(SafeDeleteQueryset):
         remove_list = ['id', 'box_id', 'tags', 'media', 'features', 'categories']
         model = self[0].__class__.__name__.lower()
         validations = {'storage': self.storage_validation, 'category': self.category_validation,
-                       'product': self.product_validation, 'tag': self.tag_validation}
+                       'product': self.product_validation, 'tag': self.tag_validation, 'brand': self.brand_validation}
         kwargs = validations[model](**kwargs)
         [kwargs.pop(item, None) for item in remove_list]
         return super().update(**kwargs)
@@ -174,18 +173,25 @@ class MyQuerySet(SafeDeleteQueryset):
         if kwargs.get('is_manage', None):
             kwargs.pop('is_manage')
             return kwargs
+        if 'priority' in kwargs:
+            if item.disable is True and kwargs['priority'] == 0:
+                raise ValidationError('انبار پیش فرض باید فعال باشد')
+            return kwargs
         try:
             kwargs = item.validation(kwargs)
         except KeyError:
-            if item.deadline < timezone.now() and kwargs['disable'] is False:
-                raise ValidationError("لطفا زمان ددلاین محصول رو افزایش دهید")
+            try:
+                if item.deadline < timezone.now() and kwargs['disable'] is False:
+                    raise ValidationError("لطفا زمان ددلاین محصول رو افزایش دهید")
+            except TypeError:
+                pass
             return {'disable': kwargs['disable']}
         features = Feature.objects.filter(pk__in=kwargs.get('features', []))
         item.features.clear()
         item.features.add(*features)
-        # if kwargs['manage']:
-        #     item.assign_default_value(item.product_id)
-        # todo manage for storage or product
+        if kwargs.get('manage', None):
+            item = self.first()
+            item.product.assign_default_value(item.product_id)
         return kwargs
 
     def product_validation(self, **kwargs):
@@ -215,10 +221,16 @@ class MyQuerySet(SafeDeleteQueryset):
         p_medias = [ProductMedia(product=product, media_id=pk, priority=kwargs['media'].index(pk)) for pk in
                     kwargs.get('media', [])]
         ProductMedia.objects.bulk_create(p_medias)
-        print(kwargs)
+        if kwargs.get('manage', None):
+            item = self.first()
+            item.assign_default_value()
         return kwargs
 
     def tag_validation(self, **kwargs):
+        item = self.first()
+        return item.validation(kwargs)
+
+    def brand_validation(self, **kwargs):
         item = self.first()
         return item.validation(kwargs)
 
@@ -227,6 +239,10 @@ class Base(SafeDeleteModel):
     # related_query_name = "%(app_label)s_%(class)ss" for many to many
     class Meta:
         abstract = True
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
     _safedelete_policy = SOFT_DELETE_CASCADE
     id = models.BigAutoField(auto_created=True, primary_key=True)
@@ -418,9 +434,9 @@ class Media(Base):
             name = self.image.name.replace('has-ph', 'ph')
             ph.save(f'{MEDIA_ROOT}/{name}', optimize=True, quality=80)
 
-    image = models.FileField(upload_to=upload_to)
-    video = models.URLField()
-    audio = models.URLField()
+    image = models.FileField(upload_to=upload_to, null=True, blank=True)
+    video = models.URLField(null=True, blank=True)
+    audio = models.URLField(null=True, blank=True)
     title = JSONField(default=multilanguage)
     type = models.PositiveSmallIntegerField(choices=[(1, 'image'), (2, 'thumbnail'), (3, 'media'), (4, 'slider'),
                                                      (5, 'ads'), (6, 'avatar'), (7, 'audio'), (8, 'video')])
@@ -509,7 +525,6 @@ class Tag(Base):
         return f"{self.name['fa']}"
 
     def validation(self, kwargs):
-        print(kwargs)
         permalink_validation(kwargs.get('permalink', 'pass'))
         name = kwargs['name']
         if Tag.objects.filter((Q(name__en=name['en']) & ~Q(name__en="") & ~Q(id=kwargs['id'])) |
@@ -534,15 +549,17 @@ class Tag(Base):
 class Brand(Base):
     objects = MyQuerySet.as_manager()
 
-    def validation(self):
+    def validation(self, kwargs):
         self.permalink = self.permalink.lower()
-        if Brand.objects.filter((Q(name__en=self.name['en']) & ~Q(name__en="")) |
-                                (Q(name__fa=self.name['fa']) & ~Q(name__fa="")) |
-                                (Q(name__ar=self.name['ar']) & ~Q(name__ar=""))).count() > 0:
+        name = kwargs['name']
+        if Brand.objects.filter((Q(name__en=name['en']) & ~Q(name__en="") & ~Q(id=kwargs['id'])) |
+                                (Q(name__fa=name['fa']) & ~Q(name__fa="") & ~Q(id=kwargs['id'])) |
+                                (Q(name__ar=name['ar']) & ~Q(name__ar="") & ~Q(id=kwargs['id']))).count() > 0:
             raise IntegrityError("DETAIL:  Key (name)=() already exists.")
+        return kwargs
 
     def save(self, *args, **kwargs):
-        self.validation()
+        self.validation(self.__dict__)
         super().save(*args, **kwargs)
 
     name = JSONField(default=multilanguage)
@@ -559,10 +576,15 @@ class Product(Base):
     prefetch = ['tags', 'media']
     filter = {"verify": True, "disable": False}
 
+    def assign_default_value(self):
+        storages = self.storages.all()
+        Product.objects.filter(pk=self.pk).update(default_storage=min(storages, key=attrgetter('discount_price')))
+
     def validation(self):
         permalink_validation(self.permalink)
 
     def save(self, *args, **kwargs):
+        print(self.__dict__)
         self.validation()
         super().save(*args, **kwargs)
 
@@ -600,7 +622,7 @@ class Product(Base):
     category = models.ManyToManyField(Category, related_query_name="categories", related_name="categories")
     box = models.ForeignKey(Box, on_delete=PROTECT)
     brand = models.ForeignKey(Brand, on_delete=PROTECT, null=True, blank=True)
-    thumbnail = models.ForeignKey(Media, on_delete=PROTECT, related_name='product_thumbnail', null=True)
+    thumbnail = models.ForeignKey(Media, on_delete=PROTECT, related_name='product_thumbnail', null=True, blank=True)
     city = models.ForeignKey(City, on_delete=CASCADE, null=True, blank=True)
     default_storage = models.OneToOneField(null=True, blank=True, to="Storage", on_delete=CASCADE,
                                            related_name='product_default_storage')
@@ -611,6 +633,7 @@ class Product(Base):
     rate = models.PositiveSmallIntegerField(default=0)
     disable = models.BooleanField(default=True)
     verify = models.BooleanField(default=False)
+    manage = models.BooleanField(default=True)
     type = models.PositiveSmallIntegerField(choices=[(1, 'service'), (2, 'product'), (3, 'tourism'), (4, 'package'),
                                                      (5, 'package_item')])
     permalink = models.CharField(max_length=255, db_index=True, unique=True)
@@ -623,8 +646,8 @@ class Product(Base):
     location = JSONField(null=True, blank=True)
     address = JSONField(null=True, blank=True)
     short_address = JSONField(null=True, blank=True)
-    properties = JSONField(default=product_properties)
-    details = JSONField(default=product_details)
+    properties = JSONField(null=True, blank=True)
+    details = JSONField(null=True, blank=True)
 
     # home_buissiness =
     # support_description =
@@ -668,23 +691,15 @@ class Storage(Base):
     def __str__(self):
         return f"{self.product}"
 
-    def assign_default_value(self, product_id):
-        storages = Storage.objects.filter(product_id=product_id, disable=False)
-        try:
-            Product.objects.filter(pk=product_id).update(
-                default_storage=min(storages, key=attrgetter('discount_price')))
-        except Exception:
-            pass
-
     def validation(self, my_dict):
         my_dict['start_time'] = datetime.datetime.utcfromtimestamp(
             my_dict.get('start_time') or timezone.now().timestamp()).replace(tzinfo=pytz.utc)
-        my_dict['deadline'] = datetime.datetime.utcfromtimestamp(
-            my_dict.get('deadline') or timezone.now().timestamp()).replace(tzinfo=pytz.utc)
+        if my_dict.get('deadline', None):
+            my_dict['deadline'] = datetime.datetime.utcfromtimestamp(my_dict['deadline']).replace(tzinfo=pytz.utc)
+        if not my_dict.get('deadline', None):
+            my_dict['deadline'] = None
         my_dict['tax_type'] = {'has_not': 1, 'from_total_price': 2, 'from_profit': 3}[my_dict['tax_type']]
         my_dict['discount_percent'] = int(100 - my_dict['discount_price'] / my_dict['final_price'] * 100)
-        # todo debug
-        my_dict['vip_discount_price'] = my_dict['discount_price']
         my_dict['vip_discount_percent'] = int(100 - my_dict.get('vip_discount_price') / my_dict['final_price'] * 100)
         if my_dict.get('features', None) and not my_dict.get('features_percent', None):
             raise ValidationError('درصد ویژگی ها نامعتبر است')
@@ -707,18 +722,13 @@ class Storage(Base):
         return my_dict
 
     def save(self, *args, **kwargs):
-        try:
-            self.__dict__ = self.validation(self.__dict__)
-        except TypeError:
-            # todo debug
-            pass
-        self.full_clean()
-        print(self.__dict__)
-        super().save(*args, **kwargs)
-        if self.manage:
-            self.assign_default_value(self.product_id)
+        self.__dict__ = self.validation(self.__dict__)
 
-    product = models.ForeignKey(Product, on_delete=PROTECT)
+        super().save(*args, **kwargs)
+        if self.product.manage:
+            self.product.assign_default_value()
+
+    product = models.ForeignKey(Product, on_delete=PROTECT, related_name='storages')
     features = models.ManyToManyField(Feature, through='FeatureStorage', related_query_name="features")
     items = models.ManyToManyField("self", through='Package', symmetrical=False)
     features_percent = models.PositiveSmallIntegerField(default=0)
@@ -741,8 +751,8 @@ class Storage(Base):
     vip_discount_percent = models.PositiveSmallIntegerField(verbose_name='Discount vip price percent')
     gender = models.BooleanField(blank=True, null=True)
     disable = models.BooleanField(default=False)
-    manage = models.BooleanField(default=True)
-    deadline = models.DateTimeField(default=next_month)
+
+    deadline = models.DateTimeField(null=True, blank=True)
     start_time = models.DateTimeField(auto_now_add=True)
     title = JSONField(default=multilanguage)
     supplier = models.ForeignKey(User, on_delete=PROTECT)

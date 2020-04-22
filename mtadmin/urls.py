@@ -33,4 +33,6 @@ urlpatterns = [
     path('search', error_handler(Search.as_view()), name='search'),
     path('settings', error_handler(BoxSettings.as_view()), name='settings'),
     path('supplier', error_handler(SupplierView.as_view()), name='supplier'),
+    path('snapshot', error_handler(Snapshot.as_view()), name='snapshot'),
+
 ]

@@ -103,11 +103,11 @@ Access-Token: {{access_token}}
 
 {
   "parent_id": 3,
-  "box_id": 1,
+  "box_id": 3,
   "media_id": 1,
-  "priority": 1,
+  "priority": -1,
   "disable": false,
-  "permalink": "permalink3",
+  "permalink": "permalink10",
   "name": {
     "fa": "نام دسته بندی"
   }

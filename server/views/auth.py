@@ -87,7 +87,7 @@ class Login(View):
         user.save()
         send_sms(user.username, input_data=[{'code': user.activation_code}])
         res = {'resend_timeout': resend_timeout, 'timeout': activation_expire}
-        return JsonResponse(res, status=res_code['activate'])
+        return JsonResponse(res, status=res_code['updated'])
 
     @staticmethod
     def check_password(user):

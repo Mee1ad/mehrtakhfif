@@ -44,12 +44,10 @@ class CategoryView(TableView):
         return JsonResponse(get_pagination(categories, request.step, request.page, CategoryASchema, request.all))
 
     def post(self, request):
-        item = create_object(request, Category, serializer=CategoryASchema, return_item=True)
-        return JsonResponse(item, status=201)
+        return create_object(request, Category, serializer=CategoryASchema, return_item=True)
 
     def put(self, request):
-        item = update_object(request, Category, return_item=True, serializer=CategoryASchema)
-        return JsonResponse({"data": item})
+        return update_object(request, Category, return_item=True, serializer=CategoryASchema)
 
     def delete(self, request):
         return delete_base(request, Category)
@@ -76,12 +74,10 @@ class BrandView(TableView):
         return JsonResponse(serialized_objects(request, Brand, BrandASchema, BrandASchema, error_null_box=False))
 
     def post(self, request):
-        item = create_object(request, Brand, return_item=True, serializer=BrandASchema, error_null_box=False)
-        return JsonResponse(item, status=201)
+        return create_object(request, Brand, return_item=True, serializer=BrandASchema, error_null_box=False)
 
     def put(self, request):
-        item = update_object(request, Brand, return_item=True, serializer=BrandASchema)
-        return JsonResponse({"data": item})
+        return update_object(request, Brand, return_item=True, serializer=BrandASchema, require_box=False)
 
     def delete(self, request):
         return delete_base(request, Brand)
@@ -94,12 +90,10 @@ class FeatureView(TableView):
         return JsonResponse(serialized_objects(request, Feature, FeatureASchema, FeatureASchema))
 
     def post(self, request):
-        pk = create_object(request, Feature)
-        return JsonResponse(pk, status=201)
+        return create_object(request, Feature)
 
     def put(self, request):
-        update_object(request, Feature)
-        return JsonResponse({})
+        return update_object(request, Feature)
 
     def delete(self, request):
         return delete_base(request, Feature)
@@ -112,12 +106,10 @@ class ProductView(TableView):
         return JsonResponse(serialized_objects(request, Product, ProductASchema, ProductESchema))
 
     def post(self, request):
-        pk = create_object(request, Product, ProductESchema)
-        return JsonResponse(pk, status=201)
+        return create_object(request, Product, ProductESchema)
 
     def put(self, request):
-        update_object(request, Product)
-        return JsonResponse({})
+        return update_object(request, Product)
 
     def delete(self, request):
         return delete_base(request, Product)
@@ -130,12 +122,10 @@ class HouseView(TableView):
         return JsonResponse(serialized_objects(request, House, HouseESchema, HouseESchema, box_key='product__box'))
 
     def post(self, request):
-        pk = create_object(request, House, HouseESchema)
-        return JsonResponse(pk, status=201)
+        return create_object(request, House, HouseESchema)
 
     def put(self, request):
-        update_object(request, House)
-        return JsonResponse({})
+        return update_object(request, House)
 
     def delete(self, request):
         return delete_base(request, House)
@@ -143,6 +133,7 @@ class HouseView(TableView):
 
 class StorageView(TableView):
     permission_required = 'server.view_storage'
+
     @pysnooper.snoop()
     def get(self, request):
         Storage.objects.filter(deadline__lt=timezone.now(), disable=False).update(disable=True)
@@ -156,16 +147,14 @@ class StorageView(TableView):
         product_id = request.GET.get('product_id')
         product = Product.objects.get(pk=product_id)
         return JsonResponse({"product": {"id": product.id, "name": product.name, "permalink": product.permalink,
-                                         "default_storage": {"id": product.default_storage_id}},
-                             "data": data})
+                                         "default_storage": {"id": product.default_storage_id},
+                                         "manage": product.manage,}, "data": data})
 
     def post(self, request):
-        pk = create_object(request, Storage, box_key='product__box', error_null_box=False)
-        return JsonResponse(pk, status=201)
+        return create_object(request, Storage, box_key='product__box', error_null_box=False)
 
     def put(self, request):
-        update_object(request, Storage, require_box=False, box_key='product__box')
-        return JsonResponse({})
+        return update_object(request, Storage, require_box=False, box_key='product__box')
 
     def delete(self, request):
         return delete_base(request, Storage)
@@ -194,12 +183,10 @@ class MenuView(TableView):
         return JsonResponse(serialized_objects(request, Menu, MenuASchema, MenuESchema))
 
     def post(self, request):
-        pk = create_object(request, Menu)
-        return JsonResponse(pk, status=201)
+        return create_object(request, Menu)
 
     def put(self, request):
-        update_object(request, Menu)
-        return JsonResponse({})
+        return update_object(request, Menu)
 
     def delete(self, request):
         return delete_base(request, Menu)
@@ -225,12 +212,10 @@ class TagView(TableView):
         return JsonResponse(res)
 
     def post(self, request):
-        items = create_object(request, Tag, box_key=None, return_item=True, serializer=TagASchema, error_null_box=False)
-        return JsonResponse(items, status=201)
+        return create_object(request, Tag, box_key=None, return_item=True, serializer=TagASchema, error_null_box=False)
 
     def put(self, request):
-        update_object(request, Tag, serializer=TagASchema, require_box=False, return_item=True)
-        return JsonResponse({})
+        return update_object(request, Tag, serializer=TagASchema, require_box=False, return_item=True)
 
     def delete(self, request):
         return delete_base(request, Tag)
@@ -243,12 +228,10 @@ class SpecialOfferView(TableView):
         return JsonResponse(serialized_objects(request, SpecialOffer, SpecialOfferASchema, SpecialOfferESchema))
 
     def post(self, request):
-        pk = create_object(request, SpecialOffer)
-        return JsonResponse(pk, status=201)
+        return create_object(request, SpecialOffer)
 
     def put(self, request):
-        update_object(request, SpecialOffer)
-        return JsonResponse({})
+        return update_object(request, SpecialOffer)
 
     def delete(self, request):
         return delete_base(request, SpecialOffer)
@@ -261,12 +244,10 @@ class SpecialProductView(TableView):
         return JsonResponse(serialized_objects(request, SpecialProduct, SpecialProductASchema, SpecialProductESchema))
 
     def post(self, request):
-        pk = create_object(request, SpecialProduct)
-        return JsonResponse(pk, status=201)
+        return create_object(request, SpecialProduct)
 
     def put(self, request):
-        update_object(request, SpecialProduct)
-        return JsonResponse({})
+        return update_object(request, SpecialProduct)
 
     def delete(self, request):
         return delete_base(request, SpecialProduct)
@@ -350,16 +331,14 @@ class SupplierView(TableView):
         data = get_data(request, require_box=False)
         data['is_supplier'] = True
         [data.pop(k, None) for k in self.rm_list]
-        item = create_object(request, User, serializer=SupplierESchema, error_null_box=False,
+        return create_object(request, User, serializer=SupplierESchema, error_null_box=False,
                              data=data, return_item=True)
-        return JsonResponse(item, status=201)
 
     def put(self, request):
         data = get_data(request, require_box=False)
         data['is_supplier'] = True
         [data.pop(k, None) for k in self.rm_list]
-        item = update_object(request, User, serializer=SupplierESchema, data=data, return_item=True, require_box=False)
-        return JsonResponse({"data": item})
+        return update_object(request, User, serializer=SupplierESchema, data=data, return_item=True, require_box=False)
 
     def delete(self, request):
         return delete_base(request, Brand)

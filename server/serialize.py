@@ -374,11 +374,17 @@ class StorageSchema(BaseSchema):
                       'discount_price', 'vip_discount_price', 'discount_percent', 'vip_discount_percent')
 
     title = fields.Method('get_title')
-    deadline = fields.Function(lambda o: o.deadline.timestamp())
+    deadline = fields.Method("get_deadline")
     default = fields.Function(lambda o: o == o.product.default_storage)
     features = FeatureField()
     max_count_for_sale = fields.Method("get_max_count_for_sale")
     min_count_alert = fields.Method("get_min_count_alert")
+
+    def get_deadline(self, obj):
+        try:
+            return obj.deadline.timestamp()
+        except Exception:
+            pass
 
 
 class MinStorageSchema(BaseSchema):
