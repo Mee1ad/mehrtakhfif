@@ -114,5 +114,5 @@ settings_var.py
 staticfiles
 celerybeat.pid
 celerybeat-schedule
-!media/.gitkeep
+!media/icons.json
 !static/.gitkeep

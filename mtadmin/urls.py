@@ -34,5 +34,6 @@ urlpatterns = [
     path('settings', error_handler(BoxSettings.as_view()), name='settings'),
     path('supplier', error_handler(SupplierView.as_view()), name='supplier'),
     path('snapshot', error_handler(Snapshot.as_view()), name='snapshot'),
+    path('icon/<str:key>', error_handler(Icon.as_view()), name='icon'),
 
 ]

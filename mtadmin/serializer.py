@@ -248,8 +248,9 @@ class CategoryESchema(CategoryASchema):
 
 
 class FeatureASchema(BaseAdminSchema):
-    name = fields.Dict()
-    value = fields.Dict()
+    class Meta:
+        additional = ('icon', 'name', 'value')
+
     type = fields.Function(lambda o: o.get_type_display())
 
 

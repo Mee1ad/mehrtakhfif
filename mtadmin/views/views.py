@@ -1,5 +1,5 @@
 from django.core.mail import send_mail
-
+from os import listdir
 from mtadmin.utils import *
 from server.utils import get_access_token, random_data
 import json
@@ -12,6 +12,7 @@ from server.documents import SupplierDocument
 import requests
 from mehr_takhfif.settings import ARVAN_API_KEY
 from time import sleep
+from os import listdir
 
 
 class Token(AdminView):
@@ -190,3 +191,24 @@ class Snapshot(AdminView):
                     break
         res['data'] = self.get_snapshots()
         return JsonResponse(res)
+
+
+class Icon(AdminView):
+    def get(self, request, key):
+        with open("media/icons.json", "r") as read_file:
+            icons = json.load(read_file)
+        if key == 'all':
+            return JsonResponse({'data': icons})
+        icons = [icon for icon in icons if icon[key] is True]
+
+        # self.create_json_from_directory()
+        # icons = "ok"
+        return JsonResponse({'data': icons})
+
+    def create_json_from_directory(self):
+        icons = listdir('media/icon/boom-gardi')
+        icon_list = []
+        for i in icons:
+            icon_list.append({'name': i, 'feature': True})
+        with open("media/icons.json", "w") as read_file:
+            json.dump(icon_list, read_file)
