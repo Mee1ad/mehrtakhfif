@@ -62,7 +62,11 @@ class BaseAdminSchema(Schema):
         return obj.title
 
     def get_box(self, obj):
-        return {'id': obj.box_id, 'name': obj.box.name}
+        try:
+            return {'id': obj.box_id, 'name': obj.box.name, 'settings': obj.box.settings}
+        except AttributeError:
+            obj = obj.product
+            return {'id': obj.box_id, 'name': obj.box.name, 'settings': obj.box.settings}
 
     def get_category(self, obj):
         cats = []
@@ -200,6 +204,7 @@ class StorageESchema(StorageASchema):
     supplier = fields.Function(lambda o: UserSchema().dump(o.supplier))
     features = FeatureField()
     tax = fields.Function(lambda o: o.get_tax_type_display())
+    box = fields.Method("get_box")
 
 
 class CommentASchema(BaseAdminSchema):
