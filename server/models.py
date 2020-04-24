@@ -648,6 +648,7 @@ class Product(Base):
     short_address = JSONField(null=True, blank=True)
     properties = JSONField(null=True, blank=True)
     details = JSONField(null=True, blank=True)
+    settings = JSONField(default=dict)
 
     # home_buissiness =
     # support_description =
