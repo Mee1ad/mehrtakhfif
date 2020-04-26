@@ -130,21 +130,20 @@ class Search(AdminView):
 
 
 class BoxSettings(AdminView):
+    models = {'box': Box, 'product': Product}
+    box_key = {'box': 'id', 'product': 'box_id'}
 
-    def get(self, request):
-        box_id = request.GET.get('b', None)
-        if box_id:
-            model = Box
-        box_check = get_box_permission(request.user, 'id', box_id)
-        box_settings = model.objects.filter(pk=box_id, **box_check).values('settings').first()
-        return JsonResponse(box_settings)
+    def get(self, request, model):
+        pk = request.GET.get('id')
+        box_check = get_box_permission(request.user, self.box_key[model])
+        model = self.models[model]
+        box_settings = model.objects.filter(pk=pk, **box_check).values('settings').first()
+        return JsonResponse({'data': box_settings})
 
-    def patch(self, request):
+    def patch(self, request, model):
         data = json.loads(request.body)
-        box_id = data.get('b', None)
-        if box_id:
-            model = Box
-        box_check = get_box_permission(request.user, 'id', data['id'])
+        box_check = get_box_permission(request.user, self.box_key[model])
+        model = self.models[model]
         if model.objects.filter(pk=data['id'], **box_check).update(settings=data['settings']):
             return JsonResponse({})
         return HttpResponseBadRequest()

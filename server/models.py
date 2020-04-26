@@ -149,10 +149,10 @@ class MyQuerySet(SafeDeleteQueryset):
         if not self:
             return True
         remove_list = ['id', 'box_id', 'tags', 'media', 'features', 'categories']
-        model = self[0].__class__.__name__.lower()
-        validations = {'storage': self.storage_validation, 'category': self.category_validation,
-                       'product': self.product_validation, 'tag': self.tag_validation, 'brand': self.brand_validation}
-        kwargs = validations[model](**kwargs)
+        # model = self[0].__class__.__name__.lower()
+        # validations = {'storage': self.storage_validation, 'category': self.category_validation,
+        #                'product': self.product_validation, 'tag': self.tag_validation, 'brand': self.brand_validation}
+        # kwargs = validations[model](**kwargs)
         [kwargs.pop(item, None) for item in remove_list]
         return super().update(**kwargs)
 
@@ -186,9 +186,13 @@ class MyQuerySet(SafeDeleteQueryset):
             except TypeError:
                 pass
             return {'disable': kwargs['disable']}
-        features = Feature.objects.filter(pk__in=kwargs.get('features', []))
-        item.features.clear()
-        item.features.add(*features)
+        if kwargs.get('features', None):
+            features = Feature.objects.filter(pk__in=kwargs.get('features', []))
+            item.features.clear()
+            feature_storages = [FeatureStorage(feature_id=item['feature_id'], media_id=item['media_id'],
+                                               value=kwargs['value']) for item in kwargs['features']]
+            FeatureStorage.objects.bulk_create(feature_storages)
+            item.features.add(*features)
         if kwargs.get('manage', None):
             item = self.first()
             item.product.assign_default_value(item.product_id)
@@ -584,8 +588,9 @@ class Product(Base):
         permalink_validation(self.permalink)
 
     def save(self, *args, **kwargs):
-        print(self.__dict__)
-        self.validation()
+        if kwargs.get('validation', True):
+            self.validation()
+        kwargs.get('validation', None)
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -693,12 +698,12 @@ class Storage(Base):
         return f"{self.product}"
 
     def validation(self, my_dict):
-        my_dict['start_time'] = datetime.datetime.utcfromtimestamp(
-            my_dict.get('start_time') or timezone.now().timestamp()).replace(tzinfo=pytz.utc)
+        my_dict['start_time'] = datetime.datetime.utcfromtimestamp(my_dict.get('start_time') or timezone.now().timestamp()).replace(tzinfo=pytz.utc)
         if my_dict.get('deadline', None):
             my_dict['deadline'] = datetime.datetime.utcfromtimestamp(my_dict['deadline']).replace(tzinfo=pytz.utc)
         if not my_dict.get('deadline', None):
             my_dict['deadline'] = None
+        print([my_dict['tax_type']])
         my_dict['tax_type'] = {'has_not': 1, 'from_total_price': 2, 'from_profit': 3}[my_dict['tax_type']]
         my_dict['discount_percent'] = int(100 - my_dict['discount_price'] / my_dict['final_price'] * 100)
         my_dict['vip_discount_percent'] = int(100 - my_dict.get('vip_discount_price') / my_dict['final_price'] * 100)
@@ -710,10 +715,10 @@ class Storage(Base):
             raise ValidationError("تعداد نامعتبر است")
         my_dict['tax'] = {1: 0, 2: my_dict['discount_price'] * 0.09,
                           3: (my_dict['discount_price'] - my_dict['start_price']) * 0.09}[my_dict['tax_type']]
-        supplier = User.objects.get(pk=my_dict.get('supplier_id'), is_supplier=True)
-        if not supplier.is_verify:
+        supplier = User.objects.filter(pk=my_dict.get('supplier_id'), is_supplier=True).first()
+        if supplier and supplier.is_verify is False:
             my_dict['disable'] = True
-        if my_dict.get('priority', None) == 0 and my_dict['disable']:
+        if my_dict.get('priority', None) == 0 and my_dict.get('disable', None):
             my_dict['manage'] = True
         if my_dict.get('features_percent', 0) > 100 or my_dict['discount_percent'] > 100 or \
                 my_dict['vip_discount_percent'] > 100:
@@ -723,8 +728,9 @@ class Storage(Base):
         return my_dict
 
     def save(self, *args, **kwargs):
-        self.__dict__ = self.validation(self.__dict__)
-
+        if kwargs.get('validation', True):
+            self.__dict__ = self.validation(self.__dict__)
+        kwargs.pop('validation', None)
         super().save(*args, **kwargs)
         if self.product.manage:
             self.product.assign_default_value()
@@ -754,9 +760,9 @@ class Storage(Base):
     disable = models.BooleanField(default=False)
 
     deadline = models.DateTimeField(null=True, blank=True)
-    start_time = models.DateTimeField(auto_now_add=True)
+    start_time = models.DateTimeField()
     title = JSONField(default=multilanguage)
-    supplier = models.ForeignKey(User, on_delete=PROTECT)
+    supplier = models.ForeignKey(User, on_delete=PROTECT, null=True, blank=True)
     invoice_description = JSONField(default=multilanguage)
     invoice_title = JSONField(default=multilanguage)
 

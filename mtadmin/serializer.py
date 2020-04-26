@@ -89,7 +89,7 @@ class BaseAdminSchema(Schema):
         return storage_list
 
     def get_storage(self, obj):
-        storages = obj.storage_set.all()
+        storages = obj.storages.all()
         storage_list = []
         for index, storage in enumerate(storages):
             storage_list.append({'id': storage.pk, 'title': {'fa': storage.title['fa']},
@@ -148,7 +148,7 @@ class ProductASchema(BaseAdminSchema):
     settings = fields.Dict()
     box = fields.Method("get_box")
     categories = fields.Method("get_category")
-    # storages = fields.Method("get_storage")
+    storages = fields.Method("get_storage")
     city = fields.Nested(CitySchema)
     thumbnail = fields.Nested("MediaASchema")
 

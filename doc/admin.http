@@ -80,20 +80,6 @@ Access-Token: {{access_token}}
   ]
 }
 
-###
-PATCH {{admin_host}}/storage
-Content-Type: Application/json
-Access-Token: {{access_token}}
-
-{
-  "storage": 14,
-  "features": [
-    14,
-    15,
-    16
-  ]
-}
-
 ### For Replace just change POST to PUT and add id if is not
 ### HINT: id in POST will not be used, don't mind if is in POST
 ### Create
@@ -237,7 +223,7 @@ Content-Type: Application/json
 Access-Token: {{access_token}}
 
 {
-  "product_id": 1,
+  "product_id": 23,
   "available_count": 1000,
   "start_price": 50000,
   "final_price": 100000,
@@ -248,14 +234,16 @@ Access-Token: {{access_token}}
   "vip_discount_percent": 60,
   "available_count_for_sale": 500,
   "max_count_for_sale": 5,
+  "vip_max_count_for_sale": 5,
   "priority": 0,
-  "tax": 2300,
+  "tax_type": "has_not",
   "gender": null,
-  "start_time": "2020-03-16 19:11:30+00:00",
-  "deadline": "2020-4-16 19:11:30+00:00",
+
   "title": {
     "fa": "عنوان"
-  }
+  },
+  "features": [{"feature_id": 14, "storage_id": 106,
+          "value": [{"fvid": 1, "price": 0}, {"fvid": 2, "price": 5000}]}]
 }
 
 ###

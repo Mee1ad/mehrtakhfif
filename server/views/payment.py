@@ -83,7 +83,10 @@ class PaymentRequest(View):
         basket = get_basket(invoice.user, basket=invoice.basket, return_obj=True)
         additional_data = []
         for basket_product in basket.basket_products:
-            supplier = basket_product.supplier
+            try:
+                supplier = basket_product.supplier
+            except AttributeError:
+                continue
             for data in additional_data:
                 if supplier.deposit_id == data[0]:
                     data[1] += basket_product.start_price

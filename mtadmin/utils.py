@@ -22,7 +22,7 @@ class TableView(LoginRequiredMixin, PermissionRequiredMixin, View):
 class AdminView(LoginRequiredMixin, View):
     pass
 
-
+@pysnooper.snoop()
 def serialized_objects(request, model, serializer=None, single_serializer=None, box_key='box_id', error_null_box=True,
                        params=None):
     pk = request.GET.get('id', None)
@@ -139,15 +139,20 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
         if not product.thumbnail_id or not product.media.all() or not product.category.all():
             product.disable = True
             product.save()
-    if model == Category or model == Storage:
-        item = obj
+    # todo submit feature to invoice products
+
+    if model == Category:
+        pass
+    if model == Storage:
         if 'features' in m2m:
-            features = Feature.objects.filter(pk__in=m2m['features'])
-            item.feature_set.add(*features)
-            if model == Storage:
-                item.priority = Product.objects.first(pk=item.product_id).count() - 1
-                item.save()
-                assign_default_value(obj.product_id)
+            feature_storages = [FeatureStorage(feature_id=item['feature_id'], storage_id=obj.pk,
+                                               value=item['value']) for item in m2m['features']]
+            FeatureStorage.objects.bulk_create(feature_storages)
+        obj.priority = Product.objects.filter(pk=obj.product_id).count() - 1
+        obj.save(validation=False)
+        if obj.product.manage:
+            obj.product.assign_default_value()
+
     if return_item:
         request.GET._mutable = True
         request.GET['id'] = obj.pk
@@ -165,6 +170,7 @@ def update_object(request, model, box_key='box', return_item=False, serializer=N
     pk = data['id']
     box_check = get_box_permission(request.user, box_key) if require_box else {}
     items = model.objects.filter(pk=pk, **box_check)
+    # items.first().validation(**data)
     items.update(**data)
     if return_item:
         request.GET._mutable = True

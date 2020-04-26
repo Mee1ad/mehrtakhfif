@@ -142,13 +142,14 @@ class StorageView(TableView):
         if not params['filter'].get(box_key):
             box_check = get_box_permission(request.user, box_key)
             params['filter'] = {**params['filter'], **box_check}
+        params['order'] = ['-priority']
         data = serialized_objects(request, Storage, StorageESchema, StorageESchema, box_key,
                                   params=params, error_null_box=False)
         product_id = request.GET.get('product_id')
         product = Product.objects.get(pk=product_id)
         return JsonResponse({"product": {"id": product.id, "name": product.name, "permalink": product.permalink,
                                          "default_storage": {"id": product.default_storage_id},
-                                         "manage": product.manage,}, "data": data})
+                                         "manage": product.manage}, "data": data})
 
     def post(self, request):
         return create_object(request, Storage, box_key='product__box', error_null_box=False)
