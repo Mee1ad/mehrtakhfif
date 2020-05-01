@@ -1,6 +1,6 @@
 from django.http import JsonResponse, HttpResponseForbidden, HttpResponseBadRequest
 from server.utils import get_pagination, get_token_from_cookie, set_token, check_access_token
-from django.core.exceptions import ValidationError, FieldError, PermissionDenied
+from django.core.exceptions import ValidationError, FieldError, PermissionDenied, FieldDoesNotExist
 from django.contrib.admin.utils import NestedObjects
 from django.db.models import F
 from server.models import *
@@ -22,7 +22,7 @@ class TableView(LoginRequiredMixin, PermissionRequiredMixin, View):
 class AdminView(LoginRequiredMixin, View):
     pass
 
-@pysnooper.snoop()
+
 def serialized_objects(request, model, serializer=None, single_serializer=None, box_key='box_id', error_null_box=True,
                        params=None):
     pk = request.GET.get('id', None)
@@ -42,7 +42,7 @@ def serialized_objects(request, model, serializer=None, single_serializer=None, 
         if params.get('aggregate', None):
             # todo tax
             pass
-        return get_pagination(query, request.step, request.page, serializer, show_all=request.all)
+        return get_pagination(request, query, serializer, show_all=request.all)
     except (FieldError, ValueError):
         raise FieldError
 
@@ -119,7 +119,7 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
     if box_key == 'product__box':
         if not Product.objects.filter(pk=data['product_id'], box__in=boxes).exists():
             raise PermissionDenied
-    rm = ['tags', 'media', 'features', 'categories']
+    rm = ['tags', 'media', 'features', 'categories', 'items']
     m2m = {}
     for item in rm:
         try:
@@ -129,6 +129,8 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
             continue
     obj = model.objects.create(**data, created_by=user, updated_by=user)
     if model == Product:
+        if not m2m['categories']:
+            raise ValidationError('لطفا دسته بندی را انتخاب کنید')
         product = obj
         tags = Tag.objects.filter(pk__in=m2m['tags'])
         categories = Category.objects.filter(pk__in=m2m['categories'])
@@ -140,7 +142,7 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
             product.disable = True
             product.save()
     # todo submit feature to invoice products
-
+    # todo handle manytomany items <<items>>
     if model == Category:
         pass
     if model == Storage:
@@ -158,10 +160,11 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
         request.GET['id'] = obj.pk
         items = serialized_objects(request, model, single_serializer=serializer, box_key=box_key,
                                    error_null_box=error_null_box)
-        return JsonResponse({"data": items}, status=201)
-    return JsonResponse({'id': obj.pk})
+        return JsonResponse(items, status=201)
+    return JsonResponse({'id': obj.pk}, status=201)
 
 
+@pysnooper.snoop()
 def update_object(request, model, box_key='box', return_item=False, serializer=None, data=None, require_box=True):
     if not request.user.has_perm(f'server.change_{model.__name__.lower()}'):
         raise PermissionDenied
@@ -170,30 +173,37 @@ def update_object(request, model, box_key='box', return_item=False, serializer=N
     pk = data['id']
     box_check = get_box_permission(request.user, box_key) if require_box else {}
     items = model.objects.filter(pk=pk, **box_check)
-    # items.first().validation(**data)
-    items.update(**data)
+    try:
+        items.update(**data, validation=True)
+    except FieldDoesNotExist:
+        print(data)
+        items.update(**data)
     if return_item:
         request.GET._mutable = True
         request.GET['id'] = items.first().pk
         items = serialized_objects(request, model, single_serializer=serializer, error_null_box=require_box)
         return JsonResponse({"data": items}, status=res_code['updated'])
-    return JsonResponse({})
+    return JsonResponse({}, status=res_code['updated'])
 
 
-def delete_base(request, model):
+# bug remove mt_profit from res
+
+def delete_base(request, model, require_box=False):
     pk = int(request.GET.get('id', None))
     if request.token:
         if delete_object(request, model, pk):
             return JsonResponse({})
         return JsonResponse({}, status=400)
-    return prepare_for_delete(model, pk, request.user)
+    return prepare_for_delete(model, pk, request.user, require_box=require_box)
 
 
 def get_box_permission(user, box_key='box', box_id=None):
     boxes_id = user.box_permission.all().values_list('id', flat=True)
     if boxes_id:
-        if box_id and (int(box_id) not in boxes_id):
-            raise PermissionDenied
+        if box_id:
+            if int(box_id) not in boxes_id:
+                raise PermissionDenied
+            return {f'{box_key}': box_id}
         return {f'{box_key}__in': boxes_id}
     raise PermissionDenied
 
@@ -203,11 +213,14 @@ def check_user_permission(user, permission):
         raise PermissionDenied
 
 
-def prepare_for_delete(model, pk, user, box_key='box'):
+def prepare_for_delete(model, pk, user, box_key='box', require_box=True):
     if not user.has_perm(f'server.delete_{model.__name__.lower()}'):
         raise PermissionDenied
     box_check = get_box_permission(user, box_key)
-    item = model.objects.get(pk=pk, **box_check)
+    try:
+        item = model.objects.get(pk=pk, **box_check)
+    except FieldError:
+        item = model.objects.get(pk=pk)
     collector = NestedObjects(using='default')
     collector.collect([item])
     data = collector.nested()

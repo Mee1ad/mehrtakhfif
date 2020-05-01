@@ -16,7 +16,6 @@ def sub(a, b):
 
 @register.filter(name="get_value_added")
 def get_value_added(a, b):
-    print(a - b)
     return f"{a - b:,}"
 
 

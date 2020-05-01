@@ -14,6 +14,9 @@ from mehr_takhfif.settings import INVOICE_ROOT, STATIC_ROOT, SHORTLINK
 import pdfkit
 from django.template.loader import render_to_string
 import pysnooper
+from mehr_takhfif.settings import ARVAN_API_KEY
+from time import sleep
+import requests
 
 
 @shared_task
@@ -82,3 +85,40 @@ def send_invoice(invoice_id, lang, **kwargs):
         send_email("صورتحساب خرید", user.email, html_content=all_renders, attach=pdf_list)
         res += ', email sent'
     return res
+
+
+def get_snapshots(self, name=None):
+    images = requests.get(self.url + f'/regions/{self.region}/images?type=server', headers=self.headers).json()
+    if name:
+        return [image for image in images['data'] if name == image['abrak'].split('_', 1)[0]]
+    return images['data']
+
+# todo get a list of object and one object and say if it is in list or not
+# todo make a task in db
+@shared_task
+def server_backup():
+    url = "https://napi.arvancloud.com/ecc/v1"
+    region = "ir-thr-at1"
+    headers = {'Authorization': ARVAN_API_KEY}
+
+    servers = requests.get(url + f'/regions/{region}/servers', headers=headers).json()
+    for server in servers['data']:
+        data = {'name': server['name']}
+        new_snapshot = requests.post(url + f'/regions/{region}/servers/{server["id"]}/snapshot',
+                                     headers=headers, data=data)
+        if new_snapshot.status_code == 202:
+            images = get_snapshots(server['name'])
+            while images[0]['status'] != 'active':
+                sleep(5)
+                images = get_snapshots(server['name'])
+            last_item = -1
+            while len(images) > 2:
+                if requests.delete(url + f'/regions/{region}/images/{images[last_item]["id"]}',
+                                   headers=headers).status_code == 200:
+                    images = get_snapshots(server['name'])
+                    continue
+                if last_item == -1:
+                    last_item = -2
+                    continue
+                break
+    return 'backup synced'

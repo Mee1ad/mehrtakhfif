@@ -5,6 +5,7 @@ from server.serialize import *
 from server.utils import *
 import pysnooper
 
+
 class GetSlider(View):
     def get(self, request, slider_type):
         slider = Slider.objects.select_related(*Slider.select).all()
@@ -22,7 +23,7 @@ class GetSpecialOffer(View):
 class GetSpecialProduct(View):
     def get(self, request):
         special_product = SpecialProduct.objects.select_related(*SpecialProduct.select).filter(special=True)[:5]
-        res = {'special_product': SpecialProductSchema(language=request.lang).dump(special_product, many=True)}
+        res = {'special_product': SpecialProductSchema(**request.schema_params).dump(special_product, many=True)}
         return JsonResponse(res)
 
 
@@ -56,31 +57,27 @@ class BestSeller(View):
             item['id'] = box.pk
             item['name'] = box.name[language]
             item['key'] = box.permalink
-            item['best_seller'] = get_best_seller(box, invoice_ids, request.step, request.page)
+            item['best_seller'] = get_best_seller(request, box, invoice_ids)
             boxes.append(item)
         return JsonResponse({'box': boxes})
 
 
 class BoxWithCategory(View):
     def get(self, request):
-        box_permalink = request.GET.get('box_permalink', None)
+        box_permalink = request.GET.get('permalink', None)
         box_id = request.GET.get('box_id', None)
-        filter_param = {'permalink': box_permalink} if box_permalink else {'pk': box_id}
-        box_id = Box.objects.filter(**filter_param).first().pk
+        box_filter = {'permalink': box_permalink} if box_permalink else {'id': box_id}
         is_admin = False
-        if request.headers.get('admin'):
+        if request.headers.get('admin', None):
             is_admin = True
-        categories = get_categories(request.lang, box_id, is_admin=is_admin)
-        res = {'categories': categories}
-        # else:
-        #     boxes = Box.objects.all()
-        #     box_list = []
-        #     for box in boxes:
-        #         categories = get_categories(request.lang, box.id)
-        #         box = BoxSchema(language=request.lang).dump(box)
-        #         box['categories'] = categories
-        #         box_list.append(box)
-        #     res = {'boxes': box_list}
+        try:
+            box = Box.objects.get(**box_filter)
+            categories = get_categories(request.lang, box.pk, is_admin=is_admin)
+            box = BoxSchema(**request.schema_params).dump(box)
+            res = {'categories': categories, 'box': box}
+        except Box.DoesNotExist:
+            boxes = Box.objects.all()
+            res = {'boxes': BoxSchema(**request.schema_params).dump(boxes, many=True)}
         return JsonResponse(res)
 
 

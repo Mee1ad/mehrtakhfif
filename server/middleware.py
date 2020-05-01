@@ -18,7 +18,7 @@ class AuthMiddleware:
         # One-time configuration and initialization.
 
     def __call__(self, request):
-        print(request.META.get('REMOTE_ADDR') or request.META.get('HTTP_X_FORWARDED_FOR'))
+        # print(request.META.get('REMOTE_ADDR') or request.META.get('HTTP_X_FORWARDED_FOR'))
         path = request.path_info
         route = resolve(path).route
         app_name = resolve(path).app_name
@@ -29,7 +29,7 @@ class AuthMiddleware:
             pass
         # Debug
         if ADMIN:
-            request.user = User.objects.get(pk=1)
+            request.user = User.objects.order_by('id').first()
         if route == 'favicon.ico':
             return JsonResponse({})
         delay = request.GET.get('delay', None)
@@ -50,6 +50,8 @@ class AuthMiddleware:
             request.lang = request.headers['language']
         except Exception:
             request.lang = 'fa'
+
+        request.schema_params = {'language': request.lang, 'vip': request.user.is_vip}
         if app_name == 'server':
             request.params = {}
             # sync user basket count

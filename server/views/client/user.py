@@ -9,85 +9,22 @@ from django.db.utils import IntegrityError
 from django.contrib.auth import login
 import pytz
 from django.shortcuts import render_to_response
-import jdatetime
 import time
 # from selenium import webdriver
 
 
 class Test(View):
-    @pysnooper.snoop()
     def get(self, request):
-        driver = webdriver.Chrome('F:\Download\Compressed\chromedriver.exe')
-        driver.get("http://time.ir")
-        year = 1398
-        months_name = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن',
-                       'اسفند']
-        for y in range(1):
-            year += 1
-            month = 0
-            for m in range(12):
-                month += 1
-                ul = driver.find_element_by_class_name("list-unstyled")
-                lis = ul.find_elements_by_tag_name('li')
-                for li in lis:
-                    occasion = li.text
-                    tag = li.get_attribute('outerHTML')
-                    day = int(re.search('\d+', occasion[:2])[0])
-                    try:
-                        occasion = occasion[len(f"{day} "):].split(' [', 1)[0].split(months_name[m], 1)[1]
-                    except Exception:
-                        occasion = occasion[len(f"{day} "):].split(' [', 1)[0].split(months_name[m], 1)[0]
-                    day_off = True if re.search('eventHoliday', tag) else False
-                    try:
-                        holiday = Holiday.objects.get(date=jdatetime.datetime.strptime(f'{year}-{month}-{day}', '%Y-%m-%d').togregorian())
-                        holiday.occasion = holiday.occasion + ', ' + occasion
-                        holiday.save()
-                    except Holiday.DoesNotExist:
-                        Holiday.objects.create(day_off=day_off, occasion=occasion, date=jdatetime.datetime.strptime(f'{year}-{month}-{day}', '%Y-%m-%d').togregorian())
-                next_month = driver.find_element_by_xpath(
-                    '//*[@id="ctl00_cphTop_Sampa_Web_View_EventUI_EventCalendarSimple30cphTop_3732_ecEventCalendar_pnlNext"]/span')
-                next_month.click()
-                time.sleep(2)
-
-        driver.close()
         return JsonResponse({"message": "Done"})
 
 
 class Profile(LoginRequired):
 
     def get(self, request):
-        house = House.objects.get(pk=1)
-        price = HousePriceSchema().dump(house)['price']['months']
-        start_date = '1399-2-5'
-        end_date = '1400-8-8'
-        assert jdatetime.datetime.strptime(start_date, '%Y-%m-%d') <= jdatetime.datetime.strptime(end_date, '%Y-%m-%d')
-        start_date = ['1399', '1', '5']
-        end_date = ['1399', '1', '30']
-        start_year, start_month, start_day = int(start_date[0]), int(start_date[1]), int(start_date[2])
-        end_year, end_month, end_day = int(end_date[0]), int(end_date[1]), int(end_date[2])
-        assert end_year - start_year < 2
-        book_month = next(month for month in price if month['month'] == start_month and month['year'] == start_year)
-        amount = 0
-        if end_month != start_month:
-            days = book_month['days'][start_day - 1:]
-            current_index = price.index(book_month)
-            months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-            for month in months[start_month:end_month] or months[start_month:] + months[:end_month]:
-                current_index += 1
-                if month == end_month:
-                    days += price[current_index]['days'][:end_day]
-                    continue
-                days += price[current_index]['days']
-        else:
-            days = book_month['days'][start_day - 1:end_day]
-        for day in days:
-            amount += day['price']
-        return JsonResponse({'amount': amount})
-
-        # res = {'user': UserSchema().dump(request.user)}
-        # if request.user.is_staff:
-        #     res['user']['is_staff'] = request.user.is_staff
-        # return JsonResponse(res)
+        res = {'user': UserSchema().dump(request.user)}
+        if request.user.is_staff:
+            res['user']['is_staff'] = request.user.is_staff
+        return JsonResponse(res)
 
     def put(self, request):
         data = load_data(request)
@@ -160,7 +97,7 @@ class OrderProduct(LoginRequired):
         pk = request.GET.get('id', None)
         invoice_product = InvoiceStorage.objects.get(pk=pk, invoice__user=request.user)
         product = invoice_product.storage.product
-        # product_dict = ProductSchema(language=request.lang).dump(product)
+        # product_dict = ProductSchema(**request.schema_params).dump(product)
         invoice_product = InvoiceStorageSchema().dump(invoice_product)
         # invoice_product['product'] = product_dict
         return JsonResponse(invoice_product)
@@ -256,7 +193,7 @@ class GetCity(LoginRequired):
 class WishlistView(LoginRequired):
     def get(self, request):
         wishlists = WishList.objects.filter()
-        pg = get_pagination(wishlists, request.step, request.page, WishListSchema)
+        pg = get_pagination(request, wishlists, WishListSchema)
 
         return JsonResponse(pg)
 

@@ -119,9 +119,9 @@ def filter_params(params, lang):
     max_price = params.get('max_price', None)
     if box_permalink:
         try:
-            filters['related'] = {'category_id__in': Category.objects.filter(box__permalink=box_permalink,
-                                                                             permalink=None).values_list('parent_id',
-                                                                                                         flat=True)}
+            filters['related'] = {'category__in': Category.objects.filter(box__permalink=box_permalink,
+                                                                          permalink=None).values_list('parent_id',
+                                                                                                      flat=True)}
             filters['filter']['box'] = Box.objects.get(permalink=box_permalink)
         except Box.DoesNotExist:
             pass
@@ -269,7 +269,9 @@ def get_categories(language, box_id=None, categories=None, is_admin=None):
     return BoxCategoriesSchema(language=language).dump(new_cats, many=True)
 
 
-def get_pagination(query, step, page, serializer, show_all=False, language="fa"):
+def get_pagination(request, query, serializer, show_all=False):
+    page = request.page
+    step = request.step
     if step > 100:
         step = 10
     try:
@@ -278,7 +280,7 @@ def get_pagination(query, step, page, serializer, show_all=False, language="fa")
         count = len(query)
     query = query if show_all and count <= 500 else query[(page - 1) * step: step * page]
     try:
-        items = serializer(language=language).dump(query, many=True)
+        items = serializer(**request.schema_params).dump(query, many=True)
     except TypeError:
         items = serializer().dump(query, many=True)
     return {'pagination': {'last_page': math.ceil(count / step), 'count': count},
@@ -287,7 +289,7 @@ def get_pagination(query, step, page, serializer, show_all=False, language="fa")
 
 def user_data_with_pagination(model, serializer, request):
     query = model.objects.filter(user=request.user)
-    return get_pagination(query, request.step, request.page, serializer)
+    return product.tags
 
 
 def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=None, return_obj=False, tax=False):
@@ -297,8 +299,8 @@ def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=Non
         basket = basket or Basket.objects.filter(user=user).order_by('-id').first()
     if basket is None:
         return {}
-    basket_products = basket_products or \
-                      BasketProduct.objects.filter(basket=basket).select_related(*BasketProduct.related)
+    basket_products = basket_products or BasketProduct.objects.filter(
+        basket=basket).select_related(*BasketProduct.related)
     summary = {"total_price": 0, "discount_price": 0, "profit": 0, "mt_profit": 0, "shopping_cost": 0, "tax": 0}
     for basket_product in basket_products:
         storage = basket_product.storage
@@ -312,7 +314,7 @@ def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=Non
             {'item_final_price': storage.final_price, 'discount_percent': storage.discount_percent,
              'item_discount_price': storage.discount_price, 'start_price': storage.start_price})
         for feature in basket_product.features:
-            feature_storage = FeatureStorage.objects.get(feature_id=feature['fid'], storage_id=storage.pk)
+            feature_storage = FeatureStorage.objects.get(id=feature['fsid'], storage_id=storage.pk)
             for value in feature['fvid']:
                 feature_price = next(
                     storage['price'] for storage in feature_storage.value if storage['fvid'] == value)
@@ -338,6 +340,7 @@ def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=Non
         basket.address_required = address_required
         return basket
     basket = BasketSchema(language=lang).dump(basket)
+    print(basket)
     return {'basket': basket, 'summary': summary, 'address_required': address_required}
 
 
@@ -349,7 +352,7 @@ def sync_default_storage(storages, products):
             product.default_storage = storage
 
 
-def get_best_seller(box, invoice_ids, step, page):
+def get_best_seller(request, box, invoice_ids):
     # from invoices
     basket_products = InvoiceStorage.objects.filter(invoice_id__in=invoice_ids, box=box).values('storage', 'count')
     storage_count = {}
@@ -363,7 +366,7 @@ def get_best_seller(box, invoice_ids, step, page):
     storages = Storage.objects.filter(pk__in=storage_ids)
     products = Product.objects.filter(storage__in=storages)
     sync_default_storage(storages, products)
-    return get_pagination(products, step, page, MinProductSchema)
+    return get_pagination(request, products, MinProductSchema)
 
 
 def sync_storage(basket_id, op):

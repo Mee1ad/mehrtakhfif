@@ -38,7 +38,7 @@ def feature_value():
 
 
 def feature_value_storage():
-    return {"bool": {"fid": 1, "sid": 1, "value": [{"fvid": 1, "price": 5000}]}}
+    return {"bool": {"fsid": 1, "sid": 1, "value": [{"fvid": 1, "price": 5000}]}}
 
 
 def product_properties():
@@ -145,14 +145,18 @@ class MyQuerySet(SafeDeleteQueryset):
     _safedelete_visibility_field = 'pk'
     _queryset_class = SafeDeleteQueryset
 
+    @pysnooper.snoop()
     def update(self, *args, **kwargs):
         if not self:
             return True
         remove_list = ['id', 'box_id', 'tags', 'media', 'features', 'categories']
-        # model = self[0].__class__.__name__.lower()
-        # validations = {'storage': self.storage_validation, 'category': self.category_validation,
-        #                'product': self.product_validation, 'tag': self.tag_validation, 'brand': self.brand_validation}
-        # kwargs = validations[model](**kwargs)
+        if kwargs.get('validation', None):
+            kwargs.pop('validation')
+            model = self[0].__class__.__name__.lower()
+            validations = {'storage': self.storage_validation, 'category': self.category_validation,
+                           'product': self.product_validation}
+            validations.update(dict.fromkeys(['feature', 'brand', 'tag'], self.default_validation))
+            kwargs = validations[model](**kwargs)
         [kwargs.pop(item, None) for item in remove_list]
         return super().update(**kwargs)
 
@@ -221,6 +225,8 @@ class MyQuerySet(SafeDeleteQueryset):
         product.tags.add(*tags)
         product.category.clear()
         product.category.add(*categories)
+        if not product.category.all():
+            raise ValidationError('لطفا دسته بندی را انتخاب کنید')
         product.media.clear()
         p_medias = [ProductMedia(product=product, media_id=pk, priority=kwargs['media'].index(pk)) for pk in
                     kwargs.get('media', [])]
@@ -230,11 +236,7 @@ class MyQuerySet(SafeDeleteQueryset):
             item.assign_default_value()
         return kwargs
 
-    def tag_validation(self, **kwargs):
-        item = self.first()
-        return item.validation(kwargs)
-
-    def brand_validation(self, **kwargs):
+    def default_validation(self, **kwargs):
         item = self.first()
         return item.validation(kwargs)
 
@@ -243,10 +245,6 @@ class Base(SafeDeleteModel):
     # related_query_name = "%(app_label)s_%(class)ss" for many to many
     class Meta:
         abstract = True
-
-    def save(self, *args, **kwargs):
-        self.full_clean()
-        super().save(*args, **kwargs)
 
     _safedelete_policy = SOFT_DELETE_CASCADE
     id = models.BigAutoField(auto_created=True, primary_key=True)
@@ -291,9 +289,17 @@ class User(AbstractUser, Base):
         except Exception:
             pass
 
+    def validation(self, **kwargs):
+        self.full_clean()
+
+    def save(self, *args, **kwargs):
+        self.validation()
+        super().save(*args, **kwargs)
+
     first_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='First name')
     last_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='Last name')
     username = models.CharField(max_length=150, unique=True)
+    phone = models.CharField(max_length=150, null=True, blank=True)
     language = models.CharField(max_length=7, default='fa')
     email = models.CharField(max_length=255, blank=True, null=True, validators=[validate_email])
     password = models.CharField(max_length=255, blank=True, null=True)
@@ -324,9 +330,9 @@ class User(AbstractUser, Base):
     token = models.CharField(max_length=255, unique=True, null=True, blank=True)
     token_expire = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey('User', on_delete=PROTECT, related_name="%(app_label)s_%(class)s_created_by",
-                                   null=True)
+                                   null=True, blank=True)
     updated_by = models.ForeignKey('User', on_delete=PROTECT, related_name="%(app_label)s_%(class)s_updated_by",
-                                   null=True)
+                                   null=True, blank=True)
 
     class Meta:
         db_table = 'user'
@@ -423,7 +429,7 @@ class Media(Base):
             return self.title['user_id']
 
     def save(self, *args, **kwargs):
-        sizes = {'thumbnail': (600, 374), 'media': (1280, 794)}
+        sizes = {'thumbnail': (600, 372), 'media': (1280, 794)}
         try:
             with Image.open(self.image) as im:
                 width, height = im.size
@@ -486,9 +492,9 @@ class Category(Base):
     parent = models.ForeignKey("self", on_delete=CASCADE, null=True, blank=True)
     box = models.ForeignKey(Box, on_delete=CASCADE)
     name = JSONField(default=multilanguage)
-    permalink = models.CharField(max_length=255, db_index=True)
+    permalink = models.CharField(max_length=255, db_index=True, unique=True, null=True, blank=True)
     priority = models.PositiveSmallIntegerField(default=0)
-    disable = models.BooleanField(default=False)
+    disable = models.BooleanField(default=True)
     media = models.ForeignKey(Media, on_delete=CASCADE, null=True, blank=True)
 
     class Meta:
@@ -498,15 +504,19 @@ class Category(Base):
 
 
 class Feature(Base):
+    objects = MyQuerySet.as_manager()
+
     def __str__(self):
         return f"{self.id}"
 
-    def validation(self):
-        if self.type > 3:
+    def validation(self, kwargs):
+        kwargs['type'] = {'bool': 1, 'single': 2, 'multi': 3}[kwargs.get('type', None)]
+        if kwargs['type'] > 3:
             raise ValidationError('invalid type')
+        return kwargs
 
     def save(self, *args, **kwargs):
-        self.validation()
+        self.validation(self.__dict__)
         super().save(*args, **kwargs)
 
     name = JSONField(default=multilanguage)
@@ -698,17 +708,20 @@ class Storage(Base):
         return f"{self.product}"
 
     def validation(self, my_dict):
-        my_dict['start_time'] = datetime.datetime.utcfromtimestamp(my_dict.get('start_time') or timezone.now().timestamp()).replace(tzinfo=pytz.utc)
+        my_dict['start_time'] = datetime.datetime.utcfromtimestamp(
+            my_dict.get('start_time') or timezone.now().timestamp()).replace(tzinfo=pytz.utc)
         if my_dict.get('deadline', None):
             my_dict['deadline'] = datetime.datetime.utcfromtimestamp(my_dict['deadline']).replace(tzinfo=pytz.utc)
         if not my_dict.get('deadline', None):
             my_dict['deadline'] = None
-        print([my_dict['tax_type']])
         my_dict['tax_type'] = {'has_not': 1, 'from_total_price': 2, 'from_profit': 3}[my_dict['tax_type']]
         my_dict['discount_percent'] = int(100 - my_dict['discount_price'] / my_dict['final_price'] * 100)
         my_dict['vip_discount_percent'] = int(100 - my_dict.get('vip_discount_price') / my_dict['final_price'] * 100)
         if my_dict.get('features', None) and not my_dict.get('features_percent', None):
-            raise ValidationError('درصد ویژگی ها نامعتبر است')
+            # todo debug
+            # todo feature: add default_selected_value for feature
+            pass
+            # raise ValidationError('درصد ویژگی ها نامعتبر است')
         if my_dict['available_count'] < my_dict['available_count_for_sale'] or my_dict['available_count'] < my_dict[
             'max_count_for_sale'] or \
                 my_dict['available_count'] < my_dict['vip_max_count_for_sale']:
@@ -835,7 +848,8 @@ class BasketProduct(models.Model):
     def validation(self):
         for feature in self.features:
             try:
-                item = Feature.objects.get(pk=feature['fid'])
+                item = FeatureStorage.objects.get(pk=feature['fsid'])
+                item = Feature.objects.get(pk=item.feature_id)
                 ids = [v.get('id') for v in item.value]
                 if not set(feature['fvid']).issubset(ids):
                     raise ValidationError('invalid feature_value_id')
@@ -985,6 +999,7 @@ class InvoiceStorage(models.Model):
     vip_discount_price = models.PositiveIntegerField(verbose_name='Discount price', default=0)
     vip_discount_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount price percent')
     details = JSONField(null=True, help_text="package/storage/product details")
+    features = JSONField(null=True)
 
     # todo change to invoice_storage
     class Meta:

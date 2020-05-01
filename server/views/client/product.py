@@ -14,17 +14,16 @@ class ProductView(View):
         if product_obj is None:
             return JsonResponse({}, status=404)
         purchased = False
-        product = ProductSchema(lang).dump(product_obj)
+        product = ProductSchema(**request.schema_params).dump(product_obj)
         if product_obj.type < 3:
-            storages = product_obj.storage_set.filter(start_time__lte=timezone.now(), deadline__gte=timezone.now())
-            product['storages'] = StorageSchema(lang).dump(storages, many=True)
+            storages = product_obj.storages.filter(start_time__lte=timezone.now(), deadline__gte=timezone.now())
+            product['storages'] = StorageSchema(**request.schema_params).dump(storages, many=True)
             if user.is_authenticated:
                 purchased = self.purchase_status(user, storages)
         if product_obj.type == 3:
-            product['house'] = HouseSchema(language=request.lang).dump(product_obj.house)
+            product['house'] = HouseSchema(**request.schema_params).dump(product_obj.house)
             # todo get purchased status
         product['categories'] = [self.get_category(c) for c in product['categories']]
-
         return JsonResponse({'product': product, 'purchased': purchased})
 
     def get_category(self, category):
@@ -48,8 +47,8 @@ class RelatedProduct(View):
     def get(self, request, permalink):
         product = Product.objects.get(permalink=permalink)
         tags = product.tags.all()
-        products = Product.objects.filter(tag__in=tags).order_by('-id').distinct('id')
-        return JsonResponse(get_pagination(products, request.step, request.page, MinProductSchema))
+        products = Product.objects.filter(tags__in=tags).order_by('-id').distinct('id')
+        return JsonResponse(get_pagination(request, products, MinProductSchema))
 
 
 class CommentView(View):
@@ -60,7 +59,7 @@ class CommentView(View):
         comment_type = request.GET.get('type', None)
         if comment_id:
             comments = Comment.objects.filter(reply_to_id=comment_id)
-            return JsonResponse(get_pagination(comments, request.step, request.page, CommentSchema))
+            return JsonResponse(get_pagination(request, comments, CommentSchema))
         if product_permalink:
             product = Product.objects.get(permalink=product_permalink)
             filterby = {"product": product}
@@ -69,7 +68,7 @@ class CommentView(View):
             filterby = {"blog_post": post}
         filterby = {"type": int(comment_type), **filterby}
         comments = Comment.objects.filter(**filterby, approved=True).exclude(reply_to__isnull=False)
-        return JsonResponse(get_pagination(comments, request.step, request.page, CommentSchema))
+        return JsonResponse(get_pagination(request, comments, CommentSchema))
 
     def post(self, request):
         data = load_data(request)

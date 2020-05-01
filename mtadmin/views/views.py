@@ -77,7 +77,7 @@ class TableFilter(AdminView):
         user = request.user
         no_box = ['tag', 'invoice', 'invoice_storage', 'comment']
         check_user_permission(user, f'view_{table}')
-        box = get_box_permission(user, 'box_id')
+        box = get_box_permission(user, 'box_id', box_id)
         if table == 'storage':
             box = {'product__box_id': box_id}
         elif table in no_box:
@@ -90,10 +90,8 @@ class TableFilter(AdminView):
 
 
 class CheckLoginToken(AdminView):
-    def options(self, request, *args, **kwargs):
-        print(request.headers)
-        print(request.body)
-        return JsonResponse({"test": "ok"})
+    # def options(self, request, *args, **kwargs):
+    #     return JsonResponse({"test": "ok"})
 
     def get(self, request):
         user = request.user
@@ -163,9 +161,7 @@ class Snapshot(AdminView):
             return [image for image in images['data'] if name == image['abrak'].split('_', 1)[0]]
         return images['data']
 
-    # todo make it task
     def post(self, request):
-        return HttpResponseForbidden()
         res = {'failed': []}
         servers = requests.get(self.url + f'/regions/{self.region}/servers', headers=self.headers).json()
         for server in servers['data']:

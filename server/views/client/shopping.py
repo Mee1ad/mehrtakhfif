@@ -1,6 +1,6 @@
 from server.utils import *
 from django.http import JsonResponse
-from mehr_takhfif.settings import TOKEN_SALT
+from mehr_takhfif.settings import TOKEN_SALT, DEBUG
 import pysnooper
 from django.db.models import F
 
@@ -50,13 +50,13 @@ class BasketView(LoginRequired):
             return JsonResponse(default_response['bad'], status=400)
 
     def add_to_basket(self, basket, products):
-        # {"id": 1, "count": 5, "features": [{"fid": 16, "fvid": [1, 2]}]}
+        # {"id": 1, "count": 5, "features": [{"fsid": 16, "fvid": [1, 2]}]}
         for product in products:
             pk = int(product['id'])
             count = int(product['count'])
             features = product['features']
             try:
-                basket_product = BasketProduct.objects.filter(basket=basket, storage_id=pk, features=features).\
+                basket_product = BasketProduct.objects.filter(basket=basket, storage_id=pk, features=features). \
                     select_related('storage')
                 storage = basket_product.first().storage
                 assert storage.available_count_for_sale >= count and storage.max_count_for_sale >= count
@@ -83,13 +83,15 @@ class BasketView(LoginRequired):
 
 
 class GetProducts(View):
+    @pysnooper.snoop()
     def post(self, request):
         data = load_data(request)
         storage_ids = [item['id'] for item in data['basket']]
         products = data['basket']
         basket = type('Basket', (), {})()
         basket.basket_products = []
-        assert not request.user.is_authenticated
+        if DEBUG is False:
+            assert not request.user.is_authenticated
         storages = Storage.objects.filter(id__in=storage_ids).select_related('product')
         address_required = False
         for item in products:
@@ -111,8 +113,11 @@ class GetProducts(View):
         data = load_data(request)
         basket = data['basket']
         product = data['product']
+        for p in basket:
+            if p['storage_id'] == product['storage_id'] and p['features'] == product['features']:
+                return JsonResponse({'index': basket.index(p)})
+        return JsonResponse({'index': -1})
 
-        return JsonResponse({'index': basket.index(product)})
 
 class InvoiceView(View):
     @pysnooper.snoop()

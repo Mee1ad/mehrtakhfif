@@ -13,7 +13,6 @@ import json
 class CategoryView(TableView):
     permission_required = 'server.view_category'
 
-    @pysnooper.snoop()
     def get(self, request):
         params = get_params(request, 'box_id')
         box_id = params['filter'].get('box_id')
@@ -41,7 +40,7 @@ class CategoryView(TableView):
             category.category_child_product_count = Product.objects.filter(category__in=children['childes']).count()
             category.product_count = Product.objects.filter(category=category).count()
 
-        return JsonResponse(get_pagination(categories, request.step, request.page, CategoryASchema, request.all))
+        return JsonResponse(get_pagination(request, categories, CategoryASchema, request.all))
 
     def post(self, request):
         return create_object(request, Category, serializer=CategoryASchema, return_item=True)
@@ -80,7 +79,7 @@ class BrandView(TableView):
         return update_object(request, Brand, return_item=True, serializer=BrandASchema, require_box=False)
 
     def delete(self, request):
-        return delete_base(request, Brand)
+        return delete_base(request, Brand, require_box=False)
 
 
 class FeatureView(TableView):
@@ -117,7 +116,7 @@ class ProductView(TableView):
 
 class HouseView(TableView):
     permission_required = 'server.view_house'
-
+    # todo get single house like storage
     def get(self, request):
         return JsonResponse(serialized_objects(request, House, HouseESchema, HouseESchema, box_key='product__box'))
 
@@ -134,7 +133,6 @@ class HouseView(TableView):
 class StorageView(TableView):
     permission_required = 'server.view_storage'
 
-    @pysnooper.snoop()
     def get(self, request):
         Storage.objects.filter(deadline__lt=timezone.now(), disable=False).update(disable=True)
         box_key = 'product__box'
@@ -145,11 +143,12 @@ class StorageView(TableView):
         params['order'] = ['-priority']
         data = serialized_objects(request, Storage, StorageESchema, StorageESchema, box_key,
                                   params=params, error_null_box=False)
-        product_id = request.GET.get('product_id')
+        product_id = int(request.GET.get('product_id'))
         product = Product.objects.get(pk=product_id)
+        box = BoxASchema().dump(product.box)
         return JsonResponse({"product": {"id": product.id, "name": product.name, "permalink": product.permalink,
                                          "default_storage": {"id": product.default_storage_id},
-                                         "manage": product.manage}, "data": data})
+                                         "manage": product.manage, 'box': box}, "data": data})
 
     def post(self, request):
         return create_object(request, Storage, box_key='product__box', error_null_box=False)
@@ -205,10 +204,10 @@ class TagView(TableView):
         try:
             query = Tag.objects.annotate(new_name=SearchVector(KeyTextTransform(request.lang, 'name')), ). \
                 filter(new_name__contains=contain)
-            res = get_pagination(query, request.step, request.page, TagASchema, request.all)
+            res = get_pagination(request, query, TagASchema, request.all)
         except (FieldError, ValueError):
             query = Tag.objects.all()
-            res = get_pagination(query, request.step, request.page, TagASchema, request.all)
+            res = get_pagination(request, query, TagASchema, request.all)
 
         return JsonResponse(res)
 
@@ -260,7 +259,6 @@ class MediaView(TableView):
     def get(self, request):
         return JsonResponse(serialized_objects(request, Media, MediaASchema, MediaESchema))
 
-    @pysnooper.snoop()
     def post(self, request):
         data = json.loads(request.POST.get('data'))
         titles = data['titles']
@@ -274,8 +272,6 @@ class MediaView(TableView):
         return JsonResponse({}, status=res_code['bad_request'])
 
     def patch(self, request):
-        import time
-        time.sleep(5)
         data = json.loads(request.body)
         title = data['title']
         pk = data['id']
@@ -340,9 +336,6 @@ class SupplierView(TableView):
         data['is_supplier'] = True
         [data.pop(k, None) for k in self.rm_list]
         return update_object(request, User, serializer=SupplierESchema, data=data, return_item=True, require_box=False)
-
-    def delete(self, request):
-        return delete_base(request, Brand)
 
 
 class Tax(AdminView):

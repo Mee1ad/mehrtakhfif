@@ -56,10 +56,11 @@ class BasketProductField(fields.Field):
 class BaseSchema(Schema):
     id = fields.Int()
 
-    def __init__(self, language='fa'):
+    def __init__(self, language='fa', vip=False):
         super().__init__()
         self.lang = language
         self.default_lang = 'fa'
+        self.vip = vip
 
     def get(self, name):
         try:
@@ -145,9 +146,9 @@ class BaseSchema(Schema):
             if hasattr(obj, 'house'):
                 return None
             if hasattr(obj, 'default_storage'):
-                return MinStorageSchema(self.lang).dump(obj.default_storage)
+                return MinStorageSchema(self.lang, vip=self.vip).dump(obj.default_storage)
             if hasattr(obj, 'storage'):
-                return MinStorageSchema(self.lang).dump(obj.storage)
+                return MinStorageSchema(self.lang, vip=self.vip).dump(obj.storage)
             return None
         except Exception:
             pass
@@ -240,7 +241,7 @@ class BoxSchema(BaseSchema):
     name = fields.Method("get_name")
 
 
-class MediaSchema(Schema):
+class MediaSchema(BaseSchema):
     def __init__(self, language='fa'):
         super().__init__()
         self.lang = language
@@ -253,12 +254,6 @@ class MediaSchema(Schema):
 
     def get_image(self, obj):
         return HOST + obj.image.url
-
-    def get_title(self, obj):
-        try:
-            return obj.title[self.lang]
-        except KeyError:
-            return obj.title
 
 
 class CategorySchema(BaseSchema):
@@ -368,17 +363,28 @@ class SliderSchema(BaseSchema):
     media = fields.Method("get_media")
 
 
-class StorageSchema(BaseSchema):
+class MinStorageSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'final_price', 'transportation_price', 'priority', 'gender',
-                      'discount_price', 'vip_discount_price', 'discount_percent', 'vip_discount_percent')
+        additional = ('id', 'final_price', 'vip_discount_price', 'vip_discount_percent')
 
+    discount_price = fields.Method("get_discount_price")
+    discount_percent = fields.Method("get_discount_percent")
     title = fields.Method('get_title')
     deadline = fields.Method("get_deadline")
-    default = fields.Function(lambda o: o == o.product.default_storage)
-    features = FeatureField()
     max_count_for_sale = fields.Method("get_max_count_for_sale")
     min_count_alert = fields.Method("get_min_count_alert")
+    has_vip = fields.Method("check_has_vip")
+    vip = fields.Method("is_vip")
+
+    def check_has_vip(self, obj):
+        if obj.discount_price > obj.vip_discount_price:
+            return True
+        return False
+
+    def is_vip(self, obj):
+        if self.vip:
+            return self.vip
+        return False
 
     def get_deadline(self, obj):
         try:
@@ -386,15 +392,23 @@ class StorageSchema(BaseSchema):
         except Exception:
             pass
 
+    def get_discount_price(self, obj):
+        if self.vip:
+            return obj.vip_discount_price
+        return obj.discount_price
 
-class MinStorageSchema(BaseSchema):
+    def get_discount_percent(self, obj):
+        if self.vip:
+            return obj.vip_discount_percent
+        return obj.discount_percent
+
+
+class StorageSchema(MinStorageSchema):
     class Meta:
-        additional = ('id', 'final_price', 'discount_price', 'discount_percent')
+        additional = MinStorageSchema.Meta.additional + ('transportation_price', 'priority', 'gender')
 
-    title = fields.Method('get_title')
-    deadline = fields.Function(lambda o: o.deadline.timestamp())
-    max_count_for_sale = fields.Method("get_max_count_for_sale")
-    min_count_alert = fields.Method("get_min_count_alert")
+    default = fields.Function(lambda o: o == o.product.default_storage)
+    features = FeatureField()
 
 
 class BasketProductSchema(BaseSchema):
@@ -408,15 +422,15 @@ class BasketProductSchema(BaseSchema):
     def get_feature(self, obj):
         res = []
         for feature in obj.features:
-            feature_id = feature['fid']
+            feature_storage_id = feature['fsid']
             fvid_list = feature['fvid']
-            f = Feature.objects.get(pk=feature_id)
-            fs = FeatureStorage.objects.get(storage=obj.storage, feature_id=feature_id)
+            fs = FeatureStorage.objects.get(storage=obj.storage, id=feature_storage_id)
+            f = Feature.objects.get(pk=fs.feature.pk)
             feature_list = []
             for fvid in fvid_list:
                 feature_name = next(i['name'][self.lang] for i in f.value if i['id'] == fvid)
                 feature_price = next(i['price'] for i in fs.value if i['fvid'] == fvid)
-                feature_list.append({'id': feature_id, 'fvid': fvid, 'name': feature_name, 'price': feature_price})
+                feature_list.append({'id': fs.pk, 'fvid': fvid, 'name': feature_name, 'price': feature_price})
             res.append({'id': f.pk, 'name': f.name[self.lang], "type": f.get_type_display(), "value": feature_list})
 
         return res
@@ -490,7 +504,7 @@ class CommentSchema(BaseSchema):
         additional = ('id', 'text', 'approved', 'rate')
 
     user = fields.Function(lambda o: {"name": o.user.first_name + " " + o.user.last_name,
-                                      "avatar": HOST + o.user.avatar.image.url})
+                                      "avatar": HOST + o.user.avatar.image.url if o.user.avatar else None})
     type = fields.Function(lambda o: o.get_type_display())
     reply_count = fields.Method('get_reply_count')
     created_at = fields.Function(lambda o: o.created_at.timestamp())
@@ -532,7 +546,7 @@ class UserCommentSchema(CommentSchema):
     product = fields.Method("get_min_product")
 
 
-class MenuSchema(BasketSchema):
+class MenuSchema(BaseSchema):
     class Meta:
         additional = ('id', 'url', 'value', 'priority')
 
@@ -593,7 +607,7 @@ class AdSchema(BaseSchema):
     product = fields.Method('get_storage')
 
 
-class WalletDetailSchema(Schema):
+class WalletDetailSchema(BaseSchema):
     class Meta:
         additional = ('id', 'credit', 'user')
 
@@ -606,7 +620,7 @@ class WishListSchema(BaseSchema):
     # type = fields.Function(lambda o: o.get_type_display())
 
 
-class NotifyUserSchema(Schema):
+class NotifyUserSchema(BaseSchema):
     class Meta:
         additional = ('id', 'user', 'notify')
 
@@ -616,7 +630,7 @@ class NotifyUserSchema(Schema):
     box = fields.Method("get_box")
 
 
-class StateSchema(Schema):
+class StateSchema(BaseSchema):
     class Meta:
         additional = ('id', 'name')
 
@@ -632,7 +646,7 @@ class ResidenceTypeSchema(BaseSchema):
     cancel_rules = fields.Method("get_name")
 
 
-class HousePriceSchema(Schema):
+class HousePriceSchema(BaseSchema):
     price = fields.Method("get_prices")
 
     @staticmethod

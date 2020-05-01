@@ -39,6 +39,10 @@ class BaseAdminSchema(Schema):
     E = Edit
     S = Schema
     """
+
+    # def __init__(self, **kwargs):
+    #     super().__init__()
+
     id = fields.Int()
     created_at = fields.Function(lambda o: o.created_at.timestamp())
     created_by = fields.Function(lambda o:
@@ -205,7 +209,6 @@ class StorageESchema(StorageASchema):
     supplier = fields.Function(lambda o: UserSchema().dump(o.supplier))
     features = FeatureField()
     tax = fields.Function(lambda o: o.get_tax_type_display())
-    box = fields.Method("get_box")
 
 
 class CommentASchema(BaseAdminSchema):
