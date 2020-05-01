@@ -16,10 +16,13 @@ Content-Type: application/json
   "permalink": "permalink-test3",
   "media": null
 }
+
 ###
 GET {{admin_host}}/category?id=54
+
 ###
 GET {{admin_host}}/category?b=3
+
 ###
 PUT {{admin_host}}/category
 Content-Type: application/json
@@ -34,8 +37,10 @@ Content-Type: application/json
   "permalink": "permalink-test3",
   "media": null
 }
+
 ###
 DELETE {{admin_host}}/category?id=54
+
 ###
 
 ### Feature CRUD
@@ -47,9 +52,24 @@ Content-Type: application/json
     "fa": "test50"
   },
   "type": "bool",
-  "value": {
-    "fa": "test50"
-  },
+  "value": [
+    {
+      "id": 1,
+      "name": {
+        "ar": "",
+        "en": "",
+        "fa": "میخواهم"
+      }
+    },
+    {
+      "id": 2,
+      "name": {
+        "ar": "",
+        "en": "",
+        "fa": "نمیخواهم"
+      }
+    }
+  ],
   "box_id": 3
 }
 
@@ -69,9 +89,24 @@ Content-Type: application/json
     "fa": "test50"
   },
   "type": "multi",
-  "value": {
-    "fa": "test50"
-  },
+  "value": [
+    {
+      "id": 1,
+      "name": {
+        "ar": "",
+        "en": "",
+        "fa": "میخواهم"
+      }
+    },
+    {
+      "id": 2,
+      "name": {
+        "ar": "",
+        "en": "",
+        "fa": "نمیخواهم"
+      }
+    }
+  ],
   "box_id": 3
 }
 
@@ -85,22 +120,34 @@ POST {{admin_host}}/brand
 Content-Type: application/json
 
 {
-  "name": {"fa":  "api-test", "en": "", "ar": ""},
+  "name": {
+    "fa": "api-test",
+    "en": "",
+    "ar": ""
+  },
   "permalink": "api-test"
 }
+
 ###
 GET {{admin_host}}/brand?id=6
+
 ###
 GET {{admin_host}}/brand
+
 ###
 PUT {{admin_host}}/brand
 Content-Type: application/json
 
 {
   "id": 6,
-  "name": {"fa":  "api-test2", "en": "", "ar": ""},
+  "name": {
+    "fa": "api-test2",
+    "en": "",
+    "ar": ""
+  },
   "permalink": "api-test2"
 }
+
 ###
 DELETE {{admin_host}}/brand?id=6
 
@@ -110,22 +157,34 @@ POST {{admin_host}}/tag
 Content-Type: application/json
 
 {
-  "name": {"fa":  "api-test", "en": "", "ar": ""},
+  "name": {
+    "fa": "api-test",
+    "en": "",
+    "ar": ""
+  },
   "permalink": "api-test"
 }
+
 ###
 GET {{admin_host}}/tag?id=6
+
 ###
 GET {{admin_host}}/tag
+
 ###
 PUT {{admin_host}}/tag
 Content-Type: application/json
 
 {
   "id": 93,
-  "name": {"fa":  "api-test2", "en": "", "ar": ""},
+  "name": {
+    "fa": "api-test2",
+    "en": "",
+    "ar": ""
+  },
   "permalink": "api-test2"
 }
+
 ###
 DELETE {{admin_host}}/brand?id=6
 
@@ -233,10 +292,13 @@ GET {{admin_host}}/search?type=supplier&q=میلاد
 
 ### Settings
 GET {{admin_host}}/settings/box
+
 ###
 GET {{admin_host}}/settings/product
+
 ###
 
 ### Icon
 GET {{admin_host}}/icon/feature
+
 ###
