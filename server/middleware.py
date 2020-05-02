@@ -16,7 +16,7 @@ class AuthMiddleware:
         super().__init__()
         self.get_response = get_response
         # One-time configuration and initialization.
-
+    @pysnooper.snoop()
     def __call__(self, request):
         # print(request.META.get('REMOTE_ADDR') or request.META.get('HTTP_X_FORWARDED_FOR'))
         path = request.path_info
@@ -78,13 +78,7 @@ class AuthMiddleware:
         # set new basket count in cookie
         response = self.get_response(request)
         if app_name == 'server' and new_basket_count and 200 <= response.status_code <= 299 and request.method == 'GET':
-            try:
-                res = json.loads(response.content)
-                res['new_basket_count'] = new_basket_count
-                response.content = json.dumps(res)
-                response = set_signed_cookie(response, 'basket_count', new_basket_count)
-            except (AttributeError, json.decoder.JSONDecodeError):
-                pass
+            response = set_signed_cookie(response, 'basket_count', new_basket_count)
         if request.method in token_requests and app_name != 'admin':
             # return set_csrf_cookie(response)
             pass

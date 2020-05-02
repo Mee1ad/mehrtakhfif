@@ -16,13 +16,10 @@ Content-Type: application/json
   "permalink": "permalink-test3",
   "media": null
 }
-
 ###
 GET {{admin_host}}/category?id=54
-
 ###
 GET {{admin_host}}/category?b=3
-
 ###
 PUT {{admin_host}}/category
 Content-Type: application/json
@@ -35,9 +32,8 @@ Content-Type: application/json
     "fa": "category-test15"
   },
   "permalink": "permalink-test3",
-  "media": null
+  "media": 1
 }
-
 ###
 DELETE {{admin_host}}/category?id=54
 
@@ -300,5 +296,4 @@ GET {{admin_host}}/settings/product
 
 ### Icon
 GET {{admin_host}}/icon/feature
-
 ###

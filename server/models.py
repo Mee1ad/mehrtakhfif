@@ -149,7 +149,9 @@ class MyQuerySet(SafeDeleteQueryset):
     def update(self, *args, **kwargs):
         if not self:
             return True
-        remove_list = ['id', 'box_id', 'tags', 'media', 'features', 'categories']
+        remove_list = ['id', 'box_id', 'tags', 'features', 'categories']
+        if isinstance(self, Product):
+            remove_list += ['media']
         if kwargs.get('validation', None):
             kwargs.pop('validation')
             model = self[0].__class__.__name__.lower()
@@ -278,7 +280,7 @@ class Base(SafeDeleteModel):
             pass
 
 
-class User(AbstractUser, Base):
+class User(AbstractUser):
 
     def __str__(self):
         return self.username
@@ -333,6 +335,7 @@ class User(AbstractUser, Base):
                                    null=True, blank=True)
     updated_by = models.ForeignKey('User', on_delete=PROTECT, related_name="%(app_label)s_%(class)s_updated_by",
                                    null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = 'user'
@@ -429,7 +432,7 @@ class Media(Base):
             return self.title['user_id']
 
     def save(self, *args, **kwargs):
-        sizes = {'thumbnail': (600, 372), 'media': (1280, 794)}
+        sizes = {'thumbnail': (600, 372), 'media': (1280, 794), 'category': (800, 400)}
         try:
             with Image.open(self.image) as im:
                 width, height = im.size
@@ -449,7 +452,8 @@ class Media(Base):
     audio = models.URLField(null=True, blank=True)
     title = JSONField(default=multilanguage)
     type = models.PositiveSmallIntegerField(choices=[(1, 'image'), (2, 'thumbnail'), (3, 'media'), (4, 'slider'),
-                                                     (5, 'ads'), (6, 'avatar'), (7, 'audio'), (8, 'video')])
+                                                     (5, 'ads'), (6, 'avatar'), (7, 'audio'), (8, 'video'),
+                                                     (9, 'category')])
     box = models.ForeignKey(Box, on_delete=models.CASCADE, null=True, blank=True)
 
     def validation(self):

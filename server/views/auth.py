@@ -66,10 +66,9 @@ class Login(View):
             return JsonResponse(res)
         except User.DoesNotExist:  # Signup
             try:
-                user.delete()
-            except (ProtectedError, UnboundLocalError):
-                pass
-            user = User.objects.create_user(username=username, password=password)
+                user.set_password(password)
+            except User.DoesNotExist:
+                user = User.objects.create_user(username=username, password=password)
             res = JsonResponse({}, status=res_code['signup_with_pp'])  # please agree privacy policy
             return set_token(user, res)
         except AssertionError:  # invalid password

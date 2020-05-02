@@ -12,7 +12,6 @@ from django.db.models import F
 
 # ManyToMany Relations
 
-
 class MediaField(fields.Field):
     def _serialize(self, value, attr, obj, **kwargs):
         media = ProductMedia.objects.filter(product=obj).order_by('priority')
@@ -262,6 +261,7 @@ class CategorySchema(BaseSchema):
 
     name = fields.Method('get_name')
     parent = fields.Method('get_parent')
+    media = fields.Method('get_media_link')
 
 
 class BoxCategoriesSchema(BaseSchema):
