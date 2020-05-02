@@ -16,7 +16,7 @@ class AuthMiddleware:
         super().__init__()
         self.get_response = get_response
         # One-time configuration and initialization.
-    @pysnooper.snoop()
+
     def __call__(self, request):
         # print(request.META.get('REMOTE_ADDR') or request.META.get('HTTP_X_FORWARDED_FOR'))
         path = request.path_info

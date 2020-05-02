@@ -101,7 +101,12 @@ class BaseAdminSchema(Schema):
         return storage_list
 
     def get_media(self, obj):
-        medias = obj.media.all()
+        try:
+            medias = obj.media.all()
+        except AttributeError:
+            if obj.media is not None:
+                return MediaSchema().dump(obj.media)
+            return None
         return MediaASchema().dump(medias, many=True)
 
     def get_tag(self, obj):
@@ -117,11 +122,9 @@ class SupplierESchema(BaseAdminSchema):
         additional = ('id', 'username', 'first_name', 'last_name', 'shaba', 'is_verify')
 
 
-class BoxASchema(Schema):
-    class Meta:
-        additional = ('id', 'permalink')
-
+class BoxASchema(BoxSchema):
     name = fields.Dict()
+    disable = fields.Boolean()
 
 
 class InvoiceASchema(Schema):
@@ -155,6 +158,7 @@ class ProductASchema(BaseAdminSchema):
     storages = fields.Method("get_storage")
     city = fields.Nested(CitySchema)
     thumbnail = fields.Nested("MediaASchema")
+    disable = fields.Boolean()
 
 
 class BrandASchema(BrandSchema, BaseAdminSchema):
@@ -239,7 +243,8 @@ class MediaESchema(MediaASchema, MediaSchema):
 
 class CategoryASchema(BaseAdminSchema, CategorySchema):
     class Meta:
-        additional = CategorySchema.Meta.additional + ('child_count', 'category_child_product_count', 'product_count')
+        additional = CategorySchema.Meta.additional + ('child_count', 'category_child_product_count', 'product_count',
+                                                       'disable')
 
     parent = fields.Method("get_parent")
 

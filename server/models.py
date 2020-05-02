@@ -145,12 +145,11 @@ class MyQuerySet(SafeDeleteQueryset):
     _safedelete_visibility_field = 'pk'
     _queryset_class = SafeDeleteQueryset
 
-    @pysnooper.snoop()
     def update(self, *args, **kwargs):
         if not self:
             return True
         remove_list = ['id', 'box_id', 'tags', 'features', 'categories']
-        if isinstance(self, Product):
+        if isinstance(self[0], Product):
             remove_list += ['media']
         if kwargs.get('validation', None):
             kwargs.pop('validation')
@@ -163,56 +162,55 @@ class MyQuerySet(SafeDeleteQueryset):
         return super().update(**kwargs)
 
     def category_validation(self, **kwargs):
+        category = self.first()
         permalink_validation(kwargs.get('permalink', 'pass'))
         pk = kwargs.get('id')
         parent_id = kwargs.get('parent_id')
         if (pk == parent_id and pk is not None) or Category.objects.filter(pk=parent_id, parent_id=pk).exists():
             raise ValidationError("والد نامعتبر است")
-        item = self.first()
+        if not category.media and kwargs.get('disable') is False:
+            raise ValidationError('قبل از فعالسازی تصویر دسته بندی را مشخص کنید')
         features = Feature.objects.filter(pk__in=kwargs.get('features', []))
-        item.feature_set.clear()
-        item.feature_set.add(*features)
+        category.feature_set.clear()
+        category.feature_set.add(*features)
         return kwargs
 
     def storage_validation(self, **kwargs):
-        item = self.first()
+        storage = self.first()
         if kwargs.get('is_manage', None):
             kwargs.pop('is_manage')
             return kwargs
         if 'priority' in kwargs:
-            if item.disable is True and kwargs['priority'] == 0:
+            if storage.disable is True and kwargs['priority'] == 0:
                 raise ValidationError('انبار پیش فرض باید فعال باشد')
             return kwargs
         try:
-            kwargs = item.validation(kwargs)
+            kwargs = storage.validation(kwargs)
         except KeyError:
             try:
-                if item.deadline < timezone.now() and kwargs['disable'] is False:
+                if storage.deadline < timezone.now() and kwargs['disable'] is False:
                     raise ValidationError("لطفا زمان ددلاین محصول رو افزایش دهید")
             except TypeError:
                 pass
             return {'disable': kwargs['disable']}
         if kwargs.get('features', None):
-            features = Feature.objects.filter(pk__in=kwargs.get('features', []))
-            item.features.clear()
-            feature_storages = [FeatureStorage(feature_id=item['feature_id'], media_id=item['media_id'],
-                                               value=kwargs['value']) for item in kwargs['features']]
+            storage.features.clear()
+            feature_storages = [FeatureStorage(feature_id=item['feature_id'], value=item['value'],
+                                               storage_id=storage.pk) for item in kwargs['features']]
             FeatureStorage.objects.bulk_create(feature_storages)
-            item.features.add(*features)
         if kwargs.get('manage', None):
             item = self.first()
             item.product.assign_default_value(item.product_id)
         return kwargs
 
     def product_validation(self, **kwargs):
+        product = self.first()
         if kwargs.get('storages_id', None):
             [Storage.objects.filter(pk=pk).update(priority=kwargs['storages_id'].index(pk), is_manage=True)
              for pk in kwargs.get('storages_id', [])]
             kwargs.pop('storages_id')
             return kwargs
         permalink_validation(kwargs.get('permalink', 'pass'))
-        if not kwargs.get('thumbnail') or not kwargs.get('media') or kwargs.get('category'):
-            kwargs['disable'] = True
         default_storage_id = kwargs.get('default_storage_id')
         pk = kwargs.get('id')
         if default_storage_id:
@@ -220,23 +218,33 @@ class MyQuerySet(SafeDeleteQueryset):
             Storage.objects.filter(product_id=pk, priority__lt=new_default_storage.first().priority) \
                 .order_by('priority').update(priority=F('priority') + 1)
             new_default_storage.update(priority=0)
-        tags = Tag.objects.filter(pk__in=kwargs.get('tags', []))
-        categories = Category.objects.filter(pk__in=kwargs.get('categories', []))
-        product = self.first()
-        product.tags.clear()
-        product.tags.add(*tags)
-        product.category.clear()
-        product.category.add(*categories)
-        if not product.category.all():
-            raise ValidationError('لطفا دسته بندی را انتخاب کنید')
-        product.media.clear()
-        p_medias = [ProductMedia(product=product, media_id=pk, priority=kwargs['media'].index(pk)) for pk in
-                    kwargs.get('media', [])]
-        ProductMedia.objects.bulk_create(p_medias)
+        if kwargs.get('tags') and kwargs.get('categories') and kwargs.get('media'):
+            tags = Tag.objects.filter(pk__in=kwargs.get('tags', []))
+            if not tags:
+                raise ValidationError('لطفا حداقل 3 تگ را انتخاب کنید')
+            categories = Category.objects.filter(pk__in=kwargs.get('categories', []))
+            if not categories:
+                raise ValidationError('لطفا دسته بندی را انتخاب کنید')
+            product.tags.clear()
+            product.tags.add(*tags)
+            product.category.clear()
+            product.category.add(*categories)
+            product.media.clear()
+            p_medias = [ProductMedia(product=product, media_id=pk, priority=kwargs['media'].index(pk)) for pk in
+                        kwargs.get('media', [])]
+            ProductMedia.objects.bulk_create(p_medias)
+        if (not product.thumbnail or not product.media.all() or not product.category.all()) \
+                and kwargs.get('disable') is False:
+            kwargs['disable'] = True
+        if product.disable is False and (kwargs.get('thumbnail', '') is None or kwargs.get('media') is []
+                                         or kwargs.get('tag') is [] or kwargs.get('category') is []):
+            kwargs['disable'] = True
         if kwargs.get('manage', None):
             item = self.first()
             item.assign_default_value()
         return kwargs
+
+    # todo advance disabler for product storage category
 
     def default_validation(self, **kwargs):
         item = self.first()
@@ -416,7 +424,9 @@ class Box(Base):
     name = JSONField(default=multilanguage)
     permalink = models.CharField(max_length=255, db_index=True, unique=True)
     owner = models.OneToOneField(User, on_delete=PROTECT)
-    settings = JSONField(default=dict)
+    settings = JSONField(default=dict, blank=True)
+    disable = models.BooleanField(default=True)
+    media = models.ForeignKey("Media", on_delete=CASCADE, null=True, blank=True, related_name="box_image_box_id")
 
     class Meta:
         db_table = 'box'
@@ -447,17 +457,18 @@ class Media(Base):
             name = self.image.name.replace('has-ph', 'ph')
             ph.save(f'{MEDIA_ROOT}/{name}', optimize=True, quality=80)
 
+    choices = [(1, 'image'), (2, 'thumbnail'), (3, 'media'), (4, 'slider'),
+               (5, 'ads'), (6, 'avatar'), (7, 'audio'), (8, 'video'),
+               (9, 'category')]
     image = models.FileField(upload_to=upload_to, null=True, blank=True)
     video = models.URLField(null=True, blank=True)
     audio = models.URLField(null=True, blank=True)
     title = JSONField(default=multilanguage)
-    type = models.PositiveSmallIntegerField(choices=[(1, 'image'), (2, 'thumbnail'), (3, 'media'), (4, 'slider'),
-                                                     (5, 'ads'), (6, 'avatar'), (7, 'audio'), (8, 'video'),
-                                                     (9, 'category')])
-    box = models.ForeignKey(Box, on_delete=models.CASCADE, null=True, blank=True)
+    type = models.PositiveSmallIntegerField(choices=choices)
+    box = models.ForeignKey(Box, on_delete=models.CASCADE, null=True, blank=True, related_name="medias")
 
     def validation(self):
-        if self.type > 8:
+        if self.type > len(self.choices):
             raise ValidationError('invalid type')
 
     class Meta:
@@ -667,7 +678,7 @@ class Product(Base):
     short_address = JSONField(null=True, blank=True)
     properties = JSONField(null=True, blank=True)
     details = JSONField(null=True, blank=True)
-    settings = JSONField(default=dict)
+    settings = JSONField(default=dict, blank=True)
 
     # home_buissiness =
     # support_description =
@@ -823,6 +834,7 @@ class FeatureStorage(models.Model):
         ordering = ['-id']
 
 
+# todo every feature at least must have 2 price
 class Basket(Base):
     prefetch = ['products']
 

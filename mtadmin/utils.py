@@ -164,7 +164,6 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
     return JsonResponse({'id': obj.pk}, status=201)
 
 
-@pysnooper.snoop()
 def update_object(request, model, box_key='box', return_item=False, serializer=None, data=None, require_box=True):
     if not request.user.has_perm(f'server.change_{model.__name__.lower()}'):
         raise PermissionDenied

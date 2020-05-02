@@ -238,6 +238,7 @@ class BoxSchema(BaseSchema):
 
     id = fields.Int()
     name = fields.Method("get_name")
+    media = fields.Method('get_media_link')
 
 
 class MediaSchema(BaseSchema):
@@ -261,7 +262,7 @@ class CategorySchema(BaseSchema):
 
     name = fields.Method('get_name')
     parent = fields.Method('get_parent')
-    media = fields.Method('get_media_link')
+    media = fields.Method('get_media')
 
 
 class BoxCategoriesSchema(BaseSchema):
