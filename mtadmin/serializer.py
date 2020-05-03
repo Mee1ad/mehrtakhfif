@@ -167,7 +167,7 @@ class BrandASchema(BrandSchema, BaseAdminSchema):
 
 class ProductESchema(ProductASchema, ProductSchema):
     class Meta:
-        additional = ProductSchema.Meta.additional + ('disable', 'verify')
+        additional = ProductSchema.Meta.additional + ('verify', )
 
     # media = fields.Method("get_media")
     tag = fields.Method("get_tag")
@@ -207,7 +207,7 @@ class StorageASchema(BaseAdminSchema, StorageSchema):
 class StorageESchema(StorageASchema):
     class Meta:
         additional = StorageASchema.Meta.additional + StorageSchema.Meta.additional + \
-                     ('disable', 'features_percent', 'available_count', 'invoice_description',
+                     ('features_percent', 'available_count', 'invoice_description',
                       'invoice_title')
 
     supplier = fields.Function(lambda o: UserSchema().dump(o.supplier))

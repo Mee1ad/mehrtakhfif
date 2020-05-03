@@ -3,6 +3,7 @@ from server.models import *
 from server.serialize import *
 from server.utils import View, get_pagination, load_data
 import pysnooper
+from django.db.models import Q
 
 
 class ProductView(View):
@@ -10,13 +11,16 @@ class ProductView(View):
     def get(self, request, permalink):
         lang = request.lang
         user = request.user
-        product_obj = Product.objects.filter(permalink=permalink).prefetch_related(*Product.prefetch).first()
+        preview = {'disable': False} if user.is_staff is False else {}
+        product_obj = Product.objects.filter(permalink=permalink, **preview).prefetch_related(
+            *Product.prefetch).first()
         if product_obj is None:
             return JsonResponse({}, status=404)
         purchased = False
         product = ProductSchema(**request.schema_params).dump(product_obj)
         if product_obj.type < 3:
-            storages = product_obj.storages.filter(start_time__lte=timezone.now(), deadline__gte=timezone.now())
+            storages = product_obj.storages.filter(Q(start_time__lte=timezone.now()) & Q(**preview),
+                                                   (Q(deadline__gte=timezone.now()) | Q(deadline__isnull=True)))
             product['storages'] = StorageSchema(**request.schema_params).dump(storages, many=True)
             if user.is_authenticated:
                 purchased = self.purchase_status(user, storages)
@@ -45,9 +49,9 @@ class ProductView(View):
 
 class RelatedProduct(View):
     def get(self, request, permalink):
-        product = Product.objects.get(permalink=permalink)
+        product = Product.objects.get(permalink=permalink, disable=False)
         tags = product.tags.all()
-        products = Product.objects.filter(tags__in=tags).order_by('-id').distinct('id')
+        products = Product.objects.filter(tags__in=tags, disable=False).order_by('-id').distinct('id')
         return JsonResponse(get_pagination(request, products, MinProductSchema))
 
 

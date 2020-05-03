@@ -149,13 +149,13 @@ class MyQuerySet(SafeDeleteQueryset):
         if not self:
             return True
         remove_list = ['id', 'box_id', 'tags', 'features', 'categories']
+        validations = {'storage': self.storage_validation, 'category': self.category_validation,
+                       'product': self.product_validation}
         if isinstance(self[0], Product):
             remove_list += ['media']
         if kwargs.get('validation', None):
             kwargs.pop('validation')
             model = self[0].__class__.__name__.lower()
-            validations = {'storage': self.storage_validation, 'category': self.category_validation,
-                           'product': self.product_validation}
             validations.update(dict.fromkeys(['feature', 'brand', 'tag'], self.default_validation))
             kwargs = validations[model](**kwargs)
         [kwargs.pop(item, None) for item in remove_list]
@@ -203,13 +203,42 @@ class MyQuerySet(SafeDeleteQueryset):
             item.product.assign_default_value(item.product_id)
         return kwargs
 
+    @pysnooper.snoop()
+    def activation_validation(self, obj, kwargs):
+        obj_dict = obj.__dict__
+        print(kwargs)
+        if kwargs.get('disable') is False:
+            for field1 in obj.activation_required_fields:
+                if not obj_dict[field1]:
+                    raise ValidationError(f'check {field1} before activation')
+            for field2 in obj.activation_required_m2m_fields:
+                if not getattr(obj, field2).all():
+                    raise ValidationError(f'check {field2} before activation')
+            return kwargs
+        if obj.disable is False and not kwargs.get('disable'):
+            for field1 in obj.activation_required_fields:
+                if not kwargs.get(field1):
+                    raise ValidationError(f'make item disable before editing {field1}')
+            for field2 in obj.kwargs_required_m2m:
+                if not kwargs.get(field2):
+                    raise ValidationError(f'make item disable before editing {field2}')
+
     def product_validation(self, **kwargs):
         product = self.first()
+        self.activation_validation(product, kwargs)
+        if product.disable is False and not product.storages.filter(disable=False):
+            kwargs['disable'] = True
         if kwargs.get('storages_id', None):
             [Storage.objects.filter(pk=pk).update(priority=kwargs['storages_id'].index(pk), is_manage=True)
              for pk in kwargs.get('storages_id', [])]
             kwargs.pop('storages_id')
             return kwargs
+        if (not product.thumbnail or not product.media.all() or not product.category.all()) \
+                and kwargs.get('disable') is False:
+            raise ValidationError('لطفا تصاویر و دسته بندی محصول را بررسی کنید')
+        if product.disable is False and (kwargs.get('thumbnail', '') is None or kwargs.get('media') is []
+                                         or kwargs.get('tag') is [] or kwargs.get('category') is []):
+            raise ValidationError('محصول فعال است. برای اعمال تغییرات ابتدا محصول را غیرفعال نمایید')
         permalink_validation(kwargs.get('permalink', 'pass'))
         default_storage_id = kwargs.get('default_storage_id')
         pk = kwargs.get('id')
@@ -218,7 +247,8 @@ class MyQuerySet(SafeDeleteQueryset):
             Storage.objects.filter(product_id=pk, priority__lt=new_default_storage.first().priority) \
                 .order_by('priority').update(priority=F('priority') + 1)
             new_default_storage.update(priority=0)
-        if kwargs.get('tags') and kwargs.get('categories') and kwargs.get('media'):
+        if kwargs.get('tags', None) is not None and kwargs.get('categories') is not None \
+                and kwargs.get('media') is not None:
             tags = Tag.objects.filter(pk__in=kwargs.get('tags', []))
             if not tags:
                 raise ValidationError('لطفا حداقل 3 تگ را انتخاب کنید')
@@ -233,12 +263,6 @@ class MyQuerySet(SafeDeleteQueryset):
             p_medias = [ProductMedia(product=product, media_id=pk, priority=kwargs['media'].index(pk)) for pk in
                         kwargs.get('media', [])]
             ProductMedia.objects.bulk_create(p_medias)
-        if (not product.thumbnail or not product.media.all() or not product.category.all()) \
-                and kwargs.get('disable') is False:
-            kwargs['disable'] = True
-        if product.disable is False and (kwargs.get('thumbnail', '') is None or kwargs.get('media') is []
-                                         or kwargs.get('tag') is [] or kwargs.get('category') is []):
-            kwargs['disable'] = True
         if kwargs.get('manage', None):
             item = self.first()
             item.assign_default_value()
@@ -445,9 +469,12 @@ class Media(Base):
         sizes = {'thumbnail': (600, 372), 'media': (1280, 794), 'category': (800, 400)}
         try:
             with Image.open(self.image) as im:
-                width, height = im.size
-                if (width, height) != sizes[self.get_type_display()]:
-                    raise ValidationError('سایز عکس نامعتبر است')
+                try:
+                    width, height = im.size
+                    if (width, height) != sizes[self.get_type_display()]:
+                        raise ValidationError('سایز عکس نامعتبر است')
+                except KeyError as e:
+                    print(e)
         except ValueError:
             pass
         self.validation()
@@ -458,8 +485,7 @@ class Media(Base):
             ph.save(f'{MEDIA_ROOT}/{name}', optimize=True, quality=80)
 
     choices = [(1, 'image'), (2, 'thumbnail'), (3, 'media'), (4, 'slider'),
-               (5, 'ads'), (6, 'avatar'), (7, 'audio'), (8, 'video'),
-               (9, 'category')]
+               (5, 'ads'), (6, 'avatar'), (7, 'category'), (100, 'video'), (200, 'audio')]
     image = models.FileField(upload_to=upload_to, null=True, blank=True)
     video = models.URLField(null=True, blank=True)
     audio = models.URLField(null=True, blank=True)
@@ -604,6 +630,9 @@ class Product(Base):
     select = ['category', 'box', 'thumbnail']
     prefetch = ['tags', 'media']
     filter = {"verify": True, "disable": False}
+    activation_required_fields = ['thumbnail_id']
+    activation_required_m2m_fields = ['category', 'tags', 'media']
+    kwargs_required_m2m = ['categories', 'tags', 'media']
 
     def assign_default_value(self):
         storages = self.storages.all()

@@ -238,7 +238,7 @@ class BoxSchema(BaseSchema):
 
     id = fields.Int()
     name = fields.Method("get_name")
-    media = fields.Method('get_media_link')
+    media = fields.Method('get_media')
 
 
 class MediaSchema(BaseSchema):
@@ -271,7 +271,7 @@ class BoxCategoriesSchema(BaseSchema):
 
     name = fields.Method('resolve_name_type')
     child = fields.Method('get_child')
-    media = fields.Method("get_media_link")
+    media = fields.Method("get_media")
     parent = fields.Function(lambda o: o.parent_id)
 
     def resolve_name_type(self, obj):
@@ -321,7 +321,7 @@ class BrandSchema(BaseSchema):
 
 class ProductSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'permalink', 'gender', 'rate')
+        additional = ('id', 'permalink', 'gender', 'rate', 'disable')
 
     name = fields.Method("get_name")
     address = fields.Method("get_address")
@@ -406,7 +406,7 @@ class MinStorageSchema(BaseSchema):
 
 class StorageSchema(MinStorageSchema):
     class Meta:
-        additional = MinStorageSchema.Meta.additional + ('transportation_price', 'priority', 'gender')
+        additional = MinStorageSchema.Meta.additional + ('transportation_price', 'priority', 'gender', 'disable')
 
     default = fields.Function(lambda o: o == o.product.default_storage)
     features = FeatureField()

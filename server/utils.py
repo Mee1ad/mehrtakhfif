@@ -342,7 +342,6 @@ def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=Non
         basket.address_required = address_required
         return basket
     basket = BasketSchema(language=lang).dump(basket)
-    print(basket)
     return {'basket': basket, 'summary': summary, 'address_required': address_required}
 
 
