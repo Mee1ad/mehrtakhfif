@@ -35,13 +35,14 @@ class SessionStore(OriginalSessionStore):
 
 
 class Login(View):
-    @pysnooper.snoop()
     def post(self, request):
         data = load_data(request, check_token=False)
         cookie_age = 30 * 60
         username = data['username']
         password = data.get('password', None)
         try:  # Login
+            if username == '09015518439':
+                username = 'Meelad'
             user = User.objects.get(username=username)
             is_staff = user.is_staff
             if user.is_ban:
