@@ -291,7 +291,7 @@ def get_pagination(request, query, serializer, show_all=False):
 
 def user_data_with_pagination(model, serializer, request):
     query = model.objects.filter(user=request.user)
-    return product.tags
+    return get_pagination(request, query, serializer)
 
 
 def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=None, return_obj=False, tax=False):
