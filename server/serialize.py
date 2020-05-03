@@ -179,6 +179,7 @@ class BaseSchema(Schema):
 
     def get_location(self, obj):
         if obj.location is not None:
+            print(obj.location)
             return {'lat': float(obj.location[0]), 'lng': float(obj.location[1])}
         return None
 
@@ -226,10 +227,14 @@ class AddressSchema(BaseSchema):
 
     city = fields.Method("get_city")
     state = fields.Function(lambda o: o.state.id)
-    location = fields.Function(lambda o: {"lat": o.location['lat'], 'lng': o.location['lng']} if o.location else {})
+    # location = fields.Function(lambda o: {"lat": o.location['lat'], 'lng': o.location['lng']} if o.location else {})
+    location = fields.Method('get_location')
 
     def get_city(self, obj):
-        return CitySchema().dump(obj.city)
+        try:
+            return CitySchema().dump(obj.city)
+        except AttributeError:
+            pass
 
 
 class BoxSchema(BaseSchema):
