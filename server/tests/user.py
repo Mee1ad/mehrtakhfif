@@ -41,7 +41,7 @@ class AdminBaseTest(APITestCase):
 class UserGetData(AdminBaseTest):
 
     def test_get_data(self):
-
+        pass
         # res = self.client.get('/slider/home')
         # self.assertEqual(res.status_code, 200)
         # res = self.client.get('special_offer')

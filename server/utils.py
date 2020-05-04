@@ -415,7 +415,7 @@ def check_access_token(token, user, model=None, pk=None):
 def set_token(user, response):
     user.token = get_access_token(user)
     user.save()
-    response = set_signed_cookie(response, 'token', user.token, max_age=7200, expires=7200)
+    response = set_custom_signed_cookie(response, 'token', user.token, max_age=7200, expires=7200)
     return response
 
 
@@ -426,7 +426,7 @@ def get_token_from_cookie(request):
 def set_csrf_cookie(response):
     random_text = uuid.uuid4().hex
     token = hashlib.sha3_224(random_text.encode()).hexdigest()
-    response = set_signed_cookie(response, 'csrf_cookie', token, max_age=15778800, expires=15778800, )
+    response = set_custom_signed_cookie(response, 'csrf_cookie', token, max_age=15778800, expires=15778800, )
     return response
 
 
