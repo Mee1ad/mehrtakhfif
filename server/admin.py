@@ -219,7 +219,7 @@ class MediaAdmin(admin.ModelAdmin):
     def url(self, obj):
         # move file
 
-        return mark_safe(f'<a href="http://localhost{obj.image.url}">{obj.image.name}</a>')
+        return mark_safe(f'<a href="{HOST}{obj.image.url}">{obj.image.name}</a>')
 
 
 class StateAdmin(admin.ModelAdmin):

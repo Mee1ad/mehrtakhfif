@@ -45,13 +45,13 @@ pattern = {'phone': r'^(09[0-9]{9})$', 'email': r'^(([^<>()\[\]\\.,;:\s@"]+(\.[^
 
 
 # Data
-
 def validation(data):
     for key in data:
         if key == 'basket':
             assert len(key) < 20
         try:
-            assert re.search(pattern[key], str(data[key]))
+            if not re.search(pattern[key], str(data[key])) and data[key] != "":
+                raise AssertionError
         except AssertionError:
             raise ValidationError(f'نامعتبر است {key}')
         except KeyError:
@@ -365,7 +365,7 @@ def get_best_seller(request, box, invoice_ids):
     storage_count = {k: v for k, v in sorted(storage_count.items(), key=lambda item: item[1])}
     storage_ids = storage_count.keys()
     storages = Storage.objects.filter(pk__in=storage_ids)
-    products = Product.objects.filter(storage__in=storages)
+    products = Product.objects.filter(default_storage__in=storages)
     sync_default_storage(storages, products)
     return get_pagination(request, products, MinProductSchema)
 
@@ -420,7 +420,7 @@ def set_token(user, response):
 
 
 def get_token_from_cookie(request):
-    return get_signed_cookie(request, 'token', False)
+    return get_custom_signed_cookie(request, 'token', False)
 
 
 def set_csrf_cookie(response):
@@ -431,7 +431,7 @@ def set_csrf_cookie(response):
 
 
 def check_csrf_token(request):
-    csrf_cookie = get_signed_cookie(request, 'csrf_cookie', False)
+    csrf_cookie = get_custom_signed_cookie(request, 'csrf_cookie', False)
 
     @pysnooper.snoop()
     def double_check_token(minute):
@@ -463,12 +463,12 @@ def products_availability_check(products, step, page):
     return available_products
 
 
-def set_signed_cookie(res, key, value, salt=TOKEN_SALT, domain=DEFAULT_COOKIE_DOMAIN, **kwargs):
+def set_custom_signed_cookie(res, key, value, salt=TOKEN_SALT, domain=DEFAULT_COOKIE_DOMAIN, **kwargs):
     res.set_signed_cookie(key, value, salt=salt, domain=domain, **kwargs)
     return res
 
 
-def get_signed_cookie(req, key, error=None, salt=TOKEN_SALT):
+def get_custom_signed_cookie(req, key, error=None, salt=TOKEN_SALT):
     if error is not None:
         return req.get_signed_cookie(key, error, salt=salt)
     return req.get_signed_cookie(key, salt=salt)

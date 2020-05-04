@@ -19,7 +19,7 @@ class Backend(ModelBackend):
     @staticmethod
     def get_user_from_cookie(request):
         try:
-            client_token = get_signed_cookie(request, 'token', False)
+            client_token = get_custom_signed_cookie(request, 'token', False)
             return User.objects.get(token=client_token, is_ban=False)
         except Exception:
             return None
@@ -62,9 +62,13 @@ class Login(View):
             login(request, user, backend='django.contrib.auth.backends.ModelBackend')
             res = {'user': UserSchema().dump(user)}
             basket = Basket.objects.filter(user=user).order_by('-id')
+            res['basket_count'] = 0
             if basket.exists():
                 res['basket_count'] = basket.first().products.all().count()
-            return JsonResponse(res)
+            basket_count = res['basket_count']
+            res = JsonResponse(res)
+            set_custom_signed_cookie(res, 'basket_count', basket_count)
+            return res
         except User.DoesNotExist:  # Signup
             try:
                 user.set_password(password)
@@ -85,7 +89,8 @@ class Login(View):
         user.activation_code = random.randint(10000, 99999)
         user.activation_expire = add_minutes(activation_expire)
         user.save()
-        send_sms(user.username, input_data=[{'code': user.activation_code}])
+        # todo debug
+        # send_sms(user.username, input_data=[{'code': user.activation_code}])
         res = {'resend_timeout': resend_timeout, 'timeout': activation_expire}
         return JsonResponse(res, status=res_code['updated'])
 
@@ -107,7 +112,7 @@ class PrivacyPolicy(View):
 
     @staticmethod
     def get_user(request):
-        client_token = get_signed_cookie(request, 'token', False)
+        client_token = get_custom_signed_cookie(request, 'token', False)
         return User.objects.get(token=client_token)
 
 
@@ -142,7 +147,7 @@ class Activate(View):
         data = load_data(request)
         # TODO: get csrf code
         try:
-            client_token = get_signed_cookie(request, 'token', False)
+            client_token = get_custom_signed_cookie(request, 'token', False)
             code = data['code']
             user = User.objects.get(activation_code=code, token=client_token, is_ban=False,
                                     activation_expire__gte=timezone.now())
@@ -154,11 +159,13 @@ class Activate(View):
             if user.is_staff:
                 res['user']['is_staff'] = user.is_staff
             basket = Basket.objects.filter(user=user).order_by('-id')
+            res['basket_count'] = 0
             if basket.exists():
                 res['basket_count'] = basket.first().products.all().count()
             response = JsonResponse(res, status=res_code['signup_with_pass'])
             if Login.check_password(user):
                 response = JsonResponse(res)  # successful login
+                set_custom_signed_cookie(response, 'basket_count', res['basket_count'])
                 response.delete_cookie('token')
             return response
         except Exception:
@@ -169,6 +176,8 @@ class LogoutView(View):
     def post(self, request):
         try:
             logout(request)
-            return JsonResponse({})
+            res = JsonResponse({})
+            res.delete_cookie('basket_count', domain=DEFAULT_COOKIE_DOMAIN)
+            return res
         except Exception:
             return JsonResponse({}, status=res_code['forbidden'])

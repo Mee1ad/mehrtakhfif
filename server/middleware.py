@@ -1,6 +1,6 @@
 from mehr_takhfif.settings import TOKEN_SALT, ADMIN, DEFAULT_COOKIE_DOMAIN
-from server.utils import default_step, default_page, res_code, set_csrf_cookie, check_csrf_token, set_signed_cookie, \
-    get_signed_cookie
+from server.utils import default_step, default_page, res_code, set_csrf_cookie, check_csrf_token, get_custom_signed_cookie, \
+    set_custom_signed_cookie
 from server.models import User, Basket
 from django.core.exceptions import PermissionDenied
 from django.http import JsonResponse, HttpResponseNotFound
@@ -51,7 +51,8 @@ class AuthMiddleware:
         except Exception:
             request.lang = 'fa'
 
-        request.schema_params = {'language': request.lang, 'vip': request.user.is_vip}
+        request.schema_params = {'language': request.lang,
+                                 'vip': request.user.is_vip if request.user.is_authenticated else False}
         if app_name == 'server':
             request.params = {}
             # sync user basket count
@@ -62,7 +63,7 @@ class AuthMiddleware:
                 basket = Basket.objects.filter(user=request.user).order_by('-id')
                 if basket.exists():
                     db_basket_count = basket.first().products.all().count()
-                    user_basket_count = get_signed_cookie(request, 'basket_count', False)
+                    user_basket_count = get_custom_signed_cookie(request, 'basket_count', False)
                     if not db_basket_count == int(user_basket_count):
                         new_basket_count = db_basket_count
                     request.basket = basket
@@ -78,7 +79,7 @@ class AuthMiddleware:
         # set new basket count in cookie
         response = self.get_response(request)
         if app_name == 'server' and new_basket_count and 200 <= response.status_code <= 299 and request.method == 'GET':
-            response = set_signed_cookie(response, 'basket_count', new_basket_count)
+            response = set_custom_signed_cookie(response, 'basket_count', new_basket_count)
         if request.method in token_requests and app_name != 'admin':
             # return set_csrf_cookie(response)
             pass

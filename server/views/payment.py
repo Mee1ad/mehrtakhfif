@@ -129,7 +129,7 @@ class PaymentRequest(View):
 
         invoice = Invoice.objects.create(created_by=user, updated_by=user, user=user,
                                          amount=basket['summary']['discount_price'],
-                                         type=1, address=address, basket_id=basket['basket']['id'],
+                                         address=address, basket_id=basket['basket']['id'],
                                          final_price=basket['summary']['total_price'], expire=add_minutes(1))
         return invoice
 
@@ -147,17 +147,17 @@ class PaymentRequest(View):
             basket.save()
             invoice.save()
 
-    @pysnooper.snoop()
     def submit_invoice_storages(self, invoice_id):
         invoice = Invoice.objects.filter(pk=invoice_id).select_related(*Invoice.select).first()
         basket = get_basket(invoice.user, basket=invoice.basket, return_obj=True)
+        print(basket.basket_products)
         invoice_products = []
         for product in basket.basket_products:
-            supplier = product.supplier
+            storage = product.storage
+            supplier = storage.supplier
             amount = product.start_price
             if not InvoiceSuppliers.objects.filter(invoice=invoice, supplier=supplier).update(amount=amount):
                 InvoiceSuppliers.objects.create(invoice=invoice, supplier=supplier, amount=amount)
-            storage = product.storage
             invoice_products.append(
                 InvoiceStorage(storage=storage, invoice_id=invoice_id, count=product.count, tax=storage.tax,
                                final_price=storage.final_price, discount_price=storage.discount_price,

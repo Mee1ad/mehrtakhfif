@@ -95,7 +95,7 @@ def media(obj, array=False):
     serialized_data = serialize(obj, fields, array=array)
     try:
         for item in serialized_data:
-                item['file'] = HOST + MEDIA_URL + item['file']
+            item['file'] = HOST + MEDIA_URL + item['file']
     except TypeError:
         serialized_data['file'] = HOST + MEDIA_URL + serialized_data['file']
     except AttributeError:

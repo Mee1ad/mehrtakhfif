@@ -60,7 +60,7 @@ class CommentView(View):
         product_permalink = request.GET.get('prp', None)
         post_permalink = request.GET.get('pop', None)
         comment_id = request.GET.get('comment_id', None)
-        comment_type = request.GET.get('type', None)
+        comment_type = request.GET['type']
         if comment_id:
             comments = Comment.objects.filter(reply_to_id=comment_id)
             return JsonResponse(get_pagination(request, comments, CommentSchema))

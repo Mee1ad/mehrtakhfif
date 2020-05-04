@@ -24,7 +24,7 @@ class AdminActivate(AdminView):
     def post(self, request):
         data = load_data(request)
         try:
-            client_token = get_signed_cookie(request, 'token', False)
+            client_token = get_custom_signed_cookie(request, 'token', False)
             code = data['code']
             user = User.objects.get(Q(activation_code=code, token=client_token, is_ban=False,
                                       activation_expire__gte=timezone.now()), (Q(is_staff=True) | Q(is_superuser=True)))

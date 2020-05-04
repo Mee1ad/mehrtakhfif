@@ -1,0 +1,143 @@
+### Home
+GET {{host}}/slider/home
+
+###
+
+GET {{host}}/special_offer
+
+###
+
+GET {{host}}/box_special_product
+
+###
+
+GET {{host}}/special_product
+
+###
+
+GET {{host}}/best_seller
+
+###
+
+GET {{host}}/box_with_category
+
+###
+
+GET {{host}}/menu
+
+###
+
+GET {{host}}/suggest?id='test'
+
+###
+
+GET {{host}}/ads
+
+###
+
+### Box
+GET {{host}}/filter
+
+###
+
+GET {{host}}/best_seller
+
+###
+
+GET {{host}}/filter_detail
+
+###
+
+GET {{host}}/features?box=ghaza_noshidani_old
+
+###
+
+GET {{host}}/tag/cafe
+
+###
+
+GET {{host}}/category/غذا-خشک-گربه
+
+###
+
+### Product
+GET {{host}}/product/p-23
+
+###
+
+GET {{host}}/comment?prp=p-23&type=1
+
+###
+
+GET {{host}}/related_products/p-23
+
+###
+
+### Shopping
+GET {{host}}/basket
+
+###
+
+POST {{host}}/product
+Content-Type: application/json
+
+{
+  "basket": [
+    {
+      "id": 126,
+      "count": 5,
+      "features": [
+        {
+          "fsid": 11,
+          "fvid": [
+            1
+          ]
+        }
+      ]
+    }
+  ]
+}
+
+###
+
+### Payment
+GET {{host}}/ipg
+
+###
+
+GET {{host}}/payment/31
+
+###
+
+GET {{host}}/invoice/5ZaBzK
+
+###
+
+### User
+GET {{host}}/profile
+
+###
+
+GET {{host}}/states
+
+###
+
+GET {{host}}/cities/1
+
+###
+
+GET {{host}}/orders
+
+###
+GET {{host}}/orders?id=100
+
+###
+
+GET {{host}}/trips
+
+###
+
+GET {{host}}/wishlist
+
+###
+

@@ -203,7 +203,6 @@ class MyQuerySet(SafeDeleteQueryset):
             item.product.assign_default_value(item.product_id)
         return kwargs
 
-    @pysnooper.snoop()
     def activation_validation(self, obj, kwargs):
         obj_dict = obj.__dict__
         print(kwargs)
@@ -323,11 +322,12 @@ class User(AbstractUser):
         except Exception:
             pass
 
-    def validation(self, **kwargs):
-        self.full_clean()
+    def validation(self, kwargs):
+        pass
 
     def save(self, *args, **kwargs):
-        self.validation()
+        self.validation(self.__dict__)
+        self.full_clean()
         super().save(*args, **kwargs)
 
     first_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='First name')
@@ -685,7 +685,7 @@ class Product(Base):
     city = models.ForeignKey(City, on_delete=CASCADE, null=True, blank=True)
     default_storage = models.OneToOneField(null=True, blank=True, to="Storage", on_delete=CASCADE,
                                            related_name='product_default_storage')
-    tags = models.ManyToManyField(Tag, through="ProductTag")
+    tags = models.ManyToManyField(Tag, through="ProductTag", related_name='products')
     media = models.ManyToManyField(Media, through='ProductMedia')
     income = models.BigIntegerField(default=0)
     profit = models.PositiveIntegerField(default=0)
@@ -900,7 +900,10 @@ class BasketProduct(models.Model):
                     raise ValidationError('invalid feature_value_id')
             except Feature.DoesNotExist:
                 raise ValidationError('invalid feature_id')
-            except Exception:
+            except FeatureStorage.DoesNotExist:
+                raise ValidationError('invalid feature_storage_id')
+            except Exception as e:
+                print(e)
                 raise ValidationError('invalid data')
 
     def save(self, *args, **kwargs):

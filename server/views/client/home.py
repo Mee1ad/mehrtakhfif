@@ -51,7 +51,7 @@ class BestSeller(View):
         last_week = add_days(-7)
         boxes = []
         language = request.lang
-        invoice_ids = Invoice.objects.filter(created_at__gte=last_week, status='payed').values('id')
+        invoice_ids = Invoice.objects.filter(created_at__gte=last_week, status=2).values('id')
         for box, index in zip(all_box, range(len(all_box))):
             item = {}
             item['id'] = box.pk

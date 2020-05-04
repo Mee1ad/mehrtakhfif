@@ -92,7 +92,7 @@ class BestSeller(View):
 class TagView(View):
     def get(self, request, permalink):
         tag = Tag.objects.filter(permalink=permalink).first()
-        products = tag.product_set.all()
+        products = tag.products.all()
         pg = get_pagination(request, products, MinProductSchema)
         return JsonResponse(pg)
 

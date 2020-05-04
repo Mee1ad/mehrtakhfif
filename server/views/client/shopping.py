@@ -22,7 +22,7 @@ class BasketView(LoginRequired):
         basket_count = self.add_to_basket(basket, data['products'])
         res = {'new_basket_count': basket_count, **get_basket(request.user, request.lang)}
         res = JsonResponse(res)
-        res = set_signed_cookie(res, 'new_basket_count', basket_count)
+        res = set_custom_signed_cookie(res, 'new_basket_count', basket_count)
         return res
 
     def patch(self, request):

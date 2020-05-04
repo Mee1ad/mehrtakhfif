@@ -178,10 +178,11 @@ class BaseSchema(Schema):
         return None
 
     def get_location(self, obj):
-        if obj.location is not None:
-            print(obj.location)
-            return {'lat': float(obj.location[0]), 'lng': float(obj.location[1])}
-        return None
+        try:
+            if obj.location is not None:
+                return {'lat': float(obj.location['lat']), 'lng': float(obj.location['lng'])}
+        except AttributeError:
+            return None
 
     def get_feature(self, obj):
         return FeatureSchema(language=self.lang).dump(obj.feature)
@@ -205,14 +206,27 @@ class BaseSchema(Schema):
             return obj.available_count_for_sale
         return None
 
+    def get_city(self, obj):
+        try:
+            return CitySchema().dump(obj.city)
+        except AttributeError:
+            pass
+
+    def get_state(self, obj):
+        try:
+            return CitySchema().dump(obj.state)
+        except AttributeError:
+            pass
+
 
 class UserSchema(BaseSchema):
     class Meta:
         additional = (
             'id', 'email', 'first_name', 'last_name', 'gender', 'username', 'meli_code', 'vip',
-            'active_address', 'shaba', 'birthday')
+            'active_address', 'shaba')
 
     avatar = fields.Method("get_avatar")
+    birthday = fields.Method("get_birthday")
 
     def get_avatar(self, obj):
         try:
@@ -220,21 +234,19 @@ class UserSchema(BaseSchema):
         except Exception:
             pass
 
+    def get_birthday(self, obj):
+        try:
+            return obj.birthday.timestamp()
+        except AttributeError:
+            return None
 
 class AddressSchema(BaseSchema):
     class Meta:
         additional = ('id', 'province', 'postal_code', 'address', 'location', 'name', 'phone')
 
     city = fields.Method("get_city")
-    state = fields.Function(lambda o: o.state.id)
-    # location = fields.Function(lambda o: {"lat": o.location['lat'], 'lng': o.location['lng']} if o.location else {})
+    state = fields.Method('get_state')
     location = fields.Method('get_location')
-
-    def get_city(self, obj):
-        try:
-            return CitySchema().dump(obj.city)
-        except AttributeError:
-            pass
 
 
 class BoxSchema(BaseSchema):
@@ -343,7 +355,7 @@ class ProductSchema(BaseSchema):
     description = fields.Method("get_description")
     properties = fields.Method("get_properties")
     details = fields.Method("get_details")
-    location = fields.Function(lambda o: {"lat": o.location['lat'], 'lng': o.location['lng']} if o.location else {})
+    location = fields.Method("get_location")
 
 
 class ProductMediaSchema(BaseSchema):
@@ -610,7 +622,13 @@ class AdSchema(BaseSchema):
 
     title = fields.Method('get_title')
     media = fields.Method('get_media')
-    product = fields.Method('get_storage')
+    product_permalink = fields.Method('get_min_product2')
+
+    def get_min_product2(self, obj):
+        try:
+            return obj.storage.product.permalink
+        except AttributeError:
+            pass
 
 
 class WalletDetailSchema(BaseSchema):

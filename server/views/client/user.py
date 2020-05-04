@@ -10,6 +10,7 @@ from django.contrib.auth import login
 import pytz
 from django.shortcuts import render_to_response
 import time
+from datetime import datetime
 # from selenium import webdriver
 
 
@@ -37,6 +38,7 @@ class Profile(LoginRequired):
         user.meli_code = data.get('meli_code') or user.meli_code
         user.shaba = data.get('shaba') or user.shaba
         user.birthday = data.get('birthday') or user.birthday
+        user.birthday = datetime.utcfromtimestamp(data.get('birthday') or timezone.now().timestamp()) or user.birthday
         user.subscribe = data.get('subscribe') or user.subscribe
         user.save()
         return JsonResponse({'user': UserSchema().dump(user)})

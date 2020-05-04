@@ -15,7 +15,7 @@ Content-Type: Application/json
 
 
 ### get products with list of id
-POST {{host}}/get_products
+POST {{host}}/product
 Content-Type: Application/json
 
 {
