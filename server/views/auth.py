@@ -9,7 +9,7 @@ from server.utils import *
 from server.serialize import UserSchema
 import pysnooper
 from secrets import token_hex
-from mehr_takhfif.settings import DEFAULT_COOKIE_DOMAIN
+from mehr_takhfif.settings import DEFAULT_COOKIE_DOMAIN, DEBUG
 from django.contrib.sessions.backends.db import SessionStore as OriginalSessionStore
 from django.utils.crypto import get_random_string
 from django.core.exceptions import PermissionDenied
@@ -89,8 +89,8 @@ class Login(View):
         user.activation_code = random.randint(10000, 99999)
         user.activation_expire = add_minutes(activation_expire)
         user.save()
-        # todo debug
-        # send_sms(user.username, input_data=[{'code': user.activation_code}])
+        if not DEBUG:
+            send_sms(user.username, input_data=[{'code': user.activation_code}])
         res = {'resend_timeout': resend_timeout, 'timeout': activation_expire}
         return JsonResponse(res, status=res_code['updated'])
 
