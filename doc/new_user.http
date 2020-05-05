@@ -40,10 +40,6 @@ GET {{host}}/filter
 
 ###
 
-GET {{host}}/best_seller
-
-###
-
 GET {{host}}/filter_detail
 
 ###

@@ -205,7 +205,6 @@ class MyQuerySet(SafeDeleteQueryset):
 
     def activation_validation(self, obj, kwargs):
         obj_dict = obj.__dict__
-        print(kwargs)
         if kwargs.get('disable') is False:
             for field1 in obj.activation_required_fields:
                 if not obj_dict[field1]:
@@ -747,6 +746,7 @@ class Storage(Base):
     objects = MyQuerySet.as_manager()
     select = ['product', 'product__thumbnail']
     prefetch = ['product__media', 'feature']
+    activation_required_fields = ['supplier']
 
     def __str__(self):
         return f"{self.product}"

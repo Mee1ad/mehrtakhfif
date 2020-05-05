@@ -21,44 +21,96 @@ class AdminBaseTest(APITestCase):
     brand = 6
     feature = 16
 
-    def get_name(self):
-        return {'fa': self.fake.name(), 'en': '', 'ar': ''}
-
-    def base_create(self, data, url):
-        res = self.client.post(url, data, format='json')
-        self.assertEqual(res.status_code, 201)
-        try:
-            return json.loads(res.content)['data']['id']
-        except KeyError:
-            return json.loads(res.content)['id']
-
-    def base_get(self, urls, get_query):
-        for url in urls:
-            res = self.client.get(url)
-            self.assertEqual(res.status_code, 200)
+    def base_get(self, url):
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, 200)
 
 
 class UserGetData(AdminBaseTest):
 
-    def test_get_data(self):
-        pass
-        # res = self.client.get('/slider/home')
-        # self.assertEqual(res.status_code, 200)
-        # res = self.client.get('special_offer')
-        # self.assertEqual(res.status_code, 200)
-        # res = self.client.get('/box_special_product')
-        # self.assertEqual(res.status_code, 200)
-        # res = self.client.get('/special_product')
-        # self.assertEqual(res.status_code, 200)
-        # res = self.client.get('/best_seller')
-        # self.assertEqual(res.status_code, 200)
-        # res = self.client.get('/box_with_category')
-        # self.assertEqual(res.status_code, 200)
-        # res = self.client.get('/menu')
-        # self.assertEqual(res.status_code, 200)
-        # res = self.client.get('/suggest?id="test"')
-        # self.assertEqual(res.status_code, 200)
-        # res = self.client.get('/ads')
-        # self.assertEqual(res.status_code, 200)
-        # res = self.client.get('/slider/home')
-        # self.assertEqual(res.status_code, 200)
+    def test_slider(self):
+        self.base_get('/slider/home')
+
+    def test_special_offer(self):
+        self.base_get('/special_offer')
+
+    def test_box_special_product(self):
+        self.base_get('/box_special_product')
+
+    def test_special_product(self):
+        self.base_get('/special_product')
+
+    def test_best_seller(self):
+        self.base_get('/best_seller')
+
+    def test_box_with_category(self):
+        self.base_get('/box_with_category')
+
+    def test_menu(self):
+        self.base_get('/menu')
+
+    def test_suggest(self):
+        self.base_get('/suggest?id=test')
+
+    def test_ads(self):
+        self.base_get('/ads')
+
+    def test_filter(self):
+        self.base_get('/filter')
+
+    def test_filter_detail(self):
+        self.base_get('/filter_detail')
+
+    def test_feature(self):
+        self.base_get(f'/feature?box={self.}')
+
+    def test_tag(self):
+        self.base_get('/tag/cafe')
+
+    def test_category(self):
+        self.base_get('/category/غذا-خشک-گربه')
+
+    def test_product(self):
+        self.base_get('/product/p-23')
+
+    def test_comment(self):
+        self.base_get('/comment?prp=p-23&type=1')
+
+    def test_relatd_products(self):
+        self.base_get('/relatd_products/p-23')
+
+    def test_basket(self):
+        self.base_get('/basket')
+
+    def test_ipg(self):
+        self.base_get('/ipg')
+
+    def test_payment(self):
+        self.base_get('/payment/31')
+
+    def test_invoice(self):
+        self.base_get('/invoice/5ZaBzK')
+
+    def test_profile(self):
+        self.base_get('/profile')
+
+    def test_states(self):
+        self.base_get('/states')
+
+    def test_cities(self):
+        self.base_get('/cities/1')
+
+    def test_orders(self):
+        self.base_get('/orders')
+        self.base_get('/orders?id=100')
+
+    def test_trips(self):
+        self.base_get('/trips')
+
+    def test_wishlist(self):
+        self.base_get('/wishlist')
+
+
+        # advance filter testing
+        # post product for unauthorized users
+        #

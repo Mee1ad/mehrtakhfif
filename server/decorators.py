@@ -8,7 +8,7 @@ from django.http import JsonResponse, HttpResponseServerError, HttpResponseForbi
 from django.core.exceptions import PermissionDenied
 
 from server.models import *
-
+from server.utils import res_code
 
 def try_except(func):
     @functools.wraps(func)
@@ -20,7 +20,10 @@ def try_except(func):
         except json.decoder.JSONDecodeError:
             traceback.print_exc()
             return HttpResponseServerError()
-        except (AssertionError, ObjectDoesNotExist, ValidationError, StopIteration, AttributeError, KeyError):
+        except ValidationError as e:
+            print(str(e)[2:-2])
+            return JsonResponse({'type': 'validation', 'error': str(e)[2:-2]}, status=res_code['bad_request'])
+        except (AssertionError, ObjectDoesNotExist, StopIteration, AttributeError, KeyError):
             traceback.print_exc()
             return HttpResponseBadRequest()
         except Exception:

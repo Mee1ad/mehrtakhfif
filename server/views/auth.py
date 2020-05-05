@@ -68,6 +68,7 @@ class Login(View):
             basket_count = res['basket_count']
             res = JsonResponse(res)
             set_custom_signed_cookie(res, 'basket_count', basket_count)
+            set_custom_signed_cookie(res, 'is_login', True)
             return res
         except User.DoesNotExist:  # Signup
             try:
@@ -166,6 +167,7 @@ class Activate(View):
             if Login.check_password(user):
                 response = JsonResponse(res)  # successful login
                 set_custom_signed_cookie(response, 'basket_count', res['basket_count'])
+                set_custom_signed_cookie(response, 'is_login', True)
                 response.delete_cookie('token')
             return response
         except Exception:
@@ -178,6 +180,7 @@ class LogoutView(View):
             logout(request)
             res = JsonResponse({})
             res.delete_cookie('basket_count', domain=DEFAULT_COOKIE_DOMAIN)
+            set_custom_signed_cookie(res, 'is_login', False)
             return res
         except Exception:
             return JsonResponse({}, status=res_code['forbidden'])

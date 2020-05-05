@@ -11,6 +11,7 @@ import pytz
 from django.shortcuts import render_to_response
 import time
 from datetime import datetime
+import jdatetime
 # from selenium import webdriver
 
 
@@ -135,7 +136,8 @@ class AddressView(LoginRequired):
         data = load_data(request)
         try:
             address_count = Address.objects.filter(user=request.user).count()
-            address = Address(state_id=data['state_id'], city_id=data['city_id'], postal_code=data['postal_code'],
+            city = City.objects.get(pk=data['city_id'])
+            address = Address(state=city.state, city=city, postal_code=data['postal_code'],
                               address=data['address'], location=load_location(data['location']), user=request.user,
                               name=data['name'], phone=data['phone'])
             address.save()
