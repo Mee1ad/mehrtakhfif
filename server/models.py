@@ -476,7 +476,6 @@ class Media(Base):
                     print(e)
         except ValueError:
             pass
-        self.type = [item[0] for item in self.choices if item[1] == self.type][0]
         super().save(*args, **kwargs)
         if self.type in has_placeholder:
             ph = reduce_image_quality(self.image.path)
