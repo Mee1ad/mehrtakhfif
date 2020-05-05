@@ -45,13 +45,23 @@ class BaseAdminSchema(Schema):
 
     id = fields.Int()
     created_at = fields.Function(lambda o: o.created_at.timestamp())
-    created_by = fields.Function(lambda o:
-                                 {'id': o.created_by_id,
-                                  'name': f"{o.created_by.first_name} {o.created_by.last_name}" if o.created_by.first_name else ""})
+    created_by = fields.Method("get_created_by")
     updated_at = fields.Function(lambda o: o.updated_at.timestamp())
-    updated_by = fields.Function(lambda o:
-                                 {'id': o.updated_by_id,
-                                  'name': f"{o.updated_by.first_name} {o.updated_by.last_name}" if o.created_by.first_name else ""})
+    updated_by = fields.Method("get_updated_by")
+
+    def get_created_by(self, obj):
+        try:
+            user = obj.created_by
+            return {'id': obj.pk, 'name': f"{user.first_name} {user.last_name}"}
+        except AttributeError:
+            return None
+
+    def get_updated_by(self, obj):
+        try:
+            user = obj.updated_by
+            return {'id': obj.pk, 'name': f"{user.first_name} {user.last_name}"}
+        except AttributeError:
+            return None
 
     def get_name(self, obj):
         return obj.name
@@ -120,6 +130,9 @@ class BaseAdminSchema(Schema):
 class SupplierESchema(BaseAdminSchema):
     class Meta:
         additional = ('id', 'username', 'first_name', 'last_name', 'shaba', 'is_verify')
+
+
+
 
 
 class BoxASchema(BoxSchema):
