@@ -465,7 +465,7 @@ class Media(Base):
             return self.title['user_id']
 
     def save(self, *args, **kwargs):
-        sizes = {'thumbnail': (600, 372), 'media': (1280, 794), 'category': (800, 400)}
+        sizes = {'thumbnail': (600, 372), 'media': (1280, 794), 'category': (800, 500)}
         try:
             with Image.open(self.image) as im:
                 try:
@@ -476,7 +476,7 @@ class Media(Base):
                     print(e)
         except ValueError:
             pass
-        self.validation()
+        self.type = [item[0] for item in self.choices if item[1] == self.type][0]
         super().save(*args, **kwargs)
         if self.type in has_placeholder:
             ph = reduce_image_quality(self.image.path)
@@ -491,10 +491,6 @@ class Media(Base):
     title = JSONField(default=multilanguage)
     type = models.PositiveSmallIntegerField(choices=choices)
     box = models.ForeignKey(Box, on_delete=models.CASCADE, null=True, blank=True, related_name="medias")
-
-    def validation(self):
-        if self.type > len(self.choices):
-            raise ValidationError('invalid type')
 
     class Meta:
         db_table = 'media'
@@ -766,8 +762,7 @@ class Storage(Base):
             # todo feature: add default_selected_value for feature
             pass
             # raise ValidationError('درصد ویژگی ها نامعتبر است')
-        if my_dict['available_count'] < my_dict['available_count_for_sale'] or my_dict['available_count'] < my_dict[
-            'max_count_for_sale'] or \
+        if my_dict['available_count'] < my_dict['available_count_for_sale'] or \
                 my_dict['available_count'] < my_dict['vip_max_count_for_sale']:
             raise ValidationError("تعداد نامعتبر است")
         my_dict['tax'] = {1: 0, 2: my_dict['discount_price'] * 0.09,
