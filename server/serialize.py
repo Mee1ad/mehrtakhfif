@@ -8,6 +8,7 @@ from server.models import BasketProduct, FeatureStorage, Booking, Comment, Invoi
     ProductMedia, Holiday
 from jdatetime import date, timedelta
 from django.db.models import F
+import time
 
 
 # ManyToMany Relations
@@ -66,9 +67,7 @@ class BaseSchema(Schema):
             if name[self.lang] != "":
                 return name[self.lang]
             return name[self.default_lang]
-        except ValueError:
-            return name[self.default_lang]
-        except KeyError:
+        except (KeyError, TypeError):
             return None
 
     def get_name(self, obj):
@@ -181,7 +180,7 @@ class BaseSchema(Schema):
         try:
             if obj.location is not None:
                 return {'lat': float(obj.location['lat']), 'lng': float(obj.location['lng'])}
-        except AttributeError:
+        except (AttributeError, KeyError):
             return None
 
     def get_feature(self, obj):
@@ -199,6 +198,11 @@ class BaseSchema(Schema):
     def get_max_count_for_sale(self, obj):
         if obj.available_count_for_sale >= obj.max_count_for_sale:
             return obj.max_count_for_sale
+        return obj.available_count_for_sale
+
+    def get_vip_max_count_for_sale(self, obj):
+        if obj.available_count_for_sale >= obj.vip_max_count_for_sale:
+            return obj.vip_max_count_for_sale
         return obj.available_count_for_sale
 
     def get_min_count_alert(self, obj):
@@ -236,9 +240,10 @@ class UserSchema(BaseSchema):
 
     def get_birthday(self, obj):
         try:
-            return obj.birthday.timestamp()
+            return int(time.mktime(obj.birthday.timetuple()))
         except AttributeError:
             return None
+
 
 class AddressSchema(BaseSchema):
     class Meta:
@@ -390,6 +395,7 @@ class MinStorageSchema(BaseSchema):
     title = fields.Method('get_title')
     deadline = fields.Method("get_deadline")
     max_count_for_sale = fields.Method("get_max_count_for_sale")
+    vip_max_count_for_sale = fields.Method("get_vip_max_count_for_sale")
     min_count_alert = fields.Method("get_min_count_alert")
     has_vip = fields.Method("check_has_vip")
     vip = fields.Method("is_vip")
