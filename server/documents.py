@@ -82,7 +82,7 @@ class SupplierDocument(Document):
     first_name = fields.TextField(analyzer=ngram, attr='first_name')
     last_name = fields.TextField(analyzer=ngram, attr='last_name')
     username = fields.TextField(analyzer=ngram, attr='username')
-    avatar = fields.TextField(attr='get_avatar')
+    # avatar = fields.TextField(attr='get_avatar')
 
     class Index:
         # Name of the Elasticsearch index

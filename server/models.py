@@ -159,6 +159,9 @@ class MyQuerySet(SafeDeleteQueryset):
             validations.update(dict.fromkeys(['feature', 'brand', 'tag'], self.default_validation))
             kwargs = validations[model](**kwargs)
         [kwargs.pop(item, None) for item in remove_list]
+        # todo debug
+        kwargs.pop('vip_discount_price', None)
+        kwargs.pop('vip_discount_percent', None)
         return super().update(**kwargs)
 
     def category_validation(self, **kwargs):
@@ -220,10 +223,12 @@ class MyQuerySet(SafeDeleteQueryset):
             for field2 in obj.kwargs_required_m2m:
                 if not kwargs.get(field2):
                     raise ValidationError(f'make item disable before editing {field2}')
+        kwargs['verify'] = True
+        return kwargs
 
     def product_validation(self, **kwargs):
         product = self.first()
-        self.activation_validation(product, kwargs)
+        kwargs = self.activation_validation(product, kwargs)
         if product.disable is False and not product.storages.filter(disable=False):
             kwargs['disable'] = True
         if kwargs.get('storages_id', None):
@@ -315,12 +320,6 @@ class User(AbstractUser):
     def __str__(self):
         return self.username
 
-    def get_avatar(self):
-        try:
-            return HOST + self.avatar.image.url
-        except Exception:
-            pass
-
     def validation(self, kwargs):
         pass
 
@@ -344,17 +343,17 @@ class User(AbstractUser):
     is_active = models.BooleanField(default=False, verbose_name='Phone verified')
     is_superuser = models.BooleanField(default=False, verbose_name='Superuser')
     is_staff = models.BooleanField(default=False, verbose_name='Staff')
-    is_vip = models.BooleanField(default=False)
     is_supplier = models.BooleanField(default=False)
     is_verify = models.BooleanField(default=False)
     privacy_agreement = models.BooleanField(default=False)
     deposit_id = models.PositiveSmallIntegerField(null=True, blank=True)
     default_address = models.OneToOneField(to="Address", on_delete=SET_NULL, null=True, blank=True,
                                            related_name="user_default_address")
+    vip_type = models.ManyToManyField(to="VipType", related_name="users")
     box_permission = models.ManyToManyField("Box")
     email_verified = models.BooleanField(default=False, verbose_name='Email verified')
     subscribe = models.BooleanField(default=True)
-    avatar = models.ForeignKey("Media", on_delete=SET_NULL, null=True, blank=True)
+    avatar = models.PositiveSmallIntegerField(null=True, blank=True)
     meli_code = models.CharField(max_length=15, blank=True, null=True, verbose_name='National code')
     wallet_credit = models.IntegerField(default=0)
     suspend_expire_date = models.DateTimeField(blank=True, null=True, verbose_name='Suspend expire date')
@@ -370,6 +369,17 @@ class User(AbstractUser):
 
     class Meta:
         db_table = 'user'
+        ordering = ['-id']
+
+
+class VipType(SafeDeleteModel):
+    def __str__(self):
+        return self.name
+
+    name = models.CharField(max_length=255)
+
+    class Meta:
+        db_table = 'vip_type'
         ordering = ['-id']
 
 
@@ -687,6 +697,7 @@ class Product(Base):
     disable = models.BooleanField(default=True)
     verify = models.BooleanField(default=False)
     manage = models.BooleanField(default=True)
+    reservable = models.BooleanField(default=False)
     type = models.PositiveSmallIntegerField(choices=[(1, 'service'), (2, 'product'), (3, 'tourism'), (4, 'package'),
                                                      (5, 'package_item')])
     permalink = models.CharField(max_length=255, db_index=True, unique=True)
@@ -747,6 +758,17 @@ class Storage(Base):
         return f"{self.product}"
 
     def validation(self, my_dict):
+        if my_dict.get('is_package'):
+            # {'is_package': True, 'items': [{'package_item_id':1, 'count': 5}, {'package_item_id':2, 'count': 10}]}
+            my_dict.pop('is_package', None)
+            package_items = [Package(**item) for item in my_dict.get('items')]
+            Package.objects.bulk_create(package_items)
+            my_dict['discount_price'] = 0
+            my_dict['final_price'] = 0
+            for package_item in package_items:
+                my_dict['discount_price'] += package_item.package_item.discount_price
+                my_dict['final_price'] += package_item.package_item.final_price
+
         my_dict['start_time'] = datetime.datetime.utcfromtimestamp(
             my_dict.get('start_time') or timezone.now().timestamp()).replace(tzinfo=pytz.utc)
         if my_dict.get('deadline', None):
@@ -755,7 +777,7 @@ class Storage(Base):
             my_dict['deadline'] = None
         my_dict['tax_type'] = {'has_not': 1, 'from_total_price': 2, 'from_profit': 3}[my_dict['tax_type']]
         my_dict['discount_percent'] = int(100 - my_dict['discount_price'] / my_dict['final_price'] * 100)
-        my_dict['vip_discount_percent'] = int(100 - my_dict.get('vip_discount_price') / my_dict['final_price'] * 100)
+        # my_dict['vip_discount_percent'] = int(100 - my_dict.get('vip_discount_price') / my_dict['final_price'] * 100)
         if my_dict.get('features', None) and not my_dict.get('features_percent', None):
             # todo debug
             # todo feature: add default_selected_value for feature
@@ -771,8 +793,7 @@ class Storage(Base):
             my_dict['disable'] = True
         if my_dict.get('priority', None) == 0 and my_dict.get('disable', None):
             my_dict['manage'] = True
-        if my_dict.get('features_percent', 0) > 100 or my_dict['discount_percent'] > 100 or \
-                my_dict['vip_discount_percent'] > 100:
+        if my_dict.get('features_percent', 0) > 100 or my_dict['discount_percent'] > 100:
             raise ValidationError("درصد باید کوچکتر از 100 باشد")
         if my_dict['discount_price'] < my_dict['start_price']:
             raise ValidationError("قیمت با تخفیف باید بزرگتر از قیمت اولیه باشد")
@@ -795,7 +816,6 @@ class Storage(Base):
     start_price = models.PositiveIntegerField(verbose_name='Start price')
     final_price = models.PositiveIntegerField(verbose_name='Final price')
     discount_price = models.PositiveIntegerField(verbose_name='Discount price')
-    vip_discount_price = models.PositiveIntegerField(verbose_name='Discount vip price')
     transportation_price = models.PositiveIntegerField(default=0)
     available_count_for_sale = models.PositiveIntegerField(verbose_name='Available count for sale')
     max_count_for_sale = models.PositiveSmallIntegerField(default=1)
@@ -806,35 +826,48 @@ class Storage(Base):
         choices=[(1, 'has_not'), (2, 'from_total_price'), (3, 'from_profit')])
     tax = models.PositiveIntegerField(default=0)
     discount_percent = models.PositiveSmallIntegerField(verbose_name='Discount price percent')
-    vip_discount_percent = models.PositiveSmallIntegerField(verbose_name='Discount vip price percent')
+    package_discount_price = models.PositiveSmallIntegerField(default=0)
     gender = models.BooleanField(blank=True, null=True)
     disable = models.BooleanField(default=False)
-
     deadline = models.DateTimeField(null=True, blank=True)
     start_time = models.DateTimeField()
     title = JSONField(default=multilanguage)
     supplier = models.ForeignKey(User, on_delete=PROTECT, null=True, blank=True)
     invoice_description = JSONField(default=multilanguage)
     invoice_title = JSONField(default=multilanguage)
+    vip_prices = models.ManyToManyField(VipType, through='VipPrice', related_name="storages")
 
     class Meta:
         db_table = 'storage'
         ordering = ['-id']
 
 
+class VipPrice(models.Model):
+
+    def __str__(self):
+        return f"{self.vip_type.name} - {self.storage.get_name_fa()}"
+
+    id = models.BigAutoField(auto_created=True, primary_key=True)
+    vip_type = models.ForeignKey(VipType, on_delete=PROTECT)
+    storage = models.ForeignKey(Storage, on_delete=PROTECT)
+    discount_price = models.PositiveIntegerField()
+    discount_percent = models.PositiveSmallIntegerField()
+
+    class Meta:
+        db_table = 'vip_price'
+        ordering = ['-id']
+
+
 class Package(Base):
-    def validation(self):
-        if self.discount_percent > 100:
-            raise ValidationError("درصد باید کوچکتر از 100 باشد")
+    def __str__(self):
+        return self.package.get_name_fa()
 
     def save(self, *args, **kwargs):
-        self.validation()
         super().save(*args, **kwargs)
 
     package = models.ForeignKey(Storage, on_delete=PROTECT, related_name="package")
     package_item = models.ForeignKey(Storage, on_delete=PROTECT, related_name="package_item")
     count = models.PositiveSmallIntegerField(default=1)
-    discount_percent = models.PositiveSmallIntegerField(default=0)
 
     class Meta:
         db_table = 'package'

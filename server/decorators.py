@@ -10,6 +10,7 @@ from django.core.exceptions import PermissionDenied
 from server.models import *
 from server.utils import res_code
 
+
 def try_except(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):

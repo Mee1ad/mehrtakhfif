@@ -56,7 +56,7 @@ class Login(View):
             if not user.is_active:  # incomplete signup
                 raise User.DoesNotExist  # redirect to signup
             if not user.check_password(password):
-                raise ValidationError('پسورد نامعتبر است')
+                raise ValidationError('شماره موبایل یا پسورد نامعتبر است')
             if is_staff:
                 return set_token(user, self.send_activation(user))
             login(request, user, backend='django.contrib.auth.backends.ModelBackend')
@@ -92,7 +92,7 @@ class Login(View):
         user.save()
         if not DEBUG:
             send_sms(user.username, input_data=[{'code': user.activation_code}])
-        res = {'resend_timeout': resend_timeout, 'timeout': activation_expire}
+        res = {'resend_timeout': resend_timeout, 'timeout': activation_expire, 'code': user.activation_code}
         return JsonResponse(res, status=res_code['updated'])
 
     @staticmethod
@@ -123,7 +123,7 @@ class SetPassword(View):
         try:
             user = Backend.get_user_from_cookie(request)
             data = json.loads(request.body)
-            user.set_password(data['new_password'])
+            user.set_password(data['password'])
             user.save()
             return JsonResponse({'user': UserSchema().dump(user)})
         except Exception:
@@ -163,6 +163,9 @@ class Activate(View):
             res['basket_count'] = 0
             if basket.exists():
                 res['basket_count'] = basket.first().products.all().count()
+            if data.get('new_password'):
+                user.set_password(data['new_password'])
+                user.save()
             response = JsonResponse(res, status=res_code['signup_with_pass'])
             if Login.check_password(user):
                 response = JsonResponse(res)  # successful login
@@ -171,7 +174,7 @@ class Activate(View):
                 response.delete_cookie('token')
             return response
         except Exception:
-            return JsonResponse({'message': 'code not found'}, status=res_code['integrity'])
+            return JsonResponse({'message': 'code not found'}, status=res_code['unauthorized'])
 
 
 class LogoutView(View):

@@ -21,7 +21,6 @@ class Test(View):
 
 
 class Profile(LoginRequired):
-
     def get(self, request):
         res = {'user': UserSchema().dump(request.user)}
         if request.user.is_staff:
@@ -38,14 +37,15 @@ class Profile(LoginRequired):
         user.email = data.get('email') or user.email
         user.meli_code = data.get('meli_code') or user.meli_code
         user.shaba = data.get('shaba') or user.shaba
-        user.birthday = data.get('birthday') or user.birthday
-        user.birthday = datetime.utcfromtimestamp(data.get('birthday') or timezone.now().timestamp()) or user.birthday
+        if data.get('birthday'):
+            user.birthday = datetime.utcfromtimestamp(data.get('birthday'))
         user.subscribe = data.get('subscribe') or user.subscribe
         user.save()
         return JsonResponse({'user': UserSchema().dump(user)})
 
 
 class Avatar(LoginRequired):
+    # todo remove avatar view
     def post(self, request):
         user = request.user
         pre_avatar_id = None
@@ -58,7 +58,7 @@ class Avatar(LoginRequired):
             user.save()
             if pre_avatar_id:
                 Media.objects.filter(pk=pre_avatar_id).delete()
-            return JsonResponse({"media": MediaSchema().dump(media, many=True)})
+            return JsonResponse({"media": MediaSchema().dump(media, many=True)}, status=201)
         return JsonResponse({}, status=400)
 
     def delete(self, request):
@@ -70,12 +70,13 @@ class Avatar(LoginRequired):
 
 
 class Orders(LoginRequired):
-    @pysnooper.snoop()
     def get(self, request):
         pk = request.GET.get('id', None)
         if pk:
-            invoice_exists = Invoice.objects.filter(pk=pk, user=request.user)
-            assert invoice_exists
+            try:
+                invoice_exists = Invoice.objects.get(pk=pk, user=request.user)
+            except Invoice.DoesNotExist:
+                return JsonResponse({}, status=404)
             products = InvoiceStorage.objects.filter(invoice_id=pk)
             invoice = invoice_exists.first()
             address = AddressSchema().dump(invoice.address)
@@ -127,7 +128,7 @@ class AddressView(LoginRequired):
     """
 
     def get(self, request):
-        addresses = user_data_with_pagination(Address, AddressSchema, request)
+        addresses = user_data_with_pagination(Address, AddressSchema, request, show_all=request.all)
         default_address = AddressSchema().dump(request.user.default_address)
         return JsonResponse({'addresses': addresses, 'default_address': default_address})
 

@@ -79,7 +79,7 @@ auth = [
     path('logout', try_except(LogoutView.as_view()), name='logout'),
     path('activate', try_except(Activate.as_view()), name='activate'),
     path('resend_code', try_except(ResendCode.as_view()), name='resend_code'),
-    path('reset_password', try_except(SetPassword.as_view()), name='reset_password'),
+    path('set_password', try_except(SetPassword.as_view()), name='set_password'),
     path('privacy_policy', try_except(PrivacyPolicy.as_view()), name='privacy_policy'),
 ]
 

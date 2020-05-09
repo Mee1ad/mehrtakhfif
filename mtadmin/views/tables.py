@@ -160,6 +160,23 @@ class StorageView(TableView):
         return delete_base(request, Storage)
 
 
+class VipPriceView(TableView):
+    permission_required = 'server.view_vip_price'
+
+    def get(self, request):
+        return JsonResponse(serialized_objects(request, VipPrice, VipPriceSchema, VipPriceSchema,
+                                               box_key='storage__product__box'))
+
+    def post(self, request):
+        return create_object(request, VipPrice)
+
+    def put(self, request):
+        return update_object(request, VipPrice)
+
+    def delete(self, request):
+        return delete_base(request, VipPrice)
+
+
 class InvoiceView(TableView):
     permission_required = 'server.view_invoice'
 

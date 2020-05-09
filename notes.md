@@ -5,5 +5,10 @@
 - manytomany value - product - key
 - manytomany key - category
 
+## vip tables
+
 ## todo
 - notification on storage min item
+- psp test
+- package test
+- complete user testing

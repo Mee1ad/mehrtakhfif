@@ -50,7 +50,6 @@ class IPG(View):
 
 
 class PaymentRequest(View):
-    @pysnooper.snoop()
     def get(self, request, basket_id):
         # return JsonResponse({"url": "http://api.mt.com/payment/callback"})
         # ipg_id = request.GET.get('ipg_id', 1)

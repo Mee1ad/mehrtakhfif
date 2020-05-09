@@ -5,7 +5,7 @@ from secrets import token_hex
 from datetime import date
 from django.utils import timezone
 from server.models import BasketProduct, FeatureStorage, Booking, Comment, Invoice, Feature, \
-    ProductMedia, Holiday
+    ProductMedia, Holiday, VipPrice, Storage, Package
 from jdatetime import date, timedelta
 from django.db.models import F
 import time
@@ -24,6 +24,12 @@ class FeatureField(fields.Field):
     def _serialize(self, value, attr, obj, **kwargs):
         features = FeatureStorage.objects.filter(storage=obj)
         return FeatureStorageSchema().dump(features, many=True)
+
+
+class PackegeItemsField(fields.Field):
+    def _serialize(self, value, attr, obj, **kwargs):
+        items = Package.objects.filter(package_id=obj)
+        return PackageItemSchema().dump(items, many=True)
 
 
 class TagField(fields.Field):
@@ -139,7 +145,9 @@ class BaseSchema(Schema):
             return StorageSchema(self.lang).dump(obj.storage)
         return None
 
+    @pysnooper.snoop()
     def get_min_storage(self, obj):
+        print('hello')
         try:
             if hasattr(obj, 'house'):
                 return None
@@ -223,14 +231,36 @@ class BaseSchema(Schema):
             pass
 
 
+class MinUserSchema(Schema):
+    class Meta:
+        additional = ('id', 'first_name', 'last_name', 'username')
+
+    name = fields.Method("get_username")
+
+    def get_username(self, obj):
+        try:
+            return obj.first_name + " " + obj.last_name
+        except Exception:
+            try:
+                return obj.first_name
+            except Exception:
+                return None
+
+
 class UserSchema(BaseSchema):
     class Meta:
-        additional = (
-            'id', 'email', 'first_name', 'last_name', 'gender', 'username', 'meli_code', 'vip',
-            'active_address', 'shaba')
+        additional = ('id', 'email', 'first_name', 'last_name', 'gender', 'username', 'meli_code',
+                      'active_address', 'shaba')
 
     avatar = fields.Method("get_avatar")
     birthday = fields.Method("get_birthday")
+    vip_type = fields.Method("get_vip_type")
+
+    def get_vip_type(self, obj):
+        try:
+            return obj.vip_type.name
+        except Exception:
+            return None
 
     def get_avatar(self, obj):
         try:
@@ -388,27 +418,22 @@ class SliderSchema(BaseSchema):
 
 class MinStorageSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'final_price', 'vip_discount_price', 'vip_discount_percent')
+        additional = ('id', 'final_price', 'discount_price', 'discount_percent')
 
-    discount_price = fields.Method("get_discount_price")
-    discount_percent = fields.Method("get_discount_percent")
+    vip_discount_price = fields.Method("get_vip_discount_price")
+    vip_discount_percent = fields.Method("get_vip_discount_percent")
     title = fields.Method('get_title')
     deadline = fields.Method("get_deadline")
     max_count_for_sale = fields.Method("get_max_count_for_sale")
-    vip_max_count_for_sale = fields.Method("get_vip_max_count_for_sale")
     min_count_alert = fields.Method("get_min_count_alert")
-    has_vip = fields.Method("check_has_vip")
-    vip = fields.Method("is_vip")
+    vip_type = fields.Method("get_vip_type")
+    vip_max_count_for_sale = fields.Method("get_vip_max_count_for_sale")
 
-    def check_has_vip(self, obj):
-        if obj.discount_price > obj.vip_discount_price:
-            return True
-        return False
-
-    def is_vip(self, obj):
-        if self.vip:
-            return self.vip
-        return False
+    def get_vip_type(self, obj):
+        try:
+            return VipPrice.objects.filter(storage_id=obj.pk).order_by('discount_price').first().vip_type.name
+        except Exception:
+            return None
 
     def get_deadline(self, obj):
         try:
@@ -416,15 +441,19 @@ class MinStorageSchema(BaseSchema):
         except Exception:
             pass
 
-    def get_discount_price(self, obj):
-        if self.vip:
-            return obj.vip_discount_price
-        return obj.discount_price
+    def get_vip_discount_price(self, obj):
+        try:
+            prices = VipPrice.objects.filter(storage_id=obj.pk).values_list('discount_price', flat=True)
+            return min(prices)
+        except Exception:
+            return obj.discount_price
 
-    def get_discount_percent(self, obj):
-        if self.vip:
-            return obj.vip_discount_percent
-        return obj.discount_percent
+    def get_vip_discount_percent(self, obj):
+        try:
+            prices = VipPrice.objects.filter(storage_id=obj.pk).values_list('discount_percent', flat=True)
+            return min(prices)
+        except Exception:
+            return obj.discount_percent
 
 
 class StorageSchema(MinStorageSchema):
@@ -433,6 +462,37 @@ class StorageSchema(MinStorageSchema):
 
     default = fields.Function(lambda o: o == o.product.default_storage)
     features = FeatureField()
+
+
+class PackageSchema(StorageSchema):
+    items = PackegeItemsField()
+    discount_price = fields.Method('get_package_discount_price')
+    final_price = fields.Method('get_package_final_price')
+
+    def get_package_discount_price(self, obj):
+        discount_price = obj.discount_price
+        items = Package.objects.filter(package=obj)
+        for item in items:
+            discount_price += item.package_item.discount_price * item.count
+        return discount_price
+
+    def get_package_final_price(self, obj):
+        final_price = obj.final_price
+        items = Package.objects.filter(package=obj)
+        for item in items:
+            final_price += item.package_item.final_price * item.count
+        return final_price
+
+
+class PackageItemSchema(BaseSchema):
+    count = fields.Int()
+    title = fields.Method("get_item_title")
+
+    def get_item_title(self, obj):
+        try:
+            return obj.package_item.title[self.lang]
+        except AttributeError:
+            return None
 
 
 class BasketProductSchema(BaseSchema):
@@ -527,8 +587,7 @@ class CommentSchema(BaseSchema):
     class Meta:
         additional = ('id', 'text', 'approved', 'rate')
 
-    user = fields.Function(lambda o: {"name": o.user.first_name + " " + o.user.last_name,
-                                      "avatar": HOST + o.user.avatar.image.url if o.user.avatar else None})
+    user = fields.Nested(MinUserSchema)
     type = fields.Function(lambda o: o.get_type_display())
     reply_count = fields.Method('get_reply_count')
     created_at = fields.Function(lambda o: o.created_at.timestamp())

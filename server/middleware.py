@@ -51,19 +51,18 @@ class AuthMiddleware:
         except Exception:
             request.lang = 'fa'
 
-        request.schema_params = {'language': request.lang,
-                                 'vip': request.user.is_vip if request.user.is_authenticated else False}
+        request.schema_params = {'language': request.lang}
+
         if app_name == 'server':
             request.params = {}
             # sync user basket count
             new_basket_count = None
             if request.user.is_authenticated:
-                db_basket_count = None
 
                 basket = Basket.objects.filter(user=request.user).order_by('-id')
                 if basket.exists():
                     db_basket_count = basket.first().products.all().count()
-                    user_basket_count = get_custom_signed_cookie(request, 'basket_count', False)
+                    user_basket_count = get_custom_signed_cookie(request, 'basket_count', -1)
                     if not db_basket_count == int(user_basket_count):
                         new_basket_count = db_basket_count
                     request.basket = basket
@@ -75,10 +74,12 @@ class AuthMiddleware:
                 # todo debug
                 pass
                 # raise PermissionDenied
-
+        elif app_name == 'admin':
+            if request.user.is_superuser is False:
+                return HttpResponseNotFound()
         # set new basket count in cookie
         response = self.get_response(request)
-        if app_name == 'server' and new_basket_count and 200 <= response.status_code <= 299 and request.method == 'GET':
+        if app_name == 'server' and new_basket_count is not None and 200 <= response.status_code <= 299 and request.method == 'GET':
             response = set_custom_signed_cookie(response, 'basket_count', new_basket_count)
         if request.method in token_requests and app_name != 'admin':
             # return set_csrf_cookie(response)

@@ -132,9 +132,6 @@ class SupplierESchema(BaseAdminSchema):
         additional = ('id', 'username', 'first_name', 'last_name', 'shaba', 'is_verify')
 
 
-
-
-
 class BoxASchema(BoxSchema):
     name = fields.Dict()
     disable = fields.Boolean()
@@ -180,7 +177,7 @@ class BrandASchema(BrandSchema, BaseAdminSchema):
 
 class ProductESchema(ProductASchema, ProductSchema):
     class Meta:
-        additional = ProductSchema.Meta.additional + ('verify', )
+        additional = ProductSchema.Meta.additional + ('verify',)
 
     # media = fields.Method("get_media")
     tag = fields.Method("get_tag")
@@ -199,6 +196,13 @@ class PriceSchema(Schema):
     class Meta:
         additional = ('weekday', 'weekend', 'guest', 'weekly_discount_percent', 'monthly_discount_percent',
                       'eyd', 'peak', 'custom_price')
+
+
+class VipPriceSchema(Schema):
+    class Meta:
+        additional = ('storage_id', 'discount_price', 'discount_percent')
+
+    vip_type = fields.Function(lambda o: o.vip_type.name)
 
 
 class HouseESchema(BaseAdminSchema, HouseSchema):

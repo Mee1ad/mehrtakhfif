@@ -25,6 +25,8 @@ urlpatterns = [
     # path('admin/doc/', include('django.contrib.admindocs.urls')),
 ]
 
+handler404 = 'server.views.error.not_found'
+
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     import debug_toolbar
@@ -36,3 +38,5 @@ if settings.DEBUG:
                       # url(r'^__debug__/', include(debug_toolbar.urls)),
 
                   ] + urlpatterns
+
+

@@ -22,7 +22,7 @@ class TableView(LoginRequiredMixin, PermissionRequiredMixin, View):
 class AdminView(LoginRequiredMixin, View):
     pass
 
-
+@pysnooper.snoop()
 def serialized_objects(request, model, serializer=None, single_serializer=None, box_key='box_id', error_null_box=True,
                        params=None):
     pk = request.GET.get('id', None)
@@ -127,6 +127,9 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
             data.pop(item)
         except KeyError:
             continue
+    # todo debug
+    data.pop('vip_discount_price', None)
+    data.pop('vip_discount_percent', None)
     obj = model.objects.create(**data, created_by=user, updated_by=user)
     if model == Product:
         if not m2m['categories']:

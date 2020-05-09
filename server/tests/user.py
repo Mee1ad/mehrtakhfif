@@ -11,15 +11,11 @@ from random import randint
 
 class AdminBaseTest(APITestCase):
     # fixtures = ["user.yaml", "group.yaml", "content_type.yaml", "permission.yaml", "box.yaml", "media.yaml"]
-    fixtures = ["db.yaml", "product.yaml"]
+    fixtures = ["db.yaml", "product.yaml", "storage.yaml", "invoice.yaml", "invoice_storage.yaml",
+                "basket.yaml"]
     client = APIClient()
     factory = APIRequestFactory()
     fake = Faker()
-    box = 3
-    product = 1
-    invoice = 107
-    brand = 6
-    feature = 16
 
     def base_get(self, url):
         res = self.client.get(url)
@@ -27,6 +23,13 @@ class AdminBaseTest(APITestCase):
 
 
 class UserGetData(AdminBaseTest):
+    box_permalink = 'ghaza_noshidani_old'
+    tag_permalink = 'cafe'
+    category_permalink = 'غذا-خشک-گربه'
+    product_permalink = 'p-23'
+    basket_id = 31
+    invoice_key = "5ZaBzK"
+    invoice_id = 100
 
     def test_slider(self):
         self.base_get('/slider/home')
@@ -61,23 +64,24 @@ class UserGetData(AdminBaseTest):
     def test_filter_detail(self):
         self.base_get('/filter_detail')
 
-    def test_feature(self):
-        self.base_get(f'/feature?box={self.}')
+    def test_features(self):
+        self.base_get(f'/features?box={self.box_permalink}')
 
     def test_tag(self):
-        self.base_get('/tag/cafe')
+        self.base_get(f'/tag/{self.tag_permalink}')
 
     def test_category(self):
-        self.base_get('/category/غذا-خشک-گربه')
+        self.base_get(f'/category/{self.category_permalink}')
 
     def test_product(self):
-        self.base_get('/product/p-23')
+        self.base_get(f'/product/{self.product_permalink}')
 
     def test_comment(self):
-        self.base_get('/comment?prp=p-23&type=1')
+        self.base_get(f'/comment?prp=p-23&type=1')
+        self.base_get(f'/comment?prp=p-23&type=2')
 
     def test_relatd_products(self):
-        self.base_get('/relatd_products/p-23')
+        self.base_get(f'/relatd_products/{self.product_permalink}')
 
     def test_basket(self):
         self.base_get('/basket')
@@ -86,10 +90,10 @@ class UserGetData(AdminBaseTest):
         self.base_get('/ipg')
 
     def test_payment(self):
-        self.base_get('/payment/31')
+        self.base_get(f'/payment/{self.basket_id}')
 
     def test_invoice(self):
-        self.base_get('/invoice/5ZaBzK')
+        self.base_get(f'/invoice/{self.invoice_key}')
 
     def test_profile(self):
         self.base_get('/profile')
@@ -102,14 +106,13 @@ class UserGetData(AdminBaseTest):
 
     def test_orders(self):
         self.base_get('/orders')
-        self.base_get('/orders?id=100')
+        self.base_get(f'/orders?id={self.invoice_id}')
 
     def test_trips(self):
         self.base_get('/trips')
 
     def test_wishlist(self):
         self.base_get('/wishlist')
-
 
         # advance filter testing
         # post product for unauthorized users

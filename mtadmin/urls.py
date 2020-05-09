@@ -35,5 +35,5 @@ urlpatterns = [
     path('supplier', error_handler(SupplierView.as_view()), name='supplier'),
     path('snapshot', error_handler(Snapshot.as_view()), name='snapshot'),
     path('icon/<str:key>', error_handler(Icon.as_view()), name='icon'),
-
+    path('vip_price', error_handler(VipPriceView.as_view()), name='vip_Price'),
 ]

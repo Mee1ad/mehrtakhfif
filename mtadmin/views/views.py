@@ -121,8 +121,7 @@ class Search(AdminView):
 
         for hit in r:
             supplier = {'id': hit.id, 'first_name': hit.first_name, 'last_name': hit.last_name,
-                        'username': hit.username,
-                        'avatar': hit.avatar}
+                        'username': hit.username}
             items.append(supplier)
         return {'suppliers': items}
 

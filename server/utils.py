@@ -46,14 +46,20 @@ pattern = {'phone': r'^(09[0-9]{9})$', 'email': r'^(([^<>()\[\]\\.,;:\s@"]+(\.[^
 
 # Data
 def validation(data):
+    fields = {'address': 'آدرس', 'phone': 'شماره', 'email': 'ایمیل', 'postal_code': 'کد پستی', 'fullname': 'نام',
+              'location': 'لوکیشن', 'name': 'نام', 'first_name': 'نام', 'last_name': 'نام خانوادگی', }
     for key in data:
         if key == 'basket':
             assert len(key) < 20
         try:
-            if not re.search(pattern[key], str(data[key])) and data[key] != "":
-                raise AssertionError
+            if not re.search(pattern[key], str(data[key])):
+                if data[key] != "":
+                    raise AssertionError
         except AssertionError:
-            raise ValidationError(f'نامعتبر است {key}')
+            try:
+                raise ValidationError(f'{fields[key]} نامعتبر است')
+            except KeyError:
+                raise ValidationError(f'{key} نامعتبر است')
         except KeyError:
             pass
 
@@ -281,6 +287,8 @@ def get_pagination(request, query, serializer, show_all=False):
     except TypeError:
         count = len(query)
     query = query if show_all and count <= 500 else query[(page - 1) * step: step * page]
+    if show_all:
+        step = count
     try:
         items = serializer(**request.schema_params).dump(query, many=True)
     except TypeError:
@@ -289,9 +297,25 @@ def get_pagination(request, query, serializer, show_all=False):
             'data': items}
 
 
-def user_data_with_pagination(model, serializer, request):
+def user_data_with_pagination(model, serializer, request, show_all=False):
     query = model.objects.filter(user=request.user)
-    return get_pagination(request, query, serializer)
+    return get_pagination(request, query, serializer, show_all=show_all)
+
+
+def get_discount_price(storage):
+    try:
+        prices = VipPrice.objects.filter(storage_id=storage.pk).values_list('discount_price', flat=True)
+        return min(prices)
+    except Exception:
+        return storage.discount_price
+
+
+def get_discount_percent(storage):
+    try:
+        prices = VipPrice.objects.filter(storage_id=storage.pk).values_list('discount_percent', flat=True)
+        return min(prices)
+    except Exception:
+        return storage.discount_percent
 
 
 def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=None, return_obj=False, tax=False):
@@ -304,17 +328,18 @@ def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=Non
     basket_products = basket_products or BasketProduct.objects.filter(
         basket=basket).select_related(*BasketProduct.related)
     summary = {"total_price": 0, "discount_price": 0, "profit": 0, "mt_profit": 0, "shopping_cost": 0, "tax": 0}
+    address_required = False
     for basket_product in basket_products:
         storage = basket_product.storage
         basket_product.product = storage.product
         basket_product.product.default_storage = storage
         basket_product.supplier = storage.supplier
-        address_required = False
         if basket_product.product.type == 2 and not address_required:
             address_required = True
+        storage.discount_price = get_discount_price(storage)
         basket_product.__dict__.update(
-            {'item_final_price': storage.final_price, 'discount_percent': storage.discount_percent,
-             'item_discount_price': storage.discount_price, 'start_price': storage.start_price})
+            {'item_final_price': storage.final_price, 'discount_percent': get_discount_percent(storage),
+             'item_discount_price': get_discount_price(storage), 'start_price': storage.start_price})
         for feature in basket_product.features:
             feature_storage = FeatureStorage.objects.get(id=feature['fsid'], storage_id=storage.pk)
             for value in feature['fvid']:

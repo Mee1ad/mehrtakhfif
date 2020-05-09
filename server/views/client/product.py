@@ -7,9 +7,7 @@ from django.db.models import Q
 
 
 class ProductView(View):
-    @pysnooper.snoop()
     def get(self, request, permalink):
-        lang = request.lang
         user = request.user
         preview = {'disable': False} if user.is_staff is False else {}
         product_obj = Product.objects.filter(permalink=permalink, **preview).prefetch_related(
@@ -24,9 +22,13 @@ class ProductView(View):
             product['storages'] = StorageSchema(**request.schema_params).dump(storages, many=True)
             if user.is_authenticated:
                 purchased = self.purchase_status(user, storages)
-        if product_obj.type == 3:
+        elif product_obj.type == 3:
             product['house'] = HouseSchema(**request.schema_params).dump(product_obj.house)
             # todo get purchased status
+        elif product_obj.type == 4:
+            storages = product_obj.storages.filter(Q(start_time__lte=timezone.now()) & Q(**preview),
+                                                   (Q(deadline__gte=timezone.now()) | Q(deadline__isnull=True)))
+            product['storages'] = PackageSchema(**request.schema_params).dump(storages, many=True)
         product['categories'] = [self.get_category(c) for c in product['categories']]
         return JsonResponse({'product': product, 'purchased': purchased})
 
@@ -65,10 +67,16 @@ class CommentView(View):
             comments = Comment.objects.filter(reply_to_id=comment_id)
             return JsonResponse(get_pagination(request, comments, CommentSchema))
         if product_permalink:
-            product = Product.objects.get(permalink=product_permalink)
+            try:
+                product = Product.objects.get(permalink=product_permalink)
+            except Product.DoesNotExist:
+                return JsonResponse({}, status=404)
             filterby = {"product": product}
         elif post_permalink:
-            post = BlogPost.objects.get(permalink=product_permalink)
+            try:
+                post = BlogPost.objects.get(permalink=product_permalink)
+            except BlogPost.DoesNotExist:
+                return JsonResponse({} ,status=404)
             filterby = {"blog_post": post}
         filterby = {"type": int(comment_type), **filterby}
         comments = Comment.objects.filter(**filterby, approved=True).exclude(reply_to__isnull=False)
