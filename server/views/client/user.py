@@ -17,6 +17,7 @@ import jdatetime
 
 class Test(View):
     def get(self, request):
+        send_email('test', 'soheilravasani@gmail.com', from_email='superuser@mehrtakhfif.com', message='test1')
         return JsonResponse({"message": "Done"})
 
 

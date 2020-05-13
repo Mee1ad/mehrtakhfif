@@ -37,8 +37,8 @@ class CategoryView(TableView):
             if children == 0:
                 children = {'count': 0, 'childes': []}
             category.child_count = children['count']
-            category.category_child_product_count = Product.objects.filter(category__in=children['childes']).count()
-            category.product_count = Product.objects.filter(category=category).count()
+            category.category_child_product_count = Product.objects.filter(categories__in=children['childes']).count()
+            category.product_count = Product.objects.filter(categories=category).count()
 
         return JsonResponse(get_pagination(request, categories, CategoryASchema, request.all))
 
@@ -101,10 +101,27 @@ class FeatureView(TableView):
 class ProductView(TableView):
     permission_required = 'server.view_product'
 
+    # todo clean
     def get(self, request):
-        return JsonResponse(serialized_objects(request, Product, ProductASchema, ProductESchema))
-
+        types = request.GET.getlist('type[]')
+        types2 = []
+        params = get_params(request, 'box_id')
+        for t in types:
+            types2.append({'service': 1, 'product': 2, 'tourism': 3, 'package': 4, 'package_item': 5}[t])
+            params['filter'].pop('type__in')
+            params['filter']['type__in'] = types2
+        return JsonResponse(serialized_objects(request, Product, ProductASchema, ProductESchema, params=params))
+    @pysnooper.snoop()
     def post(self, request):
+        data = json.loads(request.body)
+        m2m = {}
+        for field in Product.m2m:
+            m2m[field] = data.pop(field)
+        user = request.user
+        product = Product.objects.create(**data, created_by=user, updated_by=user)
+        [getattr(product, field).set(m2m[field]) for field in Product.m2m]
+        print(product.is_valid())
+        return JsonResponse({'m': 'done'}, status=400)
         return create_object(request, Product, ProductESchema)
 
     def put(self, request):
@@ -116,6 +133,7 @@ class ProductView(TableView):
 
 class HouseView(TableView):
     permission_required = 'server.view_house'
+
     # todo get single house like storage
     def get(self, request):
         return JsonResponse(serialized_objects(request, House, HouseESchema, HouseESchema, box_key='product__box'))
@@ -133,22 +151,37 @@ class HouseView(TableView):
 class StorageView(TableView):
     permission_required = 'server.view_storage'
 
+    @pysnooper.snoop()
     def get(self, request):
+        # todo clean
         Storage.objects.filter(deadline__lt=timezone.now(), disable=False).update(disable=True)
         box_key = 'product__box'
         params = get_params(request, box_key)
+        if request.GET.get('product_type[]'):
+            product_type = request.GET.getlist('product_type[]')
+            params['filter']['product__type__in'] = product_type
+            del params['filter']['product_type__in']
         if not params['filter'].get(box_key):
             box_check = get_box_permission(request.user, box_key)
             params['filter'] = {**params['filter'], **box_check}
         params['order'] = ['-priority']
         data = serialized_objects(request, Storage, StorageESchema, StorageESchema, box_key,
                                   params=params, error_null_box=False)
-        product_id = int(request.GET.get('product_id'))
-        product = Product.objects.get(pk=product_id)
-        box = BoxASchema().dump(product.box)
-        return JsonResponse({"product": {"id": product.id, "name": product.name, "permalink": product.permalink,
-                                         "default_storage": {"id": product.default_storage_id},
-                                         "manage": product.manage, 'box': box}, "data": data})
+        if request.GET.get('product_id'):
+            product_id = int(request.GET.get('product_id'))
+            product = Product.objects.get(pk=product_id)
+            box = BoxASchema().dump(product.box)
+            return JsonResponse({"product": {"id": product.id, "name": product.name, "permalink": product.permalink,
+                                             "default_storage": {"id": product.default_storage_id},
+                                             "manage": product.manage, 'box': box, 'type': product.get_type_display()},
+                                 "data": data})
+        return JsonResponse(data)
+
+        # if request.GET.get('product__type'):
+        #     product_type = request.GET.getlist('product_type[]')
+        #     print(product_type)
+        #     return JsonResponse({})
+        #     # product = Product.objects.get(pk=product_id)
 
     def post(self, request):
         return create_object(request, Storage, box_key='product__box', error_null_box=False)
@@ -160,11 +193,30 @@ class StorageView(TableView):
         return delete_base(request, Storage)
 
 
+class PackageView(TableView):
+    permission_required = 'server.view_package'
+
+    def get(self, request):
+        params = get_params(request, box_key='product__box')
+        params['filter']['product__type'] = 4
+        return JsonResponse(serialized_objects(request, Storage, PackageASchema, box_key='product__box_id',
+                                               params=params))
+
+    def post(self, request):
+        return create_object(request, Package, PackageASchema)
+
+    def put(self, request):
+        return update_object(request, Package)
+
+    def delete(self, request):
+        return delete_base(request, Package)
+
+
 class VipPriceView(TableView):
     permission_required = 'server.view_vip_price'
 
     def get(self, request):
-        return JsonResponse(serialized_objects(request, VipPrice, VipPriceSchema, VipPriceSchema,
+        return JsonResponse(serialized_objects(request, VipPrice, VipPriceASchema, VipPriceASchema,
                                                box_key='storage__product__box'))
 
     def post(self, request):
@@ -175,6 +227,13 @@ class VipPriceView(TableView):
 
     def delete(self, request):
         return delete_base(request, VipPrice)
+
+
+class VipTypeView(TableView):
+    permission_required = 'server.view_vip_type'
+
+    def get(self, request):
+        return JsonResponse(serialized_objects(request, VipType, VipTypeASchema, error_null_box=False))
 
 
 class InvoiceView(TableView):

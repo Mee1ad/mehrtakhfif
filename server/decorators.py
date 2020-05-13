@@ -22,8 +22,11 @@ def try_except(func):
             traceback.print_exc()
             return HttpResponseServerError()
         except ValidationError as e:
-            print(str(e)[2:-2])
-            return JsonResponse({'type': 'validation', 'error': str(e)[2:-2]}, status=res_code['bad_request'])
+            # print(str(e)[2:-2])
+            e = dict(e)
+            first_key = next(iter(e))
+            return JsonResponse({'type': 'validation', 'field': first_key, 'error': e[first_key][0]},
+                                status=res_code['bad_request'])
         except (AssertionError, ObjectDoesNotExist, StopIteration, AttributeError, KeyError):
             traceback.print_exc()
             return HttpResponseBadRequest()

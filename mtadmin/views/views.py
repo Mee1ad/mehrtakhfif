@@ -33,12 +33,10 @@ class CheckPrices(AdminView):
 
         if dp and vdp:
             dper = int(100 - dp / fp * 100)
-            dvper = int(100 - vdp / fp * 100)
-            return JsonResponse({'discount_percent': dper, 'vip_discount_percent': dvper})
+            return JsonResponse({'discount_percent': dper})
         elif dper and vdper:
             dp = int(fp - fp * dper / 100)
-            vdp = int(fp - fp * vdper / 100)
-            return JsonResponse({'discount_price': dp, 'vip_discount_price': vdp})
+            return JsonResponse({'discount_price': dp})
         return JsonResponse({})
 
 

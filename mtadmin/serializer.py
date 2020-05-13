@@ -1,5 +1,6 @@
 from server.models import *
 from server.serialize import *
+from marshmallow import INCLUDE, EXCLUDE
 
 
 def list_view(obj_list):
@@ -31,6 +32,18 @@ class FeatureField(fields.Field):
     def _serialize(self, value, attr, obj, **kwargs):
         features = FeatureStorage.objects.filter(storage=obj)
         return FeatureStorageASchema().dump(features, many=True)
+
+
+class VipPriceField(fields.Field):
+    def _serialize(self, value, attr, obj, **kwargs):
+        vip_prices = VipPrice.objects.filter(storage=obj)
+        return VipPriceASchema().dump(vip_prices, many=True)
+
+
+class StorageField(fields.Field):
+    def _serialize(self, value, attr, obj, **kwargs):
+        storages = Storage.objects.filter(product=obj)
+        return StorageESchema().dump(storages, many=True)
 
 
 # Serializer
@@ -84,7 +97,7 @@ class BaseAdminSchema(Schema):
 
     def get_category(self, obj):
         cats = []
-        for cat in obj.category.all():
+        for cat in obj.categories.all():
             cats.append({'id': cat.pk, 'name': cat.name})
         return cats
 
@@ -165,10 +178,12 @@ class ProductASchema(BaseAdminSchema):
     settings = fields.Dict()
     box = fields.Method("get_box")
     categories = fields.Method("get_category")
-    storages = fields.Method("get_storage")
+    # storages = fields.Method("get_storage")
+    storages = StorageField()
     city = fields.Nested(CitySchema)
     thumbnail = fields.Nested("MediaASchema")
     disable = fields.Boolean()
+    type = fields.Function(lambda o: o.get_type_display())
 
 
 class BrandASchema(BrandSchema, BaseAdminSchema):
@@ -177,12 +192,12 @@ class BrandASchema(BrandSchema, BaseAdminSchema):
 
 class ProductESchema(ProductASchema, ProductSchema):
     class Meta:
+        unknown = EXCLUDE
         additional = ProductSchema.Meta.additional + ('verify',)
 
     # media = fields.Method("get_media")
     tag = fields.Method("get_tag")
     brand = fields.Method("get_brand")
-    default_storage_id = fields.Int()
     name = fields.Dict()
     properties = fields.Dict()
     details = fields.Dict()
@@ -190,6 +205,30 @@ class ProductESchema(ProductASchema, ProductSchema):
     short_address = fields.Dict()
     description = fields.Dict()
     short_description = fields.Dict()
+    default_storage_id = fields.Int()
+
+    # load only fields
+    thumbnail_id = fields.Int(load_only=True)
+    categories = fields.List(fields.Int(), load_only=True)
+    tags = fields.List(fields.Int(), load_only=True)
+    media = fields.List(fields.Int(), load_only=True)
+    box_id = fields.Int(load_only=True)
+
+
+    @post_load
+    def make_product(self, data, **kwargs):
+        print(data)
+        m2m = {}
+        for field in Product.m2m:
+            m2m[field] = data.pop(field)
+        product = Product(**data)
+        product.save()
+        [getattr(product, field).set(data[field]) for field in Product.m2m]
+        return product
+
+    @validates("name")
+    def validate_username(self, value):
+        print('name_validation')
 
 
 class PriceSchema(Schema):
@@ -198,11 +237,13 @@ class PriceSchema(Schema):
                       'eyd', 'peak', 'custom_price')
 
 
-class VipPriceSchema(Schema):
+class VipPriceASchema(Schema):
     class Meta:
-        additional = ('storage_id', 'discount_price', 'discount_percent')
+        additional = ('storage_id', 'discount_price', 'discount_percent', 'max_count_for_sale',
+                      'available_count_for_sale')
 
-    vip_type = fields.Function(lambda o: o.vip_type.name)
+    # vip_type = fields.Function(lambda o: o.vip_type.name)
+    vip_type = fields.Nested("VipTypeASchema")
 
 
 class HouseESchema(BaseAdminSchema, HouseSchema):
@@ -225,11 +266,40 @@ class StorageESchema(StorageASchema):
     class Meta:
         additional = StorageASchema.Meta.additional + StorageSchema.Meta.additional + \
                      ('features_percent', 'available_count', 'invoice_description',
-                      'invoice_title')
+                      'invoice_title', 'dimensions')
 
     supplier = fields.Function(lambda o: UserSchema().dump(o.supplier))
     features = FeatureField()
+    items = PackegeItemsField()
     tax = fields.Function(lambda o: o.get_tax_type_display())
+    vip_discount_price = fields.Function(lambda o: None)
+    vip_discount_percent = fields.Function(lambda o: None)
+    vip_prices = VipPriceField()
+
+
+
+
+class PackageASchema(StorageESchema):
+    items = PackegeItemsField()
+    discount_price = fields.Int()
+    final_price = fields.Int()
+
+
+class PackageItemASchema(BaseAdminSchema):
+    count = fields.Int()
+    title = fields.Method("get_item_title")
+
+    def get_item_title(self, obj):
+        try:
+            return obj.package_item.title
+        except AttributeError:
+            return None
+
+
+class VipTypeASchema(Schema):
+    id = fields.Int()
+    name = fields.Dict()
+    media = fields.Str()
 
 
 class CommentASchema(BaseAdminSchema):

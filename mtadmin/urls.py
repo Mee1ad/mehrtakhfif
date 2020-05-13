@@ -20,6 +20,7 @@ urlpatterns = [
     path('special_offer', error_handler(SpecialOfferView.as_view()), name='special_offer'),
     path('special_product', error_handler(SpecialProductView.as_view()), name='special_product'),
     path('storage', error_handler(StorageView.as_view()), name='storage'),
+    path('package', error_handler(PackageView.as_view()), name='package'),
     path('tag', error_handler(TagView.as_view()), name='tag'),
     path('token', error_handler(Token.as_view()), name='token'),
     path('media', error_handler(MediaView.as_view()), name='media'),
@@ -36,4 +37,5 @@ urlpatterns = [
     path('snapshot', error_handler(Snapshot.as_view()), name='snapshot'),
     path('icon/<str:key>', error_handler(Icon.as_view()), name='icon'),
     path('vip_price', error_handler(VipPriceView.as_view()), name='vip_Price'),
+    path('vip_type', error_handler(VipTypeView.as_view()), name='vip_type'),
 ]

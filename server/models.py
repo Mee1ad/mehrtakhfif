@@ -22,6 +22,7 @@ from safedelete.managers import SafeDeleteQueryset
 from safedelete.config import DELETED_INVISIBLE
 from operator import attrgetter
 import pytz
+from server.field_validation import *
 
 media_types = [(1, 'image'), (2, 'thumbnail'), (3, 'media'), (4, 'slider'), (5, 'ads'), (6, 'avatar')]
 has_placeholder = [1, 2, 3, 4, 5]
@@ -148,7 +149,7 @@ class MyQuerySet(SafeDeleteQueryset):
     def update(self, *args, **kwargs):
         if not self:
             return True
-        remove_list = ['id', 'box_id', 'tags', 'features', 'categories']
+        remove_list = ['id', 'box_id', 'tags', 'features', 'categories', 'vip_prices']
         validations = {'storage': self.storage_validation, 'category': self.category_validation,
                        'product': self.product_validation}
         if isinstance(self[0], Product):
@@ -180,6 +181,7 @@ class MyQuerySet(SafeDeleteQueryset):
 
     def storage_validation(self, **kwargs):
         storage = self.first()
+        kwargs = self.activation_validation(storage, kwargs)
         if kwargs.get('is_manage', None):
             kwargs.pop('is_manage')
             return kwargs
@@ -201,14 +203,28 @@ class MyQuerySet(SafeDeleteQueryset):
             feature_storages = [FeatureStorage(feature_id=item['feature_id'], value=item['value'],
                                                storage_id=storage.pk) for item in kwargs['features']]
             FeatureStorage.objects.bulk_create(feature_storages)
+        if kwargs.get('vip_prices', None):
+            storage.vip_prices.clear()
+            dper = int(100 - (kwargs.get('discount_price') or storage.discount_price) / (
+                    kwargs.get('final_price') or storage.final_price) * 100)
+            vip_prices = [VipPrice(vip_type_id=item['vip_type_id'], discount_price=item['discount_price'],
+                                   max_count_for_sale=item.get('max_count_for_sale') or kwargs.get(
+                                       'max_count_for_sale'), discount_percent=dper,
+                                   available_count_for_sale=item.get('available_count_for_sale') or kwargs.get(
+                                       'available_count_for_sale'), storage_id=storage.pk) for item in
+                          kwargs.get('vip_prices')]
+            VipPrice.objects.bulk_create(vip_prices)
         if kwargs.get('manage', None):
             item = self.first()
             item.product.assign_default_value(item.product_id)
         return kwargs
 
+    @pysnooper.snoop()
     def activation_validation(self, obj, kwargs):
         obj_dict = obj.__dict__
         if kwargs.get('disable') is False:
+            if obj.__class__.__name__ == 'Storage':
+                pass
             for field1 in obj.activation_required_fields:
                 if not obj_dict[field1]:
                     raise ValidationError(f'check {field1} before activation')
@@ -217,13 +233,16 @@ class MyQuerySet(SafeDeleteQueryset):
                     raise ValidationError(f'check {field2} before activation')
             return kwargs
         if obj.disable is False and not kwargs.get('disable'):
+            if obj.__class__.__name__ == 'Storage':
+                pass
             for field1 in obj.activation_required_fields:
                 if not kwargs.get(field1):
                     raise ValidationError(f'make item disable before editing {field1}')
             for field2 in obj.kwargs_required_m2m:
                 if not kwargs.get(field2):
                     raise ValidationError(f'make item disable before editing {field2}')
-        kwargs['verify'] = True
+        if obj.__class__.__name__ == 'Product':
+            kwargs['verify'] = True
         return kwargs
 
     def product_validation(self, **kwargs):
@@ -236,7 +255,7 @@ class MyQuerySet(SafeDeleteQueryset):
              for pk in kwargs.get('storages_id', [])]
             kwargs.pop('storages_id')
             return kwargs
-        if (not product.thumbnail or not product.media.all() or not product.category.all()) \
+        if (not product.thumbnail or not product.media.all() or not product.categories.all()) \
                 and kwargs.get('disable') is False:
             raise ValidationError('لطفا تصاویر و دسته بندی محصول را بررسی کنید')
         if product.disable is False and (kwargs.get('thumbnail', '') is None or kwargs.get('media') is []
@@ -260,8 +279,8 @@ class MyQuerySet(SafeDeleteQueryset):
                 raise ValidationError('لطفا دسته بندی را انتخاب کنید')
             product.tags.clear()
             product.tags.add(*tags)
-            product.category.clear()
-            product.category.add(*categories)
+            product.categories.clear()
+            product.categories.add(*categories)
             product.media.clear()
             p_medias = [ProductMedia(product=product, media_id=pk, priority=kwargs['media'].index(pk)) for pk in
                         kwargs.get('media', [])]
@@ -376,7 +395,8 @@ class VipType(SafeDeleteModel):
     def __str__(self):
         return self.name
 
-    name = models.CharField(max_length=255)
+    name = JSONField()
+    media = models.CharField(max_length=255)
 
     class Meta:
         db_table = 'vip_type'
@@ -638,6 +658,23 @@ class Product(Base):
     activation_required_m2m_fields = ['category', 'tags', 'media']
     kwargs_required_m2m = ['categories', 'tags', 'media']
 
+    fk = ['box', 'brand', 'thumbnail', 'city', 'default_storage']
+    required_fk = ['thumbnail']
+    m2m = ['categories', 'tags', 'media']
+    required_m2m = ['categories', 'tags', 'media']
+
+    def is_valid(self):
+        print(self.__dict__)
+        for field in self.required_fk:
+            if not getattr(self, field):
+                print(getattr(self, field))
+                raise ValidationError(f'{field} is invalid')
+        for field in self.required_m2m:
+            if not getattr(self, field).all():
+                print(getattr(self, field).all())
+                raise ValidationError(f'{field} is invalid')
+        return True
+
     def assign_default_value(self):
         storages = self.storages.all()
         Product.objects.filter(pk=self.pk).update(default_storage=min(storages, key=attrgetter('discount_price')))
@@ -648,7 +685,6 @@ class Product(Base):
     def save(self, *args, **kwargs):
         if kwargs.get('validation', True):
             self.validation()
-        kwargs.get('validation', None)
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -662,15 +698,15 @@ class Product(Base):
 
     def get_category_fa(self):
         try:
-            return self.category.all().first().name['fa']
+            return self.categories.all().first().name['fa']
         except Exception:
             pass
 
     def get_category_en(self):
-        return self.category.name['en']
+        return self.categories.name['en']
 
     def get_category_ar(self):
-        return self.category.name['ar']
+        return self.categories.name['ar']
 
     def get_thumbnail(self):
         try:
@@ -681,8 +717,7 @@ class Product(Base):
     # def save(self):
     #     self.slug = slugify(self.title)
     #     super(Post, self).save()
-
-    category = models.ManyToManyField(Category, related_query_name="categories", related_name="categories")
+    categories = models.ManyToManyField(Category, related_query_name="categories", related_name="categories")
     box = models.ForeignKey(Box, on_delete=PROTECT)
     brand = models.ForeignKey(Brand, on_delete=PROTECT, null=True, blank=True)
     thumbnail = models.ForeignKey(Media, on_delete=PROTECT, related_name='product_thumbnail', null=True, blank=True)
@@ -752,7 +787,9 @@ class Storage(Base):
     objects = MyQuerySet.as_manager()
     select = ['product', 'product__thumbnail']
     prefetch = ['product__media', 'feature']
-    activation_required_fields = ['supplier']
+    activation_required_fields = ['supplier_id', 'dimensions']
+    activation_required_m2m_fields = []
+    kwargs_required_m2m = []
 
     def __str__(self):
         return f"{self.product}"
@@ -768,6 +805,7 @@ class Storage(Base):
             for package_item in package_items:
                 my_dict['discount_price'] += package_item.package_item.discount_price
                 my_dict['final_price'] += package_item.package_item.final_price
+            my_dict['discount_percent'] = int(100 - my_dict['discount_price'] / my_dict['final_price'] * 100)
 
         my_dict['start_time'] = datetime.datetime.utcfromtimestamp(
             my_dict.get('start_time') or timezone.now().timestamp()).replace(tzinfo=pytz.utc)
@@ -783,8 +821,7 @@ class Storage(Base):
             # todo feature: add default_selected_value for feature
             pass
             # raise ValidationError('درصد ویژگی ها نامعتبر است')
-        if my_dict['available_count'] < my_dict['available_count_for_sale'] or \
-                my_dict['available_count'] < my_dict['vip_max_count_for_sale']:
+        if my_dict['available_count'] < my_dict['available_count_for_sale']:
             raise ValidationError("تعداد نامعتبر است")
         my_dict['tax'] = {1: 0, 2: my_dict['discount_price'] * 0.09,
                           3: (my_dict['discount_price'] - my_dict['start_price']) * 0.09}[my_dict['tax_type']]
@@ -819,7 +856,6 @@ class Storage(Base):
     transportation_price = models.PositiveIntegerField(default=0)
     available_count_for_sale = models.PositiveIntegerField(verbose_name='Available count for sale')
     max_count_for_sale = models.PositiveSmallIntegerField(default=1)
-    vip_max_count_for_sale = models.PositiveSmallIntegerField(default=1)
     min_count_alert = models.PositiveSmallIntegerField(default=5)
     priority = models.PositiveSmallIntegerField(default=0)
     tax_type = models.PositiveSmallIntegerField(
@@ -836,6 +872,8 @@ class Storage(Base):
     invoice_description = JSONField(default=multilanguage)
     invoice_title = JSONField(default=multilanguage)
     vip_prices = models.ManyToManyField(VipType, through='VipPrice', related_name="storages")
+    dimensions = JSONField(help_text="{'weight': '', 'height: '', 'width': '', 'length': ''}",
+                           validators=[validate_vip_price])
 
     class Meta:
         db_table = 'storage'
@@ -852,6 +890,8 @@ class VipPrice(models.Model):
     storage = models.ForeignKey(Storage, on_delete=PROTECT)
     discount_price = models.PositiveIntegerField()
     discount_percent = models.PositiveSmallIntegerField()
+    max_count_for_sale = models.PositiveSmallIntegerField(default=1)
+    available_count_for_sale = models.PositiveIntegerField(default=1)
 
     class Meta:
         db_table = 'vip_price'

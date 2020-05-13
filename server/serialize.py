@@ -1,11 +1,10 @@
-from marshmallow import Schema, fields
+from marshmallow import Schema, fields, post_load, validates
 from mehr_takhfif.settings import HOST, MEDIA_URL
 import pysnooper
 from secrets import token_hex
 from datetime import date
 from django.utils import timezone
-from server.models import BasketProduct, FeatureStorage, Booking, Comment, Invoice, Feature, \
-    ProductMedia, Holiday, VipPrice, Storage, Package
+from server.models import *
 from jdatetime import date, timedelta
 from django.db.models import F
 import time
@@ -116,8 +115,8 @@ class BaseSchema(Schema):
         return None
 
     def get_category(self, obj):
-        if obj.category.all():
-            return CategorySchema(self.lang).dump(obj.category.all(), many=True)
+        if obj.categories.all():
+            return CategorySchema(self.lang).dump(obj.categories.all(), many=True)
         return None
 
     def get_product(self, obj):
@@ -145,9 +144,7 @@ class BaseSchema(Schema):
             return StorageSchema(self.lang).dump(obj.storage)
         return None
 
-    @pysnooper.snoop()
     def get_min_storage(self, obj):
-        print('hello')
         try:
             if hasattr(obj, 'house'):
                 return None
@@ -209,8 +206,9 @@ class BaseSchema(Schema):
         return obj.available_count_for_sale
 
     def get_vip_max_count_for_sale(self, obj):
-        if obj.available_count_for_sale >= obj.vip_max_count_for_sale:
-            return obj.vip_max_count_for_sale
+        # todo check after adding vip table
+        # if obj.available_count_for_sale >= obj.vip_max_count_for_sale:
+        #     return obj.vip_max_count_for_sale
         return obj.available_count_for_sale
 
     def get_min_count_alert(self, obj):
@@ -249,12 +247,13 @@ class MinUserSchema(Schema):
 
 class UserSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'email', 'first_name', 'last_name', 'gender', 'username', 'meli_code',
+        additional = ('id', 'first_name', 'last_name', 'gender', 'username', 'meli_code',
                       'active_address', 'shaba')
 
-    avatar = fields.Method("get_avatar")
+    avatar = fields.Method("get_avatar", data_key="avatar_id")
     birthday = fields.Method("get_birthday")
     vip_type = fields.Method("get_vip_type")
+    email = fields.Email()
 
     def get_vip_type(self, obj):
         try:
@@ -273,6 +272,20 @@ class UserSchema(BaseSchema):
             return int(time.mktime(obj.birthday.timetuple()))
         except AttributeError:
             return None
+
+    @post_load
+    def make_user(self, data, **kwargs):
+        return User(**data)
+
+    @validates("username")
+    def validate_username(self, value):
+        print('username_validation')
+        print(value)
+
+    @validates("birthday")
+    def validate_birthday(self, value):
+        print('birthday_validation')
+        print(value)
 
 
 class AddressSchema(BaseSchema):
@@ -379,6 +392,7 @@ class ProductSchema(BaseSchema):
     address = fields.Method("get_address")
     short_address = fields.Method("get_short_address")
     type = fields.Function(lambda o: o.get_type_display())
+    # type = fields.Int(load_only=True)
     brand = fields.Method("get_brand")
     box = fields.Method("get_box")
     categories = fields.Method("get_category")
@@ -466,22 +480,8 @@ class StorageSchema(MinStorageSchema):
 
 class PackageSchema(StorageSchema):
     items = PackegeItemsField()
-    discount_price = fields.Method('get_package_discount_price')
-    final_price = fields.Method('get_package_final_price')
-
-    def get_package_discount_price(self, obj):
-        discount_price = obj.discount_price
-        items = Package.objects.filter(package=obj)
-        for item in items:
-            discount_price += item.package_item.discount_price * item.count
-        return discount_price
-
-    def get_package_final_price(self, obj):
-        final_price = obj.final_price
-        items = Package.objects.filter(package=obj)
-        for item in items:
-            final_price += item.package_item.final_price * item.count
-        return final_price
+    discount_price = fields.Int()
+    final_price = fields.Int()
 
 
 class PackageItemSchema(BaseSchema):
@@ -722,6 +722,10 @@ class NotifyUserSchema(BaseSchema):
 class StateSchema(BaseSchema):
     class Meta:
         additional = ('id', 'name')
+
+    @post_load
+    def make_user(self, data, **kwargs):
+        return State(**data)
 
 
 class CitySchema(Schema):

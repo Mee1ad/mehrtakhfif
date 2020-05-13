@@ -22,7 +22,7 @@ class TableView(LoginRequiredMixin, PermissionRequiredMixin, View):
 class AdminView(LoginRequiredMixin, View):
     pass
 
-@pysnooper.snoop()
+
 def serialized_objects(request, model, serializer=None, single_serializer=None, box_key='box_id', error_null_box=True,
                        params=None):
     pk = request.GET.get('id', None)
@@ -36,7 +36,7 @@ def serialized_objects(request, model, serializer=None, single_serializer=None, 
     if not params:
         params = get_params(request, box_key)
     try:
-        if error_null_box and not params['filter'].get(box_key):
+        if error_null_box and not params['filter'].get(box_key) and not params['filter'].get(box_key[:-3]):
             raise PermissionDenied
         query = model.objects.filter(**params['filter']).order_by(*params['order'])
         if params.get('aggregate', None):
@@ -119,7 +119,7 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
     if box_key == 'product__box':
         if not Product.objects.filter(pk=data['product_id'], box__in=boxes).exists():
             raise PermissionDenied
-    rm = ['tags', 'media', 'features', 'categories', 'items']
+    rm = ['tags', 'media', 'features', 'categories', 'items', 'vip_prices']
     m2m = {}
     for item in rm:
         try:
@@ -127,9 +127,10 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
             data.pop(item)
         except KeyError:
             continue
-    # todo debug
-    data.pop('vip_discount_price', None)
-    data.pop('vip_discount_percent', None)
+    print(data)
+    if model == Product:
+        if data.get('type'):
+            data['type'] = {'service': 1, 'product': 2, 'tourism': 3, 'package': 4, 'package_item': 5}[data['type']]
     obj = model.objects.create(**data, created_by=user, updated_by=user)
     if model == Product:
         if not m2m['categories']:
@@ -140,8 +141,8 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
         p_medias = [ProductMedia(product=product, media_id=pk, priority=m2m['media'].index(pk)) for pk in m2m['media']]
         ProductMedia.objects.bulk_create(p_medias)
         product.tags.add(*tags)
-        product.category.add(*categories)
-        if not product.thumbnail_id or not product.media.all() or not product.category.all():
+        product.categories.add(*categories)
+        if not product.thumbnail_id or not product.media.all() or not product.categories.all():
             product.disable = True
             product.save()
     # todo submit feature to invoice products
@@ -149,6 +150,13 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
     if model == Category:
         pass
     if model == Storage:
+        if 'vip_price' in m2m:
+            dper = int(100 - item['discount_price'] / obj.final_price * 100)
+            vip_prices = [VipPrice(vip_type_id=item['vip_type_id'], discount_price=item['discount_price'],
+                                   max_count_for_sale=item['max_count_for_sale'], discount_percent=dper,
+                                   available_count_for_sale=item['available_count_for_sale'], storage_id=obj.pk) for item in
+                          m2m['vip_price']]
+            VipPrice.objects.bulk_create(vip_prices)
         if 'features' in m2m:
             feature_storages = [FeatureStorage(feature_id=item['feature_id'], storage_id=obj.pk,
                                                value=item['value']) for item in m2m['features']]
@@ -157,7 +165,6 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
         obj.save(validation=False)
         if obj.product.manage:
             obj.product.assign_default_value()
-
     if return_item:
         request.GET._mutable = True
         request.GET['id'] = obj.pk

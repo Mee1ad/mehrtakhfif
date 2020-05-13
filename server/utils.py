@@ -276,7 +276,7 @@ def get_categories(language, box_id=None, categories=None, is_admin=None):
     new_cats = [x for x in new_cats if x not in remove_index]
     return BoxCategoriesSchema(language=language).dump(new_cats, many=True)
 
-
+@pysnooper.snoop()
 def get_pagination(request, query, serializer, show_all=False):
     page = request.page
     step = request.step
