@@ -287,7 +287,7 @@ def get_pagination(request, query, serializer, show_all=False):
     except TypeError:
         count = len(query)
     query = query if show_all and count <= 500 else query[(page - 1) * step: step * page]
-    if show_all:
+    if show_all and count > 0:
         step = count
     try:
         items = serializer(**request.schema_params).dump(query, many=True)
