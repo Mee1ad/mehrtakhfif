@@ -245,8 +245,8 @@ def send_email(subject, to, from_email='support@mehrtakhfif.com', message=None, 
     if type(to) != list:
         to = [to]
     msg = EmailMultiAlternatives(subject, message, from_email, to)
-    msg.attach_alternative(html_content, "text/html")
     if html_content:
+        msg.attach_alternative(html_content, "text/html")
         msg.content_subtype = "html"
         [msg.attach_file(a) for a in attach]
     msg.send()
@@ -366,6 +366,7 @@ def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=Non
         basket.summary = summary
         basket.address_required = address_required
         return basket
+    summary.pop('mt_profit', None)
     basket = BasketSchema(language=lang).dump(basket)
     return {'basket': basket, 'summary': summary, 'address_required': address_required}
 
