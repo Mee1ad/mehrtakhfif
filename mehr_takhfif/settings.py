@@ -226,7 +226,7 @@ EMAIL_HOST_PASSWORD = 'vcza$!me1jEnP%ES^0x2tWX&RehafiD'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 SERVER_EMAIL = 'superuser@mehrtakhfif.com'
-ADMINS = [('Soheil', 'support@mehrtakhfif.com'), ('Meelad', 'soheilravasani@gmail.com')]
+# ADMINS = [('Soheil', 'support@mehrtakhfif.com'), ('Meelad', 'soheilravasani@gmail.com')]
 
 # EMAIL_HOST = 'localhost'
 # EMAIL_USE_TLS = False
