@@ -225,8 +225,7 @@ EMAIL_HOST_USER = 'superuser@mehrtakhfif.com'
 EMAIL_HOST_PASSWORD = 'vcza$!me1jEnP%ES^0x2tWX&RehafiD'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-# SERVER_EMAIL = 'api-traceback@mehrtakhfif.com'
-SERVER_EMAIL = 'superuser@mehrtakhfif.com'
+SERVER_EMAIL = 'api-traceback@mehrtakhfif.com'
 ADMINS = [('Soheil', 'superuser@mehrtakhfif.com')]
 
 # EMAIL_HOST = 'localhost'
