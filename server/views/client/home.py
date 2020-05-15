@@ -71,12 +71,13 @@ class BoxWithCategory(View):
         if request.headers.get('admin', None):
             is_admin = True
         try:
-            box = Box.objects.get(**box_filter)
-            categories = get_categories(request.lang, box.pk, is_admin=is_admin)
+            disable = {'disable': False} if not request.user.is_staff else {}
+            box = Box.objects.get(**box_filter, **disable)
+            categories = get_categories(request.lang, box.pk, is_admin=is_admin, disable=disable)
             box = BoxSchema(**request.schema_params).dump(box)
             res = {'categories': categories, 'box': box}
         except Box.DoesNotExist:
-            boxes = Box.objects.all()
+            boxes = Box.objects.filter(**disable)
             res = {'boxes': BoxSchema(**request.schema_params).dump(boxes, many=True)}
         return JsonResponse(res)
 

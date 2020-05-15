@@ -35,7 +35,7 @@ default_step = 10
 default_page = 1
 default_response = {'ok': {'message': 'ok'}, 'bad': {'message': 'bad request'}}
 res_code = {'success': 200, 'bad_request': 400, 'unauthorized': 401, 'forbidden': 403, 'token_issue': 401,
-            'integrity': 406, 'banned': 493,
+            'integrity': 406, 'banned': 493, 'activation_warning': 250,
             'signup_with_pp': 251, 'invalid_password': 450, 'signup_with_pass': 201, 'updated': 202}
 pattern = {'phone': r'^(09[0-9]{9})$', 'email': r'^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\
            [[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$',
@@ -252,9 +252,9 @@ def send_email(subject, to, from_email='support@mehrtakhfif.com', message=None, 
     msg.send()
 
 
-def get_categories(language, box_id=None, categories=None, is_admin=None):
+def get_categories(language, box_id=None, categories=None, is_admin=None, disable={}):
     if box_id:
-        categories = Category.objects.filter(box_id=box_id)
+        categories = Category.objects.filter(box_id=box_id, **disable)
     if categories is None:
         categories = Category.objects.all()
     if len(categories) == 0:
@@ -276,7 +276,7 @@ def get_categories(language, box_id=None, categories=None, is_admin=None):
     new_cats = [x for x in new_cats if x not in remove_index]
     return BoxCategoriesSchema(language=language).dump(new_cats, many=True)
 
-@pysnooper.snoop()
+
 def get_pagination(request, query, serializer, show_all=False):
     page = request.page
     step = request.step

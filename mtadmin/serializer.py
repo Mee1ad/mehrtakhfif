@@ -195,7 +195,7 @@ class ProductESchema(ProductASchema, ProductSchema):
         unknown = EXCLUDE
         additional = ProductSchema.Meta.additional + ('verify',)
 
-    # media = fields.Method("get_media")
+    media = fields.Method("get_media")
     tag = fields.Method("get_tag")
     brand = fields.Method("get_brand")
     name = fields.Dict()
@@ -206,25 +206,6 @@ class ProductESchema(ProductASchema, ProductSchema):
     description = fields.Dict()
     short_description = fields.Dict()
     default_storage_id = fields.Int()
-
-    # load only fields
-    thumbnail_id = fields.Int(load_only=True)
-    categories = fields.List(fields.Int(), load_only=True)
-    tags = fields.List(fields.Int(), load_only=True)
-    media = fields.List(fields.Int(), load_only=True)
-    box_id = fields.Int(load_only=True)
-
-
-    @post_load
-    def make_product(self, data, **kwargs):
-        print(data)
-        m2m = {}
-        for field in Product.m2m:
-            m2m[field] = data.pop(field)
-        product = Product(**data)
-        product.save()
-        [getattr(product, field).set(data[field]) for field in Product.m2m]
-        return product
 
     @validates("name")
     def validate_username(self, value):

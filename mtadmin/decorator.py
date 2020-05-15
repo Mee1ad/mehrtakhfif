@@ -6,8 +6,8 @@ from django.http import JsonResponse, HttpResponseForbidden, HttpResponseBadRequ
 from django.core.exceptions import FieldDoesNotExist, ValidationError, PermissionDenied, FieldError
 from django.db.utils import IntegrityError
 from server.utils import res_code
-import os
-import sys
+from django.core.exceptions import NON_FIELD_ERRORS
+from mtadmin.exception import *
 
 
 def error_handler(func):
@@ -18,11 +18,12 @@ def error_handler(func):
         except (FieldError, TypeError, KeyError):
             traceback.print_exc()
             return HttpResponseBadRequest()
+        except ActivationError as e:
+            return JsonResponse({'error': str(e)}, status=res_code['activation_warning'])
         except ValidationError as e:
-            print(str(e)[2:-2])
-            # res = HttpResponseBadRequest()
-            # res['error'] = str(e)[2:-2]
-            return JsonResponse({'type': 'validation', 'error': str(e)[2:-2]}, status=res_code['bad_request'])
+            print('in errore')
+            non_field_errors = e.message_dict[NON_FIELD_ERRORS][0]
+            return JsonResponse({'error': non_field_errors}, status=res_code['bad_request'])
         except PermissionDenied:
             traceback.print_exc()
             return HttpResponseForbidden()
@@ -30,6 +31,7 @@ def error_handler(func):
             traceback.print_exc()
             return JsonResponse({}, status=res_code['token_issue'])
         except IntegrityError as e:
+            traceback.print_exc()
             pattern = r'(\((\w+)\))='
             try:
                 field = re.search(pattern, str(e))[2]

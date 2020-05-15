@@ -10,9 +10,7 @@ def validate_vip_price(value):
 
 
 def validate_product_type(value):
-    type_range = 5
-    if not 1 <= value <= type_range:
-        raise ValidationError(_('نوع محصول نامعتبر است'), code='invalid')
+    pass
 
 
 def validate_permalink(value):
@@ -63,3 +61,8 @@ def product_validation(self, **kwargs):
         item = self.first()
         item.assign_default_value()
     return kwargs
+
+
+def validate_meli_code(value):
+    print('this is validations')
+    return value + '555'

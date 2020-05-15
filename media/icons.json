@@ -273,5 +273,13 @@
     "name": "default-property.svg",
     "feature": true,
     "tourism": true
+  },
+  {
+    "name": "red_cross.svg",
+    "vip_type": true
+  },
+  {
+    "name": "tamin_ejtemaei.svg",
+    "vip_type": true
   }
 ]

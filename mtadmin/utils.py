@@ -11,6 +11,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMix
 from django.views import View
 import pysnooper
 from server.utils import res_code
+from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
 
 rolls = ['superuser', 'backup', 'admin', 'accountants']
 
@@ -110,7 +111,90 @@ def assign_default_value(product_id):
     Product.objects.filter(pk=product_id).update(default_storage=min(storages, key=attrgetter('discount_price')))
 
 
+def get_m2m_fields(model, data):
+    m2m = {}
+    custom_m2m = {}
+    remove_fields = {}
+    for item in model.m2m:
+        try:
+            m2m[item] = data.pop(item)
+        except KeyError:
+            continue
+    for item in model.custom_m2m:
+        try:
+            custom_m2m[item] = data.pop(item)
+        except KeyError:
+            continue
+    for item in model.remove_fields:
+        try:
+            remove_fields[item] = data.pop(item)
+        except KeyError:
+            continue
+    return [data, m2m, custom_m2m, remove_fields]
+
+
 def create_object(request, model, box_key='box', return_item=False, serializer=None, error_null_box=True, data=None):
+    if not request.user.has_perm(f'server.add_{model.__name__.lower()}'):
+        raise PermissionDenied
+    data = data or get_data(request, require_box=error_null_box)
+    user = request.user
+    boxes = user.box_permission.all()
+    if box_key == 'product__box':
+        if not Product.objects.filter(pk=data['product_id'], box__in=boxes).exists():
+            raise PermissionDenied
+    data, m2m, custom_m2m, remove_fields = get_m2m_fields(model, data)
+    obj = model(**data, created_by=user, updated_by=user)
+    obj.save(**remove_fields)
+    [getattr(obj, field).set(m2m[field]) for field in model.m2m]
+    for field in custom_m2m:
+        add_custom_m2m(obj, field, custom_m2m[field])
+    if return_item:
+        request.GET._mutable = True
+        request.GET['id'] = obj.pk
+        items = serialized_objects(request, model, single_serializer=serializer, box_key=box_key,
+                                   error_null_box=error_null_box)
+        return JsonResponse(items, status=201)
+    return JsonResponse({'id': obj.pk}, status=201)
+
+
+def add_custom_m2m(obj, field, item_list):
+    getattr(obj, field).clear()
+    many_to_many_model = obj.custom_m2m[field]
+    extra_fields = {obj.__class__.__name__.lower(): obj}
+    items = [many_to_many_model(**item, **extra_fields) for item in item_list]
+    many_to_many_model.objects.bulk_create(items)
+
+
+def update_object(request, model, box_key='box', return_item=False, serializer=None, data=None, require_box=True):
+    if not request.user.has_perm(f'server.change_{model.__name__.lower()}'):
+        raise PermissionDenied
+    print(data)
+    # data = get_data(request)
+    data = data or json.loads(request.body)
+    data, m2m, custom_m2m, remove_fields = get_m2m_fields(model, data)
+    pk = data['id']
+    box_check = get_box_permission(request.user, box_key) if require_box else {}
+    items = model.objects.filter(pk=pk, **box_check)
+    print(data)
+    items.update(**data, remove_fields=remove_fields)
+    [getattr(items.first(), field).set(m2m[field]) for field in m2m]
+    for field in custom_m2m:
+        add_custom_m2m(items.first(), field, custom_m2m[field])
+    try:
+        if items.first().disable is False:
+            items.first().full_clean()
+    except AttributeError:
+        pass
+    if return_item:
+        request.GET._mutable = True
+        request.GET['id'] = items.first().pk
+        items = serialized_objects(request, model, single_serializer=serializer, error_null_box=require_box)
+        return JsonResponse({"data": items}, status=res_code['updated'])
+    return JsonResponse({}, status=res_code['updated'])
+
+
+def create_object_old(request, model, box_key='box', return_item=False, serializer=None, error_null_box=True,
+                      data=None):
     if not request.user.has_perm(f'server.add_{model.__name__.lower()}'):
         raise PermissionDenied
     data = data or get_data(request, require_box=error_null_box)
@@ -127,7 +211,6 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
             data.pop(item)
         except KeyError:
             continue
-    print(data)
     if model == Product:
         if data.get('type'):
             data['type'] = {'service': 1, 'product': 2, 'tourism': 3, 'package': 4, 'package_item': 5}[data['type']]
@@ -154,7 +237,8 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
             dper = int(100 - item['discount_price'] / obj.final_price * 100)
             vip_prices = [VipPrice(vip_type_id=item['vip_type_id'], discount_price=item['discount_price'],
                                    max_count_for_sale=item['max_count_for_sale'], discount_percent=dper,
-                                   available_count_for_sale=item['available_count_for_sale'], storage_id=obj.pk) for item in
+                                   available_count_for_sale=item['available_count_for_sale'], storage_id=obj.pk) for
+                          item in
                           m2m['vip_price']]
             VipPrice.objects.bulk_create(vip_prices)
         if 'features' in m2m:
@@ -174,7 +258,7 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
     return JsonResponse({'id': obj.pk}, status=201)
 
 
-def update_object(request, model, box_key='box', return_item=False, serializer=None, data=None, require_box=True):
+def update_object_old(request, model, box_key='box', return_item=False, serializer=None, data=None, require_box=True):
     if not request.user.has_perm(f'server.change_{model.__name__.lower()}'):
         raise PermissionDenied
     # data = get_data(request)
@@ -275,3 +359,4 @@ def get_table_filter(table, box):
     list_filter = schema.list_filter
     filters = [get_model_filter(model, box) for model in list_filter]
     return filters
+

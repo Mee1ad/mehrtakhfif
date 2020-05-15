@@ -111,17 +111,8 @@ class ProductView(TableView):
             params['filter'].pop('type__in')
             params['filter']['type__in'] = types2
         return JsonResponse(serialized_objects(request, Product, ProductASchema, ProductESchema, params=params))
-    @pysnooper.snoop()
+
     def post(self, request):
-        data = json.loads(request.body)
-        m2m = {}
-        for field in Product.m2m:
-            m2m[field] = data.pop(field)
-        user = request.user
-        product = Product.objects.create(**data, created_by=user, updated_by=user)
-        [getattr(product, field).set(m2m[field]) for field in Product.m2m]
-        print(product.is_valid())
-        return JsonResponse({'m': 'done'}, status=400)
         return create_object(request, Product, ProductESchema)
 
     def put(self, request):
