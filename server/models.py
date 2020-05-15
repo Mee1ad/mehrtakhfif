@@ -184,7 +184,7 @@ class MyQuerySet(SafeDeleteQueryset):
     def storage_validation(self, **kwargs):
         storage = self.first()
         kwargs = storage.pre_process(kwargs)
-        storage.post_process(kwargs['remove_fields'])
+        storage.post_process(kwargs.get('remove_fields', None))
         return kwargs
 
     def product_validation(self, **kwargs):
@@ -606,7 +606,7 @@ class Product(Base):
     prefetch = ['tags', 'media']
     filter = {"verify": True, "disable": False}
 
-    required_fields = ['thumbnail']
+    required_fields = ['thumbnail', 'description']
     related_fields = []
     remove_fields = []
     m2m = ['categories', 'tags', 'media']
