@@ -401,12 +401,16 @@ def sync_storage(basket_id, op):
     for basket_product in basket_products:
         storage = basket_product.storage
         count = basket_product.count
-        storage.available_count = op(F('available_count'), count)
-        storage.available_count_for_sale = op(F('available_count_for_sale'), count)
+        # storage.available_count = op(F('available_count'), count)
+        storage.available_count = op(storage.available_count, count)
+        # storage.available_count_for_sale = op(F('available_count_for_sale'), count)
+        storage.available_count_for_sale = op(storage.available_count_for_sale, count)
         if op == sub:
-            storage.sold_count = add(F('sold_count'), count)
+            # storage.sold_count = add(F('sold_count'), count)
+            storage.sold_count = add(storage.sold_count, count)
         if op == add:
-            storage.sold_count = sub(F('sold_count'), count)
+            # storage.sold_count = sub(F('sold_count'), count)
+            storage.sold_count = sub(storage.sold_count, count)
 
         storage.save()
 
