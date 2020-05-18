@@ -173,11 +173,13 @@ class MyQuerySet(SafeDeleteQueryset):
                 if storage.product.storages.count() <= 1:
                     storage.product.disable = True
                 # storage.related_packages.update(package__disable=True)
-                storage.cascade_disabling(storage)
+                # todo fix
+                # storage.cascade_disabling(storage)
         elif model == 'product':
             product = self.first()
             storages = product.storages.all()
-            storages.first().cascade_disabling(storages)
+            # todo fix
+            # storages.first().cascade_disabling(storages)
         return is_updated
 
     def category_validation(self, **kwargs):
