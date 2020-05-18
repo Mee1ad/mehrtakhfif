@@ -1,5 +1,5 @@
 from server.utils import *
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseBadRequest
 from mehr_takhfif.settings import TOKEN_SALT, DEBUG
 import pysnooper
 from django.db.models import F
@@ -62,7 +62,7 @@ class BasketView(LoginRequired):
                 storage = basket_product.first().storage
                 if not (storage.available_count_for_sale >= count and storage.max_count_for_sale >= count and \
                         storage.available_count_for_sale > 0 or not storage.disable):
-                    raise ValidationError('')
+                    return HttpResponseBadRequest()
                 basket_product.update(count=count)
             except AttributeError:
                 box = Storage.objects.get(pk=pk).product.box
