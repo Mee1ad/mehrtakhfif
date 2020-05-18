@@ -187,7 +187,7 @@ class Snapshot(AdminView):
 
 class Icon(AdminView):
     def get(self, request, key):
-        with open("media/icons.json", "r") as read_file:
+        with open("icons.json", "r") as read_file:
             icons = json.load(read_file)
         if key == 'all':
             return JsonResponse({'data': icons})
@@ -202,5 +202,5 @@ class Icon(AdminView):
         icon_list = []
         for i in icons:
             icon_list.append({'name': i, 'feature': True})
-        with open("media/icons.json", "w") as read_file:
+        with open("icons.json", "w") as read_file:
             json.dump(icon_list, read_file)
