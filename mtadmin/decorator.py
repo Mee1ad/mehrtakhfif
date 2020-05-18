@@ -21,7 +21,6 @@ def error_handler(func):
         except ActivationError as e:
             return JsonResponse({'error': str(e)}, status=res_code['activation_warning'])
         except ValidationError as e:
-            print('in errore')
             non_field_errors = e.message_dict[NON_FIELD_ERRORS][0]
             return JsonResponse({'error': non_field_errors}, status=res_code['bad_request'])
         except PermissionDenied:
