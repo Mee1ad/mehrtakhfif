@@ -49,6 +49,7 @@ class BasketView(LoginRequired):
         except (AssertionError, Basket.DoesNotExist):
             return JsonResponse(default_response['bad'], status=400)
 
+    @pysnooper.snoop()
     def add_to_basket(self, basket, products):
         # {"id": 1, "count": 5, "features": [{"fsid": 16, "fvid": [1, 2]}]}
         for product in products:
@@ -59,9 +60,9 @@ class BasketView(LoginRequired):
                 basket_product = BasketProduct.objects.filter(basket=basket, storage_id=pk, features=features). \
                     select_related('storage')
                 storage = basket_product.first().storage
-                assert storage.available_count_for_sale >= count and storage.max_count_for_sale >= count and \
-                    storage.available_count_for_sale > 0 or not storage.disable
-                basket_product.update(count=count)
+                if not (storage.available_count_for_sale >= count and storage.max_count_for_sale >= count and \
+                        storage.available_count_for_sale > 0 or not storage.disable):
+                    basket_product.update(count=count)
             except AttributeError:
                 box = Storage.objects.get(pk=pk).product.box
                 basket_product = BasketProduct(basket=basket, storage_id=pk, count=count, box=box, features=features)
