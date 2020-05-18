@@ -70,7 +70,7 @@ class BasketView(LoginRequired):
                 basket_product.validation()
                 storage = basket_product.storage
                 if not (storage.available_count_for_sale >= count and storage.max_count_for_sale >= count and \
-                        storage.available_count_for_sale > 0 or not storage.disable):
+                        storage.available_count_for_sale > 0 and not storage.disable):
                     raise ValidationError('متاسفانه امکان افزودن این محصول به سبد خرید وجود ندارد')
                 basket_product.save()
 

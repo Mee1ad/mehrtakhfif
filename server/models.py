@@ -173,12 +173,12 @@ class MyQuerySet(SafeDeleteQueryset):
                 if storage.product.storages.count() <= 1:
                     storage.product.disable = True
                 # storage.related_packages.update(package__disable=True)
-                # todo fix
+                # todo fix in add product
                 # storage.cascade_disabling(storage)
         elif model == 'product':
             product = self.first()
             storages = product.storages.all()
-            # todo fix
+            # todo fix in add product
             # storages.first().cascade_disabling(storages)
         return is_updated
 
