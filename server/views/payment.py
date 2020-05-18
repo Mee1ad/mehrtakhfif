@@ -15,10 +15,7 @@ import json
 import zeep
 
 from django.core.exceptions import ValidationError
-import random
-import string
-
-from mehr_takhfif.settings import INVOICE_ROOT, SHORTLINK, STATIC_ROOT
+from mehr_takhfif.settings import INVOICE_ROOT, SHORTLINK, STATIC_ROOT, DEBUG
 
 ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'disable': False},
                 {'id': 2, 'key': 'melli', 'name': 'ملی', 'hide': True, 'disable': True},
@@ -32,7 +29,7 @@ ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'dis
 bp = {'terminal_id': 5290645, 'username': "takh252", 'password': "71564848",
       'ipg_url': "https://bpm.shaparak.ir/pgwchannel/startpay.mellat",
       'callback': 'https://api.mehrtakhfif.com/payment/callback'}  # mellat
-# client = zeep.Client(wsdl="https://bpm.shaparak.ir/pgwchannel/services/pgw?wsdl")
+client = zeep.Client(wsdl="https://bpm.shaparak.ir/pgwchannel/services/pgw?wsdl")
 
 saddad = {'merchant_id': None, 'terminal_id': None, 'terminal_key': None,
           'payment_request': 'https://sadad.shaparak.ir/VPG/api/v0/Request/PaymentRequest',
@@ -71,9 +68,9 @@ class PaymentRequest(View):
         invoice = self.create_invoice(request)
         self.reserve_storage(basket, invoice)
         self.submit_invoice_storages(invoice.pk)
-        # res = {"url": f"{bp['ipg_url']}?RefId={self.behpardakht_api(invoice.pk)}"}
-        # todo debug
-        res = {"url": f"{bp['ipg_url']}?RefId=12345"}
+        res = {"url": f"{bp['ipg_url']}?RefId={self.behpardakht_api(invoice.pk)}"}
+        if DEBUG:
+            res = {"url": f"{bp['ipg_url']}?RefId=12345"}
         return JsonResponse(res)
 
     @pysnooper.snoop()
@@ -96,11 +93,11 @@ class PaymentRequest(View):
         additional_data = ';'.join(','.join(str(x) for x in b) for b in additional_data)
         additional_data += f';1,{basket.summary["mt_profit"]}, 0'
 
-        # todo debug
-        additional_data = '1,100,0;2,100,0'
-        invoice = type('BasketProduct', (), {})()
-        invoice.amount = 200
-        invoice.id = invoice_id
+        if DEBUG:
+            additional_data = '1,100,0;2,100,0'
+            invoice = type('BasketProduct', (), {})()
+            invoice.amount = 200
+            invoice.id = invoice_id
 
         local_date = timezone.now().strftime("%Y%m%d")
         local_time = pytz.timezone("Iran").localize(datetime.now()).strftime("%H%M%S")

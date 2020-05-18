@@ -43,7 +43,7 @@ class FilterDetail(View):
         prices = products.aggregate(max=Max('default_storage__discount_price'),
                                     min=Min('default_storage__discount_price'))
         # categories = [product.category for product in products.order_by('category_id').distinct('category_id')]
-        categories = Category.objects.filter(pk__in=list(filter(None, set(products.values_list('category', flat=True)))))
+        categories = Category.objects.filter(pk__in=list(filter(None, set(products.values_list('categories', flat=True)))))
         categories = get_categories(request.lang, categories=categories)
         brands = [product.brand for product in products.order_by('brand_id').distinct('brand_id') if product.brand]
         return JsonResponse({'max_price': prices['max'], 'min_price': prices['min'], **res,
@@ -53,6 +53,7 @@ class FilterDetail(View):
 class Filter(View):
     def get(self, request):
         params = filter_params(request.GET, request.lang)
+        print(params)
         query = Q(verify=True, **params['filter'])
         if params['related']:
             query = Q(verify=True, **params['filter']) | Q(verify=True, **params['related'])

@@ -165,7 +165,20 @@ class MyQuerySet(SafeDeleteQueryset):
         # noinspection PyArgumentList
         kwargs = validations[model](**kwargs)
         [kwargs.pop(item, None) for item in remove_list]
-        return super().update(**kwargs)
+        is_updated = super().update(**kwargs)
+        if model == 'storage':
+            storage = self.first()
+            storage.update_price()
+            if kwargs.get('disable') is True:
+                if storage.product.storages.count() <= 1:
+                    storage.product.disable = True
+                # storage.related_packages.update(package__disable=True)
+                storage.cascade_disabling(storage)
+        elif model == 'product':
+            product = self.first()
+            storages = product.storages.all()
+            storages.first().cascade_disabling(storages)
+        return is_updated
 
     def category_validation(self, **kwargs):
         category = self.first()
@@ -277,6 +290,13 @@ class Base(SafeDeleteModel):
     def make_item_disable(self, obj):
         obj.__class__.objects.filter(pk=obj.pk).update(disable=True)
 
+    def cascade_disabling(self, storages=None):
+        if type(storages) != list and storages is not None:
+            storages = [storages]
+        for storage in storages:
+            package_records = storage.related_packages.all()
+            for package_record in package_records:
+                Storage.objects.filter(pk=package_record.package_id).update(disable=True)
 
 class User(AbstractUser):
 
@@ -284,7 +304,7 @@ class User(AbstractUser):
         return self.username
 
     def clean(self):
-        print()
+        pass
 
     def save(self, *args, **kwargs):
         # self.full_clean()
@@ -482,8 +502,10 @@ class Category(Base):
 
     def clean(self):
         if not self.products.all():
+            self.make_item_disable(self)
             raise ActivationError(get_activation_warning_msg('محصولات'))
         if self.parent is None and self.permalink is None:
+            self.make_item_disable(self)
             raise ActivationError('این دسته بندی که ساختی بدرد نمیخوره')
         super().clean()
 
@@ -615,12 +637,14 @@ class Product(Base):
 
     def pre_process(self, my_dict):
         if my_dict.get('type'):
-            my_dict['type'] = {'service': 1, 'product': 2,'tourism': 3,'package': 4, 'package_item': 5}[my_dict['type']]
+            my_dict['type'] = {'service': 1, 'product': 2, 'tourism': 3, 'package': 4, 'package_item': 5}[
+                my_dict['type']]
         return my_dict
 
     def clean(self):
         self.base_clean()
         if not self.storages.filter(disable=False):
+            self.make_item_disable(self)
             raise ActivationError(get_activation_warning_msg('انبار فعال'))
         super().clean()
 
@@ -746,13 +770,13 @@ class FeatureStorage(models.Model):
 
 class Package(Base):
     def __str__(self):
-        return self.package.get_name_fa()
+        return self.package.title['fa']
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
 
-    package = models.ForeignKey("Storage", on_delete=PROTECT, related_name="package")
-    package_item = models.ForeignKey("Storage", on_delete=PROTECT, related_name="package_item")
+    package = models.ForeignKey("Storage", on_delete=PROTECT, related_name="packages")
+    package_item = models.ForeignKey("Storage", on_delete=PROTECT, related_name="related_packages")
     count = models.PositiveSmallIntegerField(default=1)
 
     class Meta:
@@ -786,27 +810,39 @@ class Storage(Base):
     required_fields = ['supplier', 'dimensions']
     related_fields = []
     m2m = []
-    remove_fields = ['vip_prices']  # handle in post_process
-    custom_m2m = {'features': FeatureStorage, 'items': Package}
+    remove_fields = ['vip_prices', 'items']  # handle in post_process
+    custom_m2m = {'features': FeatureStorage}
     required_m2m = []
     fields = {'supplier': 'تامین کننده', 'dimensions': 'ابعاد'}
 
+    def full_clean(self, exclude=None, validate_unique=True):
+        if Package.objects.filter(package=self):
+            self.clean()
+        else:
+            super().full_clean(exclude=None, validate_unique=True)
+
     def clean(self):
-        self.base_clean()
-        if self.available_count < self.available_count_for_sale:
-            raise ActivationError(get_activation_warning_msg('موجودی انبار'))
-        if self.supplier and self.supplier.is_verify is False:
-            raise ActivationError(get_activation_warning_msg('تامین کننده'))
-        if (self.features_percent > 100 or self.discount_percent > 100) or (self.discount_price < self.start_price):
-            raise ActivationError(get_activation_warning_msg('درصد تخفیف'))
-        if self.disable is True and self.priority == '0':
-            raise ActivationError(get_activation_warning_msg('انبار پیش فرض'))
-        if self.deadline:
-            if self.deadline < timezone.now() and self.disable is False:
-                raise ActivationError(get_activation_warning_msg('ددلاین'))
-        if not self.dimensions.get('width') or not self.dimensions.get('height') or not self.dimensions.get('length')\
-                or not self.dimensions.get('weight'):
-            raise ActivationError(get_activation_warning_msg('ابعاد'))
+        if self.product.type != 4:
+            self.base_clean()
+            if self.available_count < self.available_count_for_sale:
+                raise ActivationError(get_activation_warning_msg('موجودی انبار'))
+            if self.supplier and self.supplier.is_verify is False:
+                raise ActivationError(get_activation_warning_msg('تامین کننده'))
+            if (self.features_percent > 100 or self.discount_percent > 100) or (self.discount_price < self.start_price):
+                raise ActivationError(get_activation_warning_msg('درصد تخفیف'))
+            if self.disable is True and self.priority == '0':
+                raise ActivationError(get_activation_warning_msg('انبار پیش فرض'))
+            if self.deadline:
+                if self.deadline < timezone.now() and self.disable is False:
+                    raise ActivationError(get_activation_warning_msg('ددلاین'))
+            if not self.dimensions.get('width') or not self.dimensions.get('height') or not self.dimensions.get(
+                    'length') \
+                    or not self.dimensions.get('weight'):
+                raise ActivationError(get_activation_warning_msg('ابعاد'))
+        else:
+            if Storage.objects.get(pk=self.pk).items.filter(disable=True):
+                self.make_item_disable(self)
+                raise ActivationError(get_activation_warning_msg('یکی از انبار ها'))
         super().clean()
 
     def __str__(self):
@@ -814,24 +850,13 @@ class Storage(Base):
 
     def pre_process(self, my_dict):
         [my_dict.pop(field, None) for field in self.remove_fields]
-        if my_dict.get('is_package'):
-            # {'is_package': True, 'items': [{'package_item_id':1, 'count': 5}, {'package_item_id':2, 'count': 10}]}
-            my_dict.pop('is_package', None)
-            package_items = [Package(**item) for item in my_dict.get('items')]
-            Package.objects.bulk_create(package_items)
-            my_dict['discount_price'] = 0
-            my_dict['final_price'] = 0
-            for package_item in package_items:
-                my_dict['discount_price'] += package_item.package_item.discount_price
-                my_dict['final_price'] += package_item.package_item.final_price
-            my_dict['discount_percent'] = int(100 - my_dict['discount_price'] / my_dict['final_price'] * 100)
-        my_dict['start_time'] = datetime.datetime.utcfromtimestamp(
-            my_dict.get('start_time') or timezone.now().timestamp()).replace(tzinfo=pytz.utc)
-        if my_dict.get('deadline', None):
+        if type(my_dict.get('start_time')) is int or type(my_dict.get('start_time')) is float:
+            my_dict['start_time'] = datetime.datetime.utcfromtimestamp(my_dict['start_time']).replace(tzinfo=pytz.utc)
+        if type(my_dict.get('deadline', None)) is int or type(my_dict.get('deadline')) is float:
             my_dict['deadline'] = datetime.datetime.utcfromtimestamp(my_dict['deadline']).replace(tzinfo=pytz.utc)
         if not my_dict.get('deadline', None):
             my_dict['deadline'] = None
-        if my_dict.get('tax_type'):
+        if type(my_dict.get('tax_type')) is str:
             my_dict['tax_type'] = {'has_not': 1, 'from_total_price': 2, 'from_profit': 3}[my_dict['tax_type']]
             my_dict['tax'] = {1: 0, 2: my_dict['discount_price'] * 0.09,
                               3: (my_dict['discount_price'] - my_dict['start_price']) * 0.09}[my_dict['tax_type']]
@@ -848,7 +873,8 @@ class Storage(Base):
         return my_dict
 
     def post_process(self, my_dict):
-        # todo item
+        if not my_dict:
+            return True
         if self.product.manage:
             self.product.assign_default_value()
         if my_dict.get('vip_prices', None):
@@ -862,6 +888,32 @@ class Storage(Base):
                                        'available_count_for_sale'), storage_id=self.pk) for item in
                           my_dict.get('vip_prices')]
             VipPrice.objects.bulk_create(vip_prices)
+        if self.product.type == 4:  # package
+            # {'is_package': True, 'items': [{'package_item_id':1, 'count': 5}, {'package_item_id':2, 'count': 10}]}
+            user = self.created_by
+            package_items = [Package(**item, created_by=user, updated_by=user, package=self) for item in
+                             my_dict.get('items')]
+            Package.objects.bulk_create(package_items)
+            self.discount_price = 0
+            self.final_price = 0
+            for package_item in package_items:
+                self.discount_price += package_item.package_item.discount_price * package_item.count
+                self.final_price += package_item.package_item.final_price * package_item.count
+            self.discount_percent = int(100 - self.discount_price / self.final_price * 100)
+            self.save()
+
+    def update_price(self):
+        packages = self.related_packages.all()
+        for package in packages:
+            package = package.package
+            package_records = Package.objects.filter(package=package)
+            package.discount_price = 0
+            package.final_price = 0
+            for package_record in package_records:
+                package.discount_price += package_record.package_item.discount_price * package_record.count
+                package.final_price += package_record.package_item.final_price * package_record.count
+            package.discount_percent = int(100 - package.discount_price / package.final_price * 100)
+            package.save()
 
     def save(self, *args, **kwargs):
         self.__dict__ = self.pre_process(self.__dict__)
@@ -873,32 +925,32 @@ class Storage(Base):
     features = models.ManyToManyField(Feature, through='FeatureStorage', related_query_name="features")
     items = models.ManyToManyField("self", through='Package', symmetrical=False)
     features_percent = models.PositiveSmallIntegerField(default=0)
-    available_count = models.PositiveIntegerField(verbose_name='Available count')
+    available_count = models.PositiveIntegerField(default=0, verbose_name='Available count')
     sold_count = models.PositiveIntegerField(default=0, verbose_name='Sold count')
-    start_price = models.PositiveIntegerField(verbose_name='Start price')
-    final_price = models.PositiveIntegerField(verbose_name='Final price')
-    discount_price = models.PositiveIntegerField(verbose_name='Discount price')
+    start_price = models.PositiveIntegerField(default=0, verbose_name='Start price')
+    final_price = models.PositiveIntegerField(default=0, verbose_name='Final price')
+    discount_price = models.PositiveIntegerField(default=0, verbose_name='Discount price')
     transportation_price = models.PositiveIntegerField(default=0)
-    available_count_for_sale = models.PositiveIntegerField(verbose_name='Available count for sale')
+    available_count_for_sale = models.PositiveIntegerField(default=0, verbose_name='Available count for sale')
     max_count_for_sale = models.PositiveSmallIntegerField(default=1)
     min_count_alert = models.PositiveSmallIntegerField(default=5)
     priority = models.PositiveSmallIntegerField(default=0)
-    tax_type = models.PositiveSmallIntegerField(
-        choices=[(1, 'has_not'), (2, 'from_total_price'), (3, 'from_profit')])
+    tax_type = models.PositiveSmallIntegerField(default=0,  # turn to int in pre process
+                                                choices=[(1, 'has_not'), (2, 'from_total_price'), (3, 'from_profit')])
     tax = models.PositiveIntegerField(default=0)
-    discount_percent = models.PositiveSmallIntegerField(verbose_name='Discount price percent')
+    discount_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount price percent')
     package_discount_price = models.PositiveSmallIntegerField(default=0)
     gender = models.BooleanField(blank=True, null=True)
     disable = models.BooleanField(default=True)
     deadline = models.DateTimeField(null=True, blank=True)
-    start_time = models.DateTimeField()
+    start_time = models.DateTimeField(auto_now_add=True)
     title = JSONField(default=multilanguage)
     supplier = models.ForeignKey(User, on_delete=PROTECT, null=True, blank=True)
     invoice_description = JSONField(default=multilanguage)
     invoice_title = JSONField(default=multilanguage)
     vip_prices = models.ManyToManyField(VipType, through='VipPrice', related_name="storages")
     dimensions = JSONField(help_text="{'weight': '', 'height: '', 'width': '', 'length': ''}",
-                           validators=[validate_vip_price])
+                           validators=[validate_vip_price], default=dict)
 
     class Meta:
         db_table = 'storage'
@@ -1037,7 +1089,7 @@ class Invoice(Base):
     sync_task = models.ForeignKey(PeriodicTask, on_delete=CASCADE, null=True, blank=True,
                                   related_name='invoice_sync_task')
     email_task = models.ForeignKey(PeriodicTask, on_delete=CASCADE, null=True, blank=True)
-    basket = models.OneToOneField(to=Basket, on_delete=PROTECT, related_name='invoice_basket', null=True)
+    basket = models.ForeignKey(to=Basket, on_delete=PROTECT, related_name='invoice_basket', null=True)
     storages = models.ManyToManyField(Storage, through='InvoiceStorage')
     payed_at = models.DateTimeField(blank=True, null=True, verbose_name='Payed at')
     special_offer_id = models.BigIntegerField(blank=True, null=True, verbose_name='Special offer id')

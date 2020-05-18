@@ -125,9 +125,9 @@ def filter_params(params, lang):
     max_price = params.get('max_price', None)
     if box_permalink:
         try:
-            filters['related'] = {'category__in': Category.objects.filter(box__permalink=box_permalink,
-                                                                          permalink=None).values_list('parent_id',
-                                                                                                      flat=True)}
+            filters['related'] = {'categories__in': Category.objects.filter(box__permalink=box_permalink,
+                                                                            permalink=None).values_list('parent_id',
+                                                                                                        flat=True)}
             filters['filter']['box'] = Box.objects.get(permalink=box_permalink)
         except Box.DoesNotExist:
             pass

@@ -46,6 +46,12 @@ class StorageField(fields.Field):
         return StorageESchema().dump(storages, many=True)
 
 
+class PackegeItemsField(fields.Field):
+    def _serialize(self, value, attr, obj, **kwargs):
+        items = Package.objects.filter(package_id=obj)
+        return PackageItemASchema().dump(items, many=True)
+
+
 # Serializer
 class BaseAdminSchema(Schema):
     """
@@ -247,7 +253,7 @@ class StorageESchema(StorageASchema):
     class Meta:
         additional = StorageASchema.Meta.additional + StorageSchema.Meta.additional + \
                      ('features_percent', 'available_count', 'invoice_description',
-                      'invoice_title', 'dimensions')
+                      'invoice_title', 'dimensions', 'package_discount_price')
 
     supplier = fields.Function(lambda o: UserSchema().dump(o.supplier))
     features = FeatureField()
@@ -258,8 +264,6 @@ class StorageESchema(StorageASchema):
     vip_prices = VipPriceField()
 
 
-
-
 class PackageASchema(StorageESchema):
     items = PackegeItemsField()
     discount_price = fields.Int()
@@ -268,7 +272,17 @@ class PackageASchema(StorageESchema):
 
 class PackageItemASchema(BaseAdminSchema):
     count = fields.Int()
-    title = fields.Method("get_item_title")
+    # title = fields.Method("get_item_title")
+    product = fields.Method('get_package_item')
+
+    def get_package_item(self, obj):
+        try:
+            storage = Storage.objects.get(pk=obj.package_item_id)
+            product = storage.product
+            product.default_storage = storage
+            return ProductESchema().dump(product)
+        except Exception:
+            return None
 
     def get_item_title(self, obj):
         try:

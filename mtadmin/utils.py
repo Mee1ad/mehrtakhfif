@@ -181,7 +181,8 @@ def update_object(request, model, box_key='box', return_item=False, serializer=N
     for field in custom_m2m:
         add_custom_m2m(items.first(), field, custom_m2m[field])
     try:
-        if items.first().disable is False:
+        item = items.first()
+        if item.disable is False:
             items.first().full_clean()
     except AttributeError:
         pass
