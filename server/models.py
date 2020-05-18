@@ -132,9 +132,9 @@ def is_list_of_dict(data):
         for d in data:
             if type(d) is dict:
                 continue
-            raise ValidationError('list item is not dict')
+            raise ValidationError({'error': 'list item is not dict'})
         return True
-    raise ValidationError('data is not list')
+    raise ValidationError({'error': 'data is not list'})
 
 
 def default_meals():
@@ -145,7 +145,7 @@ def permalink_validation(permalink):
     pattern = '^[A-Za-z0-9\u0591-\u07FF\uFB1D-\uFDFD\uFE70-\uFEFC][A-Za-z0-9-\u0591-\u07FF\uFB1D-\uFDFD\uFE70-\uFEFC]*$'
     permalink = permalink
     if permalink and not re.match(pattern, permalink):
-        raise ValidationError("پیوند یکتا نامعتبر است")
+        raise ValidationError({'error': "پیوند یکتا نامعتبر است"})
     return permalink.lower()
 
 

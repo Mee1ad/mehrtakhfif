@@ -62,7 +62,7 @@ class BasketView(LoginRequired):
                 storage = basket_product.first().storage
                 if not (storage.available_count_for_sale >= count and storage.max_count_for_sale >= count and \
                         storage.available_count_for_sale > 0 or not storage.disable):
-                    return HttpResponseBadRequest()
+                    raise ValidationError('متاسفانه امکان افزودن این محصول به سبد خرید وجود ندارد')
                 basket_product.update(count=count)
             except AttributeError:
                 box = Storage.objects.get(pk=pk).product.box

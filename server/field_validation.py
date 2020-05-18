@@ -1,5 +1,6 @@
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
+import re
 
 
 def validate_vip_price(value):
@@ -16,7 +17,7 @@ def validate_product_type(value):
 def validate_permalink(value):
     pattern = '^[A-Za-z0-9\u0591-\u07FF\uFB1D-\uFDFD\uFE70-\uFEFC][A-Za-z0-9-\u0591-\u07FF\uFB1D-\uFDFD\uFE70-\uFEFC]*$'
     if value and not re.match(pattern, value):
-        raise ValidationError("پیوند یکتا نامعتبر است")
+        raise ValidationError({'error': "پیوند یکتا نامعتبر است"})
 
 
 def product_validation(self, **kwargs):
