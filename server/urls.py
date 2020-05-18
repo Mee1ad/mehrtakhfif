@@ -48,7 +48,7 @@ tourism = [
 ]
 
 shopping = [
-    path('basket', BasketView.as_view(), name='basket'),
+    path('basket', try_except(BasketView.as_view()), name='basket'),
     path('product', try_except(GetProducts.as_view()), name='product'),  # for anonymous users
     # path('show_codes', ShowCodes.as_view(), name='show_codes'),
 ]
