@@ -60,7 +60,7 @@ class BasketView(LoginRequired):
                     select_related('storage')
                 storage = basket_product.first().storage
                 assert storage.available_count_for_sale >= count and storage.max_count_for_sale >= count and \
-                    storage.available_count_for_sale > 0
+                    storage.available_count_for_sale > 0 or not storage.disable
                 basket_product.update(count=count)
             except AttributeError:
                 box = Storage.objects.get(pk=pk).product.box
