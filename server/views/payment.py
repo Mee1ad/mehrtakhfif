@@ -69,8 +69,8 @@ class PaymentRequest(View):
         self.reserve_storage(basket, invoice)
         self.submit_invoice_storages(invoice.pk)
         res = {"url": f"{bp['ipg_url']}?RefId={self.behpardakht_api(invoice.pk)}"}
-        if DEBUG:
-            res = {"url": f"{bp['ipg_url']}?RefId=12345"}
+        # if DEBUG:
+        #     res = {"url": f"{bp['ipg_url']}?RefId=12345"}
         return JsonResponse(res)
 
     @pysnooper.snoop()
@@ -108,10 +108,10 @@ class PaymentRequest(View):
                                                          amount=invoice.amount, additionalData=additional_data,
                                                          callBackUrl=bp['callback'])
 
-        if DEBUG:
-            return "test"
+        # if DEBUG:
+        #     return "test"
 
-        elif r[0:2] == "0,":
+        if r[0:2] == "0,":
             ref_id = r[2:]
             invoice.reference_id = ref_id
             invoice.save()
