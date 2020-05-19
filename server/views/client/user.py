@@ -29,12 +29,6 @@ class Test(View):
                             discount_price=choice([25000, 26000, 27000, 28000, 29000]),
                             max_count_for_sale=2, supplier_id=9)
                 s.save()
-            try:
-                storage = product.storages.first()
-                storage.title = product.name
-                storage.save()
-            except Exception:
-                pass
         return JsonResponse({"message": "Done"})
 
 
