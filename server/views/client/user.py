@@ -27,7 +27,7 @@ class Test(View):
                             start_price=choice([20000, 21000, 220000, 23000, 24000]),
                             final_price=choice([30000, 31000, 320000, 33000, 34000]),
                             discount_price=choice([25000, 26000, 27000, 28000, 29000]),
-                            max_count_for_sale=2, supplier_id=9)
+                            max_count_for_sale=2, supplier_id=9, created_by_id=9, updated_by_id=9)
                 s.save()
         return JsonResponse({"message": "Done"})
 
