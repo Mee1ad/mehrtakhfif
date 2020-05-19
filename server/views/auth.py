@@ -35,6 +35,7 @@ class SessionStore(OriginalSessionStore):
 
 
 class Login(View):
+    @pysnooper.snoop()
     def post(self, request):
         data = load_data(request, check_token=False)
         cookie_age = 30 * 60
@@ -62,6 +63,7 @@ class Login(View):
             login(request, user, backend='django.contrib.auth.backends.ModelBackend')
             res = {'user': UserSchema().dump(user)}
             basket = Basket.objects.filter(user=user).order_by('-id')
+            print(basket)
             res['basket_count'] = 0
             if basket.exists():
                 res['basket_count'] = basket.first().products.all().count()

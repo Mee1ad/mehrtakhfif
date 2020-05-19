@@ -117,7 +117,7 @@ class BaseSchema(Schema):
     def get_category(self, obj):
         if obj.categories.all():
             return CategorySchema(self.lang).dump(obj.categories.all(), many=True)
-        return None
+        return []
 
     def get_product(self, obj):
         if obj.product is not None:
@@ -257,7 +257,7 @@ class UserSchema(BaseSchema):
 
     def get_vip_type(self, obj):
         try:
-            return obj.vip_type.name
+            return obj.vip_types.all().value_List('name', flat=True)
         except Exception:
             return None
 

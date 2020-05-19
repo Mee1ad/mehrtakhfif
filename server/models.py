@@ -300,6 +300,7 @@ class Base(SafeDeleteModel):
             for package_record in package_records:
                 Storage.objects.filter(pk=package_record.package_id).update(disable=True)
 
+
 class User(AbstractUser):
 
     def __str__(self):
@@ -333,7 +334,7 @@ class User(AbstractUser):
     deposit_id = models.PositiveSmallIntegerField(null=True, blank=True)
     default_address = models.OneToOneField(to="Address", on_delete=SET_NULL, null=True, blank=True,
                                            related_name="user_default_address")
-    vip_type = models.ManyToManyField(to="VipType", related_name="users")
+    vip_types = models.ManyToManyField(to="VipType", related_name="users")
     box_permission = models.ManyToManyField("Box")
     email_verified = models.BooleanField(default=False, verbose_name='Email verified')
     subscribe = models.BooleanField(default=True)
@@ -789,7 +790,7 @@ class Package(Base):
 class VipPrice(models.Model):
 
     def __str__(self):
-        return f"{self.vip_type.name} - {self.storage.get_name_fa()}"
+        return f"{self.storage.title['fa']}"
 
     id = models.BigAutoField(auto_created=True, primary_key=True)
     vip_type = models.ForeignKey(VipType, on_delete=PROTECT)
@@ -1012,6 +1013,7 @@ class BasketProduct(models.Model):
     count = models.PositiveIntegerField(default=1)
     box = models.ForeignKey(Box, on_delete=PROTECT)
     features = JSONField(default=list)
+    vip_price = models.ForeignKey(to=VipPrice, on_delete=CASCADE, null=True, blank=True)
 
     class Meta:
         db_table = 'basket_product'
@@ -1140,8 +1142,8 @@ class InvoiceStorage(models.Model):
     final_price = models.PositiveIntegerField(verbose_name='Final price')
     discount_price = models.PositiveIntegerField(verbose_name='Discount price', default=0)
     discount_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount price percent')
-    vip_discount_price = models.PositiveIntegerField(verbose_name='Discount price', default=0)
-    vip_discount_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount price percent')
+    # vip_discount_price = models.PositiveIntegerField(verbose_name='Discount price', default=0)
+    # vip_discount_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount price percent')
     details = JSONField(null=True, help_text="package/storage/product details")
     features = JSONField(null=True)
 

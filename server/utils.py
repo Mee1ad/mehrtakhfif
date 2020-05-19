@@ -423,6 +423,11 @@ def add_one_off_job(name, args=None, kwargs=None, task='server.tasks.hello', int
     return task
 
 
+def get_vip_price(user, storage):
+    user_vip_groups = user.vip_types.all()
+    vip_prices = storage.vip_prices.all()
+
+
 # Security
 
 def get_access_token(user, model=None, pk=None, try_again=None):

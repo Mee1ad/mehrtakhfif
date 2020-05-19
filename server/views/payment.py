@@ -146,7 +146,6 @@ class PaymentRequest(View):
     def submit_invoice_storages(self, invoice_id):
         invoice = Invoice.objects.filter(pk=invoice_id).select_related(*Invoice.select).first()
         basket = get_basket(invoice.user, basket=invoice.basket, return_obj=True)
-        print(basket.basket_products)
         invoice_products = []
         for product in basket.basket_products:
             storage = product.storage
@@ -157,8 +156,7 @@ class PaymentRequest(View):
             invoice_products.append(
                 InvoiceStorage(storage=storage, invoice_id=invoice_id, count=product.count, tax=storage.tax,
                                final_price=storage.final_price, discount_price=storage.discount_price,
-                               discount_percent=storage.discount_percent, vip_discount_price=storage.vip_discount_price,
-                               vip_discount_percent=storage.vip_discount_percent, box=product.box))
+                               discount_percent=storage.discount_percent, box=product.box))
         task_name = f'{invoice.id}: cancel reservation'
         description = f'{timezone.now()}: canceled by system'
         PeriodicTask.objects.filter(name=task_name).update(enabled=False, description=description)
