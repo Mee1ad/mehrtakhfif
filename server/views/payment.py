@@ -79,6 +79,7 @@ class PaymentRequest(View):
         basket = get_basket(invoice.user, basket=invoice.basket, return_obj=True)
         additional_data = []
         for basket_product in basket.basket_products:
+            print(basket_product)
             try:
                 supplier = basket_product.supplier
             except AttributeError:
@@ -89,7 +90,7 @@ class PaymentRequest(View):
                     break
             else:
                 additional_data.append([supplier.deposit_id, basket_product.start_price, 0])
-        invoice.save()
+
         additional_data = ';'.join(','.join(str(x) for x in b) for b in additional_data)
         additional_data += f';1,{basket.summary["mt_profit"]}, 0'
 
@@ -107,7 +108,10 @@ class PaymentRequest(View):
                                                          amount=invoice.amount, additionalData=additional_data,
                                                          callBackUrl=bp['callback'])
 
-        if r[0:2] == "0,":
+        if DEBUG:
+            return "test"
+
+        elif r[0:2] == "0,":
             ref_id = r[2:]
             invoice.reference_id = ref_id
             invoice.save()
