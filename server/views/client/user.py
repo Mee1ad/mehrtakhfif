@@ -16,8 +16,27 @@ import jdatetime
 
 
 class Test(View):
+    @pysnooper.snoop()
     def get(self, request):
-        raise ValidationError('test')
+        invoice_id = 1
+        invoice = Invoice.objects.get(pk=invoice_id)
+        basket = get_basket(invoice.user, basket=invoice.basket, return_obj=True)
+        additional_data = []
+        for basket_product in basket.basket_products:
+            print(basket_product)
+            try:
+                supplier = basket_product.supplier
+            except AttributeError:
+                continue
+            for data in additional_data:
+                if supplier.deposit_id == data[0]:
+                    data[1] += basket_product.start_price
+                    break
+            else:
+                additional_data.append([supplier.deposit_id, basket_product.start_price, 0])
+
+        additional_data = ';'.join(','.join(str(x) for x in b) for b in additional_data)
+        additional_data += f';1,{basket.summary["mt_profit"]}, 0'
         return JsonResponse({"message": "Done"})
 
 
