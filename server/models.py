@@ -640,8 +640,11 @@ class Product(Base):
 
     def pre_process(self, my_dict):
         if my_dict.get('type'):
-            my_dict['type'] = {'service': 1, 'product': 2, 'tourism': 3, 'package': 4, 'package_item': 5}[
-                my_dict['type']]
+            try:
+                my_dict['type'] = {'service': 1, 'product': 2, 'tourism': 3, 'package': 4, 'package_item': 5}[
+                    my_dict['type']]
+            except KeyError:
+                pass
         return my_dict
 
     def clean(self):
