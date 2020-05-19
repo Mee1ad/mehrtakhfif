@@ -22,9 +22,12 @@ class Test(View):
     def get(self, request):
         products = Product.objects.filter(box_id=6)
         for product in products:
-            storage = product.storages.first()
-            storage.title = product.name
-            storage.save()
+            try:
+                storage = product.storages.first()
+                storage.title = product.name
+                storage.save()
+            except Exception:
+                pass
         return JsonResponse({"message": "Done"})
 
 
