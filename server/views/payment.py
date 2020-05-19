@@ -47,6 +47,7 @@ class IPG(View):
 
 
 class PaymentRequest(View):
+    @pysnooper.snoop()
     def get(self, request, basket_id):
         # return JsonResponse({"url": "http://api.mt.com/payment/callback"})
         # ipg_id = request.GET.get('ipg_id', 1)
@@ -92,7 +93,7 @@ class PaymentRequest(View):
                 additional_data.append([supplier.deposit_id, basket_product.start_price, 0])
 
         additional_data = ';'.join(','.join(str(x) for x in b) for b in additional_data)
-        additional_data += f';1,{basket.summary["mt_profit"]}, 0'
+        additional_data += f';1,{basket.summary["mt_profit"]},0'
 
         # if DEBUG:
         #     additional_data = '1,100,0;2,100,0'
