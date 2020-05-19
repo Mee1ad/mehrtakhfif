@@ -24,7 +24,7 @@ Content-Type: Application/json
 
 
 ### get payment: basket_id, ipg_id: default = 1
-GET {{host}}/payment/31?ipg_id=1
+GET {{host}}/payment/2
 
 ### for ipg
 POST {{host}}/callback

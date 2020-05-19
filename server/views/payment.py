@@ -117,7 +117,8 @@ class PaymentRequest(View):
             invoice.save()
             return ref_id
         else:
-            raise ValueError("can not get ipg page")
+            # raise ValueError("can not get ipg page")
+            raise ff
 
     @pysnooper.snoop()
     def create_invoice(self, request, basket=None):
