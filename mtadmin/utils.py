@@ -12,6 +12,8 @@ from django.views import View
 import pysnooper
 from server.utils import res_code
 from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
+from django.contrib.postgres.fields.jsonb import KeyTextTransform
+from django.contrib.postgres.search import SearchVector
 
 rolls = ['superuser', 'backup', 'admin', 'accountants']
 
@@ -37,12 +39,25 @@ def serialized_objects(request, model, serializer=None, single_serializer=None, 
     if not params:
         params = get_params(request, box_key)
     try:
+        print(params)
         if error_null_box and not params['filter'].get(box_key) and not params['filter'].get(box_key[:-3]):
             raise PermissionDenied
         query = model.objects.filter(**params['filter']).order_by(*params['order'])
         if params.get('aggregate', None):
             # todo tax
             pass
+        annotate_list = ['name__fa'] # http://localhost/admin/product?box_id=15&name__fa=نامیرا
+        common_items = list(set(params['filter']).intersection(annotate_list))
+        if common_items:
+            for item in common_items:
+                params['filter'][item + '__contains'] = params['filter'][item]
+                params['filter'].pop(item)
+            common_items = [item.split('__') for item in common_items]
+            annotate = {}
+            for index, item in enumerate(common_items):
+                annotate[item[0] + '__' + item[1]] = KeyTextTransform(item[1], item[0])
+            print(params['filter'])
+            query = model.objects.annotate(**annotate).filter(**params['filter']).order_by(*params['order'])
         return get_pagination(request, query, serializer, show_all=request.all)
     except (FieldError, ValueError):
         raise FieldError
@@ -352,7 +367,10 @@ def delete_object(request, model, pk):
 
 def get_model_filter(model, box):
     filter_list = model.objects.filter(**box).extra(select={'name': "name->>'fa'"}).values('id', 'name')
-    return {'name': model.__name__.lower(), 'filters': list(filter_list)}
+    name = model.__name__.lower()
+    if name == 'category':
+        name = 'categories'
+    return {'name': name, 'filters': list(filter_list)}
 
 
 def get_table_filter(table, box):

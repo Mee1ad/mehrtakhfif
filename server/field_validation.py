@@ -7,7 +7,7 @@ def validate_vip_price(value):
     keys = {'weight': 'وزن', 'height': 'ارتفاع', 'width': 'عرض', 'length': 'طول'}
     for key in keys:
         if key not in value:
-            raise ValidationError(_(f'لطفا {key} محصول را وارد نمایید'), code='invalid')
+            raise ValidationError(_(f'لطفا {key} محصول را وارد نمایید'))
 
 
 def validate_product_type(value):
@@ -17,7 +17,7 @@ def validate_product_type(value):
 def validate_permalink(value):
     pattern = '^[A-Za-z0-9\u0591-\u07FF\uFB1D-\uFDFD\uFE70-\uFEFC][A-Za-z0-9-\u0591-\u07FF\uFB1D-\uFDFD\uFE70-\uFEFC]*$'
     if value and not re.match(pattern, value):
-        raise ValidationError({'error': "پیوند یکتا نامعتبر است"})
+        raise ValidationError(_("پیوند یکتا نامعتبر است"))
 
 
 def product_validation(self, **kwargs):
@@ -27,7 +27,7 @@ def product_validation(self, **kwargs):
         pass
     if product.disable is False and (kwargs.get('thumbnail', '') is None or kwargs.get('media') is []
                                      or kwargs.get('tag') is [] or kwargs.get('category') is []):
-        raise ValidationError('محصول فعال است. برای اعمال تغییرات ابتدا محصول را غیرفعال نمایید')
+        raise ValidationError(_('محصول فعال است. برای اعمال تغییرات ابتدا محصول را غیرفعال نمایید'))
 
     if kwargs.get('storages_id', None):
         [Storage.objects.filter(pk=pk).update(priority=kwargs['storages_id'].index(pk), is_manage=True)
@@ -46,10 +46,10 @@ def product_validation(self, **kwargs):
             and kwargs.get('media') is not None:
         tags = Tag.objects.filter(pk__in=kwargs.get('tags', []))
         if not tags:
-            raise ValidationError('لطفا حداقل 3 تگ را انتخاب کنید')
+            raise ValidationError(_('لطفا حداقل 3 تگ را انتخاب کنید'))
         categories = Category.objects.filter(pk__in=kwargs.get('categories', []))
         if not categories:
-            raise ValidationError('لطفا دسته بندی را انتخاب کنید')
+            raise ValidationError(_('لطفا دسته بندی را انتخاب کنید'))
         product.tags.clear()
         product.tags.add(*tags)
         product.categories.clear()

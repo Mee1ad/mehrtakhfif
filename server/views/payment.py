@@ -16,6 +16,7 @@ import zeep
 
 from django.core.exceptions import ValidationError
 from mehr_takhfif.settings import INVOICE_ROOT, SHORTLINK, STATIC_ROOT, DEBUG
+from django.utils.translation import gettext_lazy as _
 
 ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'disable': False},
                 {'id': 2, 'key': 'melli', 'name': 'ملی', 'hide': True, 'disable': True},
@@ -55,7 +56,7 @@ class PaymentRequest(View):
 
         user = request.user
         if not Basket.objects.filter(pk=basket_id, user=user).exists():
-            raise ValidationError('سبد خرید نامعتبر است')
+            raise ValidationError(_('سبد خرید نامعتبر است'))
         try:
             invoice = Invoice.objects.get(user=user, basket_id=basket_id, status=1)
             assert invoice.expire >= timezone.now()
@@ -77,6 +78,9 @@ class PaymentRequest(View):
     @pysnooper.snoop()
     def behpardakht_api(self, invoice_id):
         invoice = Invoice.objects.get(pk=invoice_id)
+        if invoice.user.first_name is None or invoice.user.last_name is None or invoice.user.meli_code is None or \
+                invoice.user.username is None:
+            raise ValidationError(_('لطفا قبل از خرید پروفایل خود را تکمیل نمایید'))
         basket = get_basket(invoice.user, basket=invoice.basket, return_obj=True)
         additional_data = []
         for basket_product in basket.basket_products:
@@ -118,8 +122,7 @@ class PaymentRequest(View):
             invoice.save()
             return ref_id
         else:
-            # raise ValueError("can not get ipg page")
-            raise ff
+            raise ValueError(_("can not get ipg page"))
 
     @pysnooper.snoop()
     def create_invoice(self, request, basket=None):
@@ -190,7 +193,7 @@ class CallBack(View):
             return HttpResponseRedirect("https://mehrtakhfif.com")
         # todo https://memoryleaks.ir/unlimited-charge-of-mytehran-account/
         if not self.verify(invoice_id, ref_id):
-            raise ValidationError('پرداخت ناموفق بود')
+            raise ValidationError(_('پرداخت ناموفق بود'))
         invoice = Invoice.objects.get(pk=invoice_id, reference_id=data_dict['RefId'])
         invoice.status = 2
         invoice.payed_at = timezone.now()

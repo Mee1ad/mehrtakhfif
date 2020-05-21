@@ -25,8 +25,10 @@ import pytz
 from server.field_validation import *
 from mtadmin.exception import ActivationError
 from random import randint
+from django.utils.translation import gettext_lazy as _
 
 media_types = [(1, 'image'), (2, 'thumbnail'), (3, 'media'), (4, 'slider'), (5, 'ads'), (6, 'avatar')]
+product_types = [(1, 'service'), (2, 'product'), (3, 'tourism'), (4, 'package'), (5, 'package_item')]
 has_placeholder = [1, 2, 3, 4, 5]
 
 
@@ -132,9 +134,9 @@ def is_list_of_dict(data):
         for d in data:
             if type(d) is dict:
                 continue
-            raise ValidationError({'error': 'list item is not dict'})
+            raise ValidationError(_('list item is not dict'))
         return True
-    raise ValidationError({'error': 'data is not list'})
+    raise ValidationError(_('data is not list'))
 
 
 def default_meals():
@@ -145,7 +147,7 @@ def permalink_validation(permalink):
     pattern = '^[A-Za-z0-9\u0591-\u07FF\uFB1D-\uFDFD\uFE70-\uFEFC][A-Za-z0-9-\u0591-\u07FF\uFB1D-\uFDFD\uFE70-\uFEFC]*$'
     permalink = permalink
     if permalink and not re.match(pattern, permalink):
-        raise ValidationError({'error': "پیوند یکتا نامعتبر است"})
+        raise ValidationError(_("پیوند یکتا نامعتبر است"))
     return permalink.lower()
 
 
@@ -153,7 +155,7 @@ class MyQuerySet(SafeDeleteQueryset):
     _safedelete_visibility = DELETED_INVISIBLE
     _safedelete_visibility_field = 'pk'
     _queryset_class = SafeDeleteQueryset
-
+    @pysnooper.snoop()
     def update(self, *args, **kwargs):
         if not self:
             return True
@@ -166,7 +168,7 @@ class MyQuerySet(SafeDeleteQueryset):
         kwargs = validations[model](**kwargs)
         [kwargs.pop(item, None) for item in remove_list]
         is_updated = super().update(**kwargs)
-        if model == 'storage':
+        if model == 'storage' and self:
             storage = self.first()
             storage.update_price()
             if kwargs.get('disable') is True:
@@ -188,9 +190,9 @@ class MyQuerySet(SafeDeleteQueryset):
         pk = kwargs.get('id')
         parent_id = kwargs.get('parent_id')
         if (pk == parent_id and pk is not None) or Category.objects.filter(pk=parent_id, parent_id=pk).exists():
-            raise ValidationError("والد نامعتبر است")
+            raise ValidationError(_("والد نامعتبر است"))
         if not category.media and kwargs.get('disable') is False:
-            raise ValidationError('قبل از فعالسازی تصویر دسته بندی را مشخص کنید')
+            raise ValidationError(_('قبل از فعالسازی تصویر دسته بندی را مشخص کنید'))
         features = Feature.objects.filter(pk__in=kwargs.get('features', []))
         category.feature_set.clear()
         category.feature_set.add(*features)
@@ -416,7 +418,7 @@ class Address(models.Model):
 
     def validation(self):
         if not City.objects.filter(pk=self.city.pk, state=self.state).exists():
-            raise ValidationError('شهر یا استان نامعتبر است')
+            raise ValidationError(_('شهر یا استان نامعتبر است'))
 
     def save(self, *args, **kwargs):
         self.validation()
@@ -468,7 +470,7 @@ class Media(Base):
                 try:
                     width, height = im.size
                     if (width, height) != sizes[self.get_type_display()]:
-                        raise ValidationError('سایز عکس نامعتبر است')
+                        raise ValidationError(_('سایز عکس نامعتبر است'))
                 except KeyError as e:
                     print(e)
         except ValueError:
@@ -522,7 +524,7 @@ class Category(Base):
         if Category.objects.filter(pk=parent_id, parent_id=pk).exists():
             self.parent = None
             self.save()
-            raise ValidationError("والد نامعتبر است")
+            raise ValidationError(_("والد نامعتبر است"))
 
     def get_media(self):
         try:
@@ -553,7 +555,7 @@ class Feature(Base):
     def validation(self, kwargs):
         kwargs['type'] = {'bool': 1, 'single': 2, 'multi': 3}[kwargs.get('type', None)]
         if kwargs['type'] > 3:
-            raise ValidationError('invalid type')
+            raise ValidationError(_('invalid type'))
         return kwargs
 
     def save(self, *args, **kwargs):
@@ -692,6 +694,7 @@ class Product(Base):
     # def save(self):
     #     self.slug = slugify(self.title)
     #     super(Post, self).save()
+
     categories = models.ManyToManyField(Category, related_name="products")
     box = models.ForeignKey(Box, on_delete=PROTECT)
     brand = models.ForeignKey(Brand, on_delete=PROTECT, null=True, blank=True)
@@ -708,8 +711,7 @@ class Product(Base):
     verify = models.BooleanField(default=False)
     manage = models.BooleanField(default=True)
     reservable = models.BooleanField(default=False)
-    type = models.PositiveSmallIntegerField(choices=[(1, 'service'), (2, 'product'), (3, 'tourism'), (4, 'package'),
-                                                     (5, 'package_item')], validators=[validate_product_type])
+    type = models.PositiveSmallIntegerField(choices=product_types, validators=[validate_product_type])
     permalink = models.CharField(max_length=255, db_index=True, unique=True)
 
     name = JSONField(default=multilanguage)
@@ -839,7 +841,7 @@ class Storage(Base):
             if self.disable is True and self.priority == '0':
                 raise ActivationError(get_activation_warning_msg('انبار پیش فرض'))
             if self.deadline:
-                if self.deadline < timezone.now() and self.disable is False:
+                if self.deadline < timezone.now() and self.deadline and self.disable is False:
                     raise ActivationError(get_activation_warning_msg('ددلاین'))
             if not self.dimensions.get('width') or not self.dimensions.get('height') or not self.dimensions.get(
                     'length') \
@@ -997,14 +999,14 @@ class BasketProduct(models.Model):
                 item = Feature.objects.get(pk=item.feature_id)
                 ids = [v.get('id') for v in item.value]
                 if not set(feature['fvid']).issubset(ids):
-                    raise ValidationError('invalid feature_value_id')
+                    raise ValidationError(_('invalid feature_value_id'))
             except Feature.DoesNotExist:
-                raise ValidationError('invalid feature_id')
+                raise ValidationError(_('invalid feature_id'))
             except FeatureStorage.DoesNotExist:
-                raise ValidationError('invalid feature_storage_id')
+                raise ValidationError(_('invalid feature_storage_id'))
             except Exception as e:
                 print(e)
-                raise ValidationError('invalid data')
+                raise ValidationError(_('invalid data'))
 
     def save(self, *args, **kwargs):
         self.validation()
@@ -1059,7 +1061,7 @@ class Comment(Base):
 
     def validation(self):
         if self.rate > 10 or self.type > 2:
-            raise ValidationError('invalid value for rate or type')
+            raise ValidationError(_('invalid value for rate or type'))
 
     def save(self, *args, **kwargs):
         self.validation()
@@ -1100,7 +1102,7 @@ class Invoice(Base):
     storages = models.ManyToManyField(Storage, through='InvoiceStorage')
     payed_at = models.DateTimeField(blank=True, null=True, verbose_name='Payed at')
     special_offer_id = models.BigIntegerField(blank=True, null=True, verbose_name='Special offer id')
-    address = models.ForeignKey(to=Address, null=True, blank=True, on_delete=PROTECT)
+    address = models.TextField(max_length=255, blank=True, null=True)
     description = models.TextField(max_length=255, blank=True, null=True)
     amount = models.PositiveIntegerField()
     final_price = models.PositiveIntegerField()
@@ -1226,7 +1228,7 @@ class SpecialOffer(Base):
 
     def validation(self):
         if self.discount_percent > 100 or self.vip_discount_percent > 100:
-            raise ValidationError("درصد باید کوچکتر از 100 باشد")
+            raise ValidationError(_("درصد باید کوچکتر از 100 باشد"))
 
     def save(self, *args, **kwargs):
         self.validation()
@@ -1344,7 +1346,7 @@ class HousePrice(Base):
 
     def validation(self):
         if self.weekly_discount_percent > 100 or self.monthly_discount_percent > 100:
-            raise ValidationError("درصد باید کوچکتر از 100 باشد")
+            raise ValidationError(_("درصد باید کوچکتر از 100 باشد"))
 
     def save(self, *args, **kwargs):
         self.validation()

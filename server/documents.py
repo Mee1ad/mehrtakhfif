@@ -19,9 +19,9 @@ class ProductDocument(Document):
     # category_ar = fields.TextField(attr='get_category_ar')
 
     thumbnail = fields.TextField(attr='get_thumbnail')
-
-    def test(self):
-        return 'shit'
+    id = fields.IntegerField()
+    box_id = fields.IntegerField()
+    type = fields.TextField(attr='get_type_display')
 
     class Index:
         # Name of the Elasticsearch index

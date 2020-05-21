@@ -3,6 +3,7 @@ from django.http import JsonResponse, HttpResponseBadRequest
 from mehr_takhfif.settings import TOKEN_SALT, DEBUG
 import pysnooper
 from django.db.models import F
+from django.utils.translation import gettext_lazy as _
 
 
 class BasketView(LoginRequired):
@@ -62,7 +63,7 @@ class BasketView(LoginRequired):
                 storage = basket_product.first().storage
                 if not (storage.available_count_for_sale >= count and storage.max_count_for_sale >= count and \
                         storage.available_count_for_sale > 0 or not storage.disable):
-                    raise ValidationError('متاسفانه امکان افزودن این محصول به سبد خرید وجود ندارد')
+                    raise ValidationError(_('متاسفانه امکان افزودن این محصول به سبد خرید وجود ندارد'))
                 basket_product.update(count=count)
             except AttributeError:
                 box = Storage.objects.get(pk=pk).product.box
@@ -71,7 +72,7 @@ class BasketView(LoginRequired):
                 storage = basket_product.storage
                 if not (storage.available_count_for_sale >= count and storage.max_count_for_sale >= count and \
                         storage.available_count_for_sale > 0 and not storage.disable):
-                    raise ValidationError('متاسفانه امکان افزودن این محصول به سبد خرید وجود ندارد')
+                    raise ValidationError(_('متاسفانه امکان افزودن این محصول به سبد خرید وجود ندارد'))
                 basket_product.save()
 
         basket.count = basket.products.all().count()

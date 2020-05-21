@@ -8,6 +8,7 @@ import pysnooper
 from django.db.utils import IntegrityError
 from django.db.models import Sum
 import json
+from server.documents import TagDocument
 
 
 class CategoryView(TableView):
@@ -261,22 +262,6 @@ class MenuView(TableView):
 
 class TagView(TableView):
     permission_required = 'server.view_tag'
-
-    def get(self, request):
-        pk = request.GET.get('id', None)
-        contain = request.GET.get('contain')
-        if pk:
-            obj = Tag.objects.get(pk=pk)
-            return JsonResponse({"data": TagASchema().dump(obj)})
-        try:
-            query = Tag.objects.annotate(new_name=SearchVector(KeyTextTransform(request.lang, 'name')), ). \
-                filter(new_name__contains=contain)
-            res = get_pagination(request, query, TagASchema, request.all)
-        except (FieldError, ValueError):
-            query = Tag.objects.all()
-            res = get_pagination(request, query, TagASchema, request.all)
-
-        return JsonResponse(res)
 
     def post(self, request):
         return create_object(request, Tag, box_key=None, return_item=True, serializer=TagASchema, error_null_box=False)

@@ -9,9 +9,12 @@ from django.core.exceptions import PermissionDenied
 
 from server.models import *
 from server.utils import res_code
+from django.core.exceptions import NON_FIELD_ERRORS
+import pysnooper
 
 
 def try_except(func):
+    @pysnooper.snoop()
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         try:
@@ -23,10 +26,7 @@ def try_except(func):
             return HttpResponseServerError()
         except ValidationError as e:
             try:
-                e = dict(e)
-                first_key = next(iter(e))
-                return JsonResponse({'type': 'validation', 'field': first_key, 'error': e[first_key][0]},
-                                    status=res_code['bad_request'])
+                return JsonResponse({'error': e.message}, status=res_code['bad_request'])
             except Exception:
                 return HttpResponseBadRequest()
         except (AssertionError, ObjectDoesNotExist, StopIteration, AttributeError, KeyError):

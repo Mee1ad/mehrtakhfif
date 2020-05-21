@@ -57,9 +57,9 @@ def validation(data):
                     raise AssertionError
         except AssertionError:
             try:
-                raise ValidationError(f'{fields[key]} نامعتبر است')
+                raise ValidationError(_(f'{fields[key]} نامعتبر است'))
             except KeyError:
-                raise ValidationError(f'{key} نامعتبر است')
+                raise ValidationError(_(f'{key} نامعتبر است'))
         except KeyError:
             pass
 

@@ -8,11 +8,12 @@ from django.utils.crypto import get_random_string
 import pysnooper
 from server.utils import *
 from django.contrib.auth import login
-from server.documents import SupplierDocument
+from server.documents import *
 import requests
 from mehr_takhfif.settings import ARVAN_API_KEY
 from time import sleep
 from os import listdir
+from elasticsearch_dsl import Q
 
 
 class Token(AdminView):
@@ -103,13 +104,36 @@ class CheckLoginToken(AdminView):
 
 
 class Search(AdminView):
-    def get(self, request):
-        q = request.GET.get('q', None)
-        model = request.GET.get('type', None)
-        switch = {'supplier': self.supplier}
-        return JsonResponse(switch[model](q))
 
-    def supplier(self, q):
+    def get(self, request):
+        params = dict(request.GET)
+        model = request.GET.get('type', None)
+        switch = {'supplier': self.supplier, 'tag': self.tag, 'product': self.product}
+        return JsonResponse(switch[model](**params))
+
+    def tag(self, q, **kwargs):
+        tags_id = []
+        s = TagDocument.search()
+        r = s.query("match", name_fa=q[0])
+        if r.count() == 0:
+            r = s.query("match_all")[:10]
+        [tags_id.append(tag.id) for tag in r]
+        tags = Tag.objects.in_bulk(tags_id)
+        tags = [tags[x] for x in tags_id]
+        return {'tags': TagASchema().dump(tags, many=True)}
+
+    def product(self, q, box_id, **kwargs):
+        product_types = kwargs.get('product_types[]', [])
+        products_id = []
+        s = ProductDocument.search()
+        type_query = Q('bool', should=[Q("match", type=product_type) for product_type in product_types])
+        r = s.query('match', box_id=box_id[0]).query(type_query).query('match', name_fa=q[0])
+        [products_id.append(product.id) for product in r]
+        products = Product.objects.in_bulk(products_id)
+        products = [products[x] for x in products_id]
+        return {'products': ProductESchema().dump(products, many=True)}
+
+    def supplier(self, q, **kwargs):
         items = []
         s = SupplierDocument.search()
         r = s.query("multi_match", query=q,

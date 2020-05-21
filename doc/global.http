@@ -28,3 +28,4 @@ http://localhost/box_with_category
 http://localhost/box_with_category?box_permalink=boom-gardi
 ###
 GET {{host}}/special_offer
+###
