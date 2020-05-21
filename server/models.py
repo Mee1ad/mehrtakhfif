@@ -1103,6 +1103,7 @@ class Invoice(Base):
     payed_at = models.DateTimeField(blank=True, null=True, verbose_name='Payed at')
     special_offer_id = models.BigIntegerField(blank=True, null=True, verbose_name='Special offer id')
     # address = JSONField(null=True, blank=True)
+    ##new
     description = models.TextField(max_length=255, blank=True, null=True)
     amount = models.PositiveIntegerField()
     final_price = models.PositiveIntegerField()
