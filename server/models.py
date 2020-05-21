@@ -1102,7 +1102,7 @@ class Invoice(Base):
     storages = models.ManyToManyField(Storage, through='InvoiceStorage')
     payed_at = models.DateTimeField(blank=True, null=True, verbose_name='Payed at')
     special_offer_id = models.BigIntegerField(blank=True, null=True, verbose_name='Special offer id')
-    address = models.TextField(max_length=255, blank=True, null=True)
+    address = JSONField(null=True, blank=True)
     description = models.TextField(max_length=255, blank=True, null=True)
     amount = models.PositiveIntegerField()
     final_price = models.PositiveIntegerField()
@@ -1116,6 +1116,7 @@ class Invoice(Base):
     status = models.PositiveSmallIntegerField(default=1, choices=((1, 'pending'), (2, 'payed'), (3, 'canceled'),
                                                                   (4, 'rejected')))
     suppliers = models.ManyToManyField(User, through="InvoiceSuppliers", related_name='invoice_supplier')
+    post_tracking_code = models.CharField(max_length=255, null=True, blank=True)
 
     class Meta:
         db_table = 'invoice'
@@ -1149,8 +1150,11 @@ class InvoiceStorage(models.Model):
     discount_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount price percent')
     # vip_discount_price = models.PositiveIntegerField(verbose_name='Discount price', default=0)
     # vip_discount_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount price percent')
+    deliver_status = models.PositiveSmallIntegerField(choices=[(1, 'pending'), (2, 'packing'), (3, 'sending'),
+                                                               (4, 'deliver')], default=1)
+
     details = JSONField(null=True, help_text="package/storage/product details")
-    features = JSONField(null=True)
+    features = JSONField(default=list)
 
     # todo change to invoice_storage
     class Meta:

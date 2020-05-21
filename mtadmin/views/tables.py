@@ -238,10 +238,13 @@ class InvoiceView(TableView):
 class InvoiceStorageView(TableView):
     permission_required = 'server.view_invoicestorage'
 
-    def get(self, request):
-        pk = request.GET.get('id', 0)
-        storages = InvoiceStorage.objects.filter(invoice_id=pk)
-        return JsonResponse({'data': InvoiceStorageSchema().dump(storages, many=True)})
+    def get(self, request, pk):
+        invoice = Invoice.objects.get(pk=pk)
+        storages = InvoiceStorage.objects.filter(invoice=invoice)
+        res = {'data': InvoiceStorageSchema().dump(storages, many=True),
+               'invoice': InvoiceESchema().dump(invoice),
+               'user': MinUserSchema().dump(invoice.user)}
+        return JsonResponse(res)
 
 
 class MenuView(TableView):
@@ -293,7 +296,11 @@ class SpecialProductView(TableView):
     permission_required = 'server.view_specialproduct'
 
     def get(self, request):
-        return JsonResponse(serialized_objects(request, SpecialProduct, SpecialProductASchema, SpecialProductESchema))
+        data = serialized_objects(request, SpecialProduct, SpecialProductASchema, SpecialProductESchema)
+        for index, item in enumerate(data['data']):
+            data['data'][index]['product']['default_storage'] = data['data'][index].pop('default_storage')
+            data['data'][index].pop('default_storage', None)
+        return JsonResponse(data)
 
     def post(self, request):
         return create_object(request, SpecialProduct)

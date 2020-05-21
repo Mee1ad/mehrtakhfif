@@ -130,7 +130,7 @@ class PaymentRequest(View):
         address = None
         basket = basket or get_basket(user, request.lang)
         if basket['address_required']:
-            address = user.default_address
+            address = AddressSchema().dump(user.default_address)
 
         invoice = Invoice.objects.create(created_by=user, updated_by=user, user=user,
                                          amount=basket['summary']['discount_price'],
@@ -165,7 +165,7 @@ class PaymentRequest(View):
             invoice_products.append(
                 InvoiceStorage(storage=storage, invoice_id=invoice_id, count=product.count, tax=storage.tax,
                                final_price=storage.final_price, discount_price=storage.discount_price,
-                               discount_percent=storage.discount_percent, box=product.box))
+                               discount_percent=storage.discount_percent, box=product.box, features=product.features))
         task_name = f'{invoice.id}: cancel reservation'
         description = f'{timezone.now()}: canceled by system'
         PeriodicTask.objects.filter(name=task_name).update(enabled=False, description=description)

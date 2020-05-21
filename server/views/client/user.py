@@ -79,11 +79,10 @@ class Orders(LoginRequired):
         pk = request.GET.get('id', None)
         if pk:
             try:
-                invoice_exists = Invoice.objects.get(pk=pk, user=request.user)
+                invoice = Invoice.objects.get(pk=pk, user=request.user)
             except Invoice.DoesNotExist:
                 return JsonResponse({}, status=404)
             products = InvoiceStorage.objects.filter(invoice_id=pk)
-            invoice = invoice_exists.first()
             address = AddressSchema().dump(invoice.address)
             products = InvoiceStorageSchema().dump(products, many=True)
             return JsonResponse({"products": products, 'address': address,

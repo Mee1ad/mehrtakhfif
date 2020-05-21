@@ -160,7 +160,8 @@ class InvoiceASchema(Schema):
     class Meta:
         additional = ('id', 'basket_id', 'amount', 'status', 'final_price')
 
-    user = fields.Function(lambda o: o.user.first_name + " " + o.user.last_name)
+    user = fields.Nested(MinUserSchema)
+    status = fields.Function(lambda o: o.get_status_display())
     created_at = fields.Function(lambda o: o.created_at.timestamp())
     payed_at = fields.Function(lambda o: o.payed_at.timestamp() if o.payed_at else None)
 
@@ -363,7 +364,7 @@ class TagASchema(TagSchema):
 
 class InvoiceProductSchema(Schema):
     class Meta:
-        additional = ('id', 'count', 'final_price', 'discount_price', 'tax')
+        additional = ('id', 'count', 'final_price', 'discount_price', 'tax', 'details')
 
 
 class MenuASchema(BaseAdminSchema):
@@ -382,8 +383,12 @@ class SpecialOfferESchema(SpecialOfferASchema, SpecialOfferSchema):
     pass
 
 
-class SpecialProductASchema(BaseAdminSchema):
-    pass
+class SpecialProductASchema(SpecialProductSchema):
+    product = fields.Method("get_product")
+    name = fields.Dict()
+
+    def get_product(self, obj):
+        return ProductASchema().dump(obj.storage.product)
 
 
 class SpecialProductESchema(SpecialProductASchema, SpecialProductSchema):

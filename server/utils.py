@@ -324,7 +324,7 @@ def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=Non
     if not basket_id:
         basket = basket or Basket.objects.filter(user=user).order_by('-id').first()
     if basket is None:
-        return {}
+        return {'basket': {}, 'summary': {}, 'address_required': False}
     basket_products = basket_products or BasketProduct.objects.filter(
         basket=basket).select_related(*BasketProduct.related)
     summary = {"total_price": 0, "discount_price": 0, "profit": 0, "mt_profit": 0, "shopping_cost": 0, "tax": 0}

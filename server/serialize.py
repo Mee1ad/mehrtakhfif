@@ -290,7 +290,7 @@ class UserSchema(BaseSchema):
 
 class AddressSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'province', 'postal_code', 'address', 'location', 'name', 'phone')
+        additional = ('id', 'postal_code', 'address', 'location', 'name', 'phone')
 
     city = fields.Method("get_city")
     state = fields.Method('get_state')
@@ -538,12 +538,12 @@ class InvoiceSchema(BaseSchema):
 class InvoiceStorageSchema(BaseSchema):
     class Meta:
         additional = ('count', 'discount_price', 'final_price', 'discount_percent', 'vip_discount_price',
-                      'vip_discount_percent', 'invoice_id', 'invoice_description')
+                      'vip_discount_percent', 'invoice_id', 'invoice_description', 'details')
 
     storage = fields.Method("get_storage")
     box = fields.Method("get_box")
     unit_price = fields.Function(lambda o: int(o.discount_price / o.count))
-    purchase_date = fields.Function(lambda o: o.invoice.payed_at.timestamp())
+    purchase_date = fields.Method('get_purchase_date')
     product = fields.Method("get_storage_product")
     user = fields.Function(lambda o: {"id": o.invoice.user_id, "first_name": o.invoice.user.first_name,
                                       "last_name": o.invoice.user.last_name})
@@ -566,6 +566,12 @@ class InvoiceStorageSchema(BaseSchema):
                    "invoice_title": storage.invoice_title[self.lang]}
 
         return storage
+
+    def get_purchase_date(self, obj):
+        try:
+            return obj.invoice.payed_at.timestamp()
+        except AttributeError:
+            return None
 
 
 class BlogSchema(BaseSchema):
