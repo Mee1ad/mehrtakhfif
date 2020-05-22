@@ -128,6 +128,8 @@ class Search(AdminView):
         s = ProductDocument.search()
         type_query = Q('bool', should=[Q("match", type=product_type) for product_type in product_types])
         r = s.query('match', box_id=box_id[0]).query(type_query).query('match', name_fa=q[0])
+        if r.count() == 0 and not q[0]:
+            r = s.query('match', box_id=box_id[0]).query(type_query).query('match_all')[:10]
         [products_id.append(product.id) for product in r]
         products = Product.objects.in_bulk(products_id)
         products = [products[x] for x in products_id]
@@ -136,7 +138,7 @@ class Search(AdminView):
     def supplier(self, q, **kwargs):
         items = []
         s = SupplierDocument.search()
-        r = s.query("multi_match", query=q,
+        r = s.query("multi_match", query=q[0],
                     fields=['first_name', 'last_name', 'username']).filter("term", is_supplier="true")[:5]
         if r.count() == 0:
             r = s.query("match_all").filter("term", is_supplier="true")[:5]

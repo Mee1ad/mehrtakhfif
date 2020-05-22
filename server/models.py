@@ -155,6 +155,7 @@ class MyQuerySet(SafeDeleteQueryset):
     _safedelete_visibility = DELETED_INVISIBLE
     _safedelete_visibility_field = 'pk'
     _queryset_class = SafeDeleteQueryset
+
     @pysnooper.snoop()
     def update(self, *args, **kwargs):
         if not self:
@@ -1123,6 +1124,7 @@ class Invoice(Base):
         ordering = ['-id']
 
 
+# todo disable value_added type (half)
 class InvoiceSuppliers(models.Model):
     invoice = models.ForeignKey(Invoice, on_delete=CASCADE)
     supplier = models.ForeignKey(User, on_delete=CASCADE)
@@ -1276,7 +1278,6 @@ class SpecialProduct(Base):
     # type = models.PositiveSmallIntegerField(choices=[(1, 'service'), (2, 'product'), (3, 'code')])
     url = models.URLField(null=True, blank=True)
     name = JSONField(default=multilanguage, null=True, blank=True)
-    label_name = JSONField(default=multilanguage, null=True, blank=True)
     # product = models.ForeignKey(Product, on_delete=CASCADE, null=True, blank=True)
     description = JSONField(default=multilanguage)
 

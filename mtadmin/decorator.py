@@ -6,7 +6,7 @@ from django.http import JsonResponse, HttpResponseForbidden, HttpResponseBadRequ
 from django.core.exceptions import FieldDoesNotExist, ValidationError, PermissionDenied, FieldError
 from django.db.utils import IntegrityError
 from server.utils import res_code
-from django.core.exceptions import NON_FIELD_ERRORS
+from django.core.exceptions import NON_FIELD_ERRORS, ObjectDoesNotExist
 from mtadmin.exception import *
 
 
@@ -19,11 +19,14 @@ def error_handler(func):
             traceback.print_exc()
             return HttpResponseBadRequest()
         except ActivationError as e:
-            return JsonResponse({'error': str(e)}, status=res_code['activation_warning'])
+            return JsonResponse({'message': str(e), 'variant': 'warning'}, status=res_code['activation_warning'])
+        except ObjectDoesNotExist:
+            return JsonResponse({'message': 'اینی که گفتی رو پیداش نکردم که 🤨', 'variant': 'error'},
+                                status=res_code['object_does_not_exist'])
         except ValidationError as e:
             try:
                 non_field_errors = e.message_dict[NON_FIELD_ERRORS][0]
-                return JsonResponse({'error': non_field_errors}, status=res_code['bad_request'])
+                return JsonResponse({'message': non_field_errors, 'variant': 'error'}, status=res_code['bad_request'])
             except Exception:
                 return HttpResponseBadRequest()
         except PermissionDenied:
@@ -41,7 +44,7 @@ def error_handler(func):
             except (TypeError, IntegrityError):
                 e = str(e).split('DETAIL', 1)[0][:-1]
                 print(e)
-                return JsonResponse({'error': str(e)}, status=res_code['integrity'])
+                return JsonResponse({'message': str(e)}, status=res_code['integrity'])
         except FieldDoesNotExist:
             traceback.print_exc()
             return JsonResponse({'message': 'fields name is incorrect'}, status=res_code['bad_request'])

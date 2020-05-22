@@ -672,19 +672,11 @@ class SpecialProductSchema(BaseSchema):
         additional = ('id', 'url')
 
     name = fields.Method('get_name')
-    label_name = fields.Method('get_label_name')
-    product_name = fields.Method('get_product_name')
     default_storage = fields.Method('get_min_storage')
     # media = fields.Method('get_media')
     description = fields.Method('get_description')
     thumbnail = fields.Method("get_thumbnail")
     permalink = fields.Function(lambda o: o.storage.product.permalink)
-
-    def get_label_name(self, obj):
-        return self.get(obj.label_name)
-
-    def get_product_name(self, obj):
-        return self.get(obj.storage.product.name)
 
 
 class AdSchema(BaseSchema):

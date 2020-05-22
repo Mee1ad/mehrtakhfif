@@ -233,7 +233,7 @@ def create_object_old(request, model, box_key='box', return_item=False, serializ
     obj = model.objects.create(**data, created_by=user, updated_by=user)
     if model == Product:
         if not m2m['categories']:
-            raise ValidationError({'error': 'لطفا دسته بندی را انتخاب کنید'})
+            raise ValidationError({'message': 'لطفا دسته بندی را انتخاب کنید'})
         product = obj
         tags = Tag.objects.filter(pk__in=m2m['tags'])
         categories = Category.objects.filter(pk__in=m2m['categories'])

@@ -309,7 +309,11 @@ class SpecialProductView(TableView):
         return update_object(request, SpecialProduct)
 
     def delete(self, request):
-        return delete_base(request, SpecialProduct)
+        # todo make it global
+        pk = request.GET.get('id')
+        item = SpecialProduct.objects.get(pk=pk)
+        item.safe_delete(request.user.id)
+        return JsonResponse({'message': 'با موفقیت حذف شد'})
 
 
 class MediaView(TableView):

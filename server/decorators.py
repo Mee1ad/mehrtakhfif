@@ -26,7 +26,7 @@ def try_except(func):
             return HttpResponseServerError()
         except ValidationError as e:
             try:
-                return JsonResponse({'error': e.message}, status=res_code['bad_request'])
+                return JsonResponse({'message': e.message}, status=res_code['bad_request'])
             except Exception:
                 return HttpResponseBadRequest()
         except (AssertionError, ObjectDoesNotExist, StopIteration, AttributeError, KeyError):

@@ -1,0 +1,4 @@
+DELETE {{admin_host}}/special_product?id=1099
+Accept: application/json
+
+###
