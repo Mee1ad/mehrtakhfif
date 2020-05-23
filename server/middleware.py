@@ -1,4 +1,4 @@
-from mehr_takhfif.settings import TOKEN_SALT, ADMIN, DEFAULT_COOKIE_DOMAIN
+from mehr_takhfif.settings import TOKEN_SALT, ADMIN, DEFAULT_COOKIE_DOMAIN, ACCOUNTANT
 from server.utils import default_step, default_page, res_code, set_csrf_cookie, check_csrf_token, get_custom_signed_cookie, \
     set_custom_signed_cookie
 from server.models import User, Basket
@@ -30,6 +30,8 @@ class AuthMiddleware:
         # Debug
         if ADMIN:
             request.user = User.objects.order_by('id').first()
+        if ACCOUNTANT:
+            request.user = User.objects.get(pk=140)
         if route == 'favicon.ico':
             return JsonResponse({})
         delay = request.GET.get('delay', None)

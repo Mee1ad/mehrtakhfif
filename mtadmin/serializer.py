@@ -371,7 +371,7 @@ class TagASchema(TagSchema):
 
 class InvoiceStorageASchema(InvoiceStorageSchema):
     class Meta:
-        additional = ('id', 'count', 'final_price', 'discount_price', 'tax', 'details')
+        additional = ('id', 'count', 'final_price', 'discount_price', 'tax_type', 'details')
 
 
 class MenuASchema(BaseAdminSchema):

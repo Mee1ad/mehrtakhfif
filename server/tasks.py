@@ -40,7 +40,7 @@ def task_postrun_handler(task_id=None, **kwargs):
         PeriodicTask.objects.filter(name=task_name).update(description=description)
         return f'Return {task_id}'
 
-
+@pysnooper.snoop()
 @shared_task
 def send_invoice(invoice_id, lang, **kwargs):
     products = InvoiceStorage.objects.filter(invoice_id=invoice_id)
