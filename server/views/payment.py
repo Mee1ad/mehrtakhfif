@@ -167,7 +167,7 @@ class PaymentRequest(View):
             if not InvoiceSuppliers.objects.filter(invoice=invoice, supplier=supplier).update(amount=amount):
                 InvoiceSuppliers.objects.create(invoice=invoice, supplier=supplier, amount=amount)
             invoice_products.append(
-                InvoiceStorage(storage=storage, invoice_id=invoice_id, count=product.count, tax=storage.tax_type,
+                InvoiceStorage(storage=storage, invoice_id=invoice_id, count=product.count, tax_type=storage.tax_type,
                                final_price=storage.final_price, discount_price=storage.discount_price,
                                discount_percent=storage.discount_percent, box=product.box, features=product.features))
         task_name = f'{invoice.id}: cancel reservation'
