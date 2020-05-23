@@ -84,14 +84,13 @@ class PaymentRequest(View):
         basket = get_basket(invoice.user, basket=invoice.basket, return_obj=True)
         additional_data = []
         for basket_product in basket.basket_products:
-            print(basket_product)
             try:
                 supplier = basket_product.supplier
             except AttributeError:
                 continue
             for data in additional_data:
                 if supplier.deposit_id == data[0]:
-                    data[1] += basket_product.start_price
+                    data[1] += basket_product.start_price * 10
                     break
             else:
                 additional_data.append([supplier.deposit_id, basket_product.start_price, 0])
@@ -106,11 +105,14 @@ class PaymentRequest(View):
         #     invoice.id = invoice_id
 
         local_date = timezone.now().strftime("%Y%m%d")
+        if DEBUG is True:
+            invoice.amount = 1000
+            additional_data = '1,5000,0;2,5000,0'
         local_time = pytz.timezone("Iran").localize(datetime.now()).strftime("%H%M%S")
         r = client.service.bpCumulativeDynamicPayRequest(terminalId=bp['terminal_id'], userName=bp['username'],
                                                          userPassword=bp['password'], localTime=local_time,
                                                          localDate=local_date, orderId=invoice.id,
-                                                         amount=invoice.amount, additionalData=additional_data,
+                                                         amount=invoice.amount * 10, additionalData=additional_data,
                                                          callBackUrl=bp['callback'])
 
         # if DEBUG:

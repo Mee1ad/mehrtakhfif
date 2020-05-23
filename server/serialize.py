@@ -175,11 +175,14 @@ class BaseSchema(Schema):
         if obj.media is not None:
             return HOST + obj.media.image.url
         return None
-
+    @pysnooper.snoop()
     def get_thumbnail(self, obj):
         if obj.thumbnail is not None:
             return MediaSchema(self.lang).dump(obj.thumbnail)
-        return None
+        try:
+            return MediaSchema(self.lang).dump(obj.storage.product.thumbnail)
+        except Exception:
+            return None
 
     def get_location(self, obj):
         try:
@@ -674,7 +677,6 @@ class SpecialProductSchema(BaseSchema):
     name = fields.Method('get_name')
     default_storage = fields.Method('get_min_storage')
     # media = fields.Method('get_media')
-    description = fields.Method('get_description')
     thumbnail = fields.Method("get_thumbnail")
     permalink = fields.Function(lambda o: o.storage.product.permalink)
 

@@ -114,7 +114,7 @@ class ProductView(TableView):
         return JsonResponse(serialized_objects(request, Product, ProductASchema, ProductESchema, params=params))
 
     def post(self, request):
-        return create_object(request, Product, ProductESchema)
+        return create_object(request, Product, serializer=ProductESchema, box_key='storage__product')
 
     def put(self, request):
         return update_object(request, Product)
@@ -241,9 +241,9 @@ class InvoiceStorageView(TableView):
     def get(self, request, pk):
         invoice = Invoice.objects.get(pk=pk)
         storages = InvoiceStorage.objects.filter(invoice=invoice)
-        res = {'data': InvoiceStorageSchema().dump(storages, many=True),
-               'invoice': InvoiceESchema().dump(invoice),
-               'user': MinUserSchema().dump(invoice.user)}
+        invoice = InvoiceESchema().dump(invoice)
+        invoice['invoice_products'] = InvoiceStorageSchema().dump(storages, many=True)
+        res = {'invoice': invoice}
         return JsonResponse(res)
 
 
@@ -303,7 +303,7 @@ class SpecialProductView(TableView):
         return JsonResponse(data)
 
     def post(self, request):
-        return create_object(request, SpecialProduct)
+        return create_object(request, SpecialProduct, SpecialProductESchema)
 
     def put(self, request):
         return update_object(request, SpecialProduct)

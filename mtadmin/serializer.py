@@ -1,6 +1,8 @@
 from server.models import *
 from server.serialize import *
 from marshmallow import INCLUDE, EXCLUDE
+import pysnooper
+from server.views.payment import ipg
 
 
 def list_view(obj_list):
@@ -156,25 +158,30 @@ class BoxASchema(BoxSchema):
     disable = fields.Boolean()
 
 
-class InvoiceASchema(Schema):
+class InvoiceASchema(BaseAdminSchema):
     class Meta:
         additional = ('id', 'basket_id', 'amount', 'status', 'final_price')
 
     user = fields.Nested(MinUserSchema)
     status = fields.Function(lambda o: o.get_status_display())
-    created_at = fields.Function(lambda o: o.created_at.timestamp())
     payed_at = fields.Function(lambda o: o.payed_at.timestamp() if o.payed_at else None)
+    # todo make it real, its fake
+    product_count = fields.Function(lambda o: 5)
 
 
 class InvoiceESchema(InvoiceASchema):
     class Meta:
         additional = InvoiceASchema.Meta.additional + (
             'id', 'basket_id', 'amount', 'status', 'final_price', 'special_offer_id',
-            'address', 'description', 'tax', 'ipg')
+            'address', 'description', 'tax')
 
+    ipg = fields.Method('get_ipg')
     suspended_by = fields.Function(lambda o: o.suspended_by.first_name + " "
                                              + o.suspended_by.last_name if o.suspended_by else None)
     suspended_at = fields.Function(lambda o: o.suspended_at.timestamp() if o.suspended_at else None)
+
+    def get_ipg(self, obj):
+        return [ip for ip in ipg['data'] if ip['id'] == obj.ipg][0]
 
 
 class ProductASchema(BaseAdminSchema):
@@ -385,7 +392,12 @@ class SpecialOfferESchema(SpecialOfferASchema, SpecialOfferSchema):
 
 class SpecialProductASchema(SpecialProductSchema):
     product = fields.Method("get_product")
-    name = fields.Dict()
+    name = fields.Method("get_name")
+
+    def get_name(self, obj):
+        if obj.name:
+            return obj.name
+        return obj.storage.title
 
     def get_product(self, obj):
         return ProductASchema().dump(obj.storage.product)

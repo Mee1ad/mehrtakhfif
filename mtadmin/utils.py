@@ -105,6 +105,8 @@ def get_data(request, require_box=True):
               'box_permission', 'wallet_credit', 'suspend_expire_date', 'activation_expire'] + ['feature', ]
     [data.pop(k, None) for k in remove]
     boxes = request.user.box_permission.all()
+    print(boxes)
+    print(data.get('box_id'))
     if require_box and data.get('box_id') not in boxes.values_list('id', flat=True):
         raise PermissionDenied
     if request.method == "POST":
@@ -179,7 +181,7 @@ def add_custom_m2m(obj, field, item_list):
     items = [many_to_many_model(**item, **extra_fields) for item in item_list]
     many_to_many_model.objects.bulk_create(items)
 
-
+@pysnooper.snoop()
 def update_object(request, model, box_key='box', return_item=False, serializer=None, data=None, require_box=True):
     if not request.user.has_perm(f'server.change_{model.__name__.lower()}'):
         raise PermissionDenied
@@ -190,8 +192,10 @@ def update_object(request, model, box_key='box', return_item=False, serializer=N
     pk = data['id']
     box_check = get_box_permission(request.user, box_key) if require_box else {}
     items = model.objects.filter(pk=pk, **box_check)
-    print(data)
-    items.update(**data, remove_fields=remove_fields)
+    try:
+        items.update(**data, remove_fields=remove_fields)
+    except FieldDoesNotExist:
+        items.update(**data)
     [getattr(items.first(), field).set(m2m[field]) for field in m2m]
     for field in custom_m2m:
         add_custom_m2m(items.first(), field, custom_m2m[field])

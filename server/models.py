@@ -1265,21 +1265,25 @@ class SpecialOffer(Base):
 
 class SpecialProduct(Base):
     select = ['storage', 'thumbnail']
+    prefetch = []
+    filter = {"verify": True, "disable": False}
+
+    required_fields = ['storage', 'box']
+    related_fields = []
+    remove_fields = []
+    m2m = []
+    required_m2m = []
+    fields = {'مدیا'}
 
     def __str__(self):
         return f"{self.storage}"
 
     storage = models.ForeignKey(Storage, on_delete=CASCADE, null=True, blank=True)
-    thumbnail = models.ForeignKey(Media, on_delete=PROTECT, related_name='special_product_thumbnail')
+    thumbnail = models.ForeignKey(Media, on_delete=PROTECT, related_name='special_product_thumbnail', null=True,
+                                  blank=True)
     box = models.ForeignKey(Box, on_delete=PROTECT, null=True, blank=True)
-    category = models.ForeignKey(Category, on_delete=CASCADE, null=True, blank=True)
-    # media = models.ForeignKey(Media, on_delete=CASCADE, null=True, blank=True)
-    special = models.BooleanField(default=False, null=True, blank=True)
-    # type = models.PositiveSmallIntegerField(choices=[(1, 'service'), (2, 'product'), (3, 'code')])
     url = models.URLField(null=True, blank=True)
-    name = JSONField(default=multilanguage, null=True, blank=True)
-    # product = models.ForeignKey(Product, on_delete=CASCADE, null=True, blank=True)
-    description = JSONField(default=multilanguage)
+    name = JSONField(null=True, blank=True)
 
     class Meta:
         db_table = 'special_products'
