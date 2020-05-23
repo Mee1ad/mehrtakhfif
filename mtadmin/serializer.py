@@ -369,7 +369,7 @@ class TagASchema(TagSchema):
     name = fields.Dict()
 
 
-class InvoiceProductSchema(Schema):
+class InvoiceStorageASchema(InvoiceStorageSchema):
     class Meta:
         additional = ('id', 'count', 'final_price', 'discount_price', 'tax', 'details')
 

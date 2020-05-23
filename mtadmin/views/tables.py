@@ -242,7 +242,7 @@ class InvoiceStorageView(TableView):
         invoice = Invoice.objects.get(pk=pk)
         storages = InvoiceStorage.objects.filter(invoice=invoice)
         invoice = InvoiceESchema().dump(invoice)
-        invoice['invoice_products'] = InvoiceStorageSchema().dump(storages, many=True)
+        invoice['invoice_products'] = InvoiceStorageASchema().dump(storages, many=True)
         res = {'invoice': invoice}
         return JsonResponse(res)
 
@@ -408,4 +408,4 @@ class Tax(AdminView):
         # todo
         params = get_params(request, date_key='invoice__payed_at')
         # params['aggregate'] = {'tax': Sum('tax')}
-        return JsonResponse(serialized_objects(request, InvoiceStorage, InvoiceProductSchema))
+        return JsonResponse(serialized_objects(request, InvoiceStorage, InvoiceStorageASchema))

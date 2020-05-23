@@ -1146,7 +1146,8 @@ class InvoiceStorage(models.Model):
     storage = models.ForeignKey(Storage, on_delete=PROTECT)
     invoice = models.ForeignKey(Invoice, on_delete=PROTECT)
     count = models.PositiveIntegerField(default=1)
-    tax = models.PositiveIntegerField(default=0)
+    tax_type = models.PositiveSmallIntegerField(default=0,  # turn to int in pre process
+                                                choices=[(1, 'has_not'), (2, 'from_total_price'), (3, 'from_profit')])
     final_price = models.PositiveIntegerField(verbose_name='Final price')
     discount_price = models.PositiveIntegerField(verbose_name='Discount price', default=0)
     discount_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount price percent')

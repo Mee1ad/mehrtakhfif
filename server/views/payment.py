@@ -42,6 +42,7 @@ pecco = {'pin': '4MuVGr1FaB6P7S43Ggh5', 'terminal_id': '44481453',
 callback = HOST + "/callback"
 
 
+# todo clear basket after payment
 class IPG(View):
     def get(self, request):
         return JsonResponse({'ipg': ipg})
@@ -106,9 +107,9 @@ class PaymentRequest(View):
         #     invoice.id = invoice_id
 
         local_date = timezone.now().strftime("%Y%m%d")
-        if DEBUG:
-            invoice.amount = 1000
-            additional_data = '1,5000,0;2,5000,0'
+        # DEBUG:
+        invoice.amount = 1000
+        additional_data = '1,5000,0;2,5000,0'
         local_time = pytz.timezone("Iran").localize(datetime.now()).strftime("%H%M%S")
         r = client.service.bpCumulativeDynamicPayRequest(terminalId=bp['terminal_id'], userName=bp['username'],
                                                          userPassword=bp['password'], localTime=local_time,
@@ -166,7 +167,7 @@ class PaymentRequest(View):
             if not InvoiceSuppliers.objects.filter(invoice=invoice, supplier=supplier).update(amount=amount):
                 InvoiceSuppliers.objects.create(invoice=invoice, supplier=supplier, amount=amount)
             invoice_products.append(
-                InvoiceStorage(storage=storage, invoice_id=invoice_id, count=product.count, tax=storage.tax,
+                InvoiceStorage(storage=storage, invoice_id=invoice_id, count=product.count, tax=storage.tax_type,
                                final_price=storage.final_price, discount_price=storage.discount_price,
                                discount_percent=storage.discount_percent, box=product.box, features=product.features))
         task_name = f'{invoice.id}: cancel reservation'
