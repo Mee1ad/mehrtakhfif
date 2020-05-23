@@ -22,7 +22,7 @@ class GetSpecialOffer(View):
 
 class GetSpecialProduct(View):
     def get(self, request):
-        special_product = SpecialProduct.objects.select_related(*SpecialProduct.select).filter(special=True)[:5]
+        special_product = SpecialProduct.objects.select_related(*SpecialProduct.select)[:5]
         res = {'special_product': SpecialProductSchema(**request.schema_params).dump(special_product, many=True)}
         return JsonResponse(res)
 
