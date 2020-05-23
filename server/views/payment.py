@@ -83,6 +83,7 @@ class PaymentRequest(View):
             raise ValidationError(_('لطفا قبل از خرید پروفایل خود را تکمیل نمایید'))
         basket = get_basket(invoice.user, basket=invoice.basket, return_obj=True)
         additional_data = []
+        # bug '1,49000,0;1,16000,0'
         for basket_product in basket.basket_products:
             try:
                 supplier = basket_product.supplier
@@ -93,10 +94,10 @@ class PaymentRequest(View):
                     data[1] += basket_product.start_price * 10
                     break
             else:
-                additional_data.append([supplier.deposit_id, basket_product.start_price, 0])
+                additional_data.append([supplier.deposit_id, basket_product.start_price * 10, 0])
 
         additional_data = ';'.join(','.join(str(x) for x in b) for b in additional_data)
-        additional_data += f';1,{basket.summary["mt_profit"]},0'
+        additional_data += f';1,{basket.summary["mt_profit"] * 10},0'
 
         # if DEBUG:
         #     additional_data = '1,100,0;2,100,0'
@@ -105,7 +106,7 @@ class PaymentRequest(View):
         #     invoice.id = invoice_id
 
         local_date = timezone.now().strftime("%Y%m%d")
-        if DEBUG is True:
+        if DEBUG:
             invoice.amount = 1000
             additional_data = '1,5000,0;2,5000,0'
         local_time = pytz.timezone("Iran").localize(datetime.now()).strftime("%H%M%S")

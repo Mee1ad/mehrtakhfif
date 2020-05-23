@@ -43,7 +43,8 @@ def task_postrun_handler(task_id=None, **kwargs):
 
 @shared_task
 def send_invoice(invoice_id, lang, **kwargs):
-    digital_products = InvoiceStorage.objects.filter(invoice_id=invoice_id, storage__product__type=1)
+    products = InvoiceStorage.objects.filter(invoice_id=invoice_id)
+    digital_products = products.filter(storage__product__type=1)
     user = digital_products.first().invoice.user
     pdf_list = []
     all_renders = ""
@@ -79,9 +80,10 @@ def send_invoice(invoice_id, lang, **kwargs):
         all_renders += rendered
         sms_content += f'\n{storage.invoice_title[lang]}\n{SHORTLINK}/{key}'
     send_sms(user.username, pattern="f0ozn1ee5k", input_data=[{'order_id': f"Mt-{invoice_id}"}])
-    send_sms(user.username, pattern="dj0l65mq3x", input_data=[{'products': sms_content}])
+    if sms_content:
+        send_sms(user.username, pattern="dj0l65mq3x", input_data=[{'products': sms_content}])
     res = 'sms sent'
-    if user.email:
+    if user.email and all_renders:
         send_email("صورتحساب خرید", user.email, html_content=all_renders, attach=pdf_list)
         res += ', email sent'
     return res
