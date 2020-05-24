@@ -132,11 +132,13 @@ class PaymentRequest(View):
     def create_invoice(self, request, basket=None):
         user = request.user
         address = None
-        basket = basket or get_basket(user, request.lang)
+        basket = basket or get_basket(user, request.lang, require_profit=True)
         if basket['address_required']:
             address = AddressSchema().dump(user.default_address)
 
         invoice = Invoice.objects.create(created_by=user, updated_by=user, user=user,
+                                         mt_profit=basket['summary']['mt_profit'],
+                                         ha_profit=basket['summary']['ha_profit'],
                                          amount=basket['summary']['discount_price'],
                                          address=address, basket_id=basket['basket']['id'],
                                          final_price=basket['summary']['total_price'], expire=add_minutes(1))

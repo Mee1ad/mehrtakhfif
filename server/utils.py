@@ -318,7 +318,8 @@ def get_discount_percent(storage):
         return storage.discount_percent
 
 
-def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=None, return_obj=False, tax=False):
+def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=None, return_obj=False, tax=False,
+               require_profit=False):
     if basket_id:
         basket = Basket.objects.get(pk=basket_id)
     if not basket_id:
@@ -327,7 +328,8 @@ def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=Non
         return {'basket': {}, 'summary': {}, 'address_required': False}
     basket_products = basket_products or BasketProduct.objects.filter(
         basket=basket).select_related(*BasketProduct.related)
-    summary = {"total_price": 0, "discount_price": 0, "profit": 0, "mt_profit": 0, "shopping_cost": 0, "tax": 0}
+    summary = {"total_price": 0, "discount_price": 0, "profit": 0, "mt_profit": 0, 'ha_profit': 0,
+               "shopping_cost": 0, "tax": 0}
     address_required = False
     for basket_product in basket_products:
         storage = basket_product.storage
@@ -354,19 +356,23 @@ def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=Non
         basket_product.discount_price = basket_product.item_discount_price * count
         summary['discount_price'] += basket_product.discount_price
         summary['profit'] += basket_product.final_price - basket_product.discount_price
-        summary['mt_profit'] += basket_product.discount_price - basket_product.start_price
         basket_product.start_price = basket_product.start_price * count
         basket_product.tax = 0
         basket_product.amer = ""
         if tax:
             basket_product.amer = storage.product.box.name['fa']
             basket_product.tax = get_tax(storage.tax_type, basket_product.discount_price, basket_product.start_price)
+        ha_profit = (basket_product.discount_price - basket_product.start_price - basket_product.tax) * 0.05
+        summary['ha_profit'] += ha_profit
+        summary['mt_profit'] += basket_product.discount_price - basket_product.start_price - ha_profit
     basket.basket_products = basket_products
     if return_obj:
         basket.summary = summary
         basket.address_required = address_required
         return basket
-    summary.pop('mt_profit', None)
+    if require_profit is False:
+        summary.pop('mt_profit', None)
+        summary.pop('ha_profit', None)
     basket = BasketSchema(language=lang).dump(basket)
     return {'basket': basket, 'summary': summary, 'address_required': address_required}
 

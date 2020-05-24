@@ -174,7 +174,7 @@ class InvoiceESchema(InvoiceASchema):
         additional = InvoiceASchema.Meta.additional + (
             'id', 'basket_id', 'amount', 'status', 'final_price', 'special_offer_id',
             'address', 'description', 'reference_id', 'sale_order_id', 'sale_reference_id',
-            'card_holder', 'post_tracking_code')
+            'card_holder', 'post_tracking_code', 'mt_profit', 'ha_profit')
 
     ipg = fields.Method('get_ipg')
     suspended_by = fields.Function(lambda o: o.suspended_by.first_name + " "

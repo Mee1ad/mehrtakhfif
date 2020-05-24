@@ -1111,7 +1111,9 @@ class Invoice(Base):
     sale_order_id = models.BigIntegerField(null=True, blank=True)
     sale_reference_id = models.BigIntegerField(null=True, blank=True)
     card_holder = models.CharField(max_length=31, null=True, blank=True)
-    final_amount = models.PositiveIntegerField(null=True, blank=True)
+    final_amount = models.PositiveIntegerField(help_text='from bank')
+    mt_profit = models.PositiveIntegerField()
+    ha_profit = models.PositiveIntegerField()
     ipg = models.PositiveSmallIntegerField(default=1)
     expire = models.DateTimeField(null=True, blank=True)
     status = models.PositiveSmallIntegerField(default=1, choices=((1, 'pending'), (2, 'payed'), (3, 'canceled'),
