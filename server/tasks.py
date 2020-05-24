@@ -43,7 +43,7 @@ def task_postrun_handler(task_id=None, **kwargs):
 def send_invoice(invoice_id, lang, **kwargs):
     products = InvoiceStorage.objects.filter(invoice_id=invoice_id)
     digital_products = products.filter(storage__product__type=1)
-    user = products.first().invoice.user
+    user = Invoice.objects.get(pk=invoice_id).user
     pdf_list = []
     all_renders = ""
     sms_content = ""
