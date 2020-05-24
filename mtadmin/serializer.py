@@ -173,12 +173,28 @@ class InvoiceESchema(InvoiceASchema):
     class Meta:
         additional = InvoiceASchema.Meta.additional + (
             'id', 'basket_id', 'amount', 'status', 'final_price', 'special_offer_id',
-            'address', 'description', 'tax')
+            'address', 'description', 'reference_id', 'sale_order_id', 'sale_reference_id',
+            'card_holder', 'post_tracking_code')
 
     ipg = fields.Method('get_ipg')
     suspended_by = fields.Function(lambda o: o.suspended_by.first_name + " "
                                              + o.suspended_by.last_name if o.suspended_by else None)
     suspended_at = fields.Function(lambda o: o.suspended_at.timestamp() if o.suspended_at else None)
+    invoice_products = fields.Method("get_invoice_products")
+    tax = fields.Method("calculate_invoice_tax")
+    transportaion_price = fields.Method("get_transportaion_price")
+
+    def get_transportaion_price(self, obj):
+        # todo
+        return 10000
+
+    def get_invoice_products(self, obj):
+        storages = InvoiceStorage.objects.filter(invoice=obj)
+        return InvoiceStorageASchema().dump(storages, many=True)
+
+    def calculate_invoice_tax(self, obj):
+        # todo
+        return 5000
 
     def get_ipg(self, obj):
         return [ip for ip in ipg['data'] if ip['id'] == obj.ipg][0]

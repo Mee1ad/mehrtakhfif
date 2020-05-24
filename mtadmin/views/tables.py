@@ -235,18 +235,6 @@ class InvoiceView(TableView):
         return JsonResponse(serialized_objects(request, Invoice, InvoiceASchema, InvoiceESchema, error_null_box=False))
 
 
-class InvoiceStorageView(TableView):
-    permission_required = 'server.view_invoicestorage'
-
-    def get(self, request, pk):
-        invoice = Invoice.objects.get(pk=pk)
-        storages = InvoiceStorage.objects.filter(invoice=invoice)
-        invoice = InvoiceESchema().dump(invoice)
-        invoice['invoice_products'] = InvoiceStorageASchema().dump(storages, many=True)
-        res = {'invoice': invoice}
-        return JsonResponse(res)
-
-
 class MenuView(TableView):
     permission_required = 'server.view_menu'
 

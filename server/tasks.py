@@ -13,7 +13,6 @@ import random
 from mehr_takhfif.settings import INVOICE_ROOT, STATIC_ROOT, SHORTLINK
 import pdfkit
 from django.template.loader import render_to_string
-import pysnooper
 from mehr_takhfif.settings import ARVAN_API_KEY
 from time import sleep
 import requests
@@ -40,12 +39,11 @@ def task_postrun_handler(task_id=None, **kwargs):
         PeriodicTask.objects.filter(name=task_name).update(description=description)
         return f'Return {task_id}'
 
-@pysnooper.snoop()
 @shared_task
 def send_invoice(invoice_id, lang, **kwargs):
     products = InvoiceStorage.objects.filter(invoice_id=invoice_id)
     digital_products = products.filter(storage__product__type=1)
-    user = digital_products.first().invoice.user
+    user = products.first().invoice.user
     pdf_list = []
     all_renders = ""
     sms_content = ""
@@ -79,7 +77,7 @@ def send_invoice(invoice_id, lang, **kwargs):
         pdf_list.append(pdf)
         all_renders += rendered
         sms_content += f'\n{storage.invoice_title[lang]}\n{SHORTLINK}/{key}'
-    send_sms(user.username, pattern="f0ozn1ee5k", input_data=[{'order_id': f"Mt-{invoice_id}"}])
+    # send_sms(user.username, pattern="f0ozn1ee5k", input_data=[{'order_id': f"Mt-{invoice_id}"}])
     if sms_content:
         send_sms(user.username, pattern="dj0l65mq3x", input_data=[{'products': sms_content}])
     res = 'sms sent'

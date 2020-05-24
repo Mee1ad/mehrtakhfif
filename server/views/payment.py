@@ -207,7 +207,7 @@ class CallBack(View):
         invoice.basket.save()
         # self.submit_invoice_storages(invoice_id)
         task_name = f'{invoice.id}: send invoice'
-        kwargs = {"invoice_id": invoice.pk, "lang": request.lang}
+        kwargs = {"invoice_id": invoice.pk, "lang": request.lang, 'name': task_name}
         invoice.email_task = add_one_off_job(name=task_name, kwargs=kwargs, interval=0,
                                              task='server.tasks.send_invoice')
         invoice.save()
