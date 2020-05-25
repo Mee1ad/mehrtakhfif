@@ -71,19 +71,25 @@ class MailView(AdminView):
 
 
 class TableFilter(AdminView):
+    @pysnooper.snoop()
     def get(self, request, table):
         box_id = request.GET.get('b')
         user = request.user
         no_box = ['tag', 'invoice', 'invoice_storage', 'comment']
         check_user_permission(user, f'view_{table}')
         box = get_box_permission(user, 'box_id', box_id)
+        # todo filter per month for invoice
+        monthes = []
+        if table in no_box:
+            box = {}
         if table == 'storage':
             box = {'product__box_id': box_id}
-        elif table in no_box:
-            box = {}
-        elif table == 'media':
-            media = Media.objects.order_by('type').distinct('type')
-            return JsonResponse({'types': [{'id': item.type, 'name': item.get_type_display()} for item in media]})
+        if table == 'media':
+            media_types = Media.objects.order_by('type').distinct('type')
+            return JsonResponse({'types': [{'id': item.type, 'name': item.get_type_display()} for item in media_types]})
+        elif table == 'invoice':
+            invoice_status = Invoice.objects.order_by('status').distinct('status')
+            return JsonResponse({'types': [{'id': item.status, 'name': item.get_status_display()} for item in invoice_status]})
         filters = get_table_filter(table, box)
         return JsonResponse({'data': filters})
 
@@ -114,7 +120,7 @@ class Search(AdminView):
     def tag(self, q, **kwargs):
         tags_id = []
         s = TagDocument.search()
-        r = s.query("match", name_fa=q[0])
+        r = s.query("multi_match", query=q[0], fields=['name_fa', 'name'])
         if r.count() == 0:
             r = s.query("match_all")[:10]
         [tags_id.append(tag.id) for tag in r]

@@ -175,6 +175,7 @@ class BaseSchema(Schema):
         if obj.media is not None:
             return HOST + obj.media.image.url
         return None
+
     @pysnooper.snoop()
     def get_thumbnail(self, obj):
         if obj.thumbnail is not None:
@@ -237,6 +238,8 @@ class MinUserSchema(Schema):
         additional = ('id', 'first_name', 'last_name', 'username')
 
     name = fields.Method("get_username")
+    email = fields.Email()
+    meli_code = fields.Str()
 
     def get_username(self, obj):
         try:
@@ -256,7 +259,6 @@ class UserSchema(BaseSchema):
     avatar = fields.Method("get_avatar", data_key="avatar_id")
     birthday = fields.Method("get_birthday")
     vip_type = fields.Method("get_vip_type")
-    email = fields.Email()
 
     def get_vip_type(self, obj):
         try:
@@ -540,8 +542,8 @@ class InvoiceSchema(BaseSchema):
 
 class InvoiceStorageSchema(BaseSchema):
     class Meta:
-        additional = ('count', 'discount_price', 'final_price', 'discount_percent', 'vip_discount_price',
-                      'vip_discount_percent', 'invoice_id', 'invoice_description', 'details')
+        additional = ('count', 'discount_price', 'final_price', 'discount_percent',
+                      'invoice_id', 'invoice_description', 'details')
 
     storage = fields.Method("get_storage")
     box = fields.Method("get_box")

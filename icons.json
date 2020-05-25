@@ -275,15 +275,18 @@
     "tourism": true
   },
   {
-    "name": "helal_ahmar.svg",
+    "name": "helal-ahmar.svg",
     "vip_type": true
   },
   {
-    "name": "tamin_ejtemaei.svg",
+    "name": "tamin-ejtemaei.svg",
     "vip_type": true
   },
   {
     "name": "mehr-takhfif.svg",
     "vip_type": true
+  },
+  {
+    "name": "toman.svg"
   }
 ]

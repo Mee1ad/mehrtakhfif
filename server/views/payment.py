@@ -9,7 +9,7 @@ from django_celery_beat.models import PeriodicTask
 from server.serialize import *
 import pytz
 from datetime import datetime
-from server.utils import get_basket, add_one_off_job, sync_storage, add_minutes
+from server.utils import get_basket, add_one_off_job, sync_storage, add_minutes,get_tax
 import pysnooper
 import json
 import zeep
@@ -58,6 +58,7 @@ class PaymentRequest(View):
         user = request.user
         if not Basket.objects.filter(pk=basket_id, user=user).exists():
             raise ValidationError(_('سبد خرید نامعتبر است'))
+        # def check_
         try:
             invoice = Invoice.objects.get(user=user, basket_id=basket_id, status=1)
             assert invoice.expire >= timezone.now()
@@ -168,10 +169,12 @@ class PaymentRequest(View):
             amount = product.start_price
             if not InvoiceSuppliers.objects.filter(invoice=invoice, supplier=supplier).update(amount=amount):
                 InvoiceSuppliers.objects.create(invoice=invoice, supplier=supplier, amount=amount)
-            # invoice_products.append(
-            #     InvoiceStorage(storage=storage, invoice_id=invoice_id, count=product.count, tax_type=storage.tax_type,
-            #                    final_price=storage.final_price, discount_price=storage.discount_price,
-            #                    discount_percent=storage.discount_percent, box=product.box, features=product.features))
+            tax = get_tax(storage.tax_type, storage.discount_price, storage.start_price)
+            invoice_products.append(
+                InvoiceStorage(storage=storage, invoice_id=invoice_id, count=product.count, tax=tax,
+                               final_price=storage.final_price, discount_price=storage.discount_price,
+                               start_price=storage.start_price, discount_percent=storage.discount_percent, box=product.box,
+                               features=product.features))
         task_name = f'{invoice.id}: cancel reservation'
         description = f'{timezone.now()}: canceled by system'
         PeriodicTask.objects.filter(name=task_name).update(enabled=False, description=description)

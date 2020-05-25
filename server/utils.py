@@ -434,6 +434,13 @@ def get_vip_price(user, storage):
     vip_prices = storage.vip_prices.all()
 
 
+def remove_if_is_empty(required_keys, dictionary):
+    for key in required_keys:
+        if not dictionary[key]:
+            dictionary.pop(key, None)
+    return dictionary
+
+
 # Security
 
 def get_access_token(user, model=None, pk=None, try_again=None):

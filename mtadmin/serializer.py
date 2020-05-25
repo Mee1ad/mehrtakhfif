@@ -3,6 +3,7 @@ from server.serialize import *
 from marshmallow import INCLUDE, EXCLUDE
 import pysnooper
 from server.views.payment import ipg
+from server.utils import *
 
 
 def list_view(obj_list):
@@ -159,6 +160,8 @@ class BoxASchema(BoxSchema):
 
 
 class InvoiceASchema(BaseAdminSchema):
+    list_filter = [Box, Category]
+
     class Meta:
         additional = ('id', 'basket_id', 'amount', 'status', 'final_price')
 
@@ -183,6 +186,11 @@ class InvoiceESchema(InvoiceASchema):
     invoice_products = fields.Method("get_invoice_products")
     tax = fields.Method("calculate_invoice_tax")
     transportaion_price = fields.Method("get_transportaion_price")
+    invoice = fields.Method("get_invoice")
+
+    def get_invoice(self, obj):
+        # todo
+        return "http://api.mt.com/invoice/XwPQr4"
 
     def get_transportaion_price(self, obj):
         # todo
@@ -387,7 +395,24 @@ class TagASchema(TagSchema):
 
 class InvoiceStorageASchema(InvoiceStorageSchema):
     class Meta:
-        additional = ('id', 'count', 'final_price', 'discount_price', 'tax_type', 'details')
+        additional = ('id', 'count', 'final_price', 'discount_price', 'start_price', 'tax', 'details')
+
+    mt_profit = fields.Method('get_mt_profit')
+    hl_profit = fields.Method('get_hl_profit')
+    start_price = fields.Function(lambda o: o.storage.start_price)
+    features = fields.Dict()
+
+    def get_hl_profit(self, obj):
+        storage = obj.storage
+        tax = get_tax(storage.tax_type, storage.discount_price, storage.start_price)
+        hl_profit = (storage.discount_price - storage.start_price - tax) * 0.05
+        return hl_profit
+
+    def get_mt_profit(self, obj):
+        storage = obj.storage
+        tax = get_tax(storage.tax_type, storage.discount_price, storage.start_price)
+        hl_profit = (storage.discount_price - storage.discount_price - tax) * 0.05
+        return storage.discount_price - storage.start_price - hl_profit
 
 
 class MenuASchema(BaseAdminSchema):
@@ -423,4 +448,4 @@ class SpecialProductESchema(SpecialProductASchema, SpecialProductSchema):
     pass
 
 
-tables = {'product': ProductASchema, 'media': MediaASchema}
+tables = {'product': ProductASchema, 'media': MediaASchema, 'invoice': InvoiceASchema}

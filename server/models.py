@@ -156,7 +156,6 @@ class MyQuerySet(SafeDeleteQueryset):
     _safedelete_visibility_field = 'pk'
     _queryset_class = SafeDeleteQueryset
 
-    @pysnooper.snoop()
     def update(self, *args, **kwargs):
         if not self:
             return True
@@ -256,7 +255,7 @@ class Base(SafeDeleteModel):
     deleted_by = models.ForeignKey('User', on_delete=PROTECT, null=True, blank=True,
                                    related_name="%(app_label)s_%(class)s_deleted_by")
 
-    def safe_delete(self, user_id):
+    def safe_delete(self, user_id=1):
         i = 1
         while True:
             try:
@@ -299,6 +298,9 @@ class Base(SafeDeleteModel):
         if type(storages) != list and storages is not None:
             storages = [storages]
         for storage in storages:
+            special_products = storage.special_products.all()
+            if special_products:
+                [special_product.safe_delete() for special_product in special_products]
             package_records = storage.related_packages.all()
             for package_record in package_records:
                 Storage.objects.filter(pk=package_record.package_id).update(disable=True)
@@ -338,7 +340,7 @@ class User(AbstractUser):
     default_address = models.OneToOneField(to="Address", on_delete=SET_NULL, null=True, blank=True,
                                            related_name="user_default_address")
     vip_types = models.ManyToManyField(to="VipType", related_name="users")
-    box_permission = models.ManyToManyField("Box")
+    box_permission = models.ManyToManyField("Box", blank=True)
     email_verified = models.BooleanField(default=False, verbose_name='Email verified')
     subscribe = models.BooleanField(default=True)
     avatar = models.PositiveSmallIntegerField(null=True, blank=True)
@@ -842,7 +844,7 @@ class Storage(Base):
             if self.disable is True and self.priority == '0':
                 raise ActivationError(get_activation_warning_msg('انبار پیش فرض'))
             if self.deadline:
-                if self.deadline < timezone.now() and self.deadline and self.disable is False:
+                if self.deadline < timezone.now() and self.deadline is not None and self.disable is False:
                     raise ActivationError(get_activation_warning_msg('ددلاین'))
             if not self.dimensions.get('width') or not self.dimensions.get('height') or not self.dimensions.get(
                     'length') \
@@ -1148,9 +1150,9 @@ class InvoiceStorage(models.Model):
     storage = models.ForeignKey(Storage, on_delete=PROTECT)
     invoice = models.ForeignKey(Invoice, on_delete=PROTECT)
     count = models.PositiveIntegerField(default=1)
-    tax_type = models.PositiveSmallIntegerField(default=0,  # turn to int in pre process
-                                                choices=[(1, 'has_not'), (2, 'from_total_price'), (3, 'from_profit')])
+    tax = models.PositiveSmallIntegerField()
     final_price = models.PositiveIntegerField(verbose_name='Final price')
+    start_price = models.PositiveIntegerField()
     discount_price = models.PositiveIntegerField(verbose_name='Discount price', default=0)
     discount_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount price percent')
     # vip_discount_price = models.PositiveIntegerField(verbose_name='Discount price', default=0)
@@ -1281,7 +1283,14 @@ class SpecialProduct(Base):
     def __str__(self):
         return f"{self.storage}"
 
-    storage = models.ForeignKey(Storage, on_delete=CASCADE, null=True, blank=True)
+    def save(self, *args, **kwargs):
+        storage = self.storage
+        storage.clean()
+        if storage.disable:
+            raise ActivationError('اول باید انبار رو فعال کنی')
+        super().save(*args)
+
+    storage = models.ForeignKey(Storage, on_delete=CASCADE, null=True, blank=True, related_name='special_products')
     thumbnail = models.ForeignKey(Media, on_delete=PROTECT, related_name='special_product_thumbnail', null=True,
                                   blank=True)
     box = models.ForeignKey(Box, on_delete=PROTECT, null=True, blank=True)

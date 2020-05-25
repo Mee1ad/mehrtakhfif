@@ -14,6 +14,8 @@ from datetime import datetime
 import jdatetime
 from random import randint, choice
 from django.utils.translation import gettext_lazy as _
+
+
 # from selenium import webdriver
 
 
@@ -34,6 +36,10 @@ class Profile(LoginRequired):
 
     def put(self, request):
         data = load_data(request)
+        has_invoice = Invoice.objects.filter(user=request.user).exists()
+        if has_invoice:
+            required_keys = ['first_name', 'last_name', 'meli_code']
+            data = remove_if_is_empty(required_keys, data)
         user = request.user
         user.first_name = data.get('first_name') or user.first_name
         user.last_name = data.get('last_name') or user.last_name
