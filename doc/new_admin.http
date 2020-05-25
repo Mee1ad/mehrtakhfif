@@ -183,6 +183,13 @@ Content-Type: application/json
 }
 
 ###
+PATCH {{admin_host}}/tag
+Content-Type: application/json
+
+{
+  "tags": [1, 2, 3]
+}
+###
 DELETE {{admin_host}}/brand?id=6
 ###
 

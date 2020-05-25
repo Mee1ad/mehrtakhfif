@@ -254,6 +254,12 @@ class MenuView(TableView):
 class TagView(TableView):
     permission_required = 'server.view_tag'
 
+    def patch(self, request):
+        data = json.loads(request.body)
+        tags = data['tags']
+        tags = Tag.objects.filter(pk__in=tags)
+        return JsonResponse({'tags': TagASchema().dump(tags, many=True)})
+
     def post(self, request):
         return create_object(request, Tag, box_key=None, return_item=True, serializer=TagASchema, error_null_box=False)
 
