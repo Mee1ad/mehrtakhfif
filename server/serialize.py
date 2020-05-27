@@ -697,7 +697,7 @@ class SpecialProductSchema(BaseSchema):
         name = self.get(obj.name)
         if name:
             return name
-        return self.get(obj.storage.name)
+        return self.get(obj.storage.title)
 
 
 class AdSchema(BaseSchema):
