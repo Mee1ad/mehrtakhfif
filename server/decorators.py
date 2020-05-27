@@ -14,7 +14,6 @@ import pysnooper
 
 
 def try_except(func):
-    @pysnooper.snoop()
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         try:

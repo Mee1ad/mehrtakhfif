@@ -39,7 +39,6 @@ def serialized_objects(request, model, serializer=None, single_serializer=None, 
     if not params:
         params = get_params(request, box_key)
     try:
-        print(params)
         if error_null_box and not params['filter'].get(box_key) and not params['filter'].get(box_key[:-3]):
             raise PermissionDenied
         query = model.objects.filter(**params['filter']).order_by(*params['order'])
@@ -105,8 +104,6 @@ def get_data(request, require_box=True):
               'box_permission', 'wallet_credit', 'suspend_expire_date', 'activation_expire'] + ['feature', ]
     [data.pop(k, None) for k in remove]
     boxes = request.user.box_permission.all()
-    print(boxes)
-    print(data.get('box_id'))
     if require_box and data.get('box_id') not in boxes.values_list('id', flat=True):
         raise PermissionDenied
     if request.method == "POST":
@@ -289,7 +286,6 @@ def update_object_old(request, model, box_key='box', return_item=False, serializ
     try:
         items.update(**data, validation=True)
     except FieldDoesNotExist:
-        print(data)
         items.update(**data)
     if return_item:
         request.GET._mutable = True

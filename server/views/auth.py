@@ -64,7 +64,6 @@ class Login(View):
             login(request, user, backend='django.contrib.auth.backends.ModelBackend')
             res = {'user': UserSchema().dump(user)}
             basket = Basket.objects.filter(user=user).order_by('-id')
-            print(basket)
             res['basket_count'] = 0
             if basket.exists():
                 res['basket_count'] = basket.first().products.all().count()

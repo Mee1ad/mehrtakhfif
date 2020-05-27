@@ -58,16 +58,8 @@ class PaymentRequest(View):
         user = request.user
         if not Basket.objects.filter(pk=basket_id, user=user).exists():
             raise ValidationError(_('سبد خرید نامعتبر است'))
-        # def check_
-        try:
-            invoice = Invoice.objects.get(user=user, basket_id=basket_id, status=1)
-            assert invoice.expire >= timezone.now()
-            return JsonResponse({"url": f"{bp['ipg_url']}?RefId={invoice.reference_id}"})
-        except AssertionError:
-            invoice.status = 3
-            invoice.save()
-        except Invoice.DoesNotExist:
-            pass
+        # def check_user_information
+        # check for disabling in 15 minutes
         basket = Basket.objects.filter(user=request.user, id=basket_id).first()
         invoice = self.create_invoice(request)
         self.reserve_storage(basket, invoice)
@@ -86,6 +78,7 @@ class PaymentRequest(View):
         basket = get_basket(invoice.user, basket=invoice.basket, return_obj=True)
         additional_data = []
         # bug '1,49000,0;1,16000,0'
+        # todo add feature price
         for basket_product in basket.basket_products:
             try:
                 supplier = basket_product.supplier
@@ -175,9 +168,6 @@ class PaymentRequest(View):
                                final_price=storage.final_price, discount_price=storage.discount_price,
                                start_price=storage.start_price, discount_percent=storage.discount_percent, box=product.box,
                                features=product.features))
-        task_name = f'{invoice.id}: cancel reservation'
-        description = f'{timezone.now()}: canceled by system'
-        PeriodicTask.objects.filter(name=task_name).update(enabled=False, description=description)
         InvoiceStorage.objects.bulk_create(invoice_products)
 
 
@@ -210,13 +200,19 @@ class CallBack(View):
         invoice.final_amount = data_dict['FinalAmount']
         invoice.basket.sync = 'done'
         invoice.basket.save()
-        # self.submit_invoice_storages(invoice_id)
         task_name = f'{invoice.id}: send invoice'
         kwargs = {"invoice_id": invoice.pk, "lang": request.lang, 'name': task_name}
         invoice.email_task = add_one_off_job(name=task_name, kwargs=kwargs, interval=0,
                                              task='server.tasks.send_invoice')
         invoice.save()
+        self.finish_invoice_jobs(invoice)
+        Basket.objects.create(user=invoice.user)
         return HttpResponseRedirect(f"https://mehrtakhfif.com/invoice/{invoice_id}")
+
+    def finish_invoice_jobs(self, invoice):
+        task_name = f'{invoice.id}: cancel reservation'
+        description = f'{timezone.now()}: canceled by system'
+        PeriodicTask.objects.filter(name=task_name).update(enabled=False, description=description)
 
     @pysnooper.snoop()
     def verify(self, invoice_id, sale_ref_id):

@@ -374,6 +374,7 @@ def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=Non
         summary.pop('mt_profit', None)
         summary.pop('ha_profit', None)
     basket = BasketSchema(language=lang).dump(basket)
+    summary['invoice_discount'] = summary['final_price'] - summary['discount_price']
     return {'basket': basket, 'summary': summary, 'address_required': address_required}
 
 

@@ -20,6 +20,8 @@ def error_handler(func):
             return HttpResponseBadRequest()
         except ActivationError as e:
             return JsonResponse({'message': str(e), 'variant': 'warning'}, status=res_code['activation_warning'])
+        except WarningMessage as e:
+            return JsonResponse({'message': str(e), 'variant': 'warning'}, status=res_code['updated'])
         except ObjectDoesNotExist:
             return JsonResponse({'message': 'اینی که گفتی رو پیداش نکردم که 🤨', 'variant': 'error'},
                                 status=res_code['object_does_not_exist'])

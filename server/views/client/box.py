@@ -53,7 +53,6 @@ class FilterDetail(View):
 class Filter(View):
     def get(self, request):
         params = filter_params(request.GET, request.lang)
-        print(params)
         query = Q(verify=True, **params['filter'])
         if params['related']:
             query = Q(verify=True, **params['filter']) | Q(verify=True, **params['related'])

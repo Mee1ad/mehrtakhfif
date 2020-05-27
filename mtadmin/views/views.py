@@ -121,12 +121,15 @@ class Search(AdminView):
         tags_id = []
         s = TagDocument.search()
         r = s.query("multi_match", query=q[0], fields=['name_fa', 'name'])
-        if r.count() == 0:
+        if r.count() == 0 and not q[0]:
             r = s.query("match_all")[:10]
         [tags_id.append(tag.id) for tag in r]
         tags = Tag.objects.in_bulk(tags_id)
         tags = [tags[x] for x in tags_id]
-        return {'tags': TagASchema().dump(tags, many=True)}
+        for tag in tags:
+            print(tag.name)
+        tags = ProductTag.objects.filter(tag__in=tags).order_by('tag_id').distinct('tag_id')
+        return {'tags': ProductTagASchema().dump(tags, many=True)}
 
     def product(self, q, box_id, **kwargs):
         product_types = kwargs.get('product_types[]', [])

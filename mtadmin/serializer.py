@@ -142,11 +142,8 @@ class BaseAdminSchema(Schema):
         return MediaASchema().dump(medias, many=True)
 
     def get_tag(self, obj):
-        tags = obj.tags.all()
-        tag_list = []
-        for index, media in enumerate(tags):
-            tag_list.append({'id': media.pk, 'name': {'fa': media.name['fa']}})
-        return tag_list
+        tags = ProductTag.objects.filter(product=obj)
+        return TagASchema().dump(tags, many=True)
 
 
 class SupplierESchema(BaseAdminSchema):
@@ -168,8 +165,11 @@ class InvoiceASchema(BaseAdminSchema):
     user = fields.Nested(MinUserSchema)
     status = fields.Function(lambda o: o.get_status_display())
     payed_at = fields.Function(lambda o: o.payed_at.timestamp() if o.payed_at else None)
-    # todo make it real, its fake
-    product_count = fields.Function(lambda o: 5)
+    product_count = fields.Method("get_product_count")
+
+    def get_product_count(self, obj):
+        product_counts = obj.invoice_storages.all().values_list('count', flat=True)
+        return sum(product_counts)
 
 
 class InvoiceESchema(InvoiceASchema):
@@ -187,6 +187,11 @@ class InvoiceESchema(InvoiceASchema):
     tax = fields.Method("calculate_invoice_tax")
     transportaion_price = fields.Method("get_transportaion_price")
     invoice = fields.Method("get_invoice")
+    start_price = fields.Method('get_start_price')
+
+    def get_start_price(self, obj):
+        # todo
+        return 100
 
     def get_invoice(self, obj):
         # todo
@@ -201,8 +206,8 @@ class InvoiceESchema(InvoiceASchema):
         return InvoiceStorageASchema().dump(storages, many=True)
 
     def calculate_invoice_tax(self, obj):
-        # todo
-        return 5000
+        taxes = obj.invoice_storages.all().values_list('tax', flat=True)
+        return sum(taxes)
 
     def get_ipg(self, obj):
         return [ip for ip in ipg['data'] if ip['id'] == obj.ipg][0]
@@ -389,8 +394,15 @@ class FeatureStorageASchema(Schema):
 
 
 class TagASchema(TagSchema):
-    id = fields.Int()
+    permalink = fields.Str()
     name = fields.Dict()
+
+
+class ProductTagASchema(TagSchema):
+    id = fields.Function(lambda o: o.tag_id)
+    permalink = fields.Function(lambda o: o.tag.permalink)
+    name = fields.Function(lambda o: o.tag.name)
+    show = fields.Boolean()
 
 
 class InvoiceStorageASchema(InvoiceStorageSchema):

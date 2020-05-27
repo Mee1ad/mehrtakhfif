@@ -23,7 +23,7 @@ from safedelete.config import DELETED_INVISIBLE
 from operator import attrgetter
 import pytz
 from server.field_validation import *
-from mtadmin.exception import ActivationError
+from mtadmin.exception import *
 from random import randint
 from django.utils.translation import gettext_lazy as _
 
@@ -176,7 +176,8 @@ class MyQuerySet(SafeDeleteQueryset):
                     storage.product.disable = True
                 # storage.related_packages.update(package__disable=True)
                 # todo fix in add product
-                # storage.cascade_disabling(storage)
+                storage.cascade_disabling(storage)
+
         elif model == 'product':
             product = self.first()
             storages = product.storages.all()
@@ -267,9 +268,12 @@ class Base(SafeDeleteModel):
                 i += 1
             except AttributeError:
                 self.deleted_by_id = user_id
-                self.save()
+                message = self.save()
                 break
         self.delete()
+        if message:
+            # todo
+            raise WarningMessage(message['message'])
 
     def get_name_fa(self):
         try:
@@ -298,12 +302,15 @@ class Base(SafeDeleteModel):
         if type(storages) != list and storages is not None:
             storages = [storages]
         for storage in storages:
+            if not storage.product.storages.filter(disable=False):
+                Product.objects.filter(pk=storage.product_id).update(disable=True)
             special_products = storage.special_products.all()
             if special_products:
                 [special_product.safe_delete() for special_product in special_products]
             package_records = storage.related_packages.all()
             for package_record in package_records:
                 Storage.objects.filter(pk=package_record.package_id).update(disable=True)
+        raise WarningMessage('آیا میدانستی: محصولات ویژه و پکیج هایی که شامل این انبار بودن هم غیرفعال میشن؟! 🤭')
 
 
 class User(AbstractUser):
@@ -630,6 +637,29 @@ class Brand(Base):
         ordering = ['-id']
 
 
+class ProductTag(models.Model):
+    select = []
+    prefetch = []
+    filter = {}
+
+    required_fields = []
+    related_fields = []
+    remove_fields = []
+    custom_m2m = {}
+    m2m = []
+    required_m2m = []
+    fields = {}
+
+    id = models.BigAutoField(auto_created=True, primary_key=True)
+    product = models.ForeignKey("Product", on_delete=PROTECT)
+    tag = models.ForeignKey(Tag, on_delete=PROTECT)
+    show = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = 'product_tag'
+        ordering = ['-id']
+
+
 class Product(Base):
     objects = MyQuerySet.as_manager()
     select = ['category', 'box', 'thumbnail']
@@ -639,7 +669,8 @@ class Product(Base):
     required_fields = ['thumbnail', 'description']
     related_fields = []
     remove_fields = []
-    m2m = ['categories', 'tags', 'media']
+    custom_m2m = {'tags': ProductTag}
+    m2m = ['categories', 'media']
     required_m2m = ['categories', 'tags', 'media']
     fields = {'thumbnail': 'تامبنیل', 'categories': 'دسته بندی', 'tags': 'تگ', 'media': 'مدیا'}
 
@@ -736,17 +767,6 @@ class Product(Base):
         ordering = ['-updated_at']
 
 
-class ProductTag(models.Model):
-    id = models.BigAutoField(auto_created=True, primary_key=True)
-    product = models.ForeignKey(Product, on_delete=PROTECT)
-    tag = models.ForeignKey(Tag, on_delete=PROTECT)
-    show = models.BooleanField(default=False)
-
-    class Meta:
-        db_table = 'product_tag'
-        ordering = ['-id']
-
-
 class ProductMedia(models.Model):
     related = ['storage']
 
@@ -831,7 +851,7 @@ class Storage(Base):
             self.clean()
         else:
             super().full_clean(exclude=None, validate_unique=True)
-
+    @pysnooper.snoop()
     def clean(self):
         if self.product.type != 4:
             self.base_clean()
@@ -852,7 +872,6 @@ class Storage(Base):
                 raise ActivationError(get_activation_warning_msg('ابعاد'))
         else:
             if Storage.objects.get(pk=self.pk).items.filter(disable=True):
-                self.make_item_disable(self)
                 raise ActivationError(get_activation_warning_msg('یکی از انبار ها'))
         super().clean()
 
@@ -1109,6 +1128,7 @@ class Invoice(Base):
     description = models.TextField(max_length=255, blank=True, null=True)
     amount = models.PositiveIntegerField()
     final_price = models.PositiveIntegerField()
+    invoice_discount = models.PositiveIntegerField()
     reference_id = models.CharField(max_length=127, null=True, blank=True)
     sale_order_id = models.BigIntegerField(null=True, blank=True)
     sale_reference_id = models.BigIntegerField(null=True, blank=True)
@@ -1148,7 +1168,7 @@ class InvoiceStorage(models.Model):
     filename = models.CharField(max_length=255, null=True, blank=True)
     box = models.ForeignKey(Box, on_delete=CASCADE)
     storage = models.ForeignKey(Storage, on_delete=PROTECT)
-    invoice = models.ForeignKey(Invoice, on_delete=PROTECT)
+    invoice = models.ForeignKey(Invoice, on_delete=PROTECT, related_name='invoice_storages')
     count = models.PositiveIntegerField(default=1)
     tax = models.PositiveSmallIntegerField()
     final_price = models.PositiveIntegerField(verbose_name='Final price')
@@ -1286,9 +1306,12 @@ class SpecialProduct(Base):
     def save(self, *args, **kwargs):
         storage = self.storage
         storage.clean()
-        if storage.disable:
+        if storage.disable and not self.deleted_by:
             raise ActivationError('اول باید انبار رو فعال کنی')
         super().save(*args)
+        if self.deleted_by:
+            return {'variant': 'warning',
+                    'message': 'این انبار محصول ویژه هم داشت که دیگه نداره، چون غیرفعالش کردی تقصیر خودته :)'}
 
     storage = models.ForeignKey(Storage, on_delete=CASCADE, null=True, blank=True, related_name='special_products')
     thumbnail = models.ForeignKey(Media, on_delete=PROTECT, related_name='special_product_thumbnail', null=True,

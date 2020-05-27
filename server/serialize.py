@@ -55,6 +55,12 @@ class BasketProductField(fields.Field):
         return BasketProductSchema().dump(basket_product, many=True)
 
 
+class InvoiceStorageField(fields.Field):
+    def _serialize(self, value, attr, obj, **kwargs):
+        invoice_storages = InvoiceStorage.objects.filter(invoice=obj)
+        return InvoiceStorageSchema().dump(invoice_storages, many=True)
+
+
 # Serializer
 
 
@@ -176,7 +182,6 @@ class BaseSchema(Schema):
             return HOST + obj.media.image.url
         return None
 
-    @pysnooper.snoop()
     def get_thumbnail(self, obj):
         if obj.thumbnail is not None:
             return MediaSchema(self.lang).dump(obj.thumbnail)
@@ -534,10 +539,13 @@ class BasketSchema(BaseSchema):
 
 class InvoiceSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'amount', 'final_price')
+        additional = ('id', 'final_price', 'invoice_discount')
 
     created_at = fields.Function(lambda o: o.created_at.timestamp())
     status = fields.Function(lambda o: o.get_status_display())
+    address = fields.Dict()
+    storages = InvoiceStorageField()
+
 
 
 class InvoiceStorageSchema(BaseSchema):
@@ -546,12 +554,10 @@ class InvoiceStorageSchema(BaseSchema):
                       'invoice_id', 'invoice_description', 'details')
 
     storage = fields.Method("get_storage")
-    box = fields.Method("get_box")
     unit_price = fields.Function(lambda o: int(o.discount_price / o.count))
     purchase_date = fields.Method('get_purchase_date')
     product = fields.Method("get_storage_product")
-    user = fields.Function(lambda o: {"id": o.invoice.user_id, "first_name": o.invoice.user.first_name,
-                                      "last_name": o.invoice.user.last_name})
+    features = fields.Dict()
 
     def get_storage_product(self, obj):
         p = obj.storage.product
@@ -681,6 +687,12 @@ class SpecialProductSchema(BaseSchema):
     # media = fields.Method('get_media')
     thumbnail = fields.Method("get_thumbnail")
     permalink = fields.Function(lambda o: o.storage.product.permalink)
+
+    def get_name(self, obj):
+        name = self.get(obj.name)
+        if name:
+            return name
+        return self.get(obj.storage.name)
 
 
 class AdSchema(BaseSchema):

@@ -257,7 +257,7 @@ class TagView(TableView):
     def patch(self, request):
         data = json.loads(request.body)
         tags = data['tags']
-        tags = Tag.objects.filter(pk__in=tags)
+        tags = Tag.objects.filter(id__in=tags)
         return JsonResponse({'tags': TagASchema().dump(tags, many=True)})
 
     def post(self, request):
