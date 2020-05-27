@@ -55,6 +55,12 @@ class PackegeItemsField(fields.Field):
         return PackageItemASchema().dump(items, many=True)
 
 
+class ProductTagField(fields.Field):
+    def _serialize(self, value, attr, obj, **kwargs):
+        items = ProductTag.objects.filter(product=obj)
+        return ProductTagASchema().dump(items, many=True)
+
+
 # Serializer
 class BaseAdminSchema(Schema):
     """
@@ -233,13 +239,20 @@ class BrandASchema(BrandSchema, BaseAdminSchema):
     name = fields.Dict()
 
 
+class ProductTagASchema(Schema):
+    id = fields.Function(lambda o: o.tag_id)
+    permalink = fields.Function(lambda o: o.tag.permalink)
+    name = fields.Function(lambda o: o.tag.name)
+    show = fields.Boolean()
+
+
 class ProductESchema(ProductASchema, ProductSchema):
     class Meta:
         unknown = EXCLUDE
         additional = ProductSchema.Meta.additional + ('verify',)
 
     media = fields.Method("get_media")
-    tag = fields.Method("get_tag")
+    tags = ProductTagField()
     brand = fields.Method("get_brand")
     name = fields.Dict()
     properties = fields.Dict()
@@ -396,13 +409,6 @@ class FeatureStorageASchema(Schema):
 class TagASchema(TagSchema):
     permalink = fields.Str()
     name = fields.Dict()
-
-
-class ProductTagASchema(TagSchema):
-    id = fields.Function(lambda o: o.tag_id)
-    permalink = fields.Function(lambda o: o.tag.permalink)
-    name = fields.Function(lambda o: o.tag.name)
-    show = fields.Boolean()
 
 
 class InvoiceStorageASchema(InvoiceStorageSchema):

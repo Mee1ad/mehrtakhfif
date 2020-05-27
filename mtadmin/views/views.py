@@ -126,8 +126,6 @@ class Search(AdminView):
         [tags_id.append(tag.id) for tag in r]
         tags = Tag.objects.in_bulk(tags_id)
         tags = [tags[x] for x in tags_id]
-        for tag in tags:
-            print(tag.name)
         tags = ProductTag.objects.filter(tag__in=tags).order_by('tag_id').distinct('tag_id')
         return {'tags': ProductTagASchema().dump(tags, many=True)}
 
