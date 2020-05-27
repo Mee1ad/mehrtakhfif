@@ -102,8 +102,7 @@ class ElasticSearch(View):
         s = s.query("multi_match", query=q, fields=['name_fa', 'category_fa'])
         products = []
         for hit in s:
-            product = {'name': hit.name_fa, 'thumbnail': hit.thumbnail}
-            products.append(product)
+            products.append({'name': hit.name_fa, 'permalink': hit.permalink, 'thumbnail': hit.thumbnail})
         return JsonResponse({'products': products})
 
 

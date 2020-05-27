@@ -314,6 +314,16 @@ class Base(SafeDeleteModel):
 
 
 class User(AbstractUser):
+    select = []
+    prefetch = []
+
+    required_fields = []
+    related_fields = []
+    m2m = []
+    remove_fields = []  # handle in post_process
+    custom_m2m = {}
+    required_m2m = []
+    fields = {}
 
     def __str__(self):
         return self.username

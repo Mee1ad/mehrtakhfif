@@ -92,9 +92,10 @@ class Login(View):
         user.activation_code = random.randint(10000, 99999)
         user.activation_expire = add_minutes(activation_expire)
         user.save()
+        res = {'resend_timeout': resend_timeout, 'timeout': activation_expire, 'code': user.activation_code}
         if not DEBUG:
             send_sms(user.username, input_data=[{'code': user.activation_code}])
-        res = {'resend_timeout': resend_timeout, 'timeout': activation_expire, 'code': user.activation_code}
+            res = {'resend_timeout': resend_timeout, 'timeout': activation_expire}
         return JsonResponse(res, status=res_code['updated'])
 
     @staticmethod
