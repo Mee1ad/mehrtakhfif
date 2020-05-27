@@ -22,6 +22,7 @@ from removebg import RemoveBg
 # rgb_im.save('img.jpg')
 
 sizes = {'thumbnail': (600, 372)}
+api_keys = ['RNknKooBRiKS5BXEBZ5RcZf1', ]
 
 rmbg = RemoveBg("RNknKooBRiKS5BXEBZ5RcZf1", "error.log")
 rmbg.remove_background_from_img_file("img.jpg")

@@ -222,7 +222,7 @@ class VipPriceView(TableView):
 
 
 class VipTypeView(TableView):
-    permission_required = 'server.view_vip_type'
+    permission_required = 'server.view_viptype'
 
     def get(self, request):
         return JsonResponse(serialized_objects(request, VipType, VipTypeASchema, error_null_box=False))

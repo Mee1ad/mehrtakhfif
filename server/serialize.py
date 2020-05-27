@@ -541,11 +541,16 @@ class InvoiceSchema(BaseSchema):
     class Meta:
         additional = ('id', 'final_price', 'invoice_discount')
 
-    created_at = fields.Function(lambda o: o.created_at.timestamp())
+    payed_at = fields.Method('get_payed_at')
     status = fields.Function(lambda o: o.get_status_display())
     address = fields.Dict()
     storages = InvoiceStorageField()
 
+    def get_payed_at(self, obj):
+        try:
+            return obj.payed_at.timestamp()
+        except AttributeError:
+            return None
 
 
 class InvoiceStorageSchema(BaseSchema):

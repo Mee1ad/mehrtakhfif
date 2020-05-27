@@ -88,11 +88,7 @@ class Orders(LoginRequired):
                 invoice = Invoice.objects.get(pk=pk, user=request.user)
             except Invoice.DoesNotExist:
                 return JsonResponse({}, status=404)
-            products = InvoiceStorage.objects.filter(invoice_id=pk)
-            address = AddressSchema().dump(invoice.address)
-            products = InvoiceStorageSchema().dump(products, many=True)
-            return JsonResponse({"products": products, 'address': address,
-                                 'status': invoice.get_status_display(), 'amount': invoice.amount})
+            return JsonResponse({'data': InvoiceSchema().dump(invoice)})
         orders = user_data_with_pagination(Invoice, InvoiceSchema, request)
         return JsonResponse(orders)
 
