@@ -322,7 +322,7 @@ def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=Non
                require_profit=False):
     if basket_id:
         basket = Basket.objects.get(pk=basket_id)
-    if not basket_id:
+    if not basket_id and not basket:
         basket = basket or Basket.objects.filter(user=user).order_by('-id').first()
     if basket is None:
         return {'basket': {}, 'summary': {}, 'address_required': False}
@@ -375,6 +375,7 @@ def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=Non
         summary.pop('ha_profit', None)
     basket = BasketSchema(language=lang).dump(basket)
     summary['invoice_discount'] = summary['final_price'] - summary['discount_price']
+
     return {'basket': basket, 'summary': summary, 'address_required': address_required}
 
 

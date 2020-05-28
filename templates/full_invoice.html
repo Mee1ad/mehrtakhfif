@@ -253,7 +253,7 @@
                         <tr>
                             <td colspan="4">
                                 <span class="label">نشانی:</span>{{ user.default_address.state }}
-                                - {{ user.default_address.city }} - {{user.default_address.address}}
+                                - {{ user.default_address.city }} - {{ user.default_address.address }}
                             </td>
                         </tr>
                         <tr>
@@ -261,7 +261,7 @@
                                 <span class="label">شماره تماس:</span>{{ user.username }}
                             </td>
                             <td colspan="2">
-                                <span class="label">کد پستی:</span> {{postal_code}}
+                                <span class="label">کد پستی:</span> {{ postal_code }}
                             </td>
                         </tr>
                     </table>
@@ -302,41 +302,41 @@
             <th style="width: 2.5cm"> جمع کل پس از تخفیف و مالیات و عوارض (ریال)</th>
         </tr>
         </thead>
-        {% for product in basket.products %}
-        <tr>
-            <td>{{forloop.counter}}</td>
-            <td>{{product.product.id}}</td>
-            <td>
-                <div class="title">{{ product.product.name}}</div>
-                {#                    <div class="serials">A5593064</div>#}
-            </td>
-            <td><span>{{ product.amer }}</span></td>
-            <td><span class="ltr">{{product.count}}</span></td>
-            <td><span class="ltr">
+        {% for product in storages %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ product.product.id }}</td>
+                <td>
+                    <div class="title">{{ product.product.name }}</div>
+                    {#                    <div class="serials">A5593064</div>#}
+                </td>
+                <td><span>{{ product.amer }}</span></td>
+                <td><span class="ltr">{{ product.count }}</span></td>
+                <td><span class="ltr">
                                             {{ product.item_final_price|to_rial }}
                                         </span></td>
 
-            <td><span class="ltr">
-                                            {{product.final_price|to_rial}}
+                <td><span class="ltr">
+                                            {{ product.final_price|to_rial }}
                                         </span></td>
 
-            <td><span class="ltr">
-                                            {{product.final_price|sub:product.discount_price}}
+                <td><span class="ltr">
+                                            {{ product.final_price|sub:product.discount_price }}
                                         </span></td>
 
-            <td><span class="ltr">
-                                            {{product.discount_price|to_rial}}
+                <td><span class="ltr">
+                                            {{ product.discount_price|to_rial }}
                                         </span></td>
 
-            <td><span class="ltr">
-                                            {{product.tax|to_rial}}
+                <td><span class="ltr">
+                                            {{ product.tax|to_rial }}
                                         </span></td>
 
-            <td><span class="ltr">
-                                        {{product.discount_price|to_rial}}
+                <td><span class="ltr">
+                                        {{ product.discount_price|to_rial }}
                                         </span></td>
 
-        </tr>
+            </tr>
         {% endfor %}
         <tfoot>
         <tr>
@@ -345,7 +345,7 @@
                 جمع کل پس از تخفیف و کسر مالیات و عوارض (ریال):
             </td>
             <td><span class="ltr">
-                                    {{summary.discount_price|to_rial}}
+                                    {{ amount|to_rial }}
                                 </span></td>
         </tr>
         <tr style="background: #fff">

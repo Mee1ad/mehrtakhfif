@@ -403,3 +403,9 @@ class Tax(AdminView):
         params = get_params(request, date_key='invoice__payed_at')
         # params['aggregate'] = {'tax': Sum('tax')}
         return JsonResponse(serialized_objects(request, InvoiceStorage, InvoiceStorageASchema))
+
+
+class Dashboard(AdminView):
+    def get(self, request):
+        boxes = Box.objects.all()
+        return JsonResponse({'boxes': DashboardSchema().dump(boxes, many=True)})

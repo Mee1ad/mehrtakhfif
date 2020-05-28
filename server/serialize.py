@@ -545,6 +545,11 @@ class InvoiceSchema(BaseSchema):
     status = fields.Function(lambda o: o.get_status_display())
     address = fields.Dict()
     storages = InvoiceStorageField()
+    amount = fields.Method('get_amount')  # without tax
+
+    def get_amount(self, obj):
+        prices = InvoiceStorage.objects.filter(invoice=obj).values_list('discount_price', flat=True)
+        return sum(prices)
 
     def get_payed_at(self, obj):
         try:
@@ -556,7 +561,7 @@ class InvoiceSchema(BaseSchema):
 class InvoiceStorageSchema(BaseSchema):
     class Meta:
         additional = ('count', 'discount_price', 'final_price', 'discount_percent',
-                      'invoice_id', 'invoice_description', 'details')
+                      'invoice_id', 'invoice_description', 'details', 'tax')
 
     storage = fields.Method("get_storage")
     unit_price = fields.Function(lambda o: int(o.discount_price / o.count))

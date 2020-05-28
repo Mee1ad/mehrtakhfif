@@ -95,11 +95,14 @@ class Orders(LoginRequired):
 
 class InvoiceView(LoginRequired):
     def get(self, request, invoice_id):
-        invoice = Invoice.objects.get(pk=invoice_id, status=2, user=request.user)
-        basket = get_basket(request.user, lang=request.lang, basket=invoice.basket, tax=True)
-        basket['user'] = request.user
-        basket['date'] = jdatetime.date.fromgregorian(date=invoice.payed_at).strftime("%Y/%m/%d")
-        return render_to_response('full_invoice.html', basket)
+        invoice_obj = Invoice.objects.get(pk=invoice_id, status=2, user=request.user)
+        invoice = InvoiceSchema().dump(invoice_obj)
+        # return JsonResponse(invoice)
+        # basket = get_basket(request.user, lang=request.lang, basket=invoice.basket, tax=True)
+
+        invoice['user'] = request.user
+        invoice['date'] = jdatetime.date.fromgregorian(date=invoice_obj.payed_at).strftime("%Y/%m/%d")
+        return render_to_response('full_invoice.html', invoice)
 
 
 class OrderProduct(LoginRequired):
