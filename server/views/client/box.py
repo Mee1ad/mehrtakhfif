@@ -57,7 +57,8 @@ class Filter(View):
         query = Q(verify=True, **params['filter'])
         if params['related']:
             query = Q(verify=True, **params['filter']) | Q(verify=True, **params['related'])
-        products = Product.objects.annotate(**params['rank']).filter(query).order_by(params['order'])
+        products = Product.objects.annotate(**params['rank']).filter(query).order_by(params['order']).order_by('-id').\
+            distinct('id')
         pg = get_pagination(request, products, MinProductSchema)
         return JsonResponse(pg)
 
