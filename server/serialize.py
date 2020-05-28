@@ -568,6 +568,10 @@ class InvoiceStorageSchema(BaseSchema):
     purchase_date = fields.Method('get_purchase_date')
     product = fields.Method("get_storage_product")
     features = fields.Dict()
+    amer = fields.Method("get_amer")
+
+    def get_amer(self, obj):
+        return self.get_name(obj.storage.product.box)
 
     def get_storage_product(self, obj):
         p = obj.storage.product
