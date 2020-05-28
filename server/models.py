@@ -699,6 +699,8 @@ class Product(Base):
             self.make_item_disable(self)
             raise ActivationError(get_activation_warning_msg('انبار فعال'))
         super().clean()
+        # todo for now
+        Product.objects.filter(pk=self.pk).update(verify=True)
 
     def assign_default_value(self):
         storages = self.storages.all()
@@ -1301,7 +1303,7 @@ class SpecialOffer(Base):
 class SpecialProduct(Base):
     select = ['storage', 'thumbnail']
     prefetch = []
-    filter = {"verify": True, "disable": False}
+    filter = {"disable": False}
 
     required_fields = ['storage', 'box']
     related_fields = []

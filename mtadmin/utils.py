@@ -183,7 +183,6 @@ def update_object(request, model, box_key='box', return_item=False, serializer=N
         raise PermissionDenied
     # data = get_data(request)
     data = data or json.loads(request.body)
-    print(data)
     data, m2m, custom_m2m, remove_fields = get_m2m_fields(model, data)
     pk = data['id']
     box_check = get_box_permission(request.user, box_key) if require_box else {}
