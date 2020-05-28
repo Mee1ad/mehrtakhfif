@@ -29,6 +29,8 @@ import string
 from django.core.exceptions import PermissionDenied
 from MyQR import myqr
 from mehr_takhfif.settings import BASE_DIR
+from server.serialize import InvoiceSchema
+import jdatetime
 
 random_data = string.ascii_lowercase + string.digits
 default_step = 10
@@ -184,6 +186,14 @@ def get_tax(tax_type, discount_price, start_price=None):
                    2: discount_price * 0.09,
                    3: (discount_price - start_price) * 0.09
                }[tax_type])
+
+
+def get_invoice_file(invoice_id, user):
+    invoice_obj = Invoice.objects.get(pk=invoice_id, status=2, user=user)
+    invoice = InvoiceSchema().dump(invoice_obj)
+    invoice['user'] = user
+    invoice['date'] = jdatetime.date.fromgregorian(date=invoice_obj.payed_at).strftime("%Y/%m/%d")
+    return invoice
 
 
 # No Usage

@@ -191,21 +191,16 @@ class InvoiceESchema(InvoiceASchema):
     suspended_at = fields.Function(lambda o: o.suspended_at.timestamp() if o.suspended_at else None)
     invoice_products = fields.Method("get_invoice_products")
     tax = fields.Method("calculate_invoice_tax")
-    transportaion_price = fields.Method("get_transportaion_price")
-    invoice = fields.Method("get_invoice")
+    transportation_price = fields.Int()
+    invoice = fields.Method("get_invoice_file")
     start_price = fields.Method('get_start_price')
 
     def get_start_price(self, obj):
         invoice_storages = InvoiceStorage.objects.filter(invoice=obj).values_list('start_price', flat=True)
         return sum(invoice_storages)
 
-    def get_invoice(self, obj):
-        # todo
-        return "http://api.mt.com/invoice/XwPQr4"
-
-    def get_transportaion_price(self, obj):
-        # todo
-        return 10000
+    def get_invoice_file(self, obj):
+        return HOST + f'/invoice_detail/{obj.id}'
 
     def get_invoice_products(self, obj):
         storages = InvoiceStorage.objects.filter(invoice=obj)
@@ -467,6 +462,7 @@ class SpecialProductESchema(SpecialProductASchema, SpecialProductSchema):
 
 
 class DashboardSchema(Schema):
+    id = fields.Int()
     name = fields.Dict()
     product_count = fields.Method('get_product_count')
     active_product_count = fields.Method('get_active_product_count')

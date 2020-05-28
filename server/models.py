@@ -175,7 +175,6 @@ class MyQuerySet(SafeDeleteQueryset):
                 if storage.product.storages.count() <= 1:
                     storage.product.disable = True
                 # storage.related_packages.update(package__disable=True)
-                # todo fix in add product
                 storage.cascade_disabling(storage)
 
         elif model == 'product':
@@ -1148,6 +1147,7 @@ class Invoice(Base):
     final_amount = models.PositiveIntegerField(help_text='from bank', null=True, blank=True)
     mt_profit = models.PositiveIntegerField()
     ha_profit = models.PositiveIntegerField()
+    transportation_price = models.PositiveIntegerField(default=0)
     ipg = models.PositiveSmallIntegerField(default=1)
     expire = models.DateTimeField(null=True, blank=True)
     status = models.PositiveSmallIntegerField(default=1, choices=((1, 'pending'), (2, 'payed'), (3, 'canceled'),

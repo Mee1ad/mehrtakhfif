@@ -67,11 +67,12 @@ class InvoiceStorageField(fields.Field):
 class BaseSchema(Schema):
     id = fields.Int()
 
-    def __init__(self, language='fa', vip=False):
+    def __init__(self, language='fa', vip=False, user=None):
         super().__init__()
         self.lang = language
         self.default_lang = 'fa'
         self.vip = vip
+        self.user = user
 
     def get(self, name):
         try:
@@ -215,10 +216,17 @@ class BaseSchema(Schema):
         return obj.available_count_for_sale
 
     def get_vip_max_count_for_sale(self, obj):
-        # todo check after adding vip table
-        # if obj.available_count_for_sale >= obj.vip_max_count_for_sale:
-        #     return obj.vip_max_count_for_sale
-        return obj.available_count_for_sale
+        user_vip_types = self.user.vip_types.all().values_list('id', flat=True)
+        storage_vip_prices = VipPrice.objects.filter(storage=obj)
+        max_count_for_sale = obj.max_count_for_sale
+        for vip_type in user_vip_types:
+            try:
+                vip_max_count_for_sale = storage_vip_prices.get(vip_type=vip_type).max_count_for_sale
+                if vip_max_count_for_sale < max_count_for_sale:
+                    max_count_for_sale = vip_max_count_for_sale
+            except Exception:
+                continue
+        return max_count_for_sale
 
     def get_min_count_alert(self, obj):
         if obj.available_count_for_sale <= obj.min_count_alert:

@@ -39,6 +39,7 @@ def task_postrun_handler(task_id=None, **kwargs):
         PeriodicTask.objects.filter(name=task_name).update(description=description)
         return f'Return {task_id}'
 
+
 @shared_task
 def send_invoice(invoice_id, lang, **kwargs):
     products = InvoiceStorage.objects.filter(invoice_id=invoice_id)
@@ -93,7 +94,7 @@ def get_snapshots(self, name=None):
         return [image for image in images['data'] if name == image['abrak'].split('_', 1)[0]]
     return images['data']
 
-# todo get a list of object and one object and say if it is in list or not
+
 # todo make a task in db
 @shared_task
 def server_backup():
