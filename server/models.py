@@ -861,7 +861,7 @@ class Storage(Base):
             self.clean()
         else:
             super().full_clean(exclude=None, validate_unique=True)
-    @pysnooper.snoop()
+
     def clean(self):
         if self.product.type != 4:
             self.base_clean()

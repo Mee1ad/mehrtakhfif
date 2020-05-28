@@ -132,7 +132,7 @@ def filter_params(params, lang):
         except Box.DoesNotExist:
             pass
     if category:
-        filters['filter']['category__permalink'] = category
+        filters['filter']['categories__permalink'] = category
     if orderby != '-created_at':
         valid_key = valid_orders[orderby]
         filters['order'] = valid_key
@@ -329,7 +329,7 @@ def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=Non
     basket_products = basket_products or BasketProduct.objects.filter(
         basket=basket).select_related(*BasketProduct.related)
     summary = {"total_price": 0, "discount_price": 0, "profit": 0, "mt_profit": 0, 'ha_profit': 0,
-               "shopping_cost": 0, "tax": 0}
+               "shopping_cost": 0, "tax": 0, "final_price": 0}
     address_required = False
     for basket_product in basket_products:
         storage = basket_product.storage
