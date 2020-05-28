@@ -196,8 +196,8 @@ class InvoiceESchema(InvoiceASchema):
     start_price = fields.Method('get_start_price')
 
     def get_start_price(self, obj):
-        # todo
-        return 100
+        invoice_storages = InvoiceStorage.objects.filter(invoice=obj).values_list('start_price', flat=True)
+        return sum(invoice_storages)
 
     def get_invoice(self, obj):
         # todo

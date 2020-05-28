@@ -229,8 +229,6 @@ def update_object_old(request, model, box_key='box', return_item=False, serializ
     return JsonResponse({}, status=res_code['updated'])
 
 
-# bug remove mt_profit from res
-
 def delete_base(request, model, require_box=False):
     pk = int(request.GET.get('id', None))
     if request.token:

@@ -51,11 +51,13 @@ class FilterDetail(View):
 
 
 class Filter(View):
+    @pysnooper.snoop()
     def get(self, request):
         params = filter_params(request.GET, request.lang)
         query = Q(verify=True, **params['filter'])
         if params['related']:
             query = Q(verify=True, **params['filter']) | Q(verify=True, **params['related'])
+        print(params)
         products = Product.objects.annotate(**params['rank']).filter(query).order_by(params['order'])
         pg = get_pagination(request, products, MinProductSchema)
         return JsonResponse(pg)
