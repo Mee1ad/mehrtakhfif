@@ -1,4 +1,4 @@
-from mehr_takhfif.settings import TOKEN_SALT, ADMIN, DEFAULT_COOKIE_DOMAIN, HA_ACCOUNTANT, MT_ACCOUNTANT
+from mehr_takhfif.settings import TOKEN_SALT, ADMIN, DEFAULT_COOKIE_DOMAIN, HA_ACCOUNTANTS, MT_ACCOUNTANTS
 from server.utils import default_step, default_page, res_code, set_csrf_cookie, check_csrf_token, get_custom_signed_cookie, \
     set_custom_signed_cookie
 from server.models import User, Basket
