@@ -23,7 +23,7 @@ INSTALLED_APPS = [
     'push_notifications',
     'django_celery_results',
     'django_celery_beat',
-    'cloudinary',
+    # 'cloudinary',
     # 'django.contrib.admindocs',
     # 'django.contrib.postgres',
 ] + MY_INSTALLED_APPS
