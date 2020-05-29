@@ -84,6 +84,7 @@ class TableFilter(AdminView):
             box = {}
         if table == 'storage':
             box = {'product__box_id': box_id}
+            return JsonResponse({'disable': [{'id': 0, 'name': False}, {'id': 1, 'name': True}]})
         if table == 'media':
             media_types = Media.objects.order_by('type').distinct('type')
             return JsonResponse({'types': [{'id': item.type, 'name': item.get_type_display()} for item in media_types]})

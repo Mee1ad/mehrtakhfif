@@ -53,7 +53,7 @@ class AuthMiddleware:
         except Exception:
             request.lang = 'fa'
 
-        request.schema_params = {'language': request.lang}
+        request.schema_params = {'language': request.lang, 'user': request.user}
 
         if app_name == 'server':
             request.params = {}

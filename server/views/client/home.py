@@ -39,7 +39,7 @@ class BoxesGetSpecialProduct(View):
             box_special_product = SpecialProduct.objects.select_related(*SpecialProduct.select).filter(box=box) \
                 [(page - 1) * step:step * page]
             box = {'id': box.pk, 'name': box.name[language], 'key': box.permalink}
-            box['special_products'] = SpecialProductSchema(request.lang).dump(box_special_product, many=True)
+            box['special_products'] = SpecialProductSchema(**request.schema_params).dump(box_special_product, many=True)
             products.append(box)
         res = {'products': products}
         return JsonResponse(res)

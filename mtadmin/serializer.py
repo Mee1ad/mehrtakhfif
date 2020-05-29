@@ -292,6 +292,7 @@ class StorageASchema(BaseAdminSchema, StorageSchema):
 
     title = fields.Method("get_title")
     start_time = fields.Function(lambda o: o.start_time.timestamp())
+    vip_max_count_for_sale = fields.Function(lambda o: None)
 
 
 class StorageESchema(StorageASchema):

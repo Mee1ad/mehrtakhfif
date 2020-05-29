@@ -21,7 +21,7 @@ class BookingView(View):
         end_date = data['end_date']
         guest_count = data['guest']
         house = House.objects.get(pk=data['house_id'])
-        price = self.calculate_book_price(house, start_date, end_date, guest_count)
+        price = self.calculate_book_price(request, house, start_date, end_date, guest_count)
         invoice = Invoice.objects.create(created_by=user, updated_by=user, user=user,
                                          amount=price, type=1, address=data.get('address', None),
                                          final_price=price, expire=add_minutes(1))
@@ -29,8 +29,8 @@ class BookingView(View):
                                start_date=start_date, end_date=end_date)
         return JsonResponse({})
 
-    def calculate_book_price(self, house, start_date, end_date, guest_count=0):
-        price = HousePriceSchema().dump(house)['price']
+    def calculate_book_price(self, request, house, start_date, end_date, guest_count=0):
+        price = HousePriceSchema(**request.schema_params).dump(house)['price']
         guest_price = price['guest']
         price = price['months']
         assert datetime.strptime(start_date, '%Y-%m-%d') <= datetime.strptime(end_date, '%Y-%m-%d')
@@ -57,9 +57,9 @@ class BookingView(View):
             amount += day['price'] + guest_count * guest_price
         return amount
 
-    def get_booking_price(self):
+    def get_booking_price(self, request):
         house = House.objects.get(pk=1)
-        price = HousePriceSchema().dump(house)['price']['months']
+        price = HousePriceSchema(**request.schema_params).dump(house)['price']['months']
         start_date = '1399-2-5'
         end_date = '1400-8-8'
         assert jdatetime.datetime.strptime(start_date, '%Y-%m-%d') <= jdatetime.datetime.strptime(end_date, '%Y-%m-%d')

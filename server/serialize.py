@@ -39,6 +39,10 @@ class TagField(fields.Field):
 
 class ProductField(fields.Field):
     def _serialize(self, value, attr, obj, **kwargs):
+        print(value)
+        print(attr)
+        print(obj)
+        print(kwargs)
         product = value.all()
         return StorageSchema().dump(product, many=True)
 
@@ -128,12 +132,12 @@ class BaseSchema(Schema):
 
     def get_product(self, obj):
         if obj.product is not None:
-            return ProductSchema(self.lang).dump(obj.product)
+            return ProductSchema(self.lang, self.user).dump(obj.product)
         return None
 
     def get_house(self, obj):
         if hasattr(obj, 'house'):
-            return HouseSchema(self.lang).dump(obj.house)
+            return HouseSchema(self.lang, self.user).dump(obj.house)
         return None
 
     def get_permalink(self, obj):
@@ -143,12 +147,12 @@ class BaseSchema(Schema):
 
     def get_min_product(self, obj):
         if obj.product is not None:
-            return MinProductSchema(self.lang).dump(obj.product)
+            return MinProductSchema(self.lang, self.user).dump(obj.product)
         return None
 
     def get_storage(self, obj):
         if obj.storage is not None:
-            return StorageSchema(self.lang).dump(obj.storage)
+            return StorageSchema(self.lang, self.user).dump(obj.storage)
         return None
 
     def get_min_storage(self, obj):
@@ -156,9 +160,9 @@ class BaseSchema(Schema):
             if hasattr(obj, 'house'):
                 return None
             if hasattr(obj, 'default_storage'):
-                return MinStorageSchema(self.lang, vip=self.vip).dump(obj.default_storage)
+                return MinStorageSchema(self.lang, vip=self.vip, user=self.user).dump(obj.default_storage)
             if hasattr(obj, 'storage'):
-                return MinStorageSchema(self.lang, vip=self.vip).dump(obj.storage)
+                return MinStorageSchema(self.lang, vip=self.vip, user=self.user).dump(obj.storage)
             return None
         except Exception:
             pass
@@ -211,13 +215,14 @@ class BaseSchema(Schema):
         return new_value
 
     def get_max_count_for_sale(self, obj):
-        if obj.available_count_for_sale >= obj.max_count_for_sale:
+        if (obj.available_count_for_sale >= obj.max_count_for_sale) and (obj.max_count_for_sale != 0):
             return obj.max_count_for_sale
         return obj.available_count_for_sale
 
     def get_vip_max_count_for_sale(self, obj):
-        return 1
         user_vip_types = self.user.vip_types.all().values_list('id', flat=True)
+        if not user_vip_types:
+            return None
         storage_vip_prices = VipPrice.objects.filter(storage=obj)
         max_count_for_sale = obj.max_count_for_sale
         for vip_type in user_vip_types:
@@ -555,6 +560,7 @@ class InvoiceSchema(BaseSchema):
     address = fields.Dict()
     storages = InvoiceStorageField()
     amount = fields.Method('get_amount')  # without tax
+    created_at = fields.Function(lambda o: o.created_at.timestamp())
 
     def get_amount(self, obj):
         prices = InvoiceStorage.objects.filter(invoice=obj).values_list('discount_price', flat=True)

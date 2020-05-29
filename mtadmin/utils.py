@@ -306,7 +306,9 @@ def get_model_filter(model, box):
 
 def get_table_filter(table, box):
     schema = tables.get(table, None)
-    list_filter = schema.list_filter
-    filters = [get_model_filter(model, box) for model in list_filter]
-    return filters
-
+    try:
+        list_filter = schema.list_filter
+        filters = [get_model_filter(model, box) for model in list_filter]
+        return filters
+    except AttributeError:
+        return {}

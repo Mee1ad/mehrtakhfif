@@ -815,6 +815,8 @@ class Package(Base):
         return self.package.title['fa']
 
     def save(self, *args, **kwargs):
+        if Package.objects.filter(package_item=self.package_item).exists():
+            raise ValidationError('انبار تکراریه')
         super().save(*args, **kwargs)
 
     package = models.ForeignKey("Storage", on_delete=PROTECT, related_name="packages")
@@ -931,6 +933,7 @@ class Storage(Base):
             VipPrice.objects.bulk_create(vip_prices)
         if self.product.type == 4:  # package
             # {'is_package': True, 'items': [{'package_item_id':1, 'count': 5}, {'package_item_id':2, 'count': 10}]}
+            self.items.clear()
             user = self.created_by
             package_items = [Package(**item, created_by=user, updated_by=user, package=self) for item in
                              my_dict.get('items')]
