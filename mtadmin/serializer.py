@@ -162,15 +162,13 @@ class BoxASchema(BoxSchema):
     disable = fields.Boolean()
 
 
-class InvoiceASchema(BaseAdminSchema):
+class InvoiceASchema(BaseAdminSchema, InvoiceSchema):
     list_filter = [Box, Category]
 
     class Meta:
-        additional = ('id', 'basket_id', 'amount', 'status', 'final_price')
+        additional = ('basket_id',)
 
     user = fields.Nested(MinUserSchema)
-    status = fields.Function(lambda o: o.get_status_display())
-    payed_at = fields.Function(lambda o: o.payed_at.timestamp() if o.payed_at else None)
     product_count = fields.Method("get_product_count")
 
     def get_product_count(self, obj):
@@ -192,15 +190,12 @@ class InvoiceESchema(InvoiceASchema):
     invoice_products = fields.Method("get_invoice_products")
     tax = fields.Method("calculate_invoice_tax")
     transportation_price = fields.Int()
-    invoice = fields.Method("get_invoice_file")
     start_price = fields.Method('get_start_price')
 
     def get_start_price(self, obj):
         invoice_storages = InvoiceStorage.objects.filter(invoice=obj).values_list('start_price', flat=True)
         return sum(invoice_storages)
 
-    def get_invoice_file(self, obj):
-        return HOST + f'/invoice_detail/{obj.id}'
 
     def get_invoice_products(self, obj):
         storages = InvoiceStorage.objects.filter(invoice=obj)

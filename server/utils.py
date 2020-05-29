@@ -187,9 +187,9 @@ def get_tax(tax_type, discount_price, start_price=None):
                    3: (discount_price - start_price) * 0.09
                }[tax_type])
 
-
+@pysnooper.snoop()
 def get_invoice_file(invoice_id, user):
-    invoice_obj = Invoice.objects.get(pk=invoice_id, status=2, user=user)
+    invoice_obj = Invoice.objects.get(pk=invoice_id, status=2, **user)
     invoice = InvoiceSchema().dump(invoice_obj)
     invoice['user'] = user
     invoice['date'] = jdatetime.date.fromgregorian(date=invoice_obj.payed_at).strftime("%Y/%m/%d")

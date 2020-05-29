@@ -95,7 +95,12 @@ class Orders(LoginRequired):
 
 class InvoiceView(LoginRequired):
     def get(self, request, invoice_id):
-        invoice = get_invoice_file(invoice_id, request.user)
+        permission_group = ['admin', 'support', 'accountant']
+        permission_group = []
+        user = {'user': request.user}
+        if request.user.groups.filter(name__in=permission_group):
+            user = {}
+        invoice = get_invoice_file(invoice_id, user)
         return render_to_response('full_invoice.html', invoice)
 
 

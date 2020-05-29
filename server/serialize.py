@@ -561,6 +561,10 @@ class InvoiceSchema(BaseSchema):
     storages = InvoiceStorageField()
     amount = fields.Method('get_amount')  # without tax
     created_at = fields.Function(lambda o: o.created_at.timestamp())
+    invoice = fields.Method("get_invoice_file")
+
+    def get_invoice_file(self, obj):
+        return HOST + f'/invoice_detail/{obj.id}'
 
     def get_amount(self, obj):
         prices = InvoiceStorage.objects.filter(invoice=obj).values_list('discount_price', flat=True)
