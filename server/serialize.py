@@ -216,6 +216,7 @@ class BaseSchema(Schema):
         return obj.available_count_for_sale
 
     def get_vip_max_count_for_sale(self, obj):
+        return 1
         user_vip_types = self.user.vip_types.all().values_list('id', flat=True)
         storage_vip_prices = VipPrice.objects.filter(storage=obj)
         max_count_for_sale = obj.max_count_for_sale
