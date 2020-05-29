@@ -30,9 +30,9 @@ class AuthMiddleware:
         # Debug
         if ADMIN:
             request.user = User.objects.order_by('id').first()
-        if HA_ACCOUNTANT:
+        if HA_ACCOUNTANTS:
             request.user = User.objects.get(pk=140)
-        if MT_ACCOUNTANT:
+        if MT_ACCOUNTANTS:
             request.user = User.objects.get(pk=246)
         if route == 'favicon.ico':
             return JsonResponse({})
