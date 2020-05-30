@@ -43,8 +43,9 @@ class FilterDetail(View):
         prices = products.aggregate(max=Max('default_storage__discount_price'),
                                     min=Min('default_storage__discount_price'))
         # categories = [product.category for product in products.order_by('category_id').distinct('category_id')]
+        disable = {'disable': False} if not request.user.is_staff else {}
         categories = Category.objects.filter(
-            pk__in=list(filter(None, set(products.values_list('categories', flat=True)))), disable=False)
+            pk__in=list(filter(None, set(products.values_list('categories', flat=True)))), **disable)
         categories = get_categories(request.lang, categories=categories)
         brands = [product.brand for product in products.order_by('brand_id').distinct('brand_id') if product.brand]
         return JsonResponse({'max_price': prices['max'], 'min_price': prices['min'], **res,
@@ -55,14 +56,12 @@ class FilterDetail(View):
 class Filter(View):
     def get(self, request):
         params = filter_params(request.GET, request.lang)
-        print(params)
         query = Q(verify=True, **params['filter'])
+        disable = {'categories__disable': False, 'box__disable': False} if not request.user.is_staff else {}
         if params['related']:
             query = Q(verify=True, **params['filter']) | Q(verify=True, **params['related'])
-        products = Product.objects.annotate(**params['query']).filter(query, box__disable=False,
-                                                                     categories__disable=False).order_by(
-            params['order']).order_by('-id'). \
-            distinct('id')
+        products = Product.objects.annotate(**params['annotate']).filter(query, **disable).order_by(
+            params['order']).order_by('-id').distinct('id')
         pg = get_pagination(request, products, MinProductSchema)
         return JsonResponse(pg)
 

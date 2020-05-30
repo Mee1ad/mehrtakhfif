@@ -72,6 +72,7 @@ class BoxWithCategory(View):
             is_admin = True
         try:
             disable = {'disable': False} if not request.user.is_staff else {}
+            print(request.user, request.user.is_authenticated, disable)
             box = Box.objects.get(**box_filter, **disable)
             categories = get_categories(request.lang, box.pk, is_admin=is_admin, disable=disable)
             box = BoxSchema(**request.schema_params).dump(box)

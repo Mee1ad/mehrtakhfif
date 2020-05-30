@@ -108,7 +108,7 @@ def upload(request, titles, media_type, box=None):
 
 
 def filter_params(params, lang):
-    filters = {'filter': {'default_storage__isnull': False}, 'query': {}, 'related': {},
+    filters = {'filter': {'default_storage__isnull': False}, 'rank': {}, 'related': {}, 'query': {}, 'annotate': {},
                'order': '-created_at'}
     if not params:
         return filters
@@ -119,6 +119,7 @@ def filter_params(params, lang):
                     'discount': f'{ds}{dis}discount_percent'}
     box_permalink = params.get('b', None)
     q = params.get('q', None)
+    s = params.get('s', None)
     orderby = params.get('o', '-created_at')
     category = params.get('cat', None)
     available = params.get('available', None)
@@ -138,11 +139,13 @@ def filter_params(params, lang):
     if orderby != '-created_at':
         valid_key = valid_orders[orderby]
         filters['order'] = valid_key
-    if q:
-        filters['query'] = {'query': get_rank(q, lang)}
-        filters['filter']['query__contains'] = q
+    if s:
+        filters['annotate']['rank'] = get_rank(q, lang)
         filters['order'] = '-rank'
-        # filters['filter']['']
+    if q:
+        filters['annotate']['text'] = KeyTextTransform(lang, 'name')
+        filters['filter']['text__contains'] = q
+        filters['order'] = 'text'
     if available:
         filters['filter'][f'{ds}available_count_for_sale__gt'] = 0
     if min_price and max_price:
@@ -188,7 +191,6 @@ def get_tax(tax_type, discount_price, start_price=None):
                    2: discount_price * 0.09,
                    3: (discount_price - start_price) * 0.09
                }[tax_type])
-
 
 def get_invoice_file(invoice_id, user):
     invoice_obj = Invoice.objects.get(pk=invoice_id, status=2, **user)
