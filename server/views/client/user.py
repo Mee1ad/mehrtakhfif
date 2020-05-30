@@ -20,7 +20,6 @@ from django.utils.translation import gettext_lazy as _
 
 
 class Test(View):
-    @pysnooper.snoop()
     def get(self, request):
         # raise ValidationError('error happend')
         raise ValidationError(_(f'لطفا محصول را وارد نمایید'))

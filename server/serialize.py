@@ -155,7 +155,6 @@ class BaseSchema(Schema):
             return StorageSchema(self.lang, self.user).dump(obj.storage)
         return None
 
-    @pysnooper.snoop()
     def get_min_storage(self, obj):
         try:
             if hasattr(obj, 'house'):

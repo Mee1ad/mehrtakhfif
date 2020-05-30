@@ -16,7 +16,6 @@ class CustomItem(Item):
 
 
 class CustomPacker(Packer):
-    @pysnooper.snoop()
     def remove_item(self, item):
         self.total_items = len(self.items) - 1
         self.items.pop(item)

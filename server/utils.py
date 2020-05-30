@@ -108,7 +108,7 @@ def upload(request, titles, media_type, box=None):
 
 
 def filter_params(params, lang):
-    filters = {'filter': {'default_storage__isnull': False}, 'rank': {}, 'related': {}, 'query': '',
+    filters = {'filter': {'default_storage__isnull': False}, 'query': {}, 'related': {},
                'order': '-created_at'}
     if not params:
         return filters
@@ -139,8 +139,10 @@ def filter_params(params, lang):
         valid_key = valid_orders[orderby]
         filters['order'] = valid_key
     if q:
-        filters['rank'] = {'rank': get_rank(q, lang)}
+        filters['query'] = {'query': get_rank(q, lang)}
+        filters['filter']['query__contains'] = q
         filters['order'] = '-rank'
+        # filters['filter']['']
     if available:
         filters['filter'][f'{ds}available_count_for_sale__gt'] = 0
     if min_price and max_price:
@@ -187,7 +189,7 @@ def get_tax(tax_type, discount_price, start_price=None):
                    3: (discount_price - start_price) * 0.09
                }[tax_type])
 
-@pysnooper.snoop()
+
 def get_invoice_file(invoice_id, user):
     invoice_obj = Invoice.objects.get(pk=invoice_id, status=2, **user)
     invoice = InvoiceSchema().dump(invoice_obj)

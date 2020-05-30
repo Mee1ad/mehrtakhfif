@@ -50,7 +50,6 @@ class BasketView(LoginRequired):
         except (AssertionError, Basket.DoesNotExist):
             return JsonResponse(default_response['bad'], status=400)
 
-    @pysnooper.snoop()
     def add_to_basket(self, basket, products):
         # {"id": 1, "count": 5, "features": [{"fsid": 16, "fvid": [1, 2]}]}
         for product in products:
@@ -128,7 +127,6 @@ class GetProducts(View):
 
 
 class InvoiceView(View):
-    @pysnooper.snoop()
     def get(self, request):
         # email.attach_file('/images/weather_map.png')
         return JsonResponse(default_response['ok'])

@@ -756,6 +756,7 @@ class Product(Base):
     verify = models.BooleanField(default=False)
     manage = models.BooleanField(default=True)
     reservable = models.BooleanField(default=False)
+    breakable = models.BooleanField(default=False)
     type = models.PositiveSmallIntegerField(choices=product_types, validators=[validate_product_type])
     permalink = models.CharField(max_length=255, db_index=True, unique=True)
 

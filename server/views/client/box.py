@@ -43,21 +43,25 @@ class FilterDetail(View):
         prices = products.aggregate(max=Max('default_storage__discount_price'),
                                     min=Min('default_storage__discount_price'))
         # categories = [product.category for product in products.order_by('category_id').distinct('category_id')]
-        categories = Category.objects.filter(pk__in=list(filter(None, set(products.values_list('categories', flat=True)))))
+        categories = Category.objects.filter(
+            pk__in=list(filter(None, set(products.values_list('categories', flat=True)))), disable=False)
         categories = get_categories(request.lang, categories=categories)
         brands = [product.brand for product in products.order_by('brand_id').distinct('brand_id') if product.brand]
         return JsonResponse({'max_price': prices['max'], 'min_price': prices['min'], **res,
-                             'brands': BrandSchema(**request.schema_params).dump(brands, many=True), 'categories': categories})
+                             'brands': BrandSchema(**request.schema_params).dump(brands, many=True),
+                             'categories': categories})
 
 
 class Filter(View):
-    @pysnooper.snoop()
     def get(self, request):
         params = filter_params(request.GET, request.lang)
+        print(params)
         query = Q(verify=True, **params['filter'])
         if params['related']:
             query = Q(verify=True, **params['filter']) | Q(verify=True, **params['related'])
-        products = Product.objects.annotate(**params['rank']).filter(query).order_by(params['order']).order_by('-id').\
+        products = Product.objects.annotate(**params['query']).filter(query, box__disable=False,
+                                                                     categories__disable=False).order_by(
+            params['order']).order_by('-id'). \
             distinct('id')
         pg = get_pagination(request, products, MinProductSchema)
         return JsonResponse(pg)
@@ -101,7 +105,7 @@ class TagView(View):
 
 class CategoryView(View):
     def get(self, request, permalink):
-        category = Category.objects.filter(permalink=permalink).first()
+        category = Category.objects.filter(permalink=permalink, disable=False).first()
         products = Product.objects.filter(category=category)
         pg = get_pagination(request, products, MinProductSchema)
         return JsonResponse(pg)

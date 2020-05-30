@@ -143,7 +143,6 @@ class HouseView(TableView):
 class StorageView(TableView):
     permission_required = 'server.view_storage'
 
-    @pysnooper.snoop()
     def get(self, request):
         # todo clean
         Storage.objects.filter(deadline__lt=timezone.now(), disable=False).update(disable=True)

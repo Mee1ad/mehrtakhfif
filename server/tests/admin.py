@@ -47,7 +47,6 @@ class AdminBaseTest(APITestCase):
         res = self.client.delete(f'{url}?id={pk}')
         self.assertEqual(res.status_code, 200)
 
-    @pysnooper.snoop()
     def base_crud(self, data, url, get_query=f'?b={box}'):
         pk = self.base_create(data, url)
         data['id'] = pk

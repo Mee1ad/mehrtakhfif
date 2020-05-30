@@ -36,7 +36,6 @@ class SessionStore(OriginalSessionStore):
 
 
 class Login(View):
-    @pysnooper.snoop()
     def post(self, request):
         data = load_data(request, check_token=False)
         cookie_age = 30 * 60
@@ -104,7 +103,6 @@ class Login(View):
 
 
 class PrivacyPolicy(View):
-    @pysnooper.snoop()
     def put(self, request):
         try:
             user = Backend.get_user_from_cookie(request)
@@ -134,7 +132,6 @@ class SetPassword(View):
 
 
 class ResendCode(View):
-    @pysnooper.snoop()
     def post(self, request):
         try:
             user = Backend.get_user_from_cookie(request)

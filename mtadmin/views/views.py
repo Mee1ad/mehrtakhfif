@@ -71,7 +71,6 @@ class MailView(AdminView):
 
 
 class TableFilter(AdminView):
-    @pysnooper.snoop()
     def get(self, request, table):
         box_id = request.GET.get('b')
         user = request.user
@@ -130,7 +129,7 @@ class Search(AdminView):
         tags = Tag.objects.in_bulk(tags_id)
         tags = [tags[x] for x in tags_id]
         return {'tags': TagASchema().dump(tags, many=True)}
-
+    @pysnooper.snoop()
     def product(self, q, box_id, **kwargs):
         product_types = kwargs.get('product_types[]', [])
         products_id = []
