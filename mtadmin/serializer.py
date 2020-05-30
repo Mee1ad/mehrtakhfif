@@ -196,7 +196,6 @@ class InvoiceESchema(InvoiceASchema):
         invoice_storages = InvoiceStorage.objects.filter(invoice=obj).values_list('start_price', flat=True)
         return sum(invoice_storages)
 
-
     def get_invoice_products(self, obj):
         storages = InvoiceStorage.objects.filter(invoice=obj)
         return InvoiceStorageASchema().dump(storages, many=True)

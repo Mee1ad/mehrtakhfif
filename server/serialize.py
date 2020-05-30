@@ -155,6 +155,7 @@ class BaseSchema(Schema):
             return StorageSchema(self.lang, self.user).dump(obj.storage)
         return None
 
+    @pysnooper.snoop()
     def get_min_storage(self, obj):
         try:
             if hasattr(obj, 'house'):
@@ -220,19 +221,22 @@ class BaseSchema(Schema):
         return obj.available_count_for_sale
 
     def get_vip_max_count_for_sale(self, obj):
-        user_vip_types = self.user.vip_types.all().values_list('id', flat=True)
-        if not user_vip_types:
+        try:
+            user_vip_types = self.user.vip_types.all().values_list('id', flat=True)
+            if not user_vip_types:
+                return None
+            storage_vip_prices = VipPrice.objects.filter(storage=obj)
+            max_count_for_sale = obj.max_count_for_sale
+            for vip_type in user_vip_types:
+                try:
+                    vip_max_count_for_sale = storage_vip_prices.get(vip_type=vip_type).max_count_for_sale
+                    if vip_max_count_for_sale < max_count_for_sale:
+                        max_count_for_sale = vip_max_count_for_sale
+                except Exception:
+                    continue
+            return max_count_for_sale
+        except AttributeError:
             return None
-        storage_vip_prices = VipPrice.objects.filter(storage=obj)
-        max_count_for_sale = obj.max_count_for_sale
-        for vip_type in user_vip_types:
-            try:
-                vip_max_count_for_sale = storage_vip_prices.get(vip_type=vip_type).max_count_for_sale
-                if vip_max_count_for_sale < max_count_for_sale:
-                    max_count_for_sale = vip_max_count_for_sale
-            except Exception:
-                continue
-        return max_count_for_sale
 
     def get_min_count_alert(self, obj):
         if obj.available_count_for_sale <= obj.min_count_alert:
