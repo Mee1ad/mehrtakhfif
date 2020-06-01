@@ -115,8 +115,8 @@ def filter_params(params, lang):
     ds = 'default_storage__'
     dis = 'discount'
     valid_orders = {'cheap': f'{ds}{dis}_price', 'expensive': f'-{ds}{dis}_price',
-                    'best_seller': f'{ds}sold_count', 'popular': '-created_at',
-                    'discount': f'{ds}{dis}discount_percent'}
+                    'best_seller': f'-{ds}sold_count', 'popular': '-created_at',
+                    'discount': f'-{ds}{dis}_percent'}
     box_permalink = params.get('b', None)
     q = params.get('q', None)
     s = params.get('s', None)
@@ -191,6 +191,7 @@ def get_tax(tax_type, discount_price, start_price=None):
                    2: discount_price * 0.09,
                    3: (discount_price - start_price) * 0.09
                }[tax_type])
+
 
 def get_invoice_file(invoice_id, user):
     invoice_obj = Invoice.objects.get(pk=invoice_id, status=2, **user)

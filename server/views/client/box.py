@@ -60,8 +60,11 @@ class Filter(View):
         disable = {'categories__disable': False, 'box__disable': False} if not request.user.is_staff else {}
         if params['related']:
             query = Q(verify=True, **params['filter']) | Q(verify=True, **params['related'])
-        products = Product.objects.annotate(**params['annotate']).filter(query, **disable).order_by(
-            params['order']).order_by('-id').distinct('id')
+        products = Product.objects.annotate(**params['annotate']).filter(query, Q(**disable), ~Q(type=5)).order_by(
+            params['order'], '-id').distinct('id', params['order'].replace('-', ''))
+            # params['order']).order_by('-id').distinct('id')
+        for product in products:
+            print(product.default_storage.discount_percent)
         pg = get_pagination(request, products, MinProductSchema)
         return JsonResponse(pg)
 

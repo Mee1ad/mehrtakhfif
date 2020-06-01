@@ -29,7 +29,8 @@ class AuthMiddleware:
             pass
         # Debug
         if ADMIN:
-            request.user = User.objects.order_by('id').first()
+            # request.user = User.objects.order_by('id').first()
+            request.user = User.objects.get(pk=133)
         if HA_ACCOUNTANTS:
             request.user = User.objects.get(pk=140)
         if MT_ACCOUNTANTS:

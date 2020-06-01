@@ -24,7 +24,6 @@ class CustomPacker(Packer):
 #  طول - عرض - ارتفاع
 
 
-@pysnooper.snoop()
 def test():
     boxes = [CustomBin('box_1', 95, 100, 190, 100000), CustomBin('box_2', 100, 140, 200, 100000),
              CustomBin('box_3', 165, 205, 270, 100000),
@@ -32,18 +31,20 @@ def test():
              CustomBin('box_6', 250, 250, 500, 100000),
              CustomBin('box_7', 320, 350, 600, 100000), CustomBin('box_8', 320, 440, 600, 100000)]
 
-    items = [CustomItem('item1', 20, 50, 30, 250), CustomItem('item2', 20, 50, 30, 250),
-             CustomItem('item3', 60, 60, 180, 250),
-             CustomItem('item6', 60, 60, 180, 250), CustomItem('item7', 180, 80, 180, 250),
-             CustomItem('item8', 180, 80, 180, 250),
-             CustomItem('item9', 180, 80, 180, 250), CustomItem('item10', 180, 80, 180, 250),
-             CustomItem('item11', 180, 80, 180, 250),
-             CustomItem('item12', 180, 80, 180, 250), CustomItem('item13', 180, 80, 180, 250),
-             CustomItem('item14', 180, 80, 180, 250),
-             CustomItem('item15', 180, 150, 180, 250), CustomItem('item16', 100, 230, 190, 250),
-             CustomItem('item17', 120, 250, 190, 250),
-             CustomItem('item18', 300, 300, 300, 250), CustomItem('item4', 50, 10, 10, 250),
-             CustomItem('item5', 50, 50, 10, 250)]
+    # items = [CustomItem('item1', 20, 50, 30, 250), CustomItem('item2', 20, 50, 30, 250),
+    #          CustomItem('item3', 60, 60, 180, 250),
+    #          CustomItem('item6', 60, 60, 180, 250), CustomItem('item7', 180, 80, 180, 250),
+    #          CustomItem('item8', 180, 80, 180, 250),
+    #          CustomItem('item9', 180, 80, 180, 250), CustomItem('item10', 180, 80, 180, 250),
+    #          CustomItem('item11', 180, 80, 180, 250),
+    #          CustomItem('item12', 180, 80, 180, 250), CustomItem('item13', 180, 80, 180, 250),
+    #          CustomItem('item14', 180, 80, 180, 250),
+    #          CustomItem('item15', 180, 150, 180, 250), CustomItem('item16', 100, 230, 190, 250),
+    #          CustomItem('item17', 120, 250, 190, 250),
+    #          CustomItem('item18', 300, 300, 300, 250), CustomItem('item4', 50, 10, 10, 250),
+    #          CustomItem('item5', 50, 50, 10, 250)]
+
+    items = [CustomItem('item1', 185, 210, 300, 250)]
 
     item_remained = True
     required_bins = []

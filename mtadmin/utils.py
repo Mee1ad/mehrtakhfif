@@ -45,7 +45,7 @@ def serialized_objects(request, model, serializer=None, single_serializer=None, 
         if params.get('aggregate', None):
             # todo tax
             pass
-        annotate_list = ['name__fa'] # http://localhost/admin/product?box_id=15&name__fa=نامیرا
+        annotate_list = ['name__fa']  # http://localhost/admin/product?box_id=15&name__fa=نامیرا
         common_items = list(set(params['filter']).intersection(annotate_list))
         if common_items:
             for item in common_items:
@@ -95,12 +95,12 @@ def get_params(request, box_key=None, date_key='created_at'):
 
 
 def get_data(request, require_box=True):
-    # token = get_token_from_cookie(request)
-    # assert check_access_token(token, request.user)
     data = json.loads(request.body)
     remove = ['created_at', 'created_by', 'updated_at', 'updated_by', 'deleted_by', 'income', 'profit',
               'rate', 'default_storage', 'sold_count', 'is_superuser', 'is_staff', 'deposit_id',
               'box_permission', 'wallet_credit', 'suspend_expire_date', 'activation_expire'] + ['feature', ]
+    if data.get('permalink'):
+        data['permalink'] = clean_permalink(data['permalink'])
     [data.pop(k, None) for k in remove]
     boxes = request.user.box_permission.all()
     if require_box and data.get('box_id') not in boxes.values_list('id', flat=True):
@@ -108,6 +108,13 @@ def get_data(request, require_box=True):
     if request.method == "POST":
         data.pop('id', None)
     return data
+
+
+def clean_permalink(permalink):
+    permalink = permalink.strip()
+    if permalink[-1] == '-':
+        return permalink[:-1]
+    return permalink
 
 
 def get_roll(user):
@@ -181,16 +188,16 @@ def add_custom_m2m(obj, field, item_list):
 def update_object(request, model, box_key='box', return_item=False, serializer=None, data=None, require_box=True):
     if not request.user.has_perm(f'server.change_{model.__name__.lower()}'):
         raise PermissionDenied
-    # data = get_data(request)
-    data = data or json.loads(request.body)
+    data = data or get_data(request, require_box=False)
     data, m2m, custom_m2m, remove_fields = get_m2m_fields(model, data)
     pk = data['id']
     box_check = get_box_permission(request.user, box_key) if require_box else {}
+    footprint = {'updated_by': request.user, 'updated_at': timezone.now()}
     items = model.objects.filter(pk=pk, **box_check)
     try:
-        items.update(**data, remove_fields=remove_fields)
+        items.update(**data, remove_fields=remove_fields, **footprint)
     except FieldDoesNotExist:
-        items.update(**data)
+        items.update(**data, **footprint)
     [getattr(items.first(), field).set(m2m[field]) for field in m2m]
     for field in custom_m2m:
         add_custom_m2m(items.first(), field, custom_m2m[field])
