@@ -680,7 +680,7 @@ class Product(Base):
     remove_fields = []
     custom_m2m = {'tags': ProductTag}
     m2m = ['categories', 'media']
-    required_m2m = ['categories', 'tags', 'media']
+    required_m2m = ['categories', 'tags', 'media', 'cities']
     fields = {'thumbnail': 'تامبنیل', 'categories': 'دسته بندی', 'tags': 'تگ', 'media': 'مدیا'}
 
     def pre_process(self, my_dict):
@@ -744,7 +744,7 @@ class Product(Base):
     box = models.ForeignKey(Box, on_delete=PROTECT)
     brand = models.ForeignKey(Brand, on_delete=PROTECT, null=True, blank=True)
     thumbnail = models.ForeignKey(Media, on_delete=PROTECT, related_name='product_thumbnail', null=True, blank=True)
-    city = models.ForeignKey(City, on_delete=CASCADE, null=True, blank=True)
+    cities = models.ManyToManyField(City)
     default_storage = models.OneToOneField(null=True, blank=True, to="Storage", on_delete=CASCADE,
                                            related_name='product_default_storage')
     tags = models.ManyToManyField(Tag, through="ProductTag", related_name='products')

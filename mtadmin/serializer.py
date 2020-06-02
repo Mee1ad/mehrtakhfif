@@ -216,9 +216,7 @@ class ProductASchema(BaseAdminSchema):
     settings = fields.Dict()
     box = fields.Method("get_box")
     categories = fields.Method("get_category")
-    # storages = fields.Method("get_storage")
     storages = StorageField()
-    city = fields.Nested(CitySchema)
     thumbnail = fields.Nested("MediaASchema")
     disable = fields.Boolean()
     type = fields.Function(lambda o: o.get_type_display())
@@ -251,10 +249,6 @@ class ProductESchema(ProductASchema, ProductSchema):
     description = fields.Dict()
     short_description = fields.Dict()
     default_storage_id = fields.Int()
-
-    @validates("name")
-    def validate_username(self, value):
-        print('name_validation')
 
 
 class PriceSchema(Schema):

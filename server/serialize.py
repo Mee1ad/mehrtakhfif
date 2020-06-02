@@ -37,12 +37,14 @@ class TagField(fields.Field):
         return TagSchema().dump(tags, many=True)
 
 
+class CityField(fields.Field):
+    def _serialize(self, value, attr, obj, **kwargs):
+        cities = value.all()
+        return CitySchema().dump(cities, many=True)
+
+
 class ProductField(fields.Field):
     def _serialize(self, value, attr, obj, **kwargs):
-        print(value)
-        print(attr)
-        print(obj)
-        print(kwargs)
         product = value.all()
         return StorageSchema().dump(product, many=True)
 
@@ -432,6 +434,7 @@ class ProductSchema(BaseSchema):
     properties = fields.Method("get_properties")
     details = fields.Method("get_details")
     location = fields.Method("get_location")
+    cities = CityField()
 
 
 class ProductMediaSchema(BaseSchema):
@@ -445,6 +448,12 @@ class MinProductSchema(BaseSchema):
     name = fields.Method("get_name")
     thumbnail = fields.Method("get_thumbnail")
     default_storage = fields.Method("get_min_storage")
+    available = fields.Method('is_available')
+
+    def is_available(self, obj):
+        if obj.storages.filter(available_count_for_sale__gt=0).exists():
+            return True
+        return False
 
 
 class SliderSchema(BaseSchema):

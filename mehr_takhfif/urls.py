@@ -18,10 +18,16 @@ from django.urls import path, include
 from mehr_takhfif import settings
 from django.conf.urls.static import static
 
+
+def trigger_error(request):
+    division_by_zero = 1 / 0
+
+
 urlpatterns = [
     path('admin/', include('mtadmin.urls')),
     path('superuser/', admin.site.urls),
     path('', include('server.urls')),
+    path('sentry-debug/', trigger_error),
     # path('admin/doc/', include('django.contrib.admindocs.urls')),
 ]
 
@@ -38,5 +44,3 @@ if settings.DEBUG:
                       # url(r'^__debug__/', include(debug_toolbar.urls)),
 
                   ] + urlpatterns
-
-

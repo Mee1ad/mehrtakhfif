@@ -147,7 +147,7 @@ def filter_params(params, lang):
         filters['filter']['text__contains'] = q
         filters['order'] = 'text'
     if available:
-        filters['filter'][f'{ds}available_count_for_sale__gt'] = 0
+        filters['filter']['storages__available_count_for_sale__gt'] = 0
     if min_price and max_price:
         filters['filter'][f'{ds}{dis}_price__range'] = (min_price, max_price)
     if brand:

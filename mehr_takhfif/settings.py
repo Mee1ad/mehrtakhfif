@@ -9,24 +9,24 @@ SHORTLINK = "https://mhrt.ir"
 AUTH_USER_MODEL = 'server.User'
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'server',
-    'mtadmin',
-    'safedelete',
-    'corsheaders',
-    'debug_toolbar',
-    'push_notifications',
-    'django_celery_results',
-    'django_celery_beat',
-    # 'cloudinary',
-    # 'django.contrib.admindocs',
-    # 'django.contrib.postgres',
-] + MY_INSTALLED_APPS
+                     'django.contrib.admin',
+                     'django.contrib.auth',
+                     'django.contrib.contenttypes',
+                     'django.contrib.sessions',
+                     'django.contrib.messages',
+                     'django.contrib.staticfiles',
+                     'server',
+                     'mtadmin',
+                     'safedelete',
+                     'corsheaders',
+                     'debug_toolbar',
+                     'push_notifications',
+                     'django_celery_results',
+                     'django_celery_beat',
+                     # 'cloudinary',
+                     # 'django.contrib.admindocs',
+                     # 'django.contrib.postgres',
+                 ] + MY_INSTALLED_APPS
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -75,7 +75,6 @@ CORS_ALLOW_HEADERS = [
 CORS_EXPOSE_HEADERS = ['error']
 
 MESSAGE_STORAGE = 'django.contrib.messages.storage.cookie.CookieStorage'
-
 
 ROOT_URLCONF = 'mehr_takhfif.urls'
 
@@ -139,7 +138,7 @@ PUSH_NOTIFICATIONS_SETTINGS = {
 LANGUAGE_CODE = 'en-us'
 
 # TIME_ZONE = 'Iran'
-# TIME_ZONE = 'UTC'
+TIME_ZONE = 'UTC'
 
 USE_I18N = True
 
@@ -149,86 +148,5 @@ USE_TZ = True
 
 # activate(TIME_ZONE)
 
-
-
-#     'version': 1,
-#     'disable_existing_loggers': False,
-#     'filters': {
-#         'require_debug_false': {
-#             '()': 'django.utils.log.RequireDebugFalse'
-#         },
-#         'require_debug_true': {
-#             '()': 'django.utils.log.RequireDebugTrue'
-#         }
-#     },
-#     'formatters': {
-#         'verbose': {
-#             'format': '{levelname}: {asctime}, {module}, {message}',
-#             'style': '{'
-#         },
-#         'simple': {
-#             'format': '{levelname} {message}',
-#             'style': '{'
-#         },
-#     },
-#     'handlers': {
-#         'console': {
-#             'class': 'logging.StreamHandler',
-#             'level': 'INFO',
-#             'formatter': 'verbose'
-#         },
-#         'info_file': {
-#             'level': 'INFO',
-#             'class': 'logging.handlers.TimedRotatingFileHandler',
-#             'filename': os.path.join(BASE_DIR + '/logs/info', 'info.log'),
-#             'formatter': 'verbose',
-#             'when': 'D',
-#             'backupCount': 30
-#
-#         },
-#         'debug_file': {
-#             'level': 'DEBUG',
-#             'class': 'logging.handlers.TimedRotatingFileHandler',
-#             'filename': os.path.join(BASE_DIR + '/logs/debug', 'debug.log'),
-#             'formatter': 'verbose',
-#             'when': 'D',
-#             'backupCount': 30
-#         },
-#         'error_file': {
-#             'level': 'ERROR',
-#             'class': 'logging.handlers.TimedRotatingFileHandler',
-#             'filename': os.path.join(BASE_DIR + '/logs/error', 'error.log'),
-#             'formatter': 'verbose',
-#             'when': 'D',
-#             'backupCount': 30
-#         },
-#     },
-#     'loggers': {
-#         'django': {
-#             'handlers': ['console', 'info_file', 'debug_file', 'error_file'],
-#             'level': 'DEBUG',
-#             'propagate': True,
-#         },
-#     },
-# }
-
-if DEBUG:
-    LOGGING = {}
-
-TIME_ZONE = 'UTC'
-USE_TZ = True
 # CELERY_ENABLE_UTC = True
 # CELERY_TIMEZONE = "UTC"
-
-# Email settings
-EMAIL_HOST = 'box.mehrtakhfif.com'
-EMAIL_HOST_USER = 'superuser@mehrtakhfif.com'
-EMAIL_HOST_PASSWORD = 'vcza$!me1jEnP%ES^0x2tWX&RehafiD'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-SERVER_EMAIL = 'api-traceback@mehrtakhfif.com'
-ADMINS = [('Soheil', 'superuser@mehrtakhfif.com')]
-
-# EMAIL_HOST = 'localhost'
-# EMAIL_USE_TLS = False
-# EMAIL_USE_SSL = False

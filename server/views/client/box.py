@@ -26,6 +26,7 @@ class FilterDetail(View):
     def get(self, request):
         permalink = request.GET.get('b', None)
         q = request.GET.get('q', {})
+        category = request.GET.get('cat', None)
         box = {}
         rank = {}
         res = {'box': None}
@@ -42,20 +43,36 @@ class FilterDetail(View):
             select_related('brand', 'default_storage')
         prices = products.aggregate(max=Max('default_storage__discount_price'),
                                     min=Min('default_storage__discount_price'))
-        # categories = [product.category for product in products.order_by('category_id').distinct('category_id')]
         disable = {'disable': False} if not request.user.is_staff else {}
         categories = Category.objects.filter(
             pk__in=list(filter(None, set(products.values_list('categories', flat=True)))), **disable)
         categories = get_categories(request.lang, categories=categories)
         brands = [product.brand for product in products.order_by('brand_id').distinct('brand_id') if product.brand]
+        breadcrumb = self.get_breadcrumb(category)
         return JsonResponse({'max_price': prices['max'], 'min_price': prices['min'], **res,
                              'brands': BrandSchema(**request.schema_params).dump(brands, many=True),
-                             'categories': categories})
+                             'categories': categories, 'breadcrumb': breadcrumb})
+
+    def get_breadcrumb(self, category_permalink, lang='fa'):
+        breadcrumb = []
+        if not category_permalink:
+            return breadcrumb
+        while True:
+            if not breadcrumb:
+                category = Category.objects.get(permalink=category_permalink)
+            try:
+                breadcrumb.insert(0, {'permalink': category.permalink, 'name': category.name[lang]})
+                category = category.parent
+            except AttributeError:
+                return breadcrumb
+
+
 
 
 class Filter(View):
     def get(self, request):
         params = filter_params(request.GET, request.lang)
+        print(params)
         query = Q(verify=True, **params['filter'])
         disable = {'categories__disable': False, 'box__disable': False} if not request.user.is_staff else {}
         if params['related']:
@@ -63,8 +80,6 @@ class Filter(View):
         products = Product.objects.annotate(**params['annotate']).filter(query, Q(**disable), ~Q(type=5)).order_by(
             params['order'], '-id').distinct('id', params['order'].replace('-', ''))
             # params['order']).order_by('-id').distinct('id')
-        for product in products:
-            print(product.default_storage.discount_percent)
         pg = get_pagination(request, products, MinProductSchema)
         return JsonResponse(pg)
 
