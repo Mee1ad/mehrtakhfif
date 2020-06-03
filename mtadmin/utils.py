@@ -163,6 +163,8 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
         if not Product.objects.filter(pk=data['product_id'], box__in=boxes).exists():
             raise PermissionDenied
     data, m2m, custom_m2m, remove_fields = get_m2m_fields(model, data)
+    # todo debug
+    data.pop('city_id', None)
     obj = model(**data, created_by=user, updated_by=user)
     obj.save(**remove_fields)
     [getattr(obj, field).set(m2m[field]) for field in model.m2m]
@@ -194,6 +196,9 @@ def update_object(request, model, box_key='box', return_item=False, serializer=N
     box_check = get_box_permission(request.user, box_key) if require_box else {}
     footprint = {'updated_by': request.user, 'updated_at': timezone.now()}
     items = model.objects.filter(pk=pk, **box_check)
+    # todo debug
+    # todo debug
+    data.pop('city_id', None)
     try:
         items.update(**data, remove_fields=remove_fields, **footprint)
     except FieldDoesNotExist:
