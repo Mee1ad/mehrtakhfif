@@ -1,5 +1,6 @@
 from mehr_takhfif.settings import TOKEN_SALT, ADMIN, DEFAULT_COOKIE_DOMAIN, HA_ACCOUNTANTS, MT_ACCOUNTANTS
-from server.utils import default_step, default_page, res_code, set_csrf_cookie, check_csrf_token, get_custom_signed_cookie, \
+from server.utils import default_step, default_page, res_code, set_csrf_cookie, check_csrf_token, \
+    get_custom_signed_cookie, \
     set_custom_signed_cookie
 from server.models import User, Basket
 from django.core.exceptions import PermissionDenied
@@ -19,7 +20,7 @@ class AuthMiddleware:
         # One-time configuration and initialization.
 
     def __call__(self, request):
-        print(request.META.get('REMOTE_ADDR') or request.META.get('HTTP_X_FORWARDED_FOR'))
+        # print(request.META.get('REMOTE_ADDR') or request.META.get('HTTP_X_FORWARDED_FOR'))
         path = request.path_info
         route = resolve(path).route
         app_name = resolve(path).app_name
@@ -86,7 +87,8 @@ class AuthMiddleware:
         # set new basket count in cookie
         with configure_scope() as scope:
             user = request.user
-            scope.user = {"email": user.email, 'first_name': user.first_name, 'last_name': user.last_name}
+            if user.is_authenticated:
+                scope.user = {"email": user.email, 'first_name': user.first_name, 'last_name': user.last_name}
 
         response = self.get_response(request)
         if app_name == 'server' and new_basket_count is not None and 200 <= response.status_code <= 299 and request.method == 'GET':
