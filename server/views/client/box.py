@@ -23,32 +23,41 @@ class GetSpecialProduct(View):
 
 
 class FilterDetail(View):
+    @pysnooper.snoop()
     def get(self, request):
-        permalink = request.GET.get('b', None)
+        box_permalink = request.GET.get('b', None)
         q = request.GET.get('q', {})
-        category = request.GET.get('cat', None)
-        box = {}
+        category_permalink = request.GET.get('cat', None)
+        filter_by = {}
         rank = {}
         res = {'box': None}
         order_by = []
+        disable = {'disable': False} if not request.user.is_staff else {}
+        cat_filter_by = {}
+        if box_permalink:
+            filter_by['box'] = Box.objects.get(permalink=box_permalink)
+            cat_filter_by['box'] = filter_by['box']
+            res['box'] = BoxSchema(**request.schema_params).dump(filter_by['box'])
+        if category_permalink:
+            category = Category.objects.get(permalink=category_permalink)
+            filter_by['categories'] = category
+            cat_filter_by['box'] = category.box
+            res['box'] = BoxSchema(**request.schema_params).dump(category.box)
+        categories = Category.objects.filter(**cat_filter_by, **disable)
         if q:
             rank = get_rank(q, request.lang)
             rank = {'rank': rank}
             order_by = ['-rank']
-        if permalink:
-            res['box'] = Box.objects.filter(permalink=permalink).first()
-            box = {'box': res['box']}
-            res['box'] = BoxSchema(**request.schema_params).dump(res['box'])
-        products = Product.objects.annotate(**rank).filter(**box).order_by(*order_by). \
+        products = Product.objects.annotate(**rank).filter(**filter_by).order_by(*order_by). \
             select_related('brand', 'default_storage')
+        if q:
+            categories = Category.objects.filter(
+                pk__in=list(filter(None, set(products.values_list('categories', flat=True)))), **disable)
         prices = products.aggregate(max=Max('default_storage__discount_price'),
                                     min=Min('default_storage__discount_price'))
-        disable = {'disable': False} if not request.user.is_staff else {}
-        categories = Category.objects.filter(
-            pk__in=list(filter(None, set(products.values_list('categories', flat=True)))), **disable)
         categories = get_categories(request.lang, categories=categories)
         brands = [product.brand for product in products.order_by('brand_id').distinct('brand_id') if product.brand]
-        breadcrumb = self.get_breadcrumb(category)
+        breadcrumb = self.get_breadcrumb(category_permalink)
         return JsonResponse({'max_price': prices['max'], 'min_price': prices['min'], **res,
                              'brands': BrandSchema(**request.schema_params).dump(brands, many=True),
                              'categories': categories, 'breadcrumb': breadcrumb})
@@ -67,19 +76,18 @@ class FilterDetail(View):
                 return breadcrumb
 
 
-
-
 class Filter(View):
     def get(self, request):
         params = filter_params(request.GET, request.lang)
-        print(params)
         query = Q(verify=True, **params['filter'])
-        disable = {'categories__disable': False, 'box__disable': False} if not request.user.is_staff else {}
+        disable = get_product_filter_params(request.user.is_staff)
         if params['related']:
             query = Q(verify=True, **params['filter']) | Q(verify=True, **params['related'])
+        print(params)
+        print(disable)
         products = Product.objects.annotate(**params['annotate']).filter(query, Q(**disable), ~Q(type=5)).order_by(
             params['order'], '-id').distinct('id', params['order'].replace('-', ''))
-            # params['order']).order_by('-id').distinct('id')
+        # params['order']).order_by('-id').distinct('id')
         pg = get_pagination(request, products, MinProductSchema)
         return JsonResponse(pg)
 

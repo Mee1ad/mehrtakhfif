@@ -7,29 +7,36 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SHORTLINK = "https://mhrt.ir"
 
 AUTH_USER_MODEL = 'server.User'
+IPRESTRICT_GEOIP_ENABLED = False
 
-INSTALLED_APPS = [
-                     'django.contrib.admin',
-                     'django.contrib.auth',
-                     'django.contrib.contenttypes',
-                     'django.contrib.sessions',
-                     'django.contrib.messages',
-                     'django.contrib.staticfiles',
-                     'server',
-                     'mtadmin',
-                     'safedelete',
-                     'corsheaders',
-                     'debug_toolbar',
-                     'push_notifications',
-                     'django_celery_results',
-                     'django_celery_beat',
-                     # 'cloudinary',
-                     # 'django.contrib.admindocs',
-                     # 'django.contrib.postgres',
-                 ] + MY_INSTALLED_APPS
+INSTALLED_APPS = \
+    [
+        'jet.dashboard',
+        'jet',
+        'django.contrib.admin',
+        'django.contrib.auth',
+        'django.contrib.contenttypes',
+        'django.contrib.sessions',
+        'django.contrib.messages',
+        'django.contrib.staticfiles',
+        'server',
+        'mtadmin',
+        'safedelete',
+        'corsheaders',
+        'debug_toolbar',
+        'push_notifications',
+        'django_celery_results',
+        'django_celery_beat',
+        'iprestrict',
+        # 'cloudinary',
+        # 'django.contrib.admindocs',
+        # 'django.contrib.postgres',
+    ] + MY_INSTALLED_APPS
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'iprestrict.middleware.IPRestrictMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -150,3 +157,4 @@ USE_TZ = True
 
 # CELERY_ENABLE_UTC = True
 # CELERY_TIMEZONE = "UTC"
+

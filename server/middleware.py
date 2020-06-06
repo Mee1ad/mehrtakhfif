@@ -9,6 +9,7 @@ from django.urls import resolve
 import time
 import pysnooper
 from django.contrib.auth import login
+from sentry_sdk import configure_scope
 
 
 class AuthMiddleware:
@@ -18,7 +19,7 @@ class AuthMiddleware:
         # One-time configuration and initialization.
 
     def __call__(self, request):
-        # print(request.META.get('REMOTE_ADDR') or request.META.get('HTTP_X_FORWARDED_FOR'))
+        print(request.META.get('REMOTE_ADDR') or request.META.get('HTTP_X_FORWARDED_FOR'))
         path = request.path_info
         route = resolve(path).route
         app_name = resolve(path).app_name
@@ -29,8 +30,8 @@ class AuthMiddleware:
             pass
         # Debug
         if ADMIN:
-            # request.user = User.objects.order_by('id').first()
-            request.user = User.objects.get(pk=133)
+            request.user = User.objects.order_by('id').first()
+            # request.user = User.objects.get(pk=133)
         if HA_ACCOUNTANTS:
             request.user = User.objects.get(pk=140)
         if MT_ACCOUNTANTS:
@@ -83,6 +84,10 @@ class AuthMiddleware:
             if request.user.is_superuser is False:
                 return HttpResponseNotFound()
         # set new basket count in cookie
+        with configure_scope() as scope:
+            user = request.user
+            scope.user = {"email": user.email, 'first_name': user.first_name, 'last_name': user.last_name}
+
         response = self.get_response(request)
         if app_name == 'server' and new_basket_count is not None and 200 <= response.status_code <= 299 and request.method == 'GET':
             response = set_custom_signed_cookie(response, 'basket_count', new_basket_count)

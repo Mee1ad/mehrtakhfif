@@ -180,9 +180,10 @@ class BaseSchema(Schema):
         return None
 
     def get_media(self, obj):
-        if obj.media is not None:
+        try:
             return MediaSchema(self.lang).dump(obj.media)
-        return None
+        except AttributeError:
+            return None
 
     def get_media_link(self, obj):
         if obj.media is not None:
@@ -352,7 +353,7 @@ class MediaSchema(BaseSchema):
 
 class CategorySchema(BaseSchema):
     class Meta:
-        additional = ('id', 'permalink')
+        additional = ('id', 'permalink', 'disable')
 
     name = fields.Method('get_name')
     parent = fields.Method('get_parent')
@@ -361,7 +362,7 @@ class CategorySchema(BaseSchema):
 
 class BoxCategoriesSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'permalink')
+        additional = ('id', 'permalink', 'disable')
 
     name = fields.Method('resolve_name_type')
     child = fields.Method('get_child')
@@ -443,7 +444,7 @@ class ProductMediaSchema(BaseSchema):
 
 class MinProductSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'permalink', 'rate')
+        additional = ('id', 'permalink', 'rate', 'disable')
 
     name = fields.Method("get_name")
     thumbnail = fields.Method("get_thumbnail")

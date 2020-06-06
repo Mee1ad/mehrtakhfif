@@ -680,7 +680,7 @@ class Product(Base):
     remove_fields = []
     custom_m2m = {'tags': ProductTag}
     m2m = ['categories', 'media']
-    required_m2m = ['categories', 'tags', 'media'] # 'cities' add this
+    required_m2m = ['categories', 'tags', 'media']  # 'cities' add this
     fields = {'thumbnail': 'تامبنیل', 'categories': 'دسته بندی', 'tags': 'تگ', 'media': 'مدیا'}
 
     def pre_process(self, my_dict):

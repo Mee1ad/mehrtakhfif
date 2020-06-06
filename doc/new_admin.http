@@ -37,6 +37,14 @@ Content-Type: application/json
   "media": 1
 }
 ###
+PUT {{admin_host}}/category
+Content-Type: application/json
+
+{
+  "id": 171,
+  "disable": false
+}
+###
 DELETE {{admin_host}}/category?id=54
 ###
 

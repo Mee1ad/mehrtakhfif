@@ -25,9 +25,11 @@ def trigger_error(request):
 
 urlpatterns = [
     path('admin/', include('mtadmin.urls')),
+    path('jet/', include('jet.urls', 'jet')),
+    path('jet/dashboard/', include('jet.dashboard.urls', 'jet-dashboard')),
     path('superuser/', admin.site.urls),
     path('', include('server.urls')),
-    path('sentry-debug/', trigger_error),
+    path('iprestrict/', include('iprestrict.urls', namespace='iprestrict')),
     # path('admin/doc/', include('django.contrib.admindocs.urls')),
 ]
 

@@ -127,7 +127,7 @@ def filter_params(params, lang):
     min_price = params.get('min_price', None)
     max_price = params.get('max_price', None)
     if box_permalink:
-        try:
+        try:  # for forign category
             filters['related'] = {'categories__in': Category.objects.filter(box__permalink=box_permalink,
                                                                             permalink=None).values_list('parent_id',
                                                                                                         flat=True)}
@@ -456,6 +456,12 @@ def remove_if_is_empty(required_keys, dictionary):
         if not dictionary[key]:
             dictionary.pop(key, None)
     return dictionary
+
+
+def get_product_filter_params(is_staff):
+    if is_staff:
+        return {}
+    return {'categories__disable': False, 'box__disable': False, 'disable': False, 'storages__disable': False}
 
 
 # Security
