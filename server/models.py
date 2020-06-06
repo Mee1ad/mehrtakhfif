@@ -702,7 +702,7 @@ class Product(Base):
         Product.objects.filter(pk=self.pk).update(verify=True)
 
     def assign_default_value(self):
-        storages = self.storages.all()
+        storages = self.storages.filter(available_count_for_sale__gt=0)
         Product.objects.filter(pk=self.pk).update(default_storage=min(storages, key=attrgetter('discount_price')))
 
     def save(self, *args, **kwargs):
@@ -926,10 +926,11 @@ class Storage(Base):
             dper = int(100 - (my_dict.get('discount_price') or self.discount_price) / (
                     my_dict.get('final_price') or self.final_price) * 100)
             vip_prices = [VipPrice(vip_type_id=item['vip_type_id'], discount_price=item['discount_price'],
-                                   max_count_for_sale=item.get('max_count_for_sale') or my_dict.get(
-                                       'max_count_for_sale'), discount_percent=dper,
-                                   available_count_for_sale=item.get('available_count_for_sale') or my_dict.get(
-                                       'available_count_for_sale'), storage_id=self.pk) for item in
+                                   max_count_for_sale=item.get('max_count_for_sale', self.max_count_for_sale),
+                                   discount_percent=dper,
+                                   available_count_for_sale=item.get('available_count_for_sale',
+                                                                     self.available_count_for_sale), storage_id=self.pk)
+                          for item in
                           my_dict.get('vip_prices')]
             VipPrice.objects.bulk_create(vip_prices)
         if self.product.type == 4:  # package
@@ -946,6 +947,7 @@ class Storage(Base):
                 self.final_price += package_item.package_item.final_price * package_item.count
             self.discount_percent = int(100 - self.discount_price / self.final_price * 100)
             self.save()
+        self.product.assign_default_value()
 
     def update_price(self):
         packages = self.related_packages.all()

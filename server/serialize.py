@@ -414,34 +414,6 @@ class BrandSchema(BaseSchema):
     permalink = fields.Str()
 
 
-class ProductSchema(BaseSchema):
-    class Meta:
-        additional = ('id', 'permalink', 'gender', 'rate', 'disable')
-
-    name = fields.Method("get_name")
-    address = fields.Method("get_address")
-    short_address = fields.Method("get_short_address")
-    type = fields.Function(lambda o: o.get_type_display())
-    # type = fields.Int(load_only=True)
-    brand = fields.Method("get_brand")
-    box = fields.Method("get_box")
-    categories = fields.Method("get_category")
-    house = fields.Method("get_house")
-    tag = TagField()
-    media = MediaField()
-    thumbnail = fields.Method("get_thumbnail")
-    short_description = fields.Method("get_short_description")
-    description = fields.Method("get_description")
-    properties = fields.Method("get_properties")
-    details = fields.Method("get_details")
-    location = fields.Method("get_location")
-    cities = CityField()
-
-
-class ProductMediaSchema(BaseSchema):
-    media = fields.Method("get_media")
-
-
 class MinProductSchema(BaseSchema):
     class Meta:
         additional = ('id', 'permalink', 'rate', 'disable')
@@ -457,6 +429,32 @@ class MinProductSchema(BaseSchema):
         return False
 
 
+class ProductSchema(MinProductSchema):
+    class Meta:
+        additional = MinProductSchema.Meta.additional + ('gender',)
+
+    address = fields.Method("get_address")
+    short_address = fields.Method("get_short_address")
+    type = fields.Function(lambda o: o.get_type_display())
+    # type = fields.Int(load_only=True)
+    brand = fields.Method("get_brand")
+    box = fields.Method("get_box")
+    categories = fields.Method("get_category")
+    house = fields.Method("get_house")
+    tag = TagField()
+    media = MediaField()
+    short_description = fields.Method("get_short_description")
+    description = fields.Method("get_description")
+    properties = fields.Method("get_properties")
+    details = fields.Method("get_details")
+    location = fields.Method("get_location")
+    cities = CityField()
+
+
+class ProductMediaSchema(BaseSchema):
+    media = fields.Method("get_media")
+
+
 class SliderSchema(BaseSchema):
     class Meta:
         additional = ('id', 'link')
@@ -468,11 +466,11 @@ class SliderSchema(BaseSchema):
 
 
 class MinStorageSchema(BaseSchema):
-    class Meta:
-        additional = ('id', 'final_price', 'discount_price', 'discount_percent')
-
     vip_discount_price = fields.Method("get_vip_discount_price")
+    discount_price = fields.Method("get_discount_price")
+    final_price = fields.Method("get_final_price")
     vip_discount_percent = fields.Method("get_vip_discount_percent")
+    discount_percent = fields.Method("get_discount_percent")
     title = fields.Method('get_title')
     deadline = fields.Method("get_deadline")
     max_count_for_sale = fields.Method("get_max_count_for_sale")
@@ -492,24 +490,41 @@ class MinStorageSchema(BaseSchema):
         except Exception:
             pass
 
+    def get_discount_price(self, obj):
+        if obj.available_count_for_sale:
+            return obj.discount_price
+        return 0
+
+    def get_final_price(self, obj):
+        if obj.available_count_for_sale:
+            return obj.final_price
+        return 0
+
+    def get_discount_percent(self, obj):
+        if obj.available_count_for_sale:
+            return obj.discount_percent
+        return 0
+
     def get_vip_discount_price(self, obj):
         try:
-            prices = VipPrice.objects.filter(storage_id=obj.pk).values_list('discount_price', flat=True)
+            prices = VipPrice.objects.filter(storage_id=obj.pk, available_count_for_sale__gt=0).values_list(
+                'discount_price', flat=True)
             return min(prices)
         except Exception:
-            return obj.discount_price
+            return 0
 
     def get_vip_discount_percent(self, obj):
         try:
-            prices = VipPrice.objects.filter(storage_id=obj.pk).values_list('discount_percent', flat=True)
+            prices = VipPrice.objects.filter(storage_id=obj.pk, available_count_for_sale__gt=0).values_list(
+                'discount_percent', flat=True)
             return min(prices)
         except Exception:
-            return obj.discount_percent
+            return 0
 
 
 class StorageSchema(MinStorageSchema):
     class Meta:
-        additional = MinStorageSchema.Meta.additional + ('transportation_price', 'priority', 'gender', 'disable')
+        additional = ('transportation_price', 'priority', 'gender', 'disable')
 
     default = fields.Function(lambda o: o == o.product.default_storage)
     features = FeatureField()

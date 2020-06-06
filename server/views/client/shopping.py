@@ -50,6 +50,7 @@ class BasketView(LoginRequired):
         except (AssertionError, Basket.DoesNotExist):
             return JsonResponse(default_response['bad'], status=400)
 
+    @pysnooper.snoop()
     def add_to_basket(self, basket, products):
         # {"id": 1, "count": 5, "features": [{"fsid": 16, "fvid": [1, 2]}]}
         for product in products:
@@ -60,7 +61,7 @@ class BasketView(LoginRequired):
                 basket_product = BasketProduct.objects.filter(basket=basket, storage_id=pk, features=features). \
                     select_related('storage')
                 storage = basket_product.first().storage
-                if not (storage.available_count_for_sale >= count and storage.max_count_for_sale >= count and \
+                if not (storage.available_count_for_sale >= count and storage.max_count_for_sale >= count and
                         storage.available_count_for_sale > 0 or not storage.disable):
                     raise ValidationError(_('متاسفانه امکان افزودن این محصول به سبد خرید وجود ندارد'))
                 basket_product.update(count=count)
@@ -69,9 +70,10 @@ class BasketView(LoginRequired):
                 basket_product = BasketProduct(basket=basket, storage_id=pk, count=count, box=box, features=features)
                 basket_product.validation()
                 storage = basket_product.storage
-                if not (storage.available_count_for_sale >= count and storage.max_count_for_sale >= count and \
+                print(count, storage.available_count_for_sale, storage.max_count_for_sale, storage.disable)
+                if not (storage.available_count_for_sale >= count and storage.max_count_for_sale >= count and
                         storage.available_count_for_sale > 0 and not storage.disable):
-                    raise ValidationError(_('متاسفانه امکان افزودن این محصول به سبد خرید وجود ندارد'))
+                    raise ValidationError(_('متاسفانه این محصول ناموجود میباشد'))
                 basket_product.save()
 
         basket.count = basket.products.all().count()
