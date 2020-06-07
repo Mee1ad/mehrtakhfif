@@ -9,7 +9,7 @@ from django_celery_beat.models import PeriodicTask
 from server.serialize import *
 import pytz
 from datetime import datetime
-from server.utils import get_basket, add_one_off_job, sync_storage, add_minutes, get_tax
+from server.utils import get_basket, add_one_off_job, sync_storage, add_minutes, get_tax, set_custom_signed_cookie
 import pysnooper
 import json
 import zeep
@@ -17,6 +17,8 @@ import zeep
 from django.core.exceptions import ValidationError
 from mehr_takhfif.settings import INVOICE_ROOT, SHORTLINK, STATIC_ROOT, DEBUG
 from django.utils.translation import gettext_lazy as _
+from django_celery_beat.models import PeriodicTask, IntervalSchedule
+from server.tasks import cancel_reservation
 
 ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'disable': False},
                 {'id': 2, 'key': 'melli', 'name': 'ملی', 'hide': True, 'disable': True},
@@ -141,7 +143,7 @@ class PaymentRequest(View):
 
     @pysnooper.snoop()
     def reserve_storage(self, basket, invoice):
-        if basket.sync == 'false':
+        if basket.sync != 1:  # reserved
             sync_storage(basket, operator.sub)
             task_name = f'{invoice.id}: cancel reservation'
             # args = []
@@ -149,7 +151,7 @@ class PaymentRequest(View):
             invoice.sync_task = add_one_off_job(name=task_name, kwargs=kwargs, interval=1,
                                                 task='server.tasks.cancel_reservation')
             # basket.active = False
-            basket.sync = 'reserved'
+            basket.sync = 1  # reserved
             basket.save()
             invoice.save()
 
@@ -193,7 +195,9 @@ class CallBack(View):
         if not ref_id:
             return HttpResponseRedirect("https://mehrtakhfif.com")
         # todo https://memoryleaks.ir/unlimited-charge-of-mytehran-account/
+        invoice = Invoice.objects.get(pk=invoice_id, reference_id=data_dict['RefId'])
         if not self.verify(invoice_id, ref_id):
+            self.finish_invoice_jobs(invoice, cancel=True)
             raise ValidationError(_('پرداخت ناموفق بود'))
         invoice = Invoice.objects.get(pk=invoice_id, reference_id=data_dict['RefId'])
         invoice.status = 2
@@ -207,14 +211,22 @@ class CallBack(View):
         invoice.email_task = add_one_off_job(name=task_name, kwargs=kwargs, interval=0,
                                              task='server.tasks.send_invoice')
         invoice.save()
-        self.finish_invoice_jobs(invoice)
+        self.finish_invoice_jobs(invoice, finish=True)
         Basket.objects.create(user=invoice.user)
-        return HttpResponseRedirect(f"https://mehrtakhfif.com/invoice/{invoice_id}")
+        res = HttpResponseRedirect(f"https://mehrtakhfif.com/invoice/{invoice_id}")
+        res = set_custom_signed_cookie(res, 'basket_count', 0)
+        return res
 
-    def finish_invoice_jobs(self, invoice):
-        task_name = f'{invoice.id}: cancel reservation'
-        description = f'{timezone.now()}: canceled by system'
-        PeriodicTask.objects.filter(name=task_name).update(enabled=False, description=description)
+    def finish_invoice_jobs(self, invoice, cancel=None, finish=None):
+        if finish:  # successfull payment, cancel task
+            task_name = f'{invoice.id}: cancel reservation'
+            description = f'{timezone.now()}: canceled by system'
+            invoice.basket.status = 3  # done
+            invoice.basket.save()
+            Basket.objects.create(user=invoice.user)
+            PeriodicTask.objects.filter(name=task_name).update(enabled=False, description=description)
+        if cancel:
+            cancel_reservation(invoice.pk)
 
     @pysnooper.snoop()
     def verify(self, invoice_id, sale_ref_id):

@@ -26,6 +26,7 @@ def cancel_reservation(invoice_id, **kwargs):
         invoice.suspended_at = timezone.now()
         invoice.save()
         sync_storage(invoice.basket_id, add)
+        invoice.basket.sync = 2  # canceled
         return 'invoice canceled, storage synced successfully'
 
 

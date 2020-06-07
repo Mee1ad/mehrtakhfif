@@ -9,7 +9,8 @@ from django.utils.translation import gettext_lazy as _
 class BasketView(LoginRequired):
     def get(self, request):
         basket_id = request.GET.get('basket_id', None)
-        return JsonResponse(get_basket(request.user, request.lang, basket_id))
+        return JsonResponse({**get_basket(request.user, request.lang, basket_id),
+                             'deleted_items': self.check_basket(basket_id)})
 
     def post(self, request):
         data = load_data(request)
@@ -81,14 +82,15 @@ class BasketView(LoginRequired):
         return basket.count
 
     @staticmethod
-    def check_basket(user, basket):
-        products = basket.product.all()
-        count = 0
-        amount = 0
-        for product in products:
-            count += product.count
-            amount += product.discount_price * product.count
-        return count
+    def check_basket(basket_id):
+        basket_products = BasketProduct.objects.filter(basket_id=basket_id)
+        # todo test
+        deleted_items = []
+        for basket_product in basket_products:
+            if basket_product.count > basket_product.storage.available_count_for_sale:
+                deleted_items.append(basket_product)
+                basket_product.delete()
+        return BasketProductSchema().dump(deleted_items, many=True)
 
 
 class GetProducts(View):
