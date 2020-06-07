@@ -9,12 +9,15 @@ from django.utils.safestring import mark_safe
 from mehr_takhfif import settings
 import os
 from mehr_takhfif.settings import HOST
+from django.utils.translation import gettext_lazy as _
+from datetime import date
+
 
 UserAdmin.list_display += ('updated_at',)
 UserAdmin.list_filter = ('groups', 'box_permission', 'is_staff')
 UserAdmin.ordering = ('-id',)
 UserAdmin.list_per_page = 10
-UserAdmin.fieldsets[2][1]['fields'] = ('is_supplier', ) + UserAdmin.fieldsets[2][1]['fields'] + ('box_permission', )
+UserAdmin.fieldsets[2][1]['fields'] = ('is_supplier',) + UserAdmin.fieldsets[2][1]['fields'] + ('box_permission',)
 UserAdmin.filter_horizontal += ('box_permission',)
 
 
@@ -143,11 +146,30 @@ class SpecialProductAdmin(SafeDeleteAdmin):
     ordering = ('-created_at',)
 
 
+class DecadeBornListFilter(admin.SimpleListFilter):
+    title = _('by date')
+    parameter_name = 'date'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('80s', _('in the eighties')),
+            ('90s', _('in the nineties')),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == '80s':
+            return queryset.filter(birthday__gte=date(1980, 1, 1),
+                                   birthday__lte=date(1989, 12, 31))
+        if self.value() == '90s':
+            return queryset.filter(birthday__gte=date(1990, 1, 1),
+                                   birthday__lte=date(1999, 12, 31))
+
+
 class ProductAdmin(SafeDeleteAdmin):
-    # list_display = ('product_name', 'category', 'verify', 'type', 'permalink') + SafeDeleteAdmin.list_display
-    # list_filter = ('name', 'type', 'category') + SafeDeleteAdmin.list_filter
-    # list_display_links = ('name',)
-    search_fields = ['name']
+    list_display = ('product_name', 'disable', 'type', 'permalink') + SafeDeleteAdmin.list_display
+    # list_filter = ('type', 'DecadeBornListFilter') + SafeDeleteAdmin.list_filter
+    list_display_links = ('product_name',)
+    search_fields = ['product_name']
     list_per_page = 10
     ordering = ('-created_at',)
 

@@ -299,8 +299,9 @@ class UserSchema(BaseSchema):
 
     def get_birthday(self, obj):
         try:
+            # todo check
             return int(time.mktime(obj.birthday.timetuple()))
-        except AttributeError:
+        except Exception:
             return None
 
     @post_load

@@ -919,7 +919,9 @@ class Storage(Base):
     def post_process(self, my_dict):
         if not my_dict:
             return True
-        if self.product.manage:
+        packages = ['package', 'package_item']
+        if (self.product.manage or self.product.default_storage.available_count_for_sale < 1)\
+                and self.product.get_type_display() not in packages:
             self.product.assign_default_value()
         if my_dict.get('vip_prices', None):
             self.vip_prices.clear()
@@ -947,10 +949,11 @@ class Storage(Base):
                 self.final_price += package_item.package_item.final_price * package_item.count
             self.discount_percent = int(100 - self.discount_price / self.final_price * 100)
             self.save()
-        self.product.assign_default_value()
 
+    @pysnooper.snoop()
     def update_price(self):
-        packages = self.related_packages.all()
+        packages = list(self.packages.all().order_by('package_id').distinct('package_id')) +\
+                   list(self.related_packages.all().order_by('package_id').distinct('package_id'))
         for package in packages:
             package = package.package
             package_records = Package.objects.filter(package=package)
@@ -959,6 +962,10 @@ class Storage(Base):
             for package_record in package_records:
                 package.discount_price += package_record.package_item.discount_price * package_record.count
                 package.final_price += package_record.package_item.final_price * package_record.count
+            package.available_count_for_sale = min(
+                package_records.all().values_list('package_item__available_count_for_sale', flat=True))
+            package.available_count = min(
+                package_records.all().values_list('package_item__available_count', flat=True))
             package.discount_percent = int(100 - package.discount_price / package.final_price * 100)
             package.save()
 
