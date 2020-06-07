@@ -23,7 +23,7 @@ class GetSpecialProduct(View):
 
 
 class FilterDetail(View):
-    @pysnooper.snoop()
+
     def get(self, request):
         box_permalink = request.GET.get('b', None)
         q = request.GET.get('q', {})

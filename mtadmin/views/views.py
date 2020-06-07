@@ -129,9 +129,9 @@ class Search(AdminView):
         tags = Tag.objects.in_bulk(tags_id)
         tags = [tags[x] for x in tags_id]
         return {'tags': TagASchema().dump(tags, many=True)}
-
+    @pysnooper.snoop()
     def product(self, q, box_id, **kwargs):
-        product_types = kwargs.get('product_types[]', [])
+        product_types = kwargs.get('types[]', [])
         products_id = []
         s = ProductDocument.search()
         type_query = Q('bool', should=[Q("match", type=product_type) for product_type in product_types])
