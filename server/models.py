@@ -703,7 +703,10 @@ class Product(Base):
 
     def assign_default_value(self):
         storages = self.storages.filter(available_count_for_sale__gt=0)
-        Product.objects.filter(pk=self.pk).update(default_storage=min(storages, key=attrgetter('discount_price')))
+        try:
+            Product.objects.filter(pk=self.pk).update(default_storage=min(storages, key=attrgetter('discount_price')))
+        except ValueError:
+            pass
 
     def save(self, *args, **kwargs):
         self.pre_process(self.__dict__)
@@ -920,7 +923,7 @@ class Storage(Base):
         if not my_dict:
             return True
         packages = ['package', 'package_item']
-        if (self.product.manage or self.product.default_storage.available_count_for_sale < 1)\
+        if (self.product.manage or self.product.default_storage.available_count_for_sale < 1) \
                 and self.product.get_type_display() not in packages:
             self.product.assign_default_value()
         if my_dict.get('vip_prices', None):
@@ -952,7 +955,7 @@ class Storage(Base):
 
     @pysnooper.snoop()
     def update_price(self):
-        packages = list(self.packages.all().order_by('package_id').distinct('package_id')) +\
+        packages = list(self.packages.all().order_by('package_id').distinct('package_id')) + \
                    list(self.related_packages.all().order_by('package_id').distinct('package_id'))
         for package in packages:
             package = package.package
@@ -1024,8 +1027,8 @@ class Basket(Base):
     products = models.ManyToManyField(Storage, through='BasketProduct')
     description = models.TextField(blank=True, null=True)
     # active = models.BooleanField(default=True)
-    sync = models.CharField(max_length=255, choices=[('false', 0), ('reserved', 1),
-                                                     ('canceled', 2), ('done', 3)], default='false')
+    sync = models.CharField(max_length=255, choices=[(0, 'ready'), (1, 'reserved'),
+                                                     (2, 'canceled'), (3, 'done')], default=0)
 
     class Meta:
         db_table = 'basket'
