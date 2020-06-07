@@ -132,6 +132,7 @@ class PaymentRequest(View):
 
         invoice = Invoice.objects.create(created_by=user, updated_by=user, user=user,
                                          mt_profit=basket['summary']['mt_profit'],
+                                         invoice_discount=basket['summary']['invoice_discount'],
                                          ha_profit=basket['summary']['ha_profit'],
                                          amount=basket['summary']['discount_price'],
                                          address=address, basket_id=basket['basket']['id'],
