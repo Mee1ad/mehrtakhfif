@@ -276,7 +276,8 @@ class HouseESchema(BaseAdminSchema, HouseSchema):
 
 class StorageASchema(BaseAdminSchema, StorageSchema):
     class Meta:
-        additional = ('sold_count', 'start_price', 'available_count_for_sale', 'tax')
+        additional = ('sold_count', 'start_price', 'available_count_for_sale', 'tax', 'vip_discount_price',
+                      'discount_price', 'final_price', 'vip_discount_percent', 'discount_percent')
 
     title = fields.Method("get_title")
     start_time = fields.Function(lambda o: o.start_time.timestamp())
