@@ -1,7 +1,8 @@
-from django.urls import path
+from django.urls import path, include
 from mtadmin.views.tables import *
 from mtadmin.views.auth import *
 from mtadmin.views.views import *
+from mtadmin.views.dashboard import *
 from mtadmin.decorator import error_handler
 
 app_name = 'mtadmin'
@@ -37,5 +38,4 @@ urlpatterns = [
     path('icon/<str:key>', error_handler(Icon.as_view()), name='icon'),
     path('vip_price', error_handler(VipPriceView.as_view()), name='vip_Price'),
     path('vip_type', error_handler(VipTypeView.as_view()), name='vip_type'),
-    path('dashboard', error_handler(Dashboard.as_view()), name='dashboard'),
 ]

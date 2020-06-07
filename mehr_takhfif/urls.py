@@ -30,6 +30,7 @@ urlpatterns = [
     path('superuser/', admin.site.urls),
     path('', include('server.urls')),
     path('iprestrict/', include('iprestrict.urls', namespace='iprestrict')),
+    path('admin/dashboard/', include('mtadmin.dashboard_urls')),
     # path('admin/doc/', include('django.contrib.admindocs.urls')),
 ]
 

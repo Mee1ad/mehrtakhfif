@@ -9,7 +9,7 @@ from django_celery_beat.models import PeriodicTask
 from server.serialize import *
 import pytz
 from datetime import datetime
-from server.utils import get_basket, add_one_off_job, sync_storage, add_minutes,get_tax
+from server.utils import get_basket, add_one_off_job, sync_storage, add_minutes, get_tax
 import pysnooper
 import json
 import zeep
@@ -152,6 +152,7 @@ class PaymentRequest(View):
             basket.save()
             invoice.save()
 
+    @pysnooper.snoop()
     def submit_invoice_storages(self, invoice_id):
         invoice = Invoice.objects.filter(pk=invoice_id).select_related(*Invoice.select).first()
         basket = get_basket(invoice.user, basket=invoice.basket, return_obj=True)
@@ -166,7 +167,8 @@ class PaymentRequest(View):
             invoice_products.append(
                 InvoiceStorage(storage=storage, invoice_id=invoice_id, count=product.count, tax=tax,
                                final_price=storage.final_price, discount_price=storage.discount_price,
-                               start_price=storage.start_price, discount_percent=storage.discount_percent, box=product.box,
+                               start_price=storage.start_price, discount_percent=storage.discount_percent,
+                               box=product.box,
                                features=product.features))
         InvoiceStorage.objects.bulk_create(invoice_products)
 
@@ -179,7 +181,6 @@ class CallBack(View):
         digital = Invoice.objects.get(pk=102).storages.filter(product__type=1).exists()
         return HttpResponseRedirect("http://mt.com:3000/shopping/invoice?id=102&d=" + str(digital).lower())
 
-    @pysnooper.snoop()
     def post(self, request):
         data = request.body.decode().split('&')
         data_dict = {}
