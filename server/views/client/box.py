@@ -83,8 +83,6 @@ class Filter(View):
         disable = get_product_filter_params(request.user.is_staff)
         if params['related']:
             query = Q(verify=True, **params['filter']) | Q(verify=True, **params['related'])
-        print(params)
-        print(disable)
         products = Product.objects.annotate(**params['annotate']).filter(query, Q(**disable), ~Q(type=5)).order_by(
             params['order'], '-id').distinct('id', params['order'].replace('-', ''))
         # params['order']).order_by('-id').distinct('id')

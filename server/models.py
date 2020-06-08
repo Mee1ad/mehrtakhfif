@@ -157,6 +157,7 @@ class MyQuerySet(SafeDeleteQueryset):
     _queryset_class = SafeDeleteQueryset
 
     def update(self, *args, **kwargs):
+        # todo say if enabled or disabled
         if not self:
             return True
         remove_list = ['id', 'box_id', 'remove_fields']

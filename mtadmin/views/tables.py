@@ -71,7 +71,18 @@ class BrandView(TableView):
     permission_required = 'server.view_brand'
 
     def get(self, request):
-        return JsonResponse(serialized_objects(request, Brand, BrandASchema, BrandASchema, error_null_box=False))
+        params = get_params(request, 'box_id')
+        print(params)
+        if 'text' in params['filter']:
+            brands = Brand.objects.annotate(**params['annotate']).filter(**params['filter']).order_by(*params['order'])
+        elif 'box_id' in params['filter']:
+            products = Product.objects.filter(box_id=params['filter']['box_id'])
+            brands = [product.brand for product in
+                      products.order_by('brand_id', *params['order']).distinct(
+                          'brand_id', params['order'][0].replace('-', '')) if product.brand]
+        else:
+            brands = Brand.objects.all().order_by(*params['order'])
+        return JsonResponse(get_pagination(request, brands, BrandASchema, show_all=request.all))
 
     def post(self, request):
         return create_object(request, Brand, return_item=True, serializer=BrandASchema, error_null_box=False)

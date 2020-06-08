@@ -65,13 +65,14 @@ def get_params(request, box_key=None, date_key='created_at'):
     remove_param = ['s', 'p', 'delay', 'error', 'all']
     filterby = {}
     orderby = []
+    annotate = {}
     try:
         params = request.GET
         new_params = dict(params)
         [new_params.pop(key, None) for key in remove_param]
         keys = new_params.keys()
     except AttributeError:
-        return {'filter': filterby, 'order': orderby}
+        return {'filter': filterby, 'order': orderby, 'annotate': annotate}
     for key in keys:
         value = params.getlist(key)
         if key == 'sd':
@@ -84,14 +85,19 @@ def get_params(request, box_key=None, date_key='created_at'):
                 continue
             raise PermissionDenied
         if key == 'o':
-            orderby += value
+            orderby = value
+            continue
+        if key == 'q':
+            annotate['text'] = KeyTextTransform('fa', 'name')
+            filterby['text__contains'] = value[0]
+            orderby = ['text']
             continue
         if re.search('\[\]', key):
             filterby[key.replace('[]', '__in')] = value
             continue
         filterby[key] = value[0]
 
-    return {'filter': filterby, 'order': orderby}
+    return {'filter': filterby, 'order': orderby, 'annotate': annotate}
 
 
 def get_data(request, require_box=True):
@@ -186,7 +192,7 @@ def add_custom_m2m(obj, field, item_list):
     items = [many_to_many_model(**item, **extra_fields) for item in item_list]
     many_to_many_model.objects.bulk_create(items)
 
-@pysnooper.snoop()
+
 def update_object(request, model, box_key='box', return_item=False, serializer=None, data=None, require_box=True):
     if not request.user.has_perm(f'server.change_{model.__name__.lower()}'):
         raise PermissionDenied
@@ -199,6 +205,7 @@ def update_object(request, model, box_key='box', return_item=False, serializer=N
     # todo debug
     # todo debug
     data.pop('city_id', None)
+    print(data)
     try:
         items.update(**data, remove_fields=remove_fields, **footprint)
     except FieldDoesNotExist:
