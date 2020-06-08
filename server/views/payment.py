@@ -207,7 +207,6 @@ class CallBack(View):
                                              task='server.tasks.send_invoice')
         invoice.save()
         self.finish_invoice_jobs(invoice, finish=True)
-        Basket.objects.create(user=invoice.user)
         res = HttpResponseRedirect(f"https://mehrtakhfif.com/invoice/{invoice_id}")
         res = set_custom_signed_cookie(res, 'basket_count', 0)
         return res
