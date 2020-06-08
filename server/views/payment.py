@@ -201,8 +201,6 @@ class CallBack(View):
         invoice.payed_at = timezone.now()
         invoice.card_holder = data_dict['CardHolderPan']
         invoice.final_amount = data_dict['FinalAmount']
-        invoice.basket.sync = 'done'
-        invoice.basket.save()
         task_name = f'{invoice.id}: send invoice'
         kwargs = {"invoice_id": invoice.pk, "lang": request.lang, 'name': task_name}
         invoice.email_task = add_one_off_job(name=task_name, kwargs=kwargs, interval=0,
@@ -220,7 +218,7 @@ class CallBack(View):
             description = f'{timezone.now()}: canceled by system'
             invoice.basket.status = 3  # done
             invoice.basket.save()
-            Basket.objects.create(user=invoice.user)
+            Basket.objects.create(user=invoice.user, created_by=invoice.user, updated_by=invoice.user)
             PeriodicTask.objects.filter(name=task_name).update(enabled=False, description=description)
         if cancel:
             cancel_reservation(invoice.pk)
