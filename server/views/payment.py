@@ -192,13 +192,11 @@ class CallBack(View):
             data_dict[val[0]] = val[1]
         invoice_id = data_dict['SaleOrderId']
         ref_id = data_dict.get('SaleReferenceId', None)
-        if not ref_id:
+        invoice = Invoice.objects.get(pk=invoice_id, reference_id=data_dict['RefId'])
+        if not ref_id or not self.verify(invoice_id, ref_id):
+            self.finish_invoice_jobs(invoice, cancel=True)
             return HttpResponseRedirect("https://mehrtakhfif.com")
         # todo https://memoryleaks.ir/unlimited-charge-of-mytehran-account/
-        invoice = Invoice.objects.get(pk=invoice_id, reference_id=data_dict['RefId'])
-        if not self.verify(invoice_id, ref_id):
-            self.finish_invoice_jobs(invoice, cancel=True)
-            raise ValidationError(_('پرداخت ناموفق بود'))
         invoice.status = 2
         invoice.payed_at = timezone.now()
         invoice.card_holder = data_dict['CardHolderPan']
