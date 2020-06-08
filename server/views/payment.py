@@ -183,6 +183,7 @@ class CallBack(View):
         digital = Invoice.objects.get(pk=102).storages.filter(product__type=1).exists()
         return HttpResponseRedirect("http://mt.com:3000/shopping/invoice?id=102&d=" + str(digital).lower())
 
+    @pysnooper.snoop()
     def post(self, request):
         data = request.body.decode().split('&')
         data_dict = {}
