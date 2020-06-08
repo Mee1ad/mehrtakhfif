@@ -207,9 +207,7 @@ class CallBack(View):
                                              task='server.tasks.send_invoice')
         invoice.save()
         self.finish_invoice_jobs(invoice, finish=True)
-        res = HttpResponseRedirect(f"https://mehrtakhfif.com/invoice/{invoice_id}")
-        res = set_custom_signed_cookie(res, 'basket_count', 0)
-        return res
+        return HttpResponseRedirect(f"https://mehrtakhfif.com/invoice/{invoice_id}")
 
     def finish_invoice_jobs(self, invoice, cancel=None, finish=None):
         if finish:  # successfull payment, cancel task
