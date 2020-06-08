@@ -54,10 +54,8 @@ class IPG(View):
 class PaymentRequest(View):
     @pysnooper.snoop()
     def get(self, request, basket_id):
-        # return JsonResponse({"url": "http://api.mt.com/payment/callback"})
-        # ipg_id = request.GET.get('ipg_id', 1)
-        # return JsonResponse({"behpardakht": {"url": f"{bp['ipg_url']}?RefId={self.behpardakht_api(basket_id)}"}})
-
+        if not request.user.is_staff:
+            raise ValidationError(_('متاسفانه در حال حاضر امکان خرید وجود ندارد'))
         user = request.user
         if not Basket.objects.filter(pk=basket_id, user=user).exists():
             raise ValidationError(_('سبد خرید نامعتبر است'))
