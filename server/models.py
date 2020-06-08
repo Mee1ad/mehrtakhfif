@@ -257,6 +257,7 @@ class Base(SafeDeleteModel):
 
     def safe_delete(self, user_id=1):
         i = 1
+        message = None
         while True:
             try:
                 self.permalink = f"{self.permalink}-deleted-{i}"
@@ -920,9 +921,7 @@ class Storage(Base):
     def post_process(self, my_dict):
         if not my_dict:
             return True
-        packages = ['package', 'package_item']
-        if (self.product.manage or self.product.default_storage.available_count_for_sale < 1) \
-                and self.product.get_type_display() not in packages:
+        if self.product.manage or self.product.default_storage.available_count_for_sale < 1:
             self.product.assign_default_value()
         if my_dict.get('vip_prices', None):
             self.vip_prices.clear()
