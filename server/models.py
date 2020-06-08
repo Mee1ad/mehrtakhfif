@@ -27,7 +27,8 @@ from mtadmin.exception import *
 from random import randint
 from django.utils.translation import gettext_lazy as _
 
-media_types = [(1, 'image'), (2, 'thumbnail'), (3, 'media'), (4, 'slider'), (5, 'ads'), (6, 'avatar')]
+media_types = [(1, 'image'), (2, 'thumbnail'), (3, 'media'), (4, 'slider'), (5, 'ads'), (7, 'category'),
+               (100, 'video'), (200, 'audio')]
 product_types = [(1, 'service'), (2, 'product'), (3, 'tourism'), (4, 'package'), (5, 'package_item')]
 has_placeholder = [1, 2, 3, 4, 5]
 
@@ -108,14 +109,13 @@ def next_month():
 
 
 def upload_to(instance, filename):
-    if instance.type == 7:  # avatar
-        return f'avatar/{filename}'
     date = timezone.now().strftime("%Y-%m-%d")
     time = timezone.now().strftime("%H-%M-%S-%f")[:-4]
     if instance.type in has_placeholder:
         time = f'{time}-has-ph'
     # file_type = re.search('\\w+', instance.type)[0]
     file_format = os.path.splitext(instance.image.name)[-1]
+    # todo make it with box name
     return f'boxes/{instance.box_id}/{date}/{instance.get_type_display()}/{time}{file_format}'
 
 
@@ -500,13 +500,11 @@ class Media(Base):
             name = self.image.name.replace('has-ph', 'ph')
             ph.save(f'{MEDIA_ROOT}/{name}', optimize=True, quality=80)
 
-    choices = [(1, 'image'), (2, 'thumbnail'), (3, 'media'), (4, 'slider'),
-               (5, 'ads'), (6, 'avatar'), (7, 'category'), (100, 'video'), (200, 'audio')]
     image = models.FileField(upload_to=upload_to, null=True, blank=True)
     video = models.URLField(null=True, blank=True)
     audio = models.URLField(null=True, blank=True)
     title = JSONField(default=multilanguage)
-    type = models.PositiveSmallIntegerField(choices=choices)
+    type = models.PositiveSmallIntegerField(choices=media_types)
     box = models.ForeignKey(Box, on_delete=models.CASCADE, null=True, blank=True, related_name="medias")
 
     class Meta:
