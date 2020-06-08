@@ -71,9 +71,7 @@ class BasketView(LoginRequired):
                 basket_product = BasketProduct(basket=basket, storage_id=pk, count=count, box=box, features=features)
                 basket_product.validation()
                 storage = basket_product.storage
-                print(count, storage.available_count_for_sale, storage.max_count_for_sale, storage.disable)
-                if not (storage.available_count_for_sale >= count and storage.max_count_for_sale >= count and
-                        storage.available_count_for_sale > 0 and not storage.disable):
+                if storage.available_count_for_sale <= count or storage.max_count_for_sale <= count or storage.disable:
                     raise ValidationError(_('متاسفانه این محصول ناموجود میباشد'))
                 basket_product.save()
 
