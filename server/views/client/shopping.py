@@ -9,8 +9,9 @@ from django.utils.translation import gettext_lazy as _
 class BasketView(LoginRequired):
     def get(self, request):
         basket_id = request.GET.get('basket_id', None)
+        deleted_items = self.check_basket(basket_id)
         return JsonResponse({**get_basket(request.user, request.lang, basket_id),
-                             'deleted_items': self.check_basket(basket_id)})
+                             'deleted_items': deleted_items})
 
     def post(self, request):
         data = load_data(request)
