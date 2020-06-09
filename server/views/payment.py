@@ -95,15 +95,9 @@ class PaymentRequest(View):
         additional_data = ';'.join(','.join(str(x) for x in b) for b in additional_data)
         additional_data += f';1,{basket.summary["mt_profit"] * 10},0'
 
-        # if DEBUG:
-        #     additional_data = '1,100,0;2,100,0'
-        #     invoice = type('BasketProduct', (), {})()
-        #     invoice.amount = 200
-        #     invoice.id = invoice_id
-
         local_date = timezone.now().strftime("%Y%m%d")
         # DEBUG:
-        # invoice.amount = 1000
+        invoice.amount = 1000
         # additional_data = '1,5000,0;2,5000,0'
         local_time = pytz.timezone("Iran").localize(datetime.now()).strftime("%H%M%S")
         r = client.service.bpCumulativeDynamicPayRequest(terminalId=bp['terminal_id'], userName=bp['username'],
