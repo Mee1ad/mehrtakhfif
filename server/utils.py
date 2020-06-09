@@ -196,7 +196,7 @@ def get_tax(tax_type, discount_price, start_price=None):
 def get_invoice_file(invoice_id, user):
     invoice_obj = Invoice.objects.get(pk=invoice_id, status=2, **user)
     invoice = InvoiceSchema().dump(invoice_obj)
-    invoice['user'] = user
+    invoice.update(user)
     invoice['date'] = jdatetime.date.fromgregorian(date=invoice_obj.payed_at).strftime("%Y/%m/%d")
     return invoice
 
@@ -376,7 +376,8 @@ def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=Non
         basket_product.amer = ""
         if tax:
             basket_product.amer = storage.product.box.name['fa']
-            basket_product.tax = get_tax(storage.tax_type, basket_product.discount_price, basket_product.start_price)
+            basket_product.tax = basket_product.storage.tax
+            summary['tax'] += basket_product.storage.tax
         ha_profit = (basket_product.discount_price - basket_product.start_price - basket_product.tax) * 0.05
         summary['ha_profit'] += ha_profit
         summary['mt_profit'] += basket_product.discount_price - basket_product.start_price - ha_profit

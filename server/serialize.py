@@ -496,12 +496,12 @@ class MinStorageSchema(BaseSchema):
 
     def get_discount_price(self, obj):
         if obj.available_count_for_sale:
-            return obj.discount_price
+            return obj.discount_price + (obj.discount_price * 0.9)
         return 0
 
     def get_final_price(self, obj):
         if obj.available_count_for_sale:
-            return obj.final_price
+            return obj.final_price + (obj.final_price * 0.9)
         return 0
 
     def get_discount_percent(self, obj):

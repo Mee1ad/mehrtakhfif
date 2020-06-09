@@ -76,8 +76,9 @@ class PaymentRequest(View):
         if invoice.user.first_name is None or invoice.user.last_name is None or invoice.user.meli_code is None or \
                 invoice.user.username is None:
             raise ValidationError(_('لطفا قبل از خرید پروفایل خود را تکمیل نمایید'))
-        basket = get_basket(invoice.user, basket=invoice.basket, return_obj=True)
-        additional_data = [[1, int(basket.summary["mt_profit"] + basket.summary["ha_profit"] + basket.summary["tax"]) *
+        basket = get_basket(invoice.user, basket=invoice.basket, return_obj=True, tax=True)
+        tax = basket.summary["tax"]
+        additional_data = [[1, int(basket.summary["mt_profit"] + basket.summary["ha_profit"] + tax) *
                             10, 0]]
         # bug '1,49000,0;1,16000,0'
         # todo add feature price
@@ -103,7 +104,8 @@ class PaymentRequest(View):
         r = client.service.bpCumulativeDynamicPayRequest(terminalId=bp['terminal_id'], userName=bp['username'],
                                                          userPassword=bp['password'], localTime=local_time,
                                                          localDate=local_date, orderId=invoice.id,
-                                                         amount=invoice.amount * 10, additionalData=additional_data,
+                                                         amount=(invoice.amount + tax) * 10,
+                                                         additionalData=additional_data,
                                                          callBackUrl=bp['callback'])
 
         # if DEBUG:

@@ -10,7 +10,7 @@ class BasketView(LoginRequired):
     def get(self, request):
         basket = Basket.objects.filter(user=request.user).order_by('-id').first()
         deleted_items = self.check_basket(basket)
-        return JsonResponse({**get_basket(request.user, request.lang, basket=basket),
+        return JsonResponse({**get_basket(request.user, request.lang, basket=basket, tax=True),
                              'deleted_items': deleted_items})
 
     def post(self, request):
