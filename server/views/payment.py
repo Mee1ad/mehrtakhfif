@@ -77,7 +77,7 @@ class PaymentRequest(View):
                 invoice.user.username is None:
             raise ValidationError(_('لطفا قبل از خرید پروفایل خود را تکمیل نمایید'))
         basket = get_basket(invoice.user, basket=invoice.basket, return_obj=True)
-        additional_data = [[1, basket.summary["mt_profit"] * 10, 0]]
+        additional_data = [[1, int(basket.summary["mt_profit"]) * 10, 0]]
         # bug '1,49000,0;1,16000,0'
         # todo add feature price
         for basket_product in basket.basket_products:
