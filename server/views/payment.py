@@ -169,8 +169,13 @@ class PaymentRequest(View):
 
 
 class CallBack(View):
+
+    def get(self, request):
+        return HttpResponseRedirect("https://mehrtakhfif.com")
+
     @pysnooper.snoop()
     def post(self, request):
+        # todo redirect to site anyway
         data = request.body.decode().split('&')
         data_dict = {}
         for param in data:
