@@ -88,7 +88,7 @@ class BasketView(LoginRequired):
         deleted_items = []
         for basket_product in basket_products:
             if basket_product.count > basket_product.storage.available_count_for_sale:
-                deleted_items.append(basket_product)
+                deleted_items.append(BasketProductSchema().dump(basket_product))
                 basket_product.delete()
         return BasketProductSchema().dump(deleted_items, many=True)
 
