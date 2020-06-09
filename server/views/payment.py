@@ -96,7 +96,7 @@ class PaymentRequest(View):
 
         local_date = timezone.now().strftime("%Y%m%d")
         # DEBUG:
-        invoice.amount = 1000
+        # invoice.amount = 1000
         # additional_data = '1,5000,0;2,5000,0'
         local_time = pytz.timezone("Iran").localize(datetime.now()).strftime("%H%M%S")
         r = client.service.bpCumulativeDynamicPayRequest(terminalId=bp['terminal_id'], userName=bp['username'],
