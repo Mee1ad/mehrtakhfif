@@ -385,12 +385,12 @@ def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=Non
         basket.summary = summary
         basket.address_required = address_required
         return basket
+    print(summary)
     if require_profit is False:
         summary.pop('mt_profit', None)
         summary.pop('ha_profit', None)
     basket = BasketSchema(language=lang).dump(basket)
     summary['invoice_discount'] = summary['total_price'] - summary['discount_price']
-
     return {'basket': basket, 'summary': summary, 'address_required': address_required}
 
 

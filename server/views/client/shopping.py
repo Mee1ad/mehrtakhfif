@@ -40,7 +40,6 @@ class BasketView(LoginRequired):
 
     def delete(self, request):
         basket_product_id = request.GET.get('basket_product_id', None)
-        basket_id = request.GET.get('basket_id', None)
         summary = request.GET.get('summary', None)
         try:
             basket = Basket.objects.filter(user=request.user).order_by('-id').first()

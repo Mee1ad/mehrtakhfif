@@ -1,13 +1,13 @@
 ### Basket
 GET http://{{host}}/basket
 ###
-DELETE http://{{host}}/basket?product_id=4
+DELETE http://{{host}}/basket?basket_product_id=16
 ### add to basket
 POST {{host}}/basket
 Content-Type: Application/json
 
 {
-  "products": [{"id": 14, "count":  5, "features": [{"fsid": 16, "fvid":  [1, 3]}]}],
+  "products": [{"id": 89, "count":  1, "features": []}],
   "override": true,
   "add": true
 }
