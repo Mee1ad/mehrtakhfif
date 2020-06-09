@@ -8,9 +8,9 @@ from django.utils.translation import gettext_lazy as _
 
 class BasketView(LoginRequired):
     def get(self, request):
-        basket_id = request.GET.get('basket_id', None)
-        deleted_items = self.check_basket(basket_id)
-        return JsonResponse({**get_basket(request.user, request.lang, basket_id),
+        basket = Basket.objects.filter(user=request.user).order_by('-id').first()
+        deleted_items = self.check_basket(basket)
+        return JsonResponse({**get_basket(request.user, request.lang, basket=basket),
                              'deleted_items': deleted_items})
 
     def post(self, request):
@@ -81,16 +81,17 @@ class BasketView(LoginRequired):
         basket.save()
         return basket.count
 
-    @staticmethod
-    def check_basket(basket_id):
-        basket_products = BasketProduct.objects.filter(basket_id=basket_id)
+    @pysnooper.snoop()
+    def check_basket(self, basket):
+        print(basket)
+        basket_products = BasketProduct.objects.filter(basket=basket)
         # todo test
         deleted_items = []
         for basket_product in basket_products:
             if basket_product.count > basket_product.storage.available_count_for_sale:
                 deleted_items.append(BasketProductSchema().dump(basket_product))
                 basket_product.delete()
-        return BasketProductSchema().dump(deleted_items, many=True)
+        return deleted_items
 
 
 class GetProducts(View):

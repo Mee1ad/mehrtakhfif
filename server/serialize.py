@@ -148,9 +148,12 @@ class BaseSchema(Schema):
         return None
 
     def get_min_product(self, obj):
-        if obj.product is not None:
+        try:
             return MinProductSchema(self.lang, self.user).dump(obj.product)
-        return None
+        except AttributeError:
+            return MinProductSchema(self.lang, self.user).dump(obj.storage.product)
+        except Exception:
+            return None
 
     def get_storage(self, obj):
         if obj.storage is not None:
