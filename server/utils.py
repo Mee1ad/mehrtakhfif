@@ -21,8 +21,7 @@ from secrets import token_hex
 from mehr_takhfif.settings import CSRF_SALT, TOKEN_SALT, DEFAULT_COOKIE_DOMAIN
 from server.models import *
 import requests
-from server.serialize import MediaSchema
-from server.serialize import BoxCategoriesSchema, BasketSchema, BasketProductSchema, MinProductSchema
+from server.serialize import get_tax, BoxCategoriesSchema, BasketSchema, MinProductSchema
 from django.contrib.postgres.fields.jsonb import KeyTextTransform
 from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
 import string
@@ -31,6 +30,7 @@ from MyQR import myqr
 from mehr_takhfif.settings import BASE_DIR
 from server.serialize import InvoiceSchema
 import jdatetime
+from django.utils.translation import gettext_lazy as _
 
 random_data = string.ascii_lowercase + string.digits
 default_step = 10
@@ -183,14 +183,6 @@ def load_location(location):
     if location is not None:
         return {"lat": location[0], "lng": location[1]}
     return None
-
-
-def get_tax(tax_type, discount_price, start_price=None):
-    return int({
-                   1: 0,
-                   2: discount_price * 0.09,
-                   3: (discount_price - start_price) * 0.09
-               }[tax_type])
 
 
 def get_invoice_file(invoice_id, user):
@@ -365,19 +357,20 @@ def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=Non
                 basket_product.item_final_price += feature_price
                 basket_product.item_discount_price += feature_price
                 basket_product.start_price += feature_price
+        if tax:
+            basket_product.amer = storage.product.box.name['fa']
+            storage = basket_product.storage
+            basket_product.tax = get_tax(storage.tax_type, storage.discount_price, storage.start_price)
+            summary['tax'] += basket_product.tax
         count = basket_product.count
         basket_product.final_price = basket_product.item_final_price * count
         summary['total_price'] += basket_product.final_price
-        basket_product.discount_price = basket_product.item_discount_price * count
+        basket_product.discount_price = (basket_product.item_discount_price - basket_product.tax) * count
         summary['discount_price'] += basket_product.discount_price
         summary['profit'] += basket_product.final_price - basket_product.discount_price
         basket_product.start_price = basket_product.start_price * count
         basket_product.tax = 0
         basket_product.amer = ""
-        if tax:
-            basket_product.amer = storage.product.box.name['fa']
-            basket_product.tax = basket_product.storage.tax
-            summary['tax'] += basket_product.storage.tax
         ha_profit = (basket_product.discount_price - basket_product.start_price - basket_product.tax) * 0.05
         summary['ha_profit'] += ha_profit
         summary['mt_profit'] += basket_product.discount_price - basket_product.start_price - ha_profit
@@ -386,7 +379,6 @@ def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=Non
         basket.summary = summary
         basket.address_required = address_required
         return basket
-    print(summary)
     if require_profit is False:
         summary.pop('mt_profit', None)
         summary.pop('ha_profit', None)

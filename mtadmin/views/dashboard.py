@@ -3,32 +3,33 @@ from mtadmin.views.tables import AdminView
 from django.http import JsonResponse
 from mtadmin.dashboard_serializer import *
 from datetime import datetime, timedelta
-from jdatetime import datetime as jdatetime
+from jdatetime import datetime as jdatetime, timedelta as jtimedelta
 
 
 class DateProductCount(AdminView):
     def get(self, request):
-        start_date = request.GET.get('start')
-        end_date = request.GET.get('end')
-        start_date = datetime.fromtimestamp(int(start_date)).replace(tzinfo=pytz.utc)
-        end_date = datetime.fromtimestamp(int(end_date)).replace(tzinfo=pytz.utc)
-        days = (end_date - start_date).days
+        start_date = timezone.now() + timedelta(days=-14)
         boxes = Box.objects.all()
-        data = []
-        for day in range(days):
-            boxes_list = []
-            gte = start_date + timedelta(days=day)
-            lte = start_date + timedelta(days=day + 1)
-            label = f'{jdatetime.fromgregorian(datetime=gte).month}-{jdatetime.fromgregorian(datetime=gte).day}'
-            for box in boxes:
-                product_count = Product.objects.filter(box=box, created_at__gte=gte, created_at__lte=lte).count()
-                active_product_count = Product.objects.filter(box=box, created_at__gte=gte, created_at__lte=lte,
-                                                              disable=False).count()
-                boxes_list.append({'name': box.name['fa'], 'product_count': product_count,
-                                   'active_product_count': active_product_count, 'setting': box.settings})
-            data.append({'label': label, 'boxes': boxes_list})
+        boxes_list = []
+        labels = [
+            f'{(jdatetime.now() + jtimedelta(days=-14 + day)).month}-{(jdatetime.now() + jtimedelta(days=-13 + day)).day}'
+            for day in range(14)]
+        for box in boxes:
+            cp = []
+            up = []
+            for day in range(14):
+                gte = start_date + timedelta(days=day)
+                lte = start_date + timedelta(days=day + 1)
+                updated_products = Product.objects.filter(box=box, updated_at__gte=gte, updated_at__lte=lte).count()
+                created_products = Product.objects.filter(box=box, created_at__gte=gte, created_at__lte=lte).count()
 
-        return JsonResponse({'data': data})
+                cp.append(created_products)
+                up.append(updated_products)
+            boxes_list.append({'id': box.id, 'name': box.name, 'created_products': cp,
+                               'updated_products': up, 'settings': box.settings})
+        data = {'label': labels, 'boxes': boxes_list}
+
+        return JsonResponse(data)
 
 
 class ProductCount(AdminView):

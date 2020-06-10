@@ -10,6 +10,14 @@ from django.db.models import F
 import time
 
 
+def get_tax(tax_type, discount_price, start_price=None):
+    return int({
+                   1: 0,
+                   2: discount_price - round(discount_price / 1.09),
+                   3: (discount_price - start_price) - round((discount_price - start_price) / 0.09)
+               }[tax_type])
+
+
 # ManyToMany Relations
 
 class MediaField(fields.Field):
@@ -496,20 +504,13 @@ class MinStorageSchema(BaseSchema):
 
     def get_discount_price(self, obj):
         if obj.available_count_for_sale:
-            return obj.discount_price + self.get_tax(obj.tax_type, obj.discount_price, obj.start_price)
+            return obj.discount_price
         return 0
 
     def get_final_price(self, obj):
         if obj.available_count_for_sale:
-            return obj.final_price + self.get_tax(obj.tax_type, obj.final_price, obj.start_price)
+            return obj.final_price
         return 0
-
-    def get_tax(self, tax_type, discount_price, start_price=None):
-        return int({
-                       1: 0,
-                       2: discount_price * 0.09,
-                       3: (discount_price - start_price) * 0.09
-                   }[tax_type])
 
     def get_discount_percent(self, obj):
         if obj.available_count_for_sale:

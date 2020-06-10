@@ -905,8 +905,6 @@ class Storage(Base):
             my_dict['deadline'] = None
         if type(my_dict.get('tax_type')) is str:
             my_dict['tax_type'] = {'has_not': 1, 'from_total_price': 2, 'from_profit': 3}[my_dict['tax_type']]
-            my_dict['tax'] = {1: 0, 2: my_dict['discount_price'] * 0.09,
-                              3: (my_dict['discount_price'] - my_dict['start_price']) * 0.09}[my_dict['tax_type']]
         if my_dict.get('discount_price'):
             my_dict['discount_percent'] = int(100 - my_dict['discount_price'] / my_dict['final_price'] * 100)
         if my_dict.get('features', None) and not my_dict.get('features_percent', None):
@@ -951,7 +949,6 @@ class Storage(Base):
             self.discount_percent = int(100 - self.discount_price / self.final_price * 100)
             self.save()
 
-    @pysnooper.snoop()
     def update_price(self):
         packages = list(self.packages.all().order_by('package_id').distinct('package_id')) + \
                    list(self.related_packages.all().order_by('package_id').distinct('package_id'))
@@ -1193,10 +1190,10 @@ class InvoiceStorage(models.Model):
     key = models.CharField(max_length=31, unique=True, null=True, db_index=True)
     filename = models.CharField(max_length=255, null=True, blank=True)
     box = models.ForeignKey(Box, on_delete=CASCADE)
+    tax = models.PositiveIntegerField()
     storage = models.ForeignKey(Storage, on_delete=PROTECT)
     invoice = models.ForeignKey(Invoice, on_delete=PROTECT, related_name='invoice_storages')
     count = models.PositiveIntegerField(default=1)
-    tax = models.PositiveSmallIntegerField()
     final_price = models.PositiveIntegerField(verbose_name='Final price')
     start_price = models.PositiveIntegerField()
     discount_price = models.PositiveIntegerField(verbose_name='Discount price', default=0)
@@ -1209,7 +1206,7 @@ class InvoiceStorage(models.Model):
     details = JSONField(null=True, help_text="package/storage/product details")
     features = JSONField(default=list)
 
-    # todo change to invoice_storage
+    # stodo change to invoice_storage
     class Meta:
         db_table = 'invoice_product'
         ordering = ['-id']

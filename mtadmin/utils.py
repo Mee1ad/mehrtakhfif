@@ -41,7 +41,8 @@ def serialized_objects(request, model, serializer=None, single_serializer=None, 
     try:
         if error_null_box and not params['filter'].get(box_key) and not params['filter'].get(box_key[:-3]):
             raise PermissionDenied
-        query = model.objects.filter(**params['filter']).order_by(*params['order'])
+        distinct_by = [item.replace('-', '') for item in params['order']]
+        query = model.objects.filter(**params['filter']).order_by(*params['order']).distinct(*distinct_by)
         if params.get('aggregate', None):
             # todo tax
             pass
@@ -55,7 +56,8 @@ def serialized_objects(request, model, serializer=None, single_serializer=None, 
             annotate = {}
             for index, item in enumerate(common_items):
                 annotate[item[0] + '__' + item[1]] = KeyTextTransform(item[1], item[0])
-            query = model.objects.annotate(**annotate).filter(**params['filter']).order_by(*params['order'])
+            query = model.objects.annotate(**annotate).filter(**params['filter']).order_by(*params['order']).distinct(
+                *params['filter'])
         return get_pagination(request, query, serializer, show_all=request.all)
     except (FieldError, ValueError):
         raise FieldError

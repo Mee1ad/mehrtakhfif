@@ -9,7 +9,8 @@ from django_celery_beat.models import PeriodicTask
 from server.serialize import *
 import pytz
 from datetime import datetime
-from server.utils import get_basket, add_one_off_job, sync_storage, add_minutes, get_tax, set_custom_signed_cookie
+from server.utils import get_basket, add_one_off_job, sync_storage, add_minutes, set_custom_signed_cookie
+from server.serialize import get_tax
 import pysnooper
 import json
 import zeep
@@ -32,6 +33,7 @@ ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'dis
 bp = {'terminal_id': 5290645, 'username': "takh252", 'password': "71564848",
       'ipg_url': "https://bpm.shaparak.ir/pgwchannel/startpay.mellat",
       'callback': 'https://api.mehrtakhfif.com/payment/callback'}  # mellat
+
 
 client = zeep.Client(wsdl="https://bpm.shaparak.ir/pgwchannel/services/pgw?wsdl")
 
@@ -78,8 +80,7 @@ class PaymentRequest(View):
             raise ValidationError(_('لطفا قبل از خرید پروفایل خود را تکمیل نمایید'))
         basket = get_basket(invoice.user, basket=invoice.basket, return_obj=True, tax=True)
         tax = basket.summary["tax"]
-        additional_data = [[1, int(basket.summary["mt_profit"] + basket.summary["ha_profit"] + tax) *
-                            10, 0]]
+        additional_data = [[1, int(basket.summary["mt_profit"] + basket.summary["ha_profit"] + tax) * 10, 0]]
         # bug '1,49000,0;1,16000,0'
         # todo add feature price
         for basket_product in basket.basket_products:
@@ -104,7 +105,7 @@ class PaymentRequest(View):
         r = client.service.bpCumulativeDynamicPayRequest(terminalId=bp['terminal_id'], userName=bp['username'],
                                                          userPassword=bp['password'], localTime=local_time,
                                                          localDate=local_date, orderId=invoice.id,
-                                                         amount=(invoice.amount + tax) * 10,
+                                                         amount=invoice.amount * 10,
                                                          additionalData=additional_data,
                                                          callBackUrl=bp['callback'])
 

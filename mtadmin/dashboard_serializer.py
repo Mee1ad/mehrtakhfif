@@ -7,6 +7,7 @@ class ProductCountSchema(Schema):
     name = fields.Dict()
     product_count = fields.Method('get_product_count')
     active_product_count = fields.Method('get_active_product_count')
+    settings = fields.Function(lambda o: o.settings)
 
     def get_product_count(self, obj):
         return Product.objects.filter(box=obj).count()
