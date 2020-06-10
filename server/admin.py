@@ -11,6 +11,9 @@ import os
 from mehr_takhfif.settings import HOST
 from django.utils.translation import gettext_lazy as _
 from datetime import date
+from django.contrib.postgres.fields.jsonb import KeyTextTransform
+import pysnooper
+from django.core.exceptions import FieldError
 
 
 UserAdmin.list_display += ('updated_at',)
@@ -173,6 +176,14 @@ class ProductAdmin(SafeDeleteAdmin):
     list_per_page = 10
     ordering = ('-created_at',)
 
+    def get_search_results(self, request, queryset, search_term):
+        try:
+            queryset, use_distinct = super().get_search_results(request, queryset, search_term)
+        except FieldError:
+            queryset, use_distinct = Product.objects.annotate(q=KeyTextTransform('fa', 'name')).filter(
+                q__contains=search_term), False
+        return queryset, use_distinct
+
     def product_name(self, obj):
         return obj.name['fa']
 
@@ -217,17 +228,25 @@ class ResidenceTypeAdmin(SafeDeleteAdmin):
 
 
 class StorageAdmin(SafeDeleteAdmin):
-    list_display = ('product_name', 'category', 'gender', 'verify', 'type', 'permalink') + SafeDeleteAdmin.list_display
-    list_filter = ('name', 'type', 'category') + SafeDeleteAdmin.list_filter
-    # list_display_links = ('name',)
-    search_fields = ['name']
+    list_display = ('storage_name',) + SafeDeleteAdmin.list_display
+    list_filter = () + SafeDeleteAdmin.list_filter
+    list_display_links = ('storage_name',)
+    search_fields = ['storage_name']
     list_per_page = 10
     ordering = ('-created_at',)
 
-    def product_name(self, obj):
-        return obj.name['fa']
+    def get_search_results(self, request, queryset, search_term):
+        try:
+            queryset, use_distinct = super().get_search_results(request, queryset, search_term)
+        except FieldError:
+            queryset, use_distinct = Storage.objects.annotate(q=KeyTextTransform('fa', 'title')).filter(
+                q__contains=search_term), False
+        return queryset, use_distinct
 
-    product_name.short_description = 'name'
+    def storage_name(self, obj):
+        return obj.title['fa']
+
+    storage_name.short_description = 'title'
 
 
 class MediaAdmin(admin.ModelAdmin):
@@ -286,7 +305,7 @@ admin.site.register(House, HouseAdmin)
 admin.site.register(HousePrice, HousePriceAdmin)
 admin.site.register(ResidenceType, ResidenceTypeAdmin)
 admin.site.register(Booking, BookAdmin)
-admin.site.register(Storage)
+admin.site.register(Storage, StorageAdmin)
 admin.site.register(Basket)
 admin.site.register(Comment, CommentAdmin)
 admin.site.register(Invoice)
