@@ -26,6 +26,7 @@ from server.field_validation import *
 from mtadmin.exception import *
 from random import randint
 from django.utils.translation import gettext_lazy as _
+from django.core.exceptions import FieldDoesNotExist
 
 media_types = [(1, 'image'), (2, 'thumbnail'), (3, 'media'), (4, 'slider'), (5, 'ads'), (7, 'category'),
                (100, 'video'), (200, 'audio')]
@@ -255,21 +256,24 @@ class Base(SafeDeleteModel):
     updated_by = models.ForeignKey('User', on_delete=PROTECT, related_name="%(app_label)s_%(class)s_updated_by")
     deleted_by = models.ForeignKey('User', on_delete=PROTECT, null=True, blank=True,
                                    related_name="%(app_label)s_%(class)s_deleted_by")
-
     def safe_delete(self, user_id=1):
         i = 1
         message = None
+        model = self.__class__
+        query = model.objects.filter(pk=self.pk)
         while True:
             try:
-                self.permalink = f"{self.permalink}-deleted-{i}"
-                self.deleted_by_id = user_id
-                self.save()
+                # self.permalink = f"{self.permalink}-deleted-{i}"
+                # self.deleted_by_id = user_id
+                # self.save()
+                query.update(permalink=f'{F("permalink")}-deleted-{i}', deleted_by=user_id)
                 break
             except IntegrityError:
                 i += 1
-            except AttributeError:
-                self.deleted_by_id = user_id
-                message = self.save()
+            except FieldDoesNotExist:
+                # self.deleted_by_id = user_id
+                # message = self.save()
+                query.update(deleted_by=user_id)
                 break
         self.delete()
         if message:
@@ -327,7 +331,12 @@ class User(AbstractUser):
     fields = {}
 
     def __str__(self):
-        return self.username
+        try:
+            return self.first_name + ' ' + self.last_name
+        except TypeError:
+            return self.username
+        except Exception:
+            return ""
 
     def clean(self):
         pass
@@ -1387,6 +1396,7 @@ class Ad(models.Model):
     title = JSONField(default=multilanguage)
     url = models.CharField(max_length=255, null=True, blank=True)
     media = models.ForeignKey(Media, on_delete=PROTECT)
+    is_mobile = models.BooleanField(default=False)
     storage = models.ForeignKey(Storage, on_delete=PROTECT, blank=True, null=True)
 
     class Meta:
