@@ -28,6 +28,7 @@ INSTALLED_APPS = \
         'django_celery_results',
         'django_celery_beat',
         'iprestrict',
+        'django_user_agents',
         # 'cloudinary',
         # 'django.contrib.admindocs',
         # 'django.contrib.postgres',
@@ -47,6 +48,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'debug_toolbar.middleware.DebugToolbarMiddleware',
+    'django_user_agents.middleware.UserAgentMiddleware',
 ]
 
 DISALLOWED_USER_AGENTS = [compile('PostmanRuntime')] if not DEBUG else []
@@ -158,3 +160,4 @@ USE_TZ = True
 # CELERY_ENABLE_UTC = True
 # CELERY_TIMEZONE = "UTC"
 
+USER_AGENTS_CACHE = 'default'

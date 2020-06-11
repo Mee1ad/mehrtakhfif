@@ -90,8 +90,12 @@ class GetMenu(View):
 
 class GetAds(View):
     def get(self, request):
+        agent = request.user_agent
         box_count = (Box.objects.count() - 2) * 2
-        ads = Ad.objects.select_related(*Ad.select).order_by('-id')[:box_count]
+        if agent.is_mobile:
+            ads = Ad.objects.filter(is_mobile=True).select_related(*Ad.select).order_by('-id')[:box_count]
+        if agent.is_pc:
+            ads = Ad.objects.filter(is_mobile=False).select_related(*Ad.select).order_by('-id')[:box_count]
         ads = {'ads': AdSchema(request.lang).dump(ads, many=True)}
         while len(ads['ads']) < box_count:
             ads['ads'].append(ads['ads'][-1])
