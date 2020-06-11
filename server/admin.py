@@ -14,7 +14,7 @@ from datetime import date
 from django.contrib.postgres.fields.jsonb import KeyTextTransform
 import pysnooper
 from django.core.exceptions import FieldError
-
+from server.serialize import get_tax
 
 UserAdmin.list_display += ('updated_at',)
 UserAdmin.list_filter = ('groups', 'box_permission', 'is_staff')
@@ -24,7 +24,7 @@ UserAdmin.fieldsets[2][1]['fields'] = ('is_supplier',) + UserAdmin.fieldsets[2][
 UserAdmin.filter_horizontal += ('box_permission',)
 
 
-class Base:
+class Base(SafeDeleteAdmin):
 
     @staticmethod
     def fa(obj, table='language'):
@@ -59,6 +59,25 @@ class BoxAdmin(SafeDeleteAdmin):
 
     def fa(self, obj):
         return obj.name['fa']
+
+
+class AdAdmin(admin.ModelAdmin):
+    list_display = ('id', 'title_fa', 'url', 'storage', 'get_media')
+    # list_filter = ('name',) + SafeDeleteAdmin.list_filter
+    # search_fields = ['name']
+    # autocomplete_fields = ['owner']
+    list_per_page = 10
+
+    # ordering = ('-created_at',)
+
+    def title_fa(self, obj):
+        return obj.title['fa']
+
+    def get_media(self, obj):
+        link = obj.media.image.url
+        return mark_safe(f'<a href="{link}">{obj.media}</a>')
+
+    get_media.short_description = 'media'
 
 
 class CategoryAdmin(SafeDeleteAdmin):
@@ -227,8 +246,9 @@ class ResidenceTypeAdmin(SafeDeleteAdmin):
     ordering = ('-created_at',)
 
 
-class StorageAdmin(SafeDeleteAdmin):
-    list_display = ('storage_name',) + SafeDeleteAdmin.list_display
+class StorageAdmin(Base):
+    list_display = ('id', 'storage_name', 'available_count', 'available_count_for_sale', 'max_count_for_sale',
+                    'discount_price', 'disable', 'tax_type', 'get_supplier') + SafeDeleteAdmin.list_display
     list_filter = () + SafeDeleteAdmin.list_filter
     list_display_links = ('storage_name',)
     search_fields = ['storage_name']
@@ -246,7 +266,57 @@ class StorageAdmin(SafeDeleteAdmin):
     def storage_name(self, obj):
         return obj.title['fa']
 
+    def get_supplier(self, obj):
+        try:
+            link = reverse("admin:server_user_change", args=[obj.supplier.id])
+            return mark_safe(f'<a href="{link}">{escape(obj.supplier)}</a>')
+        except AttributeError:
+            return None
+
     storage_name.short_description = 'title'
+    get_supplier.short_description = 'supplier'
+
+
+class InvoiceAdmin(SafeDeleteAdmin):
+    list_display = ('id', 'amount', 'invoice_discount', 'status', 'get_storages',
+                    'get_invoice') + SafeDeleteAdmin.list_display
+    list_filter = SafeDeleteAdmin.list_filter
+    # list_display_links = ('',)
+    # search_fields = ['']
+    list_per_page = 10
+    ordering = ('-created_at',)
+
+    def get_storages(self, obj):
+        link = f'{HOST}/superuser/server/invoicestorage/?q={obj.id}'
+        return mark_safe(f'<a href="{link}">Show</a>')
+
+    def get_invoice(self, obj):
+        link = f'{HOST}/invoice_detail/{obj.id}'
+        return mark_safe(f'<a href="{link}">Show</a>')
+
+    get_storages.short_description = 'storages'
+    get_invoice.short_description = 'invoice'
+
+
+class InvoiceStorageAdmin(admin.ModelAdmin):
+    pass
+    list_display = ('id', 'storage_name', 'get_discount_price', 'tax', 'count', 'invoice_id')
+
+    # list_filter =
+    # # list_display_links = ('',)
+    search_fields = ['invoice__id']
+
+    # list_per_page = 10
+    # ordering = ('-created_at',)
+
+    def storage_name(self, obj):
+        return obj.storage.title['fa']
+
+    def get_discount_price(self, obj):
+        return obj.discount_price - obj.tax
+
+    storage_name.short_description = 'storage'
+    get_discount_price.short_description = 'discount_price'
 
 
 class MediaAdmin(admin.ModelAdmin):
@@ -308,7 +378,8 @@ admin.site.register(Booking, BookAdmin)
 admin.site.register(Storage, StorageAdmin)
 admin.site.register(Basket)
 admin.site.register(Comment, CommentAdmin)
-admin.site.register(Invoice)
+admin.site.register(Invoice, InvoiceAdmin)
+admin.site.register(InvoiceStorage, InvoiceStorageAdmin)
 admin.site.register(Menu, MenuAdmin)
 admin.site.register(Tag)
 admin.site.register(Rate)
@@ -320,7 +391,7 @@ admin.site.register(Blog)
 admin.site.register(BlogPost)
 admin.site.register(WishList)
 admin.site.register(NotifyUser)
-admin.site.register(Ad)
+admin.site.register(Ad, AdAdmin)
 admin.site.register(State, StateAdmin)
 admin.site.register(City, CityAdmin)
 admin.site.register(Permission)

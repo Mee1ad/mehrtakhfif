@@ -90,8 +90,12 @@ class GetMenu(View):
 
 class GetAds(View):
     def get(self, request):
-        return JsonResponse({'ads': AdSchema(request.lang).dump(
-            Ad.objects.select_related(*Ad.select).all(), many=True)})
+        box_count = (Box.objects.count() - 2) * 2
+        ads = Ad.objects.select_related(*Ad.select).order_by('-id')[:box_count]
+        ads = {'ads': AdSchema(request.lang).dump(ads, many=True)}
+        while len(ads['ads']) < box_count:
+            ads['ads'].append(ads['ads'][-1])
+        return JsonResponse(ads)
 
 
 class ElasticSearch(View):
