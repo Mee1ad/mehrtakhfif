@@ -73,6 +73,7 @@ class BrandView(TableView):
     def get(self, request):
         params = get_params(request, 'box_id')
         if params['annotate']:
+            params['filter'].pop('box_id', None)
             brands = Brand.objects.annotate(**params['annotate']).filter(**params['filter']).order_by(*params['order'])
         elif 'box_id' in params['filter']:
             products = Product.objects.filter(box_id=params['filter']['box_id'])
