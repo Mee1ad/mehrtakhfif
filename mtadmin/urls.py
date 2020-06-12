@@ -38,5 +38,4 @@ urlpatterns = [
     path('icon/<str:key>', error_handler(Icon.as_view()), name='icon'),
     path('vip_price', error_handler(VipPriceView.as_view()), name='vip_Price'),
     path('vip_type', error_handler(VipTypeView.as_view()), name='vip_type'),
-    path('inoodigehishkinemidoone', error_handler(NewBrandClass.as_view()), name='inoodigehishkinemidoone'),
 ]
