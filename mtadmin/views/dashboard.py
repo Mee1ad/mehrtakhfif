@@ -36,3 +36,66 @@ class ProductCount(AdminView):
     def get(self, request):
         boxes = Box.objects.all()
         return JsonResponse({'boxes': ProductCountSchema().dump(boxes, many=True)})
+
+
+class NewBrandClass(AdminView):
+    def get(self, request):
+        products = Product.objects.all()
+        for product in products:
+            data = product.properties
+            if data:
+                res = {"data": {
+                    "ar": {
+                        "items": []
+                    },
+                    "en": {
+                        "items": []
+                    },
+                    "fa": {
+                        "items": []
+                    }
+                }}
+
+                property = {
+                    "id": 1,
+                    "type": {
+                        "key": "attributes",
+                        "label": "ویژگی ها"
+                    },
+                    "items": []
+                }
+                usage_condition = {
+                    "id": 2,
+                    "type": {
+                        "key": "term_of_use",
+                        "label": "شرایط استفاده"
+                    },
+                    "items": []
+                }
+
+                if 'fa' in data:
+                    if 'property' in data["fa"]:
+                        for item in data["fa"]["property"]:
+                            property["items"].append({
+                                "id": item["id"],
+                                "icon": item["icon"],
+                                "text": item["text"],
+                                "priority": item["priority"]
+                            })
+                        res["data"]["fa"]["items"].append(property)
+                if 'fa' in data:
+                    if 'usage_condition' in data['fa']:
+                        if data["fa"]["usage_condition"]:
+                            for item in data["fa"]["usage_condition"]:
+                                usage_condition["items"].append({
+                                    "id": item["id"],
+                                    "icon": item["icon"],
+                                    "text": item["text"],
+                                    "priority": item["priority"]
+                                })
+                            res["data"]["fa"]["items"].append(usage_condition)
+
+                product.properties = res
+                product.save()
+        print('tammam')
+        return JsonResponse({'message': 'taamaam'})
