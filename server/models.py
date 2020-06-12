@@ -688,8 +688,8 @@ class Product(Base):
     related_fields = []
     remove_fields = []
     custom_m2m = {'tags': ProductTag}
-    m2m = ['categories', 'media']
-    required_m2m = ['categories', 'tags', 'media']  # 'cities' add this
+    m2m = ['categories', 'media', 'cities']
+    required_m2m = ['categories', 'tags', 'media']
     fields = {'thumbnail': 'تامبنیل', 'categories': 'دسته بندی', 'tags': 'تگ', 'media': 'مدیا'}
 
     def pre_process(self, my_dict):
@@ -1205,7 +1205,9 @@ class InvoiceStorage(models.Model):
     count = models.PositiveIntegerField(default=1)
     final_price = models.PositiveIntegerField(verbose_name='Final price')
     start_price = models.PositiveIntegerField()
-    discount_price = models.PositiveIntegerField(verbose_name='Discount price', default=0)
+    discount = models.PositiveIntegerField()
+    discount_price = models.PositiveIntegerField()
+    discount_price_without_tax = models.PositiveIntegerField()
     discount_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount price percent')
     # vip_discount_price = models.PositiveIntegerField(verbose_name='Discount price', default=0)
     # vip_discount_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount price percent')
@@ -1395,8 +1397,9 @@ class Ad(models.Model):
     id = models.BigAutoField(auto_created=True, primary_key=True)
     title = JSONField(default=multilanguage)
     url = models.CharField(max_length=255, null=True, blank=True)
-    media = models.ForeignKey(Media, on_delete=PROTECT)
-    is_mobile = models.BooleanField(default=False)
+    priority = models.PositiveSmallIntegerField(default=0)
+    media = models.ForeignKey(Media, on_delete=PROTECT, related_name='ad')
+    mobile_media = models.ForeignKey(Media, on_delete=PROTECT, null=True, blank=True, related_name='ad_mobile')
     storage = models.ForeignKey(Storage, on_delete=PROTECT, blank=True, null=True)
 
     class Meta:
