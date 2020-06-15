@@ -20,6 +20,7 @@ from mehr_takhfif.settings import INVOICE_ROOT, SHORTLINK, STATIC_ROOT, DEBUG
 from django.utils.translation import gettext_lazy as _
 from django_celery_beat.models import PeriodicTask, IntervalSchedule
 from server.tasks import cancel_reservation
+from server.utils import CustomBin, CustomItem, packing
 
 ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'disable': False},
                 {'id': 2, 'key': 'melli', 'name': 'ملی', 'hide': True, 'disable': True},
@@ -46,15 +47,27 @@ pecco = {'pin': '4MuVGr1FaB6P7S43Ggh5', 'terminal_id': '44481453',
 
 callback = HOST + "/callback"
 
+boxes = [CustomBin('box_1', 95, 100, 190, 100000), CustomBin('box_2', 100, 140, 200, 100000),
+         CustomBin('box_3', 165, 205, 270, 100000),
+         CustomBin('box_4', 195, 205, 305, 100000), CustomBin('box_5', 200, 260, 400, 100000),
+         CustomBin('box_6', 250, 250, 500, 100000),
+         CustomBin('box_7', 320, 350, 600, 100000), CustomBin('box_8', 320, 440, 600, 100000)]
+
 
 # todo clear basket after payment
 class IPG(View):
-    def get(self, request):
+    def get(self, request, basket_id):
+        basket_products = BasketProduct.objects.filter(basket_id=basket_id)
+        items = []
+        for basket_product in basket_products:
+            sizes = list(basket_product.storage.dimensions.values())
+            items.append(CustomItem(basket_product.storage.title[request.lang], *sizes))
+        packed_items = packing(items, boxes)
+        print(packed_items)
         return JsonResponse({'ipg': ipg})
 
 
 class PaymentRequest(View):
-    @pysnooper.snoop()
     def get(self, request, basket_id):
         if not request.user.is_staff:
             raise ValidationError(_('متاسفانه در حال حاضر امکان خرید وجود ندارد'))
@@ -67,12 +80,11 @@ class PaymentRequest(View):
         invoice = self.create_invoice(request)
         self.reserve_storage(basket, invoice)
         self.submit_invoice_storages(invoice.pk)
+        if DEBUG:
+            return JsonResponse({"url": f"{bp['ipg_url']}?RefId=12345"})
         res = {"url": f"{bp['ipg_url']}?RefId={self.behpardakht_api(invoice.pk)}"}
-        # if DEBUG:
-        #     res = {"url": f"{bp['ipg_url']}?RefId=12345"}
         return JsonResponse(res)
 
-    @pysnooper.snoop()
     def behpardakht_api(self, invoice_id):
         invoice = Invoice.objects.get(pk=invoice_id)
         if invoice.user.first_name is None or invoice.user.last_name is None or invoice.user.meli_code is None or \
@@ -120,7 +132,6 @@ class PaymentRequest(View):
         else:
             raise ValueError(_("can not get ipg page"))
 
-    @pysnooper.snoop()
     def create_invoice(self, request, basket=None):
         user = request.user
         address = None
@@ -128,6 +139,7 @@ class PaymentRequest(View):
         if basket['address_required']:
             address = AddressSchema().dump(user.default_address)
 
+        # taxes = sum([get_tax(bp.storage.tax_type, bp.storage.discount_price, bp.storage.start_price) for bp in basket])
         invoice = Invoice.objects.create(created_by=user, updated_by=user, user=user,
                                          mt_profit=basket['summary']['mt_profit'],
                                          invoice_discount=basket['summary']['invoice_discount'],
@@ -137,7 +149,6 @@ class PaymentRequest(View):
                                          final_price=basket['summary']['total_price'], expire=add_minutes(1))
         return invoice
 
-    @pysnooper.snoop()
     def reserve_storage(self, basket, invoice):
         if basket.sync != 1:  # reserved
             sync_storage(basket, operator.sub)
@@ -151,7 +162,6 @@ class PaymentRequest(View):
             basket.save()
             invoice.save()
 
-    @pysnooper.snoop()
     def submit_invoice_storages(self, invoice_id):
         invoice = Invoice.objects.filter(pk=invoice_id).select_related(*Invoice.select).first()
         basket = get_basket(invoice.user, basket=invoice.basket, return_obj=True)
@@ -164,11 +174,13 @@ class PaymentRequest(View):
                 InvoiceSuppliers.objects.create(invoice=invoice, supplier=supplier, amount=amount)
             tax = get_tax(storage.tax_type, storage.discount_price, storage.start_price)
             invoice_products.append(
-                InvoiceStorage(storage=storage, invoice_id=invoice_id, count=product.count, tax=tax,
-                               final_price=storage.final_price, discount_price=storage.discount_price,
+                InvoiceStorage(storage=storage, invoice_id=invoice_id, count=product.count, tax=tax * product.count,
+                               final_price=storage.final_price - tax, box=product.box, features=product.features,
+                               discount_price=storage.discount_price * product.count,
                                start_price=storage.start_price, discount_percent=storage.discount_percent,
-                               box=product.box,
-                               features=product.features))
+                               total_price=(storage.final_price - tax) * product.count,
+                               discount_price_without_tax=(storage.discount_price - tax) * product.count,
+                               discount=(storage.final_price - storage.discount_price) * product.count))
         InvoiceStorage.objects.bulk_create(invoice_products)
 
 

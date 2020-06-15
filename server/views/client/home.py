@@ -6,13 +6,6 @@ from server.utils import *
 import pysnooper
 
 
-class GetSlider(View):
-    def get(self, request, slider_type):
-        slider = Slider.objects.select_related(*Slider.select).all()
-        res = {'slider': SliderSchema().dump(slider, many=True)}
-        return JsonResponse(res)
-
-
 class GetSpecialOffer(View):
     def get(self, request):
         special_offer = SpecialOffer.objects.select_related(*SpecialOffer.select).all()
@@ -89,17 +82,18 @@ class GetMenu(View):
 
 
 class GetAds(View):
-    def get(self, request):
+    def get(self, request, ads_type):
         agent = request.user_agent
-        box_count = (Box.objects.count() - 2) * 2
-        if agent.is_mobile:
-            ads = Ad.objects.filter(is_mobile=True).select_related(*Ad.select).order_by('-id')[:box_count]
-        if agent.is_pc:
-            ads = Ad.objects.filter(is_mobile=False).select_related(*Ad.select).order_by('-id')[:box_count]
-        ads = {'ads': AdSchema(request.lang).dump(ads, many=True)}
-        while len(ads['ads']) < box_count:
-            ads['ads'].append(ads['ads'][-1])
-        return JsonResponse(ads)
+        ads = Ad.objects.filter(priority__isnull=False, type=ads_type).select_related(*Ad.select).order_by('priority')
+        return JsonResponse({'ads': AdSchema(agent.is_mobile).dump(ads, many=True)})
+
+
+class GetSlider(View):
+    def get(self, request, slider_type):
+        agent = request.user_agent
+        slider = Slider.objects.filter(priority__isnull=False, type=slider_type).select_related(
+            *Slider.select).order_by('priority')
+        return JsonResponse({'slider': SliderSchema(agent.is_mobile).dump(slider, many=True)})
 
 
 class ElasticSearch(View):

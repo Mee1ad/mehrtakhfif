@@ -8,13 +8,14 @@ from server.models import *
 from jdatetime import date, timedelta
 from django.db.models import F
 import time
+from math import ceil
 
 
 def get_tax(tax_type, discount_price, start_price=None):
     return int({
                    1: 0,
-                   2: discount_price - round(discount_price / 1.09),
-                   3: (discount_price - start_price) - round((discount_price - start_price) / 0.09)
+                   2: ceil(discount_price - discount_price / 1.09),
+                   3: ceil((discount_price - start_price) - (discount_price - start_price) / 0.09)
                }[tax_type])
 
 
@@ -469,10 +470,9 @@ class ProductMediaSchema(BaseSchema):
 
 class SliderSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'link')
+        additional = ('id', 'url')
 
     title = fields.Method('get_title')
-    type = fields.Function(lambda o: o.get_type_display())
     product = fields.Method("get_permalink")
     media = fields.Method("get_media")
 
@@ -619,8 +619,8 @@ class InvoiceSchema(BaseSchema):
 
 class InvoiceStorageSchema(BaseSchema):
     class Meta:
-        additional = ('count', 'discount_price', 'final_price', 'discount_percent',
-                      'invoice_id', 'invoice_description', 'details', 'tax')
+        additional = ('count', 'discount_price', 'final_price', 'discount_percent', 'discount_price_without_tax',
+                      'invoice_id', 'invoice_description', 'details', 'tax', 'discount', 'total_price')
 
     storage = fields.Method("get_storage")
     unit_price = fields.Function(lambda o: int(o.discount_price / o.count))
@@ -770,17 +770,29 @@ class SpecialProductSchema(BaseSchema):
 
 class AdSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'url')
+        additional = ('id', 'url', 'priority')
+
+    def __init__(self, is_mobile=True):
+        super().__init__()
+        self.is_mobile = is_mobile
 
     title = fields.Method('get_title')
     media = fields.Method('get_media')
-    product_permalink = fields.Method('get_min_product2')
+    product_permalink = fields.Method('get_permalink')
 
-    def get_min_product2(self, obj):
+    def get_permalink(self, obj):
         try:
             return obj.storage.product.permalink
         except AttributeError:
             pass
+
+    def get_mobile_media(self, obj):
+        try:
+            if self.is_mobile:
+                return MediaSchema(self.lang).dump(obj.mobile_media)
+            return MediaSchema(self.lang).dump(obj.mobile_media)
+        except AttributeError:
+            return None
 
 
 class WalletDetailSchema(BaseSchema):

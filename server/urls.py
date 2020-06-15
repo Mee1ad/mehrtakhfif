@@ -24,7 +24,7 @@ home = [
     path('menu', cache_page(60 * 5)(try_except(GetMenu.as_view())), name='menu'),
     path('suggest', try_except(ElasticSearch.as_view()), name='suggest'),
     path('search', try_except(ElasticSearch2.as_view()), name='search'),
-    path('ads', try_except(GetAds.as_view()), name='ads'),
+    path('ads/<str:ads_type>', try_except(GetAds.as_view()), name='ads'),
 ]
 
 box = [
@@ -54,7 +54,7 @@ shopping = [
 ]
 
 pay = [
-    path('ipg', try_except(IPG.as_view()), name='ipg'),
+    path('ipg/<int:basket_id>', try_except(IPG.as_view()), name='ipg'),
     path('payment/<int:basket_id>', try_except(PaymentRequest.as_view()), name='payment'),
     path('payment/callback', try_except(CallBack.as_view()), name='callback'),
     path('invoice/<str:key>', try_except(ShortLinkView.as_view()), name='invoice'),

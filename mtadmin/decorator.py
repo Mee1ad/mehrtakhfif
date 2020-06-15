@@ -17,7 +17,7 @@ def error_handler(func):
             return func(*args, **kwargs)
         except (FieldError, TypeError, KeyError):
             traceback.print_exc()
-            return HttpResponseBadRequest()
+            return JsonResponse({'message': 'مشکلی پیش آمده', 'variant': 'error'}, status=res_code['bad_request'])
         except ActivationError as e:
             return JsonResponse({'message': str(e), 'variant': 'warning'}, status=res_code['activation_warning'])
         except WarningMessage as e:
@@ -27,8 +27,7 @@ def error_handler(func):
                                 status=res_code['object_does_not_exist'])
         except ValidationError as e:
             try:
-                non_field_errors = e.message_dict[NON_FIELD_ERRORS][0]
-                return JsonResponse({'message': non_field_errors, 'variant': 'error'}, status=res_code['bad_request'])
+                return JsonResponse({'message': e.message, 'variant': 'error'}, status=res_code['bad_request'])
             except Exception:
                 return HttpResponseBadRequest()
         except PermissionDenied:

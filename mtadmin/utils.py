@@ -40,7 +40,11 @@ def serialized_objects(request, model, serializer=None, single_serializer=None, 
         params = get_params(request, box_key)
     try:
         if error_null_box and not params['filter'].get(box_key) and not params['filter'].get(box_key[:-3]):
-            raise PermissionDenied
+            try:
+                if int(params['filter']['type']) not in model.no_box_type:
+                    raise PermissionDenied
+            except KeyError:
+                raise PermissionDenied
         distinct_by = [item.replace('-', '') for item in params['order']]
         query = model.objects.filter(**params['filter']).order_by(*params['order']).distinct(*distinct_by)
         if params.get('aggregate', None):
@@ -88,6 +92,9 @@ def get_params(request, box_key=None, date_key='created_at'):
             raise PermissionDenied
         if key == 'o':
             orderby = value
+            continue
+        if key == 'has_review':
+            filterby['review__isnull'] = False
             continue
         if key == 'q':
             annotate['text'] = KeyTextTransform('fa', 'name')
@@ -175,7 +182,7 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
     data.pop('city_id', None)
     obj = model(**data, created_by=user, updated_by=user)
     obj.save(**remove_fields)
-    [getattr(obj, field).set(m2m[field]) for field in model.m2m]
+    [getattr(obj, field).set(m2m[field]) for field in m2m]
     for field in custom_m2m:
         add_custom_m2m(obj, field, custom_m2m[field])
     if return_item:
@@ -199,15 +206,14 @@ def update_object(request, model, box_key='box', return_item=False, serializer=N
     if not request.user.has_perm(f'server.change_{model.__name__.lower()}'):
         raise PermissionDenied
     data = data or get_data(request, require_box=False)
-    data, m2m, custom_m2m, remove_fields = get_m2m_fields(model, data)
+    try:
+        data, m2m, custom_m2m, remove_fields = get_m2m_fields(model, data)
+    except AttributeError:
+        m2m, custom_m2m, remove_fields = [], [], []
     pk = data['id']
     box_check = get_box_permission(request.user, box_key) if require_box else {}
     footprint = {'updated_by': request.user, 'updated_at': timezone.now()}
     items = model.objects.filter(pk=pk, **box_check)
-    # todo debug
-    # todo debug
-    data.pop('city_id', None)
-    print(data)
     try:
         items.update(**data, remove_fields=remove_fields, **footprint)
     except FieldDoesNotExist:

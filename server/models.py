@@ -28,14 +28,11 @@ from random import randint
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import FieldDoesNotExist
 
-media_types = [(1, 'image'), (2, 'thumbnail'), (3, 'media'), (4, 'slider'), (5, 'ads'), (7, 'category'),
-               (100, 'video'), (200, 'audio')]
 product_types = [(1, 'service'), (2, 'product'), (3, 'tourism'), (4, 'package'), (5, 'package_item')]
-has_placeholder = [1, 2, 3, 4, 5]
 
 
 def get_activation_warning_msg(field_name):
-    messages = [f'{field_name} یه جای کارش میلنگه']
+    messages = ['آیتم غیرفعال شد. ' + f'{field_name} مشکل داره']
     index = randint(0, 0)
     return messages[index]
 
@@ -112,7 +109,7 @@ def next_month():
 def upload_to(instance, filename):
     date = timezone.now().strftime("%Y-%m-%d")
     time = timezone.now().strftime("%H-%M-%S-%f")[:-4]
-    if instance.type in has_placeholder:
+    if instance.type in Media.has_placeholder:
         time = f'{time}-has-ph'
     # file_type = re.search('\\w+', instance.type)[0]
     file_format = os.path.splitext(instance.image.name)[-1]
@@ -163,7 +160,7 @@ class MyQuerySet(SafeDeleteQueryset):
             return True
         remove_list = ['id', 'box_id', 'remove_fields']
         validations = {'storage': self.storage_validation, 'category': self.category_validation,
-                       'product': self.product_validation}
+                       'product': self.product_validation, 'ad': self.ad_validation, 'slider': self.ad_validation}
         model = self[0].__class__.__name__.lower()
         validations.update(dict.fromkeys(['feature', 'brand', 'tag'], self.default_validation))
         # noinspection PyArgumentList
@@ -227,6 +224,10 @@ class MyQuerySet(SafeDeleteQueryset):
             item.assign_default_value()
         return kwargs
 
+    def ad_validation(self, **kwargs):
+        self.full_clean()
+        return kwargs
+
     # todo advance disabler for product storage category
 
     def default_validation(self, **kwargs):
@@ -240,7 +241,9 @@ class Base(SafeDeleteModel):
     class Meta:
         abstract = True
 
+    no_box_type = [4, 5, 6, 8]
     required_fields = []
+    required_multi_lang = []
     related_fields = []
     m2m = []
     remove_fields = []
@@ -256,6 +259,7 @@ class Base(SafeDeleteModel):
     updated_by = models.ForeignKey('User', on_delete=PROTECT, related_name="%(app_label)s_%(class)s_updated_by")
     deleted_by = models.ForeignKey('User', on_delete=PROTECT, null=True, blank=True,
                                    related_name="%(app_label)s_%(class)s_deleted_by")
+
     def safe_delete(self, user_id=1):
         i = 1
         message = None
@@ -286,7 +290,7 @@ class Base(SafeDeleteModel):
         except Exception:
             pass
 
-    def base_clean(self):
+    def clean(self):
         for field in self.required_fields:
             if not getattr(self, field):
                 self.make_item_disable(self)
@@ -298,6 +302,9 @@ class Base(SafeDeleteModel):
         for field in self.required_m2m:
             if not getattr(self, field).all():
                 self.make_item_disable(self)
+                raise ActivationError(get_activation_warning_msg(self.fields[field]))
+        for field in self.required_multi_lang:
+            if not getattr(self, field)['fa']:
                 raise ActivationError(get_activation_warning_msg(self.fields[field]))
 
     def make_item_disable(self, obj):
@@ -316,6 +323,33 @@ class Base(SafeDeleteModel):
             for package_record in package_records:
                 Storage.objects.filter(pk=package_record.package_id).update(disable=True)
         raise WarningMessage('آیا میدانستی: محصولات ویژه و پکیج هایی که شامل این انبار بودن هم غیرفعال میشن؟! 🤭')
+
+
+class Ad(Base):
+    select = ['media', 'storage']
+
+    required_fields = ['media', 'mobile_media', 'type']
+    required_multi_lang = ['title']
+    fields = {'title': 'عنوان', 'media': 'تصویر', 'mobile_media': 'تصویر موبایل', 'type': 'نوع'}
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args)
+
+    def __str__(self):
+        return self.title['fa']
+
+    title = JSONField(default=multilanguage)
+    url = models.CharField(max_length=255, null=True, blank=True)
+    priority = models.PositiveSmallIntegerField(null=True, blank=True)
+    media = models.ForeignKey("Media", on_delete=PROTECT, related_name='ad')
+    mobile_media = models.ForeignKey("Media", on_delete=PROTECT, null=True, blank=True, related_name='ad_mobile')
+    storage = models.ForeignKey("Storage", on_delete=PROTECT, blank=True, null=True)
+    type = models.CharField(default='home', max_length=255)
+
+    class Meta:
+        db_table = 'ad'
+        ordering = ['-id']
 
 
 class User(AbstractUser):
@@ -487,6 +521,13 @@ class Box(Base):
 
 
 class Media(Base):
+    media_types = [(1, 'image'), (2, 'thumbnail'), (3, 'media'), (4, 'slider'), (5, 'ads'), (6, 'mobile_ads'),
+                   (7, 'category'), (8, 'mobile_slider'), (100, 'video'), (200, 'audio')]
+    no_box_type = [4, 5, 6, 8]
+    media_sizes = {'thumbnail': (600, 372), 'media': (1280, 794), 'category': (800, 500), 'ads': (820, 300),
+                   'mobile_ads': (500, 384), 'slider': (1920, 504), 'mobile_slider': (980, 860)}
+    has_placeholder = [1, 2, 3, 4, 5]
+
     def __str__(self):
         try:
             return self.title['fa']
@@ -494,19 +535,19 @@ class Media(Base):
             return self.title['user_id']
 
     def save(self, *args, **kwargs):
-        sizes = {'thumbnail': (600, 372), 'media': (1280, 794), 'category': (800, 500)}
         try:
             with Image.open(self.image) as im:
                 try:
                     width, height = im.size
-                    if (width, height) != sizes[self.get_type_display()]:
+                    if (width, height) != self.media_sizes[self.get_type_display()]:
+                        print(width, height)
                         raise ValidationError(_('سایز عکس نامعتبر است'))
                 except KeyError as e:
                     print(e)
         except ValueError:
             pass
         super().save(*args, **kwargs)
-        if self.type in has_placeholder:
+        if self.type in self.has_placeholder:
             ph = reduce_image_quality(self.image.path)
             name = self.image.name.replace('has-ph', 'ph')
             ph.save(f'{MEDIA_ROOT}/{name}', optimize=True, quality=80)
@@ -702,11 +743,13 @@ class Product(Base):
         return my_dict
 
     def clean(self):
-        self.base_clean()
+        super().clean()
         if not self.storages.filter(disable=False):
             self.make_item_disable(self)
             raise ActivationError(get_activation_warning_msg('انبار فعال'))
-        super().clean()
+        if self.review is not None:
+            self.make_item_disable(self)
+            raise ActivationError('بنظر بهزاد، محصول اطلاعات صحیحی نداره!')
         # todo for now
         Product.objects.filter(pk=self.pk).update(verify=True)
 
@@ -783,6 +826,8 @@ class Product(Base):
     properties = JSONField(null=True, blank=True)
     details = JSONField(null=True, blank=True)
     settings = JSONField(default=dict, blank=True)
+    review = models.TextField(null=True, blank=True)
+    check_review = models.BooleanField(default=False)
 
     # home_buissiness =
     # support_description =
@@ -880,7 +925,7 @@ class Storage(Base):
 
     def clean(self):
         if self.product.type != 4:
-            self.base_clean()
+            super().clean()
             if self.available_count < self.available_count_for_sale:
                 raise ActivationError(get_activation_warning_msg('موجودی انبار'))
             if self.supplier and self.supplier.is_verify is False:
@@ -1203,7 +1248,8 @@ class InvoiceStorage(models.Model):
     storage = models.ForeignKey(Storage, on_delete=PROTECT)
     invoice = models.ForeignKey(Invoice, on_delete=PROTECT, related_name='invoice_storages')
     count = models.PositiveIntegerField(default=1)
-    final_price = models.PositiveIntegerField(verbose_name='Final price')
+    final_price = models.PositiveIntegerField()
+    total_price = models.PositiveIntegerField()
     start_price = models.PositiveIntegerField()
     discount = models.PositiveIntegerField()
     discount_price = models.PositiveIntegerField()
@@ -1270,15 +1316,24 @@ class Rate(models.Model):
 
 class Slider(Base):
     select = ['media']
+    required_fields = ['title', 'media', 'mobile_media', 'type']
+    equired_multi_lang = ['title']
+    fields = {'title': 'عنوان', 'media': 'تصویر', 'mobile_media': 'تصویر موبایل', 'type': 'نوع'}
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args)
 
     def __str__(self):
         return f"{self.title['fa']}"
 
     title = JSONField(default=multilanguage)
     product = models.ForeignKey(Product, on_delete=CASCADE, blank=True, null=True)
-    media = models.ForeignKey(Media, on_delete=CASCADE)
-    type = models.PositiveSmallIntegerField(null=True, blank=True, choices=((1, 'home'),))
-    link = models.URLField(null=True, blank=True)
+    media = models.ForeignKey(Media, on_delete=CASCADE, related_name='slider')
+    mobile_media = models.ForeignKey(Media, on_delete=CASCADE, related_name='slider_mobile')
+    type = models.CharField(default='home', max_length=255)
+    url = models.URLField(null=True, blank=True)
+    priority = models.PositiveSmallIntegerField(null=True, blank=True)
 
     class Meta:
         db_table = 'slider'
@@ -1385,25 +1440,6 @@ class NotifyUser(models.Model):
 
     class Meta:
         db_table = 'notify_user'
-        ordering = ['-id']
-
-
-class Ad(models.Model):
-    select = ['media', 'storage']
-
-    def __str__(self):
-        return self.title['fa']
-
-    id = models.BigAutoField(auto_created=True, primary_key=True)
-    title = JSONField(default=multilanguage)
-    url = models.CharField(max_length=255, null=True, blank=True)
-    priority = models.PositiveSmallIntegerField(default=0)
-    media = models.ForeignKey(Media, on_delete=PROTECT, related_name='ad')
-    mobile_media = models.ForeignKey(Media, on_delete=PROTECT, null=True, blank=True, related_name='ad_mobile')
-    storage = models.ForeignKey(Storage, on_delete=PROTECT, blank=True, null=True)
-
-    class Meta:
-        db_table = 'ad'
         ordering = ['-id']
 
 

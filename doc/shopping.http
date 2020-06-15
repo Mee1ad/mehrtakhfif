@@ -7,7 +7,7 @@ POST {{host}}/basket
 Content-Type: Application/json
 
 {
-  "products": [{"id": 89, "count":  1, "features": []}],
+  "products": [{"id": 266, "count":  2, "features": []}],
   "override": true,
   "add": true
 }
@@ -35,4 +35,5 @@ Content-Type: Application/json
 	"Description": "this is a test payment"
 }
 
-###
+###   all   tax  price_without_tax  discount  final_price  unit_price
+###   4000  330        3670           2000        6000        1835

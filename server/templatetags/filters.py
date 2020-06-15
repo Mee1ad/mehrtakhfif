@@ -1,4 +1,5 @@
 from django import template
+from server.serialize import get_tax
 
 register = template.Library()
 
@@ -14,8 +15,11 @@ def sub(a, b):
     return f"{(a - b) * 10:,}"
 
 
+@register.filter(name="mul")
+def mul(a, b):
+    return f"{(a * b) * 10:,}"
+
+
 @register.filter(name="get_value_added")
 def get_value_added(a, b):
     return f"{a - b:,}"
-
-

@@ -313,19 +313,19 @@
                 <td><span>{{ product.amer }}</span></td>
                 <td><span class="ltr">{{ product.count }}</span></td>
                 <td><span class="ltr">
-                                            {{ product.item_final_price|to_rial }}
-                                        </span></td>
-
-                <td><span class="ltr">
                                             {{ product.final_price|to_rial }}
                                         </span></td>
 
                 <td><span class="ltr">
-                                            {{ product.final_price|sub:product.discount_price }}
+                                            {{ product.total_price|to_rial }}
                                         </span></td>
 
                 <td><span class="ltr">
-                                            {{ product.discount_price|to_rial }}
+                                            {{ product.discount|to_rial }}
+                                        </span></td>
+
+                <td><span class="ltr">
+                                            {{ product.discount_price_without_tax|to_rial }}
                                         </span></td>
 
                 <td><span class="ltr">

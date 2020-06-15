@@ -10,6 +10,7 @@ app_name = 'mtadmin'
 urlpatterns = [
     # path('test2', error_handler(Test2.as_view()), name='test2'),
     # path('test3', error_handler(Test3.as_view()), name='test3'),
+    path('box', error_handler(BoxView.as_view()), name='box'),
     path('category', error_handler(CategoryView.as_view()), name='category'),
     path('feature', error_handler(FeatureView.as_view()), name='feature'),
     path('menu', error_handler(MenuView.as_view()), name='menu'),
@@ -38,4 +39,6 @@ urlpatterns = [
     path('icon/<str:key>', error_handler(Icon.as_view()), name='icon'),
     path('vip_price', error_handler(VipPriceView.as_view()), name='vip_Price'),
     path('vip_type', error_handler(VipTypeView.as_view()), name='vip_type'),
+    path('ads', error_handler(AdsView.as_view()), name='ads'),
+    path('slider', error_handler(SliderView.as_view()), name='slider'),
 ]

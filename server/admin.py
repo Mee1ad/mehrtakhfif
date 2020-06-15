@@ -62,7 +62,7 @@ class BoxAdmin(SafeDeleteAdmin):
 
 
 class AdAdmin(admin.ModelAdmin):
-    list_display = ('id', 'title_fa', 'url', 'storage', 'get_media')
+    list_display = ('id', 'title_fa', 'url', 'storage', 'get_media', 'get_mobile_media')
     # list_filter = ('name',) + SafeDeleteAdmin.list_filter
     # search_fields = ['name']
     # autocomplete_fields = ['owner']
@@ -77,7 +77,15 @@ class AdAdmin(admin.ModelAdmin):
         link = obj.media.image.url
         return mark_safe(f'<a href="{link}">{obj.media}</a>')
 
+    def get_mobile_media(self, obj):
+        try:
+            link = obj.mobile_media.image.url
+            return mark_safe(f'<a href="{link}">{obj.mobile_media}</a>')
+        except AttributeError:
+            return None
+
     get_media.short_description = 'media'
+    get_mobile_media.short_description = 'mobile media'
 
 
 class CategoryAdmin(SafeDeleteAdmin):
@@ -300,7 +308,7 @@ class InvoiceAdmin(SafeDeleteAdmin):
 
 class InvoiceStorageAdmin(admin.ModelAdmin):
     pass
-    list_display = ('id', 'storage_name', 'get_discount_price', 'tax', 'count', 'invoice_id')
+    list_display = ('id', 'storage_name', 'discount_price', 'tax', 'count', 'invoice_id')
 
     # list_filter =
     # # list_display_links = ('',)
@@ -312,11 +320,7 @@ class InvoiceStorageAdmin(admin.ModelAdmin):
     def storage_name(self, obj):
         return obj.storage.title['fa']
 
-    def get_discount_price(self, obj):
-        return obj.discount_price - obj.tax
-
     storage_name.short_description = 'storage'
-    get_discount_price.short_description = 'discount_price'
 
 
 class MediaAdmin(admin.ModelAdmin):

@@ -19,13 +19,16 @@ def try_except(func):
         try:
             return func(*args, **kwargs)
         except PermissionDenied:
+            traceback.print_exc()
             return HttpResponseForbidden()
         except json.decoder.JSONDecodeError:
             traceback.print_exc()
             return HttpResponseServerError()
         except ValidationError as e:
+            traceback.print_exc()
+            # non_field_errors = e.message_dict[NON_FIELD_ERRORS][0]
             try:
-                return JsonResponse({'message': e.message}, status=res_code['bad_request'])
+                return JsonResponse({'message': e.messages, 'varaiant': 'error'}, status=res_code['bad_request'])
             except Exception:
                 return HttpResponseBadRequest()
         except (AssertionError, ObjectDoesNotExist, StopIteration, AttributeError, KeyError):
@@ -33,10 +36,10 @@ def try_except(func):
             return HttpResponseBadRequest()
         except Exception:
             traceback.print_exc()
-            exc_type, exc_obj, exc_tb = sys.exc_info()
-            error_type = exc_type.__name__
-            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            trace = {'Type': error_type, 'Description': f'{exc_obj}', 'File': fname, 'Line': exc_tb.tb_lineno}
+            # exc_type, exc_obj, exc_tb = sys.exc_info()
+            # error_type = exc_type.__name__
+            # fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            # trace = {'Type': error_type, 'Description': f'{exc_obj}', 'File': fname, 'Line': exc_tb.tb_lineno}
             # devices = FCMDevice.objects.filter(device_id='469f8ce1bfe86a95')
             # devices.send_message(title="oops, an error occurred", body=error_type + f', {exc_obj}', sound="cave")
             # return HttpResponse(f'{error_type}: {exc_obj} {fname}')

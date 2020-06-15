@@ -9,6 +9,7 @@ from django.db.utils import IntegrityError
 from django.db.models import Sum
 import json
 from server.documents import TagDocument
+from server.models import Media
 
 
 class CategoryView(TableView):
@@ -92,6 +93,13 @@ class BrandView(TableView):
         return delete_base(request, Brand, require_box=False)
 
 
+class BoxView(TableView):
+    permission_required = 'server.view_box'
+
+    def get(self, request):
+        return JsonResponse(serialized_objects(request, Box, BoxASchema, BoxASchema, error_null_box=False))
+
+
 class FeatureView(TableView):
     permission_required = 'server.view_feature'
 
@@ -116,11 +124,17 @@ class ProductView(TableView):
         types = request.GET.getlist('type[]')
         types2 = []
         params = get_params(request, 'box_id')
+        required_box = {'error_null_box': True}
         for t in types:
             types2.append({'service': 1, 'product': 2, 'tourism': 3, 'package': 4, 'package_item': 5}[t])
             params['filter'].pop('type__in')
             params['filter']['type__in'] = types2
-        return JsonResponse(serialized_objects(request, Product, ProductASchema, ProductESchema, params=params))
+        if 'review__isnull' in params['filter']:
+            required_box = {'error_null_box': False}
+        print(params)
+        print(required_box)
+        return JsonResponse(serialized_objects(request, Product, ProductASchema, ProductESchema, params=params,
+                                               **required_box))
 
     def post(self, request):
         return create_object(request, Product, serializer=ProductESchema, box_key='storage__product')
@@ -322,15 +336,25 @@ class MediaView(TableView):
     permission_required = 'server.view_media'
 
     def get(self, request):
-        return JsonResponse(serialized_objects(request, Media, MediaASchema, MediaESchema))
+        no_box = [4, 5, 6]
+        require_box = {}
+        params = get_params(request, 'box_id')
+        try:
+            if int(params['filter']['type']) in no_box:
+                require_box = {'error_null_box': False}
+        except Exception:
+            pass
+        return JsonResponse(serialized_objects(request, Media, MediaASchema, MediaESchema, **require_box))
 
     def post(self, request):
         data = json.loads(request.POST.get('data'))
         titles = data['titles']
         box_id = data.get('box_id')
-        if box_id not in request.user.box_permission.all().values_list('id', flat=True):
-            raise PermissionDenied
         media_type = data['type']
+        if box_id not in request.user.box_permission.all().values_list('id', flat=True) and \
+                media_type not in Media.no_box_type:
+            raise PermissionDenied
+
         media = upload(request, titles, media_type, box_id)
         if media:
             return JsonResponse({'media': MediaASchema().dump(media, many=True)})
@@ -377,6 +401,60 @@ class CommentView(TableView):
         pk = int(request.GET.get('id', None))
         Comment.objects.filter(pk=pk).update(suspend=True)
         return JsonResponse({})
+
+
+class AdsView(TableView):
+    permission_required = 'server.view_ad'
+
+    def get(self, request):
+        params = get_params(request)
+        if params['filter'].get('priority') == 'true':
+            params['filter']['priority__isnull'] = False
+            params['filter'].pop('priority')
+        print(params)
+        return JsonResponse(serialized_objects(request, Ad, AdASchema, AdASchema, error_null_box=False, params=params))
+
+    def post(self, request):
+        return create_object(request, Ad, error_null_box=False)
+
+    def patch(self, request):
+        priorities = json.loads(request.body)['priorities']
+        Ad.objects.update(priority=None)
+        [Ad.objects.filter(pk=pk).update(priority=priorities.index(pk)) for pk in priorities]
+        return JsonResponse({'message': 'باموفقیت ذخیرته شد'})
+
+    def put(self, request):
+        return update_object(request, Ad, require_box=False)
+
+    def delete(self, request):
+        return delete_base(request, Ad)
+
+
+class SliderView(TableView):
+    permission_required = 'server.view_slider'
+
+    def get(self, request):
+        params = get_params(request)
+        if params['filter'].get('priority') == 'true':
+            params['filter']['priority__isnull'] = False
+            params['filter'].pop('priority')
+        return JsonResponse(serialized_objects(request, Slider, SliderASchema, SliderASchema, error_null_box=False,
+                                               params=params))
+
+    def post(self, request):
+        return create_object(request, Slider, error_null_box=False)
+
+    def patch(self, request):
+        priorities = json.loads(request.body)['priorities']
+        Slider.objects.update(priority=None)
+        [Slider.objects.filter(pk=pk).update(priority=priorities.index(pk)) for pk in priorities]
+        return JsonResponse({'message': 'باموفقیت ذخیرته شد'})
+
+    def put(self, request):
+        return update_object(request, Slider, require_box=False)
+
+    def delete(self, request):
+        return delete_base(request, Slider)
 
 
 class SupplierView(TableView):

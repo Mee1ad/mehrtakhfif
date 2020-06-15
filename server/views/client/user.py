@@ -95,12 +95,13 @@ class Orders(LoginRequired):
 class InvoiceView(LoginRequired):
     @pysnooper.snoop()
     def get(self, request, invoice_id):
-        permission_group = ['support', 'accountant']
-        user = {'user': request.user}
-        if request.user.groups.filter(name__in=permission_group):
+        permission_group = ['support', 'accountant', 'superuser']
+        user = {'user': request.user, 'status': 2}  # payed
+        if request.user.groups.filter(name__in=permission_group) or request.user.is_superuser:
             invoice = Invoice.objects.get(pk=invoice_id)
             user = {'user': invoice.user}
         invoice = get_invoice_file(invoice_id, user)
+
         return render_to_response('full_invoice.html', invoice)
 
 

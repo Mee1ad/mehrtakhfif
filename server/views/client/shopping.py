@@ -4,6 +4,7 @@ from mehr_takhfif.settings import TOKEN_SALT, DEBUG
 import pysnooper
 from django.db.models import F
 from django.utils.translation import gettext_lazy as _
+from server.serialize import BasketProductSchema
 
 
 class BasketView(LoginRequired):
@@ -51,7 +52,6 @@ class BasketView(LoginRequired):
         except (AssertionError, Basket.DoesNotExist):
             return JsonResponse(default_response['bad'], status=400)
 
-    @pysnooper.snoop()
     def add_to_basket(self, basket, products):
         # {"id": 1, "count": 5, "features": [{"fsid": 16, "fvid": [1, 2]}]}
         for product in products:
@@ -80,7 +80,6 @@ class BasketView(LoginRequired):
         basket.save()
         return basket.count
 
-    @pysnooper.snoop()
     def check_basket(self, basket):
         print(basket)
         basket_products = BasketProduct.objects.filter(basket=basket)

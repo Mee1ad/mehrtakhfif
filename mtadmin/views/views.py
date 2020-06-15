@@ -101,7 +101,7 @@ class CheckLoginToken(AdminView):
     def get(self, request):
         user = request.user
         permissions = user.box_permission.all()
-        boxes = BoxASchema().dump(permissions, many=True)
+        boxes = BoxASchema(user=request.user).dump(permissions, many=True)
         roll = get_roll(user)
         user = UserSchema().dump(user)
         user['roll'] = roll

@@ -160,6 +160,12 @@ class SupplierESchema(BaseAdminSchema):
 class BoxASchema(BoxSchema):
     name = fields.Dict()
     disable = fields.Boolean()
+    is_owner = fields.Method("get_is_owner")
+
+    def get_is_owner(self, obj):
+        if obj.owner == self.user:
+            return True
+        return False
 
 
 class InvoiceASchema(BaseAdminSchema, InvoiceSchema):
@@ -209,6 +215,8 @@ class InvoiceESchema(InvoiceASchema):
 
 
 class ProductASchema(BaseAdminSchema):
+    class Meta:
+        additional = ('review', 'check_review')
     list_filter = [Category]
 
     name = fields.Method("get_name")
@@ -464,6 +472,70 @@ class DashboardSchema(Schema):
 
     def get_active_product_count(self, obj):
         return Product.objects.filter(box=obj, disable=False, default_storage__disable=False).count()
+
+
+class AdASchema(BaseSchema):
+    class Meta:
+        additional = ('id', 'url', 'priority', 'type')
+
+    def __init__(self, is_mobile=True):
+        super().__init__()
+        self.is_mobile = is_mobile
+
+    title = fields.Dict()
+    media = fields.Method('get_media')
+    mobile_media = fields.Method('get_mobile_media')
+    product_permalink = fields.Method('get_permalink')
+
+    def get_permalink(self, obj):
+        try:
+            return obj.storage.product.permalink
+        except AttributeError:
+            pass
+
+    def get_mobile_media(self, obj):
+        try:
+            return MediaASchema().dump(obj.mobile_media)
+        except AttributeError:
+            return None
+
+    def get_media(self, obj):
+        try:
+            return MediaASchema().dump(obj.media)
+        except AttributeError:
+            return None
+
+
+class SliderASchema(BaseSchema):
+    class Meta:
+        additional = ('id', 'url', 'priority', 'type')
+
+    def __init__(self, is_mobile=True):
+        super().__init__()
+        self.is_mobile = is_mobile
+
+    title = fields.Dict()
+    media = fields.Method('get_media')
+    mobile_media = fields.Method('get_mobile_media')
+    product_permalink = fields.Method('get_permalink')
+
+    def get_permalink(self, obj):
+        try:
+            return obj.product.permalink
+        except AttributeError:
+            pass
+
+    def get_mobile_media(self, obj):
+        try:
+            return MediaASchema().dump(obj.mobile_media)
+        except AttributeError:
+            return None
+
+    def get_media(self, obj):
+        try:
+            return MediaASchema().dump(obj.media)
+        except AttributeError:
+            return None
 
 
 tables = {'product': ProductASchema, 'media': MediaASchema, 'invoice': InvoiceASchema}
