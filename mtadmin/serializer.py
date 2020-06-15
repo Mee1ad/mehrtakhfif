@@ -216,10 +216,9 @@ class InvoiceESchema(InvoiceASchema):
 
 class ProductASchema(BaseAdminSchema):
     class Meta:
-        additional = ('review', 'check_review')
+        additional = ('review', 'check_review', 'name')
     list_filter = [Category]
 
-    name = fields.Method("get_name")
     permalink = fields.Str()
     settings = fields.Dict()
     box = fields.Method("get_box")
@@ -244,12 +243,11 @@ class ProductTagASchema(Schema):
 class ProductESchema(ProductASchema, ProductSchema):
     class Meta:
         unknown = EXCLUDE
-        additional = ProductSchema.Meta.additional + ('verify',)
+        additional = ProductSchema.Meta.additional + ProductASchema.Meta.additional + ('verify',)
 
     media = fields.Method("get_media")
     tags = ProductTagField()
     brand = fields.Method("get_brand")
-    name = fields.Dict()
     properties = fields.Dict()
     details = fields.Dict()
     address = fields.Dict()
