@@ -36,6 +36,7 @@ class SessionStore(OriginalSessionStore):
 
 
 class Login(View):
+    @pysnooper.snoop()
     def post(self, request):
         data = load_data(request, check_token=False)
         cookie_age = 30 * 60
