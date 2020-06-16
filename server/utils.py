@@ -31,7 +31,7 @@ from mehr_takhfif.settings import BASE_DIR
 from server.serialize import InvoiceSchema
 import jdatetime
 from django.utils.translation import gettext_lazy as _
-from py3dbp import Packer, Bin, Item
+
 
 random_data = string.ascii_lowercase + string.digits
 default_step = 10
@@ -39,7 +39,7 @@ default_page = 1
 default_response = {'ok': {'message': 'ok'}, 'bad': {'message': 'bad request'}}
 res_code = {'success': 200, 'bad_request': 400, 'unauthorized': 401, 'forbidden': 403, 'token_issue': 401,
             'integrity': 406, 'banned': 493, 'activation_warning': 250, 'updated_and_disable': 251,
-            'object_does_not_exist': 444, 'signup_with_pp': 203, 'invalid_password': 450,
+            'object_does_not_exist': 444, 'signup_with_pp': 251, 'invalid_password': 450,
             'signup_with_pass': 201, 'updated': 202}
 pattern = {'phone': r'^(09[0-9]{9})$', 'email': r'^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\
            [[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$',
@@ -464,24 +464,7 @@ def get_product_filter_params(is_staff):
     return {'categories__disable': False, 'box__disable': False, 'disable': False, 'storages__disable': False}
 
 
-def packing(items, boxes, required_bins=[]):
-    packer = CustomPacker()
-    for box in boxes:
-        box.items = []
-        box.unfitted_items = []
-    [packer.add_bin(item) for item in boxes]
-    [packer.add_item(item) for item in items]
-    packer.pack()
-    for b in packer.bins:
-        if not b.unfitted_items:
-            fitted_items_name = [item.name for item in b.items]
-            required_bins.append({'name': b.name, 'items': fitted_items_name})
-            print(required_bins)
-            return required_bins
-        if b == boxes[-1]:
-            fitted_items_name = [item.name for item in b.items]
-            required_bins.append({'name': b.name, 'items': fitted_items_name})
-            packing(b.unfitted_items, boxes)
+
 
 
 # Security
@@ -618,19 +601,4 @@ class ORM:
             default=True).order_by('-product__sold_count')[:count]
 
 
-class CustomBin(Bin):
-    def string(self):
-        return [int(self.width), int(self.height), int(self.depth), int(self.max_weight), int(self.get_volume())]
 
-
-class CustomItem(Item):
-    def string(self):
-        self.position = [int(position) for position in self.position]
-        return [int(self.width), int(self.height), int(self.depth), int(self.weight), self.position, self.rotation_type
-            , int(self.get_volume())]
-
-
-class CustomPacker(Packer):
-    def remove_item(self, item):
-        self.items.pop(item)
-        self.total_items = len(self.items) - 1
