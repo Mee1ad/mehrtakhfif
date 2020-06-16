@@ -5,12 +5,20 @@ import pysnooper
 from django.db.models import F
 from django.utils.translation import gettext_lazy as _
 from server.serialize import BasketProductSchema
+from server.views.post import *
 
 
 class BasketView(LoginRequired):
     def get(self, request):
         basket = Basket.objects.filter(user=request.user).order_by('-id').first()
         deleted_items = self.check_basket(basket)
+        basket_products = BasketProduct.objects.filter(basket=basket)
+        items = []
+        for basket_product in basket_products:
+            sizes = list(basket_product.storage.dimensions.values())
+            items.append(CustomItem(basket_product.storage.title[request.lang], *sizes))
+        packed_items = packing(items, boxes)
+        print(packed_items)
         return JsonResponse({**get_basket(request.user, request.lang, basket=basket, tax=True),
                              'deleted_items': deleted_items})
 
@@ -62,7 +70,7 @@ class BasketView(LoginRequired):
                 basket_product = BasketProduct.objects.filter(basket=basket, storage_id=pk, features=features). \
                     select_related('storage')
                 storage = basket_product.first().storage
-                if storage.available_count_for_sale < count or storage.max_count_for_sale < count or storage.disable\
+                if storage.available_count_for_sale < count or storage.max_count_for_sale < count or storage.disable \
                         or storage.product.disable:
                     raise ValidationError(_('متاسفانه این محصول ناموجود میباشد'))
                 basket_product.update(count=count)
@@ -71,7 +79,7 @@ class BasketView(LoginRequired):
                 basket_product = BasketProduct(basket=basket, storage_id=pk, count=count, box=box, features=features)
                 basket_product.validation()
                 storage = basket_product.storage
-                if storage.available_count_for_sale < count or storage.max_count_for_sale < count or storage.disable\
+                if storage.available_count_for_sale < count or storage.max_count_for_sale < count or storage.disable \
                         or storage.product.disable:
                     raise ValidationError(_('متاسفانه این محصول ناموجود میباشد'))
                 basket_product.save()

@@ -46,7 +46,10 @@ def serialized_objects(request, model, serializer=None, single_serializer=None, 
             except KeyError:
                 raise PermissionDenied
         distinct_by = [item.replace('-', '') for item in params['order']]
-        query = model.objects.filter(**params['filter']).order_by(*params['order']).distinct(*distinct_by)
+        print(params)
+        print(distinct_by)
+        query = model.objects.filter(**params['filter']).order_by(*params['order'], 'id').distinct(*distinct_by, 'id')
+        # query = model.objects.filter(**params['filter']).order_by(*params['order'])
         if params.get('aggregate', None):
             # todo tax
             pass
@@ -96,6 +99,7 @@ def get_params(request, box_key=None, date_key='created_at'):
         if key == 'has_review':
             filterby['review__isnull'] = False
             continue
+
         if key == 'q':
             annotate['text'] = KeyTextTransform('fa', 'name')
             filterby['text__contains'] = value[0]

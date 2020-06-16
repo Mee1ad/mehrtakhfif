@@ -20,7 +20,7 @@ from mehr_takhfif.settings import INVOICE_ROOT, SHORTLINK, STATIC_ROOT, DEBUG
 from django.utils.translation import gettext_lazy as _
 from django_celery_beat.models import PeriodicTask, IntervalSchedule
 from server.tasks import cancel_reservation
-from server.utils import CustomBin, CustomItem, packing
+
 
 ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'disable': False},
                 {'id': 2, 'key': 'melli', 'name': 'ملی', 'hide': True, 'disable': True},
@@ -35,8 +35,7 @@ bp = {'terminal_id': 5290645, 'username': "takh252", 'password': "71564848",
       'ipg_url': "https://bpm.shaparak.ir/pgwchannel/startpay.mellat",
       'callback': 'https://api.mehrtakhfif.com/payment/callback'}  # mellat
 
-
-client = zeep.Client(wsdl="https://bpm.shaparak.ir/pgwchannel/services/pgw?wsdl")
+# client = zeep.Client(wsdl="https://bpm.shaparak.ir/pgwchannel/services/pgw?wsdl")
 
 saddad = {'merchant_id': None, 'terminal_id': None, 'terminal_key': None,
           'payment_request': 'https://sadad.shaparak.ir/VPG/api/v0/Request/PaymentRequest',
@@ -47,23 +46,10 @@ pecco = {'pin': '4MuVGr1FaB6P7S43Ggh5', 'terminal_id': '44481453',
 
 callback = HOST + "/callback"
 
-boxes = [CustomBin('box_1', 95, 100, 190, 100000), CustomBin('box_2', 100, 140, 200, 100000),
-         CustomBin('box_3', 165, 205, 270, 100000),
-         CustomBin('box_4', 195, 205, 305, 100000), CustomBin('box_5', 200, 260, 400, 100000),
-         CustomBin('box_6', 250, 250, 500, 100000),
-         CustomBin('box_7', 320, 350, 600, 100000), CustomBin('box_8', 320, 440, 600, 100000)]
-
 
 # todo clear basket after payment
 class IPG(View):
-    def get(self, request, basket_id):
-        basket_products = BasketProduct.objects.filter(basket_id=basket_id)
-        items = []
-        for basket_product in basket_products:
-            sizes = list(basket_product.storage.dimensions.values())
-            items.append(CustomItem(basket_product.storage.title[request.lang], *sizes))
-        packed_items = packing(items, boxes)
-        print(packed_items)
+    def get(self, request):
         return JsonResponse({'ipg': ipg})
 
 
