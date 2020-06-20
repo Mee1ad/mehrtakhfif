@@ -33,6 +33,8 @@ import jdatetime
 from django.utils.translation import gettext_lazy as _
 from server.serialize import UserSchema
 from barcode import generate
+from barcode.base import Barcode
+from server.views.post import get_shipping_cost
 
 random_data = string.ascii_lowercase + string.digits
 default_step = 10
@@ -188,21 +190,20 @@ def load_location(location):
     return None
 
 
-def get_invoice_file(invoice=None, invoice_id=None, user={}):
+def get_invoice_file(request, invoice=None, invoice_id=None, user={}):
     if invoice is None:
         invoice = Invoice.objects.get(pk=invoice_id, **user)
-    transport_invocie = Invoice.objects.filter(basket=invoice.basket, final_price__isnull=True, **user).order_by('-id')
-    invoice_dict = InvoiceSchema().dump(invoice)
-    if transport_invocie:
-        invoice_dict['transport_invocie'] = InvoiceSchema().dump(transport_invocie.first())
-        invoice_dict['transport_invocie']['tax'] = get_tax(2, invoice_dict['transport_invocie']['amount'], 0)
+    shipping_invoice = Invoice.objects.filter(basket=invoice.basket, final_price__isnull=True, **user).order_by('-id')
+    invoice_dict = InvoiceSchema(**request.schema_params).dump(invoice)
+    if shipping_invoice:
+        invoice_dict['shipping_invoice'] = InvoiceSchema().dump(shipping_invoice.first())
+        invoice_dict['shipping_invoice']['tax'] = get_tax(2, invoice_dict['shipping_invoice']['amount'], 0)
     invoice_dict['user'] = UserSchema().dump(invoice.user)
     try:
         invoice_dict['date'] = jdatetime.date.fromgregorian(date=invoice.payed_at).strftime("%Y/%m/%d")
     except ValueError:
         invoice_dict['date'] = '1399/99/99'
     invoice_dict['barcode'] = get_barcode(invoice.id)
-    print(invoice_dict['barcode'])
     return invoice_dict
 
 
@@ -244,7 +245,6 @@ def create_qr(data, output):
                                        colorized=True, contrast=1.0, brightness=1.0, save_name=f'{output}.png',
                                        save_dir=MEDIA_ROOT + f'/qr/')
 
-from barcode.base import Barcode
 
 def get_barcode(data=None):
     Barcode.default_writer_options['write_text'] = False
@@ -358,7 +358,7 @@ def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=Non
     basket_products = basket_products or BasketProduct.objects.filter(
         basket=basket).select_related(*BasketProduct.related)
     summary = {"total_price": 0, "discount_price": 0, "profit": 0, "mt_profit": 0, 'ha_profit': 0,
-               "shopping_cost": 0, "tax": 0, "final_price": 0}
+               "shipping_cost": 0, "tax": 0, "final_price": 0}
     address_required = False
     for basket_product in basket_products:
         storage = basket_product.storage
@@ -399,6 +399,7 @@ def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=Non
         summary['ha_profit'] += ha_profit
         summary['mt_profit'] += basket_product.discount_price - basket_product.start_price - ha_profit
     basket.basket_products = basket_products
+    summary['shipping_cost'] = get_shipping_cost(basket)
     if return_obj:
         basket.summary = summary
         basket.address_required = address_required
@@ -408,6 +409,8 @@ def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=Non
         summary.pop('ha_profit', None)
     basket = BasketSchema(language=lang).dump(basket)
     summary['invoice_discount'] = summary['total_price'] - summary['discount_price']
+    summary['total_price'] += summary['shipping_cost']
+    summary['discount_price'] += summary['shipping_cost']
     return {'basket': basket, 'summary': summary, 'address_required': address_required}
 
 

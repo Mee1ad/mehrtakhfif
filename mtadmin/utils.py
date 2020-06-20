@@ -30,7 +30,7 @@ def serialized_objects(request, model, serializer=None, single_serializer=None, 
     if pk:
         try:
             obj = model.objects.get(pk=pk, **box_check)
-            return {"data": single_serializer().dump(obj)}
+            return {"data": single_serializer(user=request.user).dump(obj)}
         except model.DoesNotExist:
             raise PermissionDenied
     if not params:
@@ -205,6 +205,7 @@ def update_object(request, model, box_key='box', return_item=False, serializer=N
     if not request.user.has_perm(f'server.change_{model.__name__.lower()}'):
         raise PermissionDenied
     data = data or get_data(request, require_box=False)
+    print(data)
     try:
         data, m2m, custom_m2m, remove_fields = get_m2m_fields(model, data)
     except AttributeError:

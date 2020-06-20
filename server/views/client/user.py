@@ -98,8 +98,7 @@ class InvoiceView(LoginRequired):
         user = {'user': request.user, 'status': 2}  # payed
         if request.user.groups.filter(name__in=permission_group) or request.user.is_superuser:
             user = {}
-        invoice = get_invoice_file(invoice_id=invoice_id, user=user)
-        print('invoice:', invoice)
+        invoice = get_invoice_file(request, invoice_id=invoice_id, user=user)
         return render_to_response('full_invoice.html', invoice)
 
 

@@ -246,7 +246,7 @@
                                 <span class="label">خریدار:</span> {{ user.first_name }} {{ user.last_name }}
                             </td>
                             <td style="width: 6.7cm">
-                                <span class="label">شماره‌اقتصادی / شماره‌ملی:</span> {{ user.meli_code }}
+                                <span class="label">شماره ‌اقتصادی / شماره‌ ملی:</span> {{ user.meli_code }}
                             </td>
                             <td>
                                 <span class="label">شناسه ملی:</span> {{ user.meli_code }}
@@ -361,8 +361,8 @@
                 </div>
                 <div class="flex">
                     <div class="flex-grow">
-                        <img class="footer-img uk-align-center" width="150px"
-                             src="https://api.mehrtakhfif.com/static/mtTypo.png">
+                        <img class="footer-img uk-align-center" width="100px"
+                             src="https://api.mehrtakhfif.com/media/asset/mohr.png">
                     </div>
                     <div class="flex-grow">۳ آذر ۱۳۹۸</div>
                     <div class="flex-grow">۹ -
@@ -378,7 +378,7 @@
         </tfoot>
     </table>
 </div>
-{% if transport_invocie %}
+{% if shipping_invoice %}
     <div class="page">
         <h1 style="text-align: center">
             صورتحسـاب فـروش كـالا و خـدمات
@@ -520,25 +520,25 @@
                 </td>
                 <td><span class="ltr">1</span></td>
                 <td><span class="ltr">
-                                        {{ transport_invocie.amount|sub:transport_invocie.tax }}
+                                        {{ shipping_invoice.amount|to_rial }}
                                     </span></td>
                 <td><span class="ltr">
-                                        {{ transport_invocie.amount|sub:transport_invocie.tax }}
+                                        {{ shipping_invoice.amount|to_rial }}
                                     </span></td>
 
                 <td><span class="ltr"> 0
                                     </span></td>
 
                 <td><span class="ltr">
-                                        {{ transport_invocie.amount|sub:transport_invocie.tax }}
+                                        {{ shipping_invoice.amount|to_rial }}
                                     </span></td>
 
                 <td><span class="ltr">
-                                        {{ transport_invocie.tax|to_rial }}
+                                        0
                                     </span></td>
 
                 <td><span class="ltr">
-                                    {{ transport_invocie.amount|to_rial }}
+                                    {{ shipping_invoice.amount|to_rial }}
                                     </span></td>
             </tr>
 
@@ -549,7 +549,7 @@
                     جمع کل پس از تخفیف و کسر مالیات و عوارض (ریال):
                 </td>
                 <td><span class="ltr">
-                                    {{ transport_invocie.amount|to_rial }}
+                                    {{ shipping_invoice.amount|to_rial }}
                                 </span></td>
             </tr>
             <tr style="background: #fff">
@@ -562,8 +562,8 @@
                     </div>
                     <div class="flex">
                         <div class="flex-grow">
-                            <img class="footer-img uk-align-center" width="150px"
-                                 src="https://api.mehrtakhfif.com/static/mtTypo.png">
+                            <img class="footer-img uk-align-center" width="100px"
+                                 src="https://api.mehrtakhfif.com/media/asset/mohr.png">
                         </div>
                         <div class="flex-grow">۳ آذر ۱۳۹۸</div>
                         <div class="flex-grow">۹ -

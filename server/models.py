@@ -1036,7 +1036,7 @@ class Storage(Base):
     start_price = models.PositiveIntegerField(default=0, verbose_name='Start price')
     final_price = models.PositiveIntegerField(default=0, verbose_name='Final price')
     discount_price = models.PositiveIntegerField(default=0, verbose_name='Discount price')
-    transportation_price = models.PositiveIntegerField(default=0)
+    shipping_cost = models.PositiveIntegerField(null=True, blank=True)
     available_count_for_sale = models.PositiveIntegerField(default=0, verbose_name='Available count for sale')
     max_count_for_sale = models.PositiveSmallIntegerField(default=1)
     min_count_alert = models.PositiveSmallIntegerField(default=5)

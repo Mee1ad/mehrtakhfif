@@ -57,12 +57,13 @@ def get_state_position(destination, origin=25):
         return 'out'
 
 
-def get_transport_price(basket=None, basket_id=None):
+def get_shipping_cost(basket=None, basket_id=None):
     if basket is None:
-        basket = Basket.objects.get(pk=basket_id)
+        try:
+            basket = Basket.objects.get(pk=basket_id)
+        except Basket.DoesNotExist:
+            return 0
     basket_products = BasketProduct.objects.filter(basket=basket)
-    # print(basket_products.annotate(weight=KeyTextTransform('weight', 'storage__dimensions')).first().weight)
-    # print(basket_products.aggregate(test=Sum(KeyTextTransform('weight', 'storage__dimensions'))))
     items = []
     weight = 0
     for basket_product in basket_products:
@@ -70,18 +71,18 @@ def get_transport_price(basket=None, basket_id=None):
         sizes = list(storage.dimensions.values())
         items.append(CustomItem(storage.title[basket.user.language], *sizes))
         weight += storage.dimensions['weight'] * basket_product.count
-    # packed_items = packing(items, boxes)
-    # weight = sum(basket_products.values_list('storage__dimensions__weight', flat=True))
-    print(weight)
-    state = basket.user.default_address.state_id
-    state_position = get_state_position(destination=state)
-    for state_price in state_prices:
-        if state_price['state'] == state_position:
-            for item in state_price['prices']:
-                if weight < item['weight']:
-                    return item['price']
-            else:
-                return state_price['prices'][-1]['price'] + ceil((weight - 2000) / 2500) * 2500
+    try:
+        state = basket.user.default_address.state_id
+        state_position = get_state_position(destination=state)
+        for state_price in state_prices:
+            if state_price['state'] == state_position:
+                for item in state_price['prices']:
+                    if weight < item['weight']:
+                        return item['price']
+                else:
+                    return state_price['prices'][-1]['price'] + ceil((weight - 2000) / 2500) * 2500
+    except AttributeError:
+        return -1
 
 
 def packing(items, boxes, required_bins=[]):

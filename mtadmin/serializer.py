@@ -195,7 +195,7 @@ class InvoiceESchema(InvoiceASchema):
     suspended_at = fields.Function(lambda o: o.suspended_at.timestamp() if o.suspended_at else None)
     invoice_products = fields.Method("get_invoice_products")
     tax = fields.Method("calculate_invoice_tax")
-    transportation_price = fields.Int()
+    shipping_cost = fields.Int()
     start_price = fields.Method('get_start_price')
 
     def get_start_price(self, obj):

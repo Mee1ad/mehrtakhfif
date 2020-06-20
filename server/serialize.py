@@ -521,7 +521,7 @@ class MinStorageSchema(BaseSchema):
 
 class StorageSchema(MinStorageSchema):
     class Meta:
-        additional = ('transportation_price', 'priority', 'gender', 'disable')
+        additional = ('shipping_cost', 'priority', 'gender', 'disable')
 
     default = fields.Function(lambda o: o == o.product.default_storage)
     features = FeatureField()
@@ -589,7 +589,12 @@ class InvoiceSchema(BaseSchema):
     invoice = fields.Method("get_invoice_file")
 
     def get_invoice_file(self, obj):
-        return HOST + f'/invoice_detail/{obj.id}'
+        try:
+            if (self.user.is_staff and not self.user.groups.filter(name='ha_accountants').exists()) or \
+                    obj.get_type_display == 'payed':
+                return HOST + f'/invoice_detail/{obj.id}'
+        except AttributeError:
+            return None
 
     def get_amount(self, obj):
         if InvoiceStorage.objects.filter(invoice=obj).exists():

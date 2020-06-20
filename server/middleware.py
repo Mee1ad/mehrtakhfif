@@ -65,14 +65,16 @@ class AuthMiddleware:
             # sync user basket count
             new_basket_count = None
             if request.user.is_authenticated:
-
                 basket = Basket.objects.filter(user=request.user).order_by('-id')
                 if basket.exists():
                     db_basket_count = basket.first().products.all().count()
                     user_basket_count = get_custom_signed_cookie(request, 'basket_count', -1)
+                    # new_basket_count = int(user_basket_count)
                     if not db_basket_count == int(user_basket_count):
                         new_basket_count = db_basket_count
                     request.basket = basket
+                else:
+                    new_basket_count = 0
 
         elif app_name == 'mtadmin':
             request.token = request.headers.get('access-token', None)
