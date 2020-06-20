@@ -20,7 +20,7 @@ from mehr_takhfif.settings import INVOICE_ROOT, SHORTLINK, STATIC_ROOT, DEBUG
 from django.utils.translation import gettext_lazy as _
 from django_celery_beat.models import PeriodicTask, IntervalSchedule
 from server.tasks import cancel_reservation
-
+from server.views.post import get_transport_price
 
 ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'disable': False},
                 {'id': 2, 'key': 'melli', 'name': 'ملی', 'hide': True, 'disable': True},
@@ -124,15 +124,15 @@ class PaymentRequest(View):
         basket = basket or get_basket(user, request.lang, require_profit=True)
         if basket['address_required']:
             address = AddressSchema().dump(user.default_address)
-
-        # taxes = sum([get_tax(bp.storage.tax_type, bp.storage.discount_price, bp.storage.start_price) for bp in basket])
+        transport_price = get_transport_price(basket_id=basket['basket']['id'])
         invoice = Invoice.objects.create(created_by=user, updated_by=user, user=user,
-                                         mt_profit=basket['summary']['mt_profit'],
-                                         invoice_discount=basket['summary']['invoice_discount'],
-                                         ha_profit=basket['summary']['ha_profit'],
+                                         mt_profit=basket['summary']['mt_profit'], expire=add_minutes(15),
+                                         invoice_discount=basket['summary']['invoice_discount'], address=address,
+                                         ha_profit=basket['summary']['ha_profit'], basket_id=basket['basket']['id'],
                                          amount=basket['summary']['discount_price'] + basket['summary']['tax'],
-                                         address=address, basket_id=basket['basket']['id'],
-                                         final_price=basket['summary']['total_price'], expire=add_minutes(1))
+                                         final_price=basket['summary']['total_price'])
+        Invoice.objects.create(created_by=user, updated_by=user, user=user, address=address,
+                               amount=transport_price, basket_id=basket['basket']['id'], expire=add_minutes(15))
         return invoice
 
     def reserve_storage(self, basket, invoice):

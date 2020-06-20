@@ -31,7 +31,8 @@ from mehr_takhfif.settings import BASE_DIR
 from server.serialize import InvoiceSchema
 import jdatetime
 from django.utils.translation import gettext_lazy as _
-
+from server.serialize import UserSchema
+from barcode import generate
 
 random_data = string.ascii_lowercase + string.digits
 default_step = 10
@@ -39,8 +40,8 @@ default_page = 1
 default_response = {'ok': {'message': 'ok'}, 'bad': {'message': 'bad request'}}
 res_code = {'success': 200, 'bad_request': 400, 'unauthorized': 401, 'forbidden': 403, 'token_issue': 401,
             'integrity': 406, 'banned': 493, 'activation_warning': 250, 'updated_and_disable': 251,
-            'object_does_not_exist': 444, 'signup_with_pp': 251, 'invalid_password': 450,
-            'signup_with_pass': 201, 'updated': 202}
+            'object_does_not_exist': 444, 'signup_with_pp': 203, 'invalid_password': 450,
+            'signup_with_pass': 201, 'updated': 202}  # todo 251 to 203
 pattern = {'phone': r'^(09[0-9]{9})$', 'email': r'^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\
            [[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$',
            'postal_code': r'^\d{5}[ -]?\d{5}$', 'fullname': r'^[آ-یA-z]{2,}( [آ-یA-z]{2,})+([آ-یA-z]|[ ]?)$',
@@ -187,15 +188,22 @@ def load_location(location):
     return None
 
 
-def get_invoice_file(invoice_id, user):
-    invoice_obj = Invoice.objects.get(pk=invoice_id, **user)
-    invoice = InvoiceSchema().dump(invoice_obj)
-    invoice.update(user)
+def get_invoice_file(invoice=None, invoice_id=None, user={}):
+    if invoice is None:
+        invoice = Invoice.objects.get(pk=invoice_id, **user)
+    transport_invocie = Invoice.objects.filter(basket=invoice.basket, final_price__isnull=True, **user).order_by('-id')
+    invoice_dict = InvoiceSchema().dump(invoice)
+    if transport_invocie:
+        invoice_dict['transport_invocie'] = InvoiceSchema().dump(transport_invocie.first())
+        invoice_dict['transport_invocie']['tax'] = get_tax(2, invoice_dict['transport_invocie']['amount'], 0)
+    invoice_dict['user'] = UserSchema().dump(invoice.user)
     try:
-        invoice['date'] = jdatetime.date.fromgregorian(date=invoice_obj.payed_at).strftime("%Y/%m/%d")
+        invoice_dict['date'] = jdatetime.date.fromgregorian(date=invoice.payed_at).strftime("%Y/%m/%d")
     except ValueError:
-        invoice['date'] = '1399/99/99'
-    return invoice
+        invoice_dict['date'] = '1399/99/99'
+    invoice_dict['barcode'] = get_barcode(invoice.id)
+    print(invoice_dict['barcode'])
+    return invoice_dict
 
 
 # No Usage
@@ -235,6 +243,15 @@ def create_qr(data, output):
     version, level, qr_name = myqr.run(data, version=2, level='L', picture="F:\Download\Photos\mt\mehrtakhfifIcon.png",
                                        colorized=True, contrast=1.0, brightness=1.0, save_name=f'{output}.png',
                                        save_dir=MEDIA_ROOT + f'/qr/')
+
+from barcode.base import Barcode
+
+def get_barcode(data=None):
+    Barcode.default_writer_options['write_text'] = False
+    barcode_directory = f'{MEDIA_ROOT}/barcode'
+    # generate('code39', f'{data}', output=f'{barcode_directory}/{data}')
+    generate('code39', f'1234567891', output=f'{barcode_directory}/{data}')
+    return HOST + f'/media/barcode/{data}.svg'
 
 
 # Utils
@@ -464,9 +481,6 @@ def get_product_filter_params(is_staff):
     return {'categories__disable': False, 'box__disable': False, 'disable': False, 'storages__disable': False}
 
 
-
-
-
 # Security
 
 def get_access_token(user, model=None, pk=None, try_again=None):
@@ -557,7 +571,6 @@ def get_custom_signed_cookie(req, key, error=None, salt=TOKEN_SALT):
 #     products.remove(product)
 #     return products
 
-
 class LoginRequired(LoginRequiredMixin, View):
     raise_exception = True
 
@@ -599,6 +612,3 @@ class ORM:
     def get_latest(count=5):
         return Storage.objects.select_related('product', 'product__thumbnail').filter(
             default=True).order_by('-product__sold_count')[:count]
-
-
-

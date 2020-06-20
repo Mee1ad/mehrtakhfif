@@ -1,7 +1,6 @@
 from statistics import mean, StatisticsError
 from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
 from django.contrib.postgres.fields.jsonb import KeyTextTransform
-from server.utils import *
 from mtadmin.utils import *
 from mtadmin.serializer import *
 import pysnooper
@@ -131,8 +130,6 @@ class ProductView(TableView):
             params['filter']['type__in'] = types2
         if 'review__isnull' in params['filter']:
             required_box = {'error_null_box': False}
-        print(params)
-        print(required_box)
         return JsonResponse(serialized_objects(request, Product, ProductASchema, ProductESchema, params=params,
                                                **required_box))
 

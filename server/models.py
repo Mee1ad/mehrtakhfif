@@ -1158,8 +1158,11 @@ class Comment(Base):
         return f"{self.user}"
 
     def validation(self):
-        if self.rate > 10 or self.type > 2:
-            raise ValidationError(_('invalid value for rate or type'))
+        try:
+            if self.rate > 10 or self.type > 1:
+                raise ValidationError(_('invalid value for rate or type'))
+        except TypeError:
+            pass
 
     def save(self, *args, **kwargs):
         self.validation()
@@ -1168,7 +1171,7 @@ class Comment(Base):
     _safedelete_policy = SOFT_DELETE_CASCADE
     id = models.BigAutoField(auto_created=True, primary_key=True)
     text = models.TextField(null=True, blank=True)
-    rate = models.PositiveSmallIntegerField(default=0, null=True)
+    rate = models.PositiveSmallIntegerField(null=True, blank=True)
     satisfied = models.BooleanField(null=True, blank=True)
     approved = models.BooleanField(default=False)
     user = models.ForeignKey(User, on_delete=CASCADE)
@@ -1203,16 +1206,15 @@ class Invoice(Base):
     address = JSONField(null=True, blank=True)
     description = models.TextField(max_length=255, blank=True, null=True)
     amount = models.PositiveIntegerField()
-    final_price = models.PositiveIntegerField()
-    invoice_discount = models.PositiveIntegerField()
+    invoice_discount = models.PositiveIntegerField(null=True, blank=True)
+    final_price = models.PositiveIntegerField(null=True, blank=True)
     reference_id = models.CharField(max_length=127, null=True, blank=True)
     sale_order_id = models.BigIntegerField(null=True, blank=True)
     sale_reference_id = models.BigIntegerField(null=True, blank=True)
     card_holder = models.CharField(max_length=31, null=True, blank=True)
     final_amount = models.PositiveIntegerField(help_text='from bank', null=True, blank=True)
-    mt_profit = models.PositiveIntegerField()
-    ha_profit = models.PositiveIntegerField()
-    transportation_price = models.PositiveIntegerField(default=0)
+    mt_profit = models.PositiveIntegerField(null=True, blank=True)
+    ha_profit = models.PositiveIntegerField(null=True, blank=True)
     ipg = models.PositiveSmallIntegerField(default=1)
     expire = models.DateTimeField(null=True, blank=True)
     status = models.PositiveSmallIntegerField(default=1, choices=((1, 'pending'), (2, 'payed'), (3, 'canceled'),

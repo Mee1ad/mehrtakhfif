@@ -1,19 +1,16 @@
-from django.http import JsonResponse, HttpResponseForbidden, HttpResponseBadRequest
-from server.utils import get_pagination, get_token_from_cookie, set_token, check_access_token
-from django.core.exceptions import ValidationError, FieldError, PermissionDenied, FieldDoesNotExist
-from django.contrib.admin.utils import NestedObjects
-from django.db.models import F
-from server.models import *
-from mtadmin.serializer import tables
-from operator import attrgetter
 import json
+from operator import attrgetter
+
+from django.contrib.admin.utils import NestedObjects
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from django.views import View
-import pysnooper
-from server.utils import res_code
-from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
 from django.contrib.postgres.fields.jsonb import KeyTextTransform
-from django.contrib.postgres.search import SearchVector
+from django.core.exceptions import FieldError, PermissionDenied
+from django.http import JsonResponse
+from django.views import View
+
+from mtadmin.serializer import tables
+from server.models import *
+from server.utils import get_pagination, get_token_from_cookie, set_token, check_access_token, res_code
 
 rolls = ['superuser', 'backup', 'admin', 'accountants']
 
@@ -46,8 +43,6 @@ def serialized_objects(request, model, serializer=None, single_serializer=None, 
             except KeyError:
                 raise PermissionDenied
         distinct_by = [item.replace('-', '') for item in params['order']]
-        print(params)
-        print(distinct_by)
         query = model.objects.filter(**params['filter']).order_by(*params['order'], 'id').distinct(*distinct_by, 'id')
         # query = model.objects.filter(**params['filter']).order_by(*params['order'])
         if params.get('aggregate', None):

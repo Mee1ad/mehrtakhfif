@@ -9,6 +9,7 @@ SHORTLINK = "https://mhrt.ir"
 AUTH_USER_MODEL = 'server.User'
 IPRESTRICT_GEOIP_ENABLED = False
 
+
 INSTALLED_APPS = \
     [
         'jet.dashboard',

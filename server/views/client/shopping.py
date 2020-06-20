@@ -12,15 +12,9 @@ class BasketView(LoginRequired):
     def get(self, request):
         basket = Basket.objects.filter(user=request.user).order_by('-id').first()
         deleted_items = self.check_basket(basket)
-        basket_products = BasketProduct.objects.filter(basket=basket)
-        items = []
-        for basket_product in basket_products:
-            sizes = list(basket_product.storage.dimensions.values())
-            items.append(CustomItem(basket_product.storage.title[request.lang], *sizes))
-        packed_items = packing(items, boxes)
-        print(packed_items)
+        transport_price = get_transport_price(basket)
         return JsonResponse({**get_basket(request.user, request.lang, basket=basket, tax=True),
-                             'deleted_items': deleted_items})
+                             'deleted_items': deleted_items, 'transport_price': transport_price})
 
     def post(self, request):
         data = load_data(request)
@@ -89,7 +83,6 @@ class BasketView(LoginRequired):
         return basket.count
 
     def check_basket(self, basket):
-        print(basket)
         basket_products = BasketProduct.objects.filter(basket=basket)
         # todo test
         deleted_items = []

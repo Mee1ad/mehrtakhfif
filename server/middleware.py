@@ -34,9 +34,9 @@ class AuthMiddleware:
             request.user = User.objects.order_by('id').first()
             # request.user = User.objects.get(pk=133)
         if HA_ACCOUNTANTS:
-            request.user = User.objects.get(pk=140)
+            request.user = User.objects.get(pk=3)
         if MT_ACCOUNTANTS:
-            request.user = User.objects.get(pk=246)
+            request.user = User.objects.get(pk=4)
         if route == 'favicon.ico':
             return JsonResponse({})
         delay = request.GET.get('delay', None)

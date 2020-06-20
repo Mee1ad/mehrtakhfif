@@ -17,7 +17,7 @@ class AdminLogin(AdminView):
         if user.is_ban:
             return JsonResponse({'message': 'user is banned'}, status=493)
         assert user.check_password(password)
-        return set_token(user, Login.send_activation(user))
+        return set_token(user, Login.send_activation(user, request))
 
 
 class AdminActivate(AdminView):

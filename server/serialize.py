@@ -82,12 +82,13 @@ class InvoiceStorageField(fields.Field):
 class BaseSchema(Schema):
     id = fields.Int()
 
-    def __init__(self, language='fa', vip=False, user=None):
+    def __init__(self, language='fa', vip=False, user=None, is_mobile=True):
         super().__init__()
         self.lang = language
         self.default_lang = 'fa'
         self.vip = vip
         self.user = user
+        self.is_mobile = is_mobile
 
     def get(self, name):
         try:
@@ -265,7 +266,8 @@ class BaseSchema(Schema):
 
     def get_state(self, obj):
         try:
-            return CitySchema().dump(obj.state)
+            print(obj.state)
+            return StateSchema().dump(obj.state)
         except AttributeError:
             pass
 
@@ -290,12 +292,18 @@ class MinUserSchema(Schema):
 
 class UserSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'first_name', 'last_name', 'gender', 'username', 'meli_code',
-                      'active_address', 'shaba')
+        additional = ('id', 'first_name', 'last_name', 'gender', 'username', 'meli_code', 'shaba')
 
     avatar = fields.Method("get_avatar", data_key="avatar_id")
     birthday = fields.Method("get_birthday")
     vip_type = fields.Method("get_vip_type")
+    default_address = fields.Method('get_default_address')
+
+    def get_default_address(self, obj):
+        try:
+            return AddressSchema().dump(obj.default_address)
+        except Exception:
+            return False
 
     def get_vip_type(self, obj):
         try:
@@ -315,20 +323,6 @@ class UserSchema(BaseSchema):
             return int(time.mktime(obj.birthday.timetuple()))
         except Exception:
             return None
-
-    @post_load
-    def make_user(self, data, **kwargs):
-        return User(**data)
-
-    @validates("username")
-    def validate_username(self, value):
-        print('username_validation')
-        print(value)
-
-    @validates("birthday")
-    def validate_birthday(self, value):
-        print('birthday_validation')
-        print(value)
 
 
 class AddressSchema(BaseSchema):
@@ -468,15 +462,6 @@ class ProductMediaSchema(BaseSchema):
     media = fields.Method("get_media")
 
 
-class SliderSchema(BaseSchema):
-    class Meta:
-        additional = ('id', 'url')
-
-    title = fields.Method('get_title')
-    product = fields.Method("get_permalink")
-    media = fields.Method("get_media")
-
-
 class MinStorageSchema(BaseSchema):
     vip_discount_price = fields.Method("get_vip_discount_price")
     discount_price = fields.Method("get_discount_price")
@@ -607,8 +592,10 @@ class InvoiceSchema(BaseSchema):
         return HOST + f'/invoice_detail/{obj.id}'
 
     def get_amount(self, obj):
-        prices = InvoiceStorage.objects.filter(invoice=obj).values_list('discount_price', flat=True)
-        return sum(prices)
+        if InvoiceStorage.objects.filter(invoice=obj).exists():
+            prices = InvoiceStorage.objects.filter(invoice=obj).values_list('discount_price', flat=True)
+            return sum(prices)
+        return obj.amount
 
     def get_payed_at(self, obj):
         try:
@@ -772,10 +759,6 @@ class AdSchema(BaseSchema):
     class Meta:
         additional = ('id', 'url', 'priority')
 
-    def __init__(self, is_mobile=True):
-        super().__init__()
-        self.is_mobile = is_mobile
-
     title = fields.Method('get_title')
     media = fields.Method('get_media')
     product_permalink = fields.Method('get_permalink')
@@ -786,11 +769,34 @@ class AdSchema(BaseSchema):
         except AttributeError:
             pass
 
-    def get_mobile_media(self, obj):
+    def get_media(self, obj):
         try:
             if self.is_mobile:
                 return MediaSchema(self.lang).dump(obj.mobile_media)
-            return MediaSchema(self.lang).dump(obj.mobile_media)
+            return MediaSchema(self.lang).dump(obj.media)
+        except AttributeError:
+            return None
+
+
+class SliderSchema(BaseSchema):
+    class Meta:
+        additional = ('id', 'url')
+
+    title = fields.Method('get_title')
+    product = fields.Method("get_permalink")
+    media = fields.Method("get_media")
+
+    def get_permalink(self, obj):
+        try:
+            return obj.storage.product.permalink
+        except AttributeError:
+            pass
+
+    def get_media(self, obj):
+        try:
+            if self.is_mobile:
+                return MediaSchema(self.lang).dump(obj.mobile_media)
+            return MediaSchema(self.lang).dump(obj.media)
         except AttributeError:
             return None
 
@@ -821,10 +827,6 @@ class NotifyUserSchema(BaseSchema):
 class StateSchema(BaseSchema):
     class Meta:
         additional = ('id', 'name')
-
-    @post_load
-    def make_user(self, data, **kwargs):
-        return State(**data)
 
 
 class CitySchema(Schema):

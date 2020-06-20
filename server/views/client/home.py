@@ -31,9 +31,10 @@ class BoxesGetSpecialProduct(View):
         for box, index in zip(all_box, range(len(all_box))):
             box_special_product = SpecialProduct.objects.select_related(*SpecialProduct.select).filter(box=box) \
                 [(page - 1) * step:step * page]
-            box = {'id': box.pk, 'name': box.name[language], 'key': box.permalink}
-            box['special_products'] = SpecialProductSchema(**request.schema_params).dump(box_special_product, many=True)
-            products.append(box)
+            if box_special_product:
+                box = {'id': box.pk, 'name': box.name[language], 'key': box.permalink}
+                box['special_products'] = SpecialProductSchema(**request.schema_params).dump(box_special_product, many=True)
+                products.append(box)
         res = {'products': products}
         return JsonResponse(res)
 
@@ -84,8 +85,10 @@ class GetMenu(View):
 class GetAds(View):
     def get(self, request, ads_type):
         agent = request.user_agent
+        print(agent)
+        print(agent.is_mobile)
         ads = Ad.objects.filter(priority__isnull=False, type=ads_type).select_related(*Ad.select).order_by('priority')
-        return JsonResponse({'ads': AdSchema(agent.is_mobile).dump(ads, many=True)})
+        return JsonResponse({'ads': AdSchema(is_mobile=agent.is_mobile).dump(ads, many=True)})
 
 
 class GetSlider(View):
@@ -93,7 +96,7 @@ class GetSlider(View):
         agent = request.user_agent
         slider = Slider.objects.filter(priority__isnull=False, type=slider_type).select_related(
             *Slider.select).order_by('priority')
-        return JsonResponse({'slider': SliderSchema(agent.is_mobile).dump(slider, many=True)})
+        return JsonResponse({'slider': SliderSchema(is_mobile=agent.is_mobile).dump(slider, many=True)})
 
 
 class ElasticSearch(View):

@@ -99,17 +99,23 @@ class CommentView(View):
             post = {"blog_post": blog_post}
         user = request.user
         res = {}
+        res_code = 201
+        res = {'message': 'نظر شما ثبت شد و پس از تایید نمایش داده میشود'}
         if user.first_name is None or user.last_name is None:
-            user.first_name = data['first_name']
-            user.last_name = data['last_name']
-            user.save()
-            res['user'] = UserSchema().dump(user)
+            try:
+                user.first_name = data['first_name']
+                user.last_name = data['last_name']
+                user.save()
+                res['user'] = UserSchema().dump(user)
+            except KeyError:
+                res = {'message': 'لطفا نام و نام خانوادگی را وارد نمایید', 'variant': 'error'}
+                res_code = 400
         if reply_to_id:
             assert Comment.objects.filter(pk=reply_to_id).exists()
         assert post or reply_to_id
         Comment.objects.create(text=data['text'], user=request.user, reply_to_id=reply_to_id, type=cm_type,
                                rate=rate, satisfied=satisfied, created_by=user, updated_by=user, **post)
-        return JsonResponse(res, status=201)
+        return JsonResponse(res, status=res_code)
 
     def delete(self, request):
         pk = request.GET.get('id', None)

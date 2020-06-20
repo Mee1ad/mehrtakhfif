@@ -9,11 +9,12 @@ from server.utils import *
 from server.serialize import UserSchema
 import pysnooper
 from secrets import token_hex
-from mehr_takhfif.settings import DEFAULT_COOKIE_DOMAIN, DEBUG
+from mehr_takhfif.settings import DEFAULT_COOKIE_DOMAIN, DEBUG, SAFE_IP, TEST_USER
 from django.contrib.sessions.backends.db import SessionStore as OriginalSessionStore
 from django.utils.crypto import get_random_string
 from django.core.exceptions import PermissionDenied
 from django.utils.translation import gettext_lazy as _
+
 
 
 class Backend(ModelBackend):
@@ -51,7 +52,7 @@ class Login(View):
                 return JsonResponse({'message': 'user is banned'}, status=res_code['banned'])
             if password is None and not is_staff:  # otp
                 if user.privacy_agreement:  # 202 need activation code (login)
-                    return set_token(user, self.send_activation(user))
+                    return set_token(user, self.send_activation(user, request))
                 # res = JsonResponse({}, status=251) # please agree privacy policy (signup)
                 # return self.set_token(user, res)
                 raise User.DoesNotExist  # redirect to signup
@@ -60,7 +61,7 @@ class Login(View):
             if not user.check_password(password):
                 raise ValidationError(_('شماره موبایل یا پسورد نامعتبر است'))
             if is_staff:
-                return set_token(user, self.send_activation(user))
+                return set_token(user, self.send_activation(user, request))
             login(request, user, backend='django.contrib.auth.backends.ModelBackend')
             res = {'user': UserSchema().dump(user)}
             basket = Basket.objects.filter(user=user).order_by('-id')
@@ -84,7 +85,7 @@ class Login(View):
 
     @staticmethod
     @pysnooper.snoop()
-    def send_activation(user):
+    def send_activation(user, request=None):
         resend_timeout = 0.5
         activation_expire = 2
         if timezone.now() < add_minutes(resend_timeout - activation_expire, time=user.activation_expire):
@@ -92,8 +93,9 @@ class Login(View):
         user.activation_code = random.randint(10000, 99999)
         user.activation_expire = add_minutes(activation_expire)
         user.save()
+        ip = request.META.get('REMOTE_ADDR') or request.META.get('HTTP_X_FORWARDED_FOR')
         res = {'resend_timeout': resend_timeout, 'timeout': activation_expire, 'code': user.activation_code}
-        if not DEBUG:
+        if not (DEBUG or (ip in SAFE_IP and user.username == TEST_USER)):
             send_sms(user.username, input_data=[{'code': user.activation_code}])
             res = {'resend_timeout': resend_timeout, 'timeout': activation_expire}
         return JsonResponse(res, status=res_code['updated'])
@@ -109,7 +111,7 @@ class PrivacyPolicy(View):
             user = Backend.get_user_from_cookie(request)
             user.privacy_agreement = True
             user.save()
-            return Login.send_activation(user)  # need activation code
+            return Login.send_activation(user, request)  # need activation code
         except Exception:
             return JsonResponse({}, status=res_code['unauthorized'])
 
@@ -136,7 +138,7 @@ class ResendCode(View):
     def post(self, request):
         try:
             user = Backend.get_user_from_cookie(request)
-            res = Login.send_activation(user)
+            res = Login.send_activation(user, request)
             res.status_code = 204
             return res
         except Exception:
