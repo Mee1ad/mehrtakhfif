@@ -93,7 +93,6 @@ class BasketView(LoginRequired):
 
 
 class GetProducts(View):
-    @pysnooper.snoop()
     def post(self, request):
         data = load_data(request)
         storage_ids = [item['id'] for item in data['basket']]

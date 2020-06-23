@@ -286,7 +286,7 @@ class StorageAdmin(Base):
 
 
 class InvoiceAdmin(SafeDeleteAdmin):
-    list_display = ('id', 'amount', 'invoice_discount', 'status', 'get_storages',
+    list_display = ('id', 'amount', 'invoice_discount', 'status', 'get_storages', 'get_suppliers',
                     'get_invoice') + SafeDeleteAdmin.list_display
     list_filter = SafeDeleteAdmin.list_filter
     # list_display_links = ('',)
@@ -298,16 +298,20 @@ class InvoiceAdmin(SafeDeleteAdmin):
         link = f'{HOST}/superuser/server/invoicestorage/?q={obj.id}'
         return mark_safe(f'<a href="{link}">Show</a>')
 
+    def get_suppliers(self, obj):
+        link = f'{HOST}/superuser/server/invoicesuppliers/?q={obj.id}'
+        return mark_safe(f'<a href="{link}">Show</a>')
+
     def get_invoice(self, obj):
         link = f'{HOST}/invoice_detail/{obj.id}'
         return mark_safe(f'<a href="{link}">Show</a>')
 
     get_storages.short_description = 'storages'
+    get_suppliers.short_description = 'suppliers'
     get_invoice.short_description = 'invoice'
 
 
 class InvoiceStorageAdmin(admin.ModelAdmin):
-    pass
     list_display = ('id', 'storage_name', 'discount_price', 'tax', 'count', 'invoice_id')
 
     # list_filter =
@@ -318,9 +322,22 @@ class InvoiceStorageAdmin(admin.ModelAdmin):
     # ordering = ('-created_at',)
 
     def storage_name(self, obj):
-        return obj.storage.title['fa']
+        link = reverse("admin:server_storage_change", args=[obj.storage_id])
+        return mark_safe(f'<a href="{link}">{escape(obj.storage.__str__())}</a>')
 
     storage_name.short_description = 'storage'
+
+
+class InvoiceSupplierAdmin(admin.ModelAdmin):
+    pass
+    list_display = ('id', 'invoice', 'supplier', 'amount')
+
+    # list_filter =
+    list_display_links = ('id',)
+    search_fields = ['invoice__id']
+
+    # list_per_page = 10
+    # ordering = ('-created_at',)
 
 
 class MediaAdmin(admin.ModelAdmin):
@@ -384,6 +401,7 @@ admin.site.register(Basket)
 admin.site.register(Comment, CommentAdmin)
 admin.site.register(Invoice, InvoiceAdmin)
 admin.site.register(InvoiceStorage, InvoiceStorageAdmin)
+admin.site.register(InvoiceSuppliers, InvoiceSupplierAdmin)
 admin.site.register(Menu, MenuAdmin)
 admin.site.register(Tag)
 admin.site.register(Rate)

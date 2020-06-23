@@ -266,7 +266,6 @@ class BaseSchema(Schema):
 
     def get_state(self, obj):
         try:
-            print(obj.state)
             return StateSchema().dump(obj.state)
         except AttributeError:
             pass

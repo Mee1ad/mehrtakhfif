@@ -205,7 +205,6 @@ def update_object(request, model, box_key='box', return_item=False, serializer=N
     if not request.user.has_perm(f'server.change_{model.__name__.lower()}'):
         raise PermissionDenied
     data = data or get_data(request, require_box=False)
-    print(data)
     try:
         data, m2m, custom_m2m, remove_fields = get_m2m_fields(model, data)
     except AttributeError:

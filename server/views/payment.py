@@ -66,10 +66,7 @@ class PaymentRequest(View):
         invoice = self.create_invoice(request)
         self.reserve_storage(basket, invoice)
         self.submit_invoice_storages(invoice.pk)
-        if DEBUG:
-            return JsonResponse({"url": f"{bp['ipg_url']}?RefId=12345"})
-        res = {"url": f"{bp['ipg_url']}?RefId={self.behpardakht_api(invoice.pk)}"}
-        return JsonResponse(res)
+        return JsonResponse({"url": f"{bp['ipg_url']}?RefId={self.behpardakht_api(invoice.pk)}"})
 
     def behpardakht_api(self, invoice_id):
         invoice = Invoice.objects.get(pk=invoice_id)
@@ -92,6 +89,7 @@ class PaymentRequest(View):
                     break
             else:
                 additional_data.append([supplier.deposit_id, basket_product.start_price * 10, 0])
+        print('additional_data:', additional_data)
 
         additional_data = ';'.join(','.join(str(x) for x in b) for b in additional_data)
 
@@ -100,15 +98,14 @@ class PaymentRequest(View):
         # invoice.amount = 1000
         # additional_data = '1,5000,0;2,5000,0'
         local_time = pytz.timezone("Iran").localize(datetime.now()).strftime("%H%M%S")
-        r = client.service.bpCumulativeDynamicPayRequest(terminalId=bp['terminal_id'], userName=bp['username'],
-                                                         userPassword=bp['password'], localTime=local_time,
-                                                         localDate=local_date, orderId=invoice.id,
-                                                         amount=invoice.amount * 10,
-                                                         additionalData=additional_data,
-                                                         callBackUrl=bp['callback'])
-
-        # if DEBUG:
-        #     return "test"
+        r = "0,123456789"
+        if not DEBUG:
+            r = client.service.bpCumulativeDynamicPayRequest(terminalId=bp['terminal_id'], userName=bp['username'],
+                                                             userPassword=bp['password'], localTime=local_time,
+                                                             localDate=local_date, orderId=invoice.id,
+                                                             amount=invoice.amount * 10,
+                                                             additionalData=additional_data,
+                                                             callBackUrl=bp['callback'])
 
         if r[0:2] == "0,":
             ref_id = r[2:]
@@ -151,7 +148,7 @@ class PaymentRequest(View):
             basket.sync = 1  # reserved
             basket.save()
             invoice.save()
-
+    @pysnooper.snoop()
     def submit_invoice_storages(self, invoice_id):
         invoice = Invoice.objects.filter(pk=invoice_id).select_related(*Invoice.select).first()
         basket = get_basket(invoice.user, basket=invoice.basket, return_obj=True)
@@ -160,7 +157,7 @@ class PaymentRequest(View):
             storage = product.storage
             supplier = storage.supplier
             amount = product.start_price
-            if not InvoiceSuppliers.objects.filter(invoice=invoice, supplier=supplier).update(amount=amount):
+            if not InvoiceSuppliers.objects.filter(invoice=invoice, supplier=supplier).update(amount=F('amount') + amount):
                 InvoiceSuppliers.objects.create(invoice=invoice, supplier=supplier, amount=amount)
             tax = get_tax(storage.tax_type, storage.discount_price, storage.start_price)
             invoice_products.append(

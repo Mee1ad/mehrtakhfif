@@ -85,8 +85,6 @@ class GetMenu(View):
 class GetAds(View):
     def get(self, request, ads_type):
         agent = request.user_agent
-        print(agent)
-        print(agent.is_mobile)
         ads = Ad.objects.filter(priority__isnull=False, type=ads_type).select_related(*Ad.select).order_by('priority')
         return JsonResponse({'ads': AdSchema(is_mobile=agent.is_mobile).dump(ads, many=True)})
 

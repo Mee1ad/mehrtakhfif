@@ -10,9 +10,10 @@ from random import randint
 # todo show disable items to admins
 
 class AdminBaseTest(APITestCase):
+    fixtures = ["db.yaml"]
     # fixtures = ["user.yaml", "group.yaml", "content_type.yaml", "permission.yaml", "box.yaml", "media.yaml"]
-    fixtures = ["db.yaml", "product.yaml", "storage.yaml", "invoice.yaml", "invoice_storage.yaml",
-                "basket.yaml"]
+    # fixtures = ["db.yaml", "product.yaml", "storage.yaml", "invoice.yaml", "invoice_storage.yaml",
+    #             "basket.yaml"]
     client = APIClient()
     factory = APIRequestFactory()
     fake = Faker()
@@ -32,7 +33,8 @@ class UserGetData(AdminBaseTest):
     invoice_id = 100
 
     def test_slider(self):
-        self.base_get('/slider/home')
+        print(Slider.objects.values_list('id', flat=True))
+        # self.base_get('/slider/home')
 
     def test_special_offer(self):
         self.base_get('/special_offer')

@@ -16,7 +16,6 @@ from django.core.exceptions import PermissionDenied
 from django.utils.translation import gettext_lazy as _
 
 
-
 class Backend(ModelBackend):
     @staticmethod
     def get_user_from_cookie(request):
@@ -146,7 +145,6 @@ class ResendCode(View):
 
 
 class Activate(View):
-    @pysnooper.snoop()
     def post(self, request):
         data = load_data(request)
         # TODO: get csrf code

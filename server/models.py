@@ -512,6 +512,7 @@ class Box(Base):
     owner = models.OneToOneField(User, on_delete=PROTECT)
     settings = JSONField(default=dict, blank=True)
     disable = models.BooleanField(default=True)
+    priority = models.PositiveSmallIntegerField(default=0)
     media = models.ForeignKey("Media", on_delete=CASCADE, null=True, blank=True, related_name="box_image_box_id")
 
     class Meta:
