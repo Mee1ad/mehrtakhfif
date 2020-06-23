@@ -1364,15 +1364,15 @@ class SpecialOffer(Base):
     product = models.ManyToManyField(Storage, related_name="special_offer_products", blank=True)
     not_accepted_products = models.ManyToManyField(Storage, related_name="special_offer_not_accepted_products",
                                                    blank=True)
-    peak_price = models.PositiveIntegerField(verbose_name='Peak price')
+    peak_price = models.PositiveIntegerField(verbose_name='Peak price', null=True, blank=True)
     discount_price = models.PositiveIntegerField(default=0, verbose_name='Discount price')
     vip_discount_price = models.PositiveIntegerField(default=0, verbose_name='Vip discount price')
     least_count = models.PositiveSmallIntegerField(default=1)
     discount_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount percent')
     vip_discount_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Vip discount percent')
-    code = models.CharField(max_length=65)
-    start_date = models.DateTimeField(verbose_name='Start date')
-    end_date = models.DateTimeField(verbose_name='End date')
+    code = models.CharField(max_length=65, null=True, blank=True)
+    start_date = models.DateTimeField(verbose_name='Start date', null=True, blank=True)
+    end_date = models.DateTimeField(verbose_name='End date', null=True, blank=True)
     name = JSONField(default=multilanguage)
 
     class Meta:
