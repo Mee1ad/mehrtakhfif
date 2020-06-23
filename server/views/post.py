@@ -57,7 +57,10 @@ def get_state_position(destination, origin=25):
         return 'out'
 
 
-def get_shipping_cost(basket=None, basket_id=None):
+def get_shipping_cost(user, basket=None, basket_id=None):
+    if not user.is_authenticated or not user.default_address:
+        # todo fix
+        return 0
     if basket is None:
         try:
             basket = Basket.objects.get(pk=basket_id)

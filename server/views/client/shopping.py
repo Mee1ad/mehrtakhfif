@@ -9,6 +9,7 @@ from server.views.post import *
 
 
 class BasketView(LoginRequired):
+    @pysnooper.snoop()
     def get(self, request):
         basket = Basket.objects.filter(user=request.user).order_by('-id').first()
         deleted_items = self.check_basket(basket)
