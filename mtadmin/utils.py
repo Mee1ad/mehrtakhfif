@@ -42,8 +42,8 @@ def serialized_objects(request, model, serializer=None, single_serializer=None, 
                     raise PermissionDenied
             except KeyError:
                 raise PermissionDenied
-        distinct_by = [item.replace('-', '') for item in params['order']]
-        query = model.objects.filter(**params['filter']).order_by(*params['order'], 'id').distinct(*distinct_by, 'id')
+        distinct_by = [item.replace('-', '') for item in params['order'] if item not in model.m2m]
+        query = model.objects.filter(**params['filter']).order_by('id', *params['order']).distinct('id', *distinct_by)
         # query = model.objects.filter(**params['filter']).order_by(*params['order'])
         if params.get('aggregate', None):
             # todo tax
@@ -60,6 +60,7 @@ def serialized_objects(request, model, serializer=None, single_serializer=None, 
                 annotate[item[0] + '__' + item[1]] = KeyTextTransform(item[1], item[0])
             query = model.objects.annotate(**annotate).filter(**params['filter']).order_by(*params['order']).distinct(
                 *distinct_by)
+
         return get_pagination(request, query, serializer, show_all=request.all)
     except (FieldError, ValueError):
         raise FieldError
