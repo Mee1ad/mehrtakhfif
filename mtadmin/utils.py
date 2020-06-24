@@ -44,8 +44,7 @@ def serialized_objects(request, model, serializer=None, single_serializer=None, 
                 raise PermissionDenied
         distinct_by = [item.replace('-', '') for item in params['order'] if item.replace('-', '') not in model.m2m]
         query = model.objects.filter(**params['filter']).order_by(*params['order'], '-id')
-        if set(params['order']).intersection(model.m2m):
-            query.order_by('-id', *params['order']).distinct('id')
+        # todo duplicate data when order by manytomany fields, need distinct
         # query = model.objects.filter(**params['filter']).order_by(*params['order'])
         if params.get('aggregate', None):
             # todo tax
