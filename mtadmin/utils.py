@@ -33,6 +33,8 @@ def serialized_objects(request, model, serializer=None, single_serializer=None, 
             return {"data": single_serializer(user=request.user).dump(obj)}
         except model.DoesNotExist:
             raise PermissionDenied
+        except TypeError:
+            return {"data": single_serializer().dump(obj)}
     if not params:
         params = get_params(request, box_key)
     try:
