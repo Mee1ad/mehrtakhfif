@@ -413,6 +413,7 @@ class User(AbstractUser):
     activation_expire = models.DateTimeField(null=True, blank=True)
     token = models.CharField(max_length=255, unique=True, null=True, blank=True)
     token_expire = models.DateTimeField(auto_now_add=True)
+    settings = JSONField(default=dict, blank=True)
     created_by = models.ForeignKey('User', on_delete=PROTECT, related_name="%(app_label)s_%(class)s_created_by",
                                    null=True, blank=True)
     updated_by = models.ForeignKey('User', on_delete=PROTECT, related_name="%(app_label)s_%(class)s_updated_by",
@@ -424,7 +425,7 @@ class User(AbstractUser):
         ordering = ['-id']
 
 
-class VipType(SafeDeleteModel):
+class VipType(Base):
     def __str__(self):
         return self.name
 
@@ -495,7 +496,7 @@ class Address(models.Model):
     phone = models.CharField(max_length=15)
     postal_code = models.CharField(max_length=15, verbose_name='Postal code')
     address = models.TextField()
-    location = JSONField(null=True)
+    location = JSONField(null=True, blank=True)
     user = models.ForeignKey(User, blank=True, null=True, on_delete=models.CASCADE)
 
     class Meta:
@@ -720,6 +721,22 @@ class ProductTag(models.Model):
         ordering = ['-id']
 
 
+class ProductMedia(models.Model):
+    related = ['storage']
+
+    def __str__(self):
+        return f"{self.id}"
+
+    id = models.BigAutoField(auto_created=True, primary_key=True)
+    product = models.ForeignKey("Product", on_delete=PROTECT)
+    media = models.ForeignKey(Media, on_delete=PROTECT)
+    priority = models.PositiveSmallIntegerField(null=True)
+
+    class Meta:
+        db_table = 'product_media'
+        ordering = ['-id']
+
+
 class Product(Base):
     objects = MyQuerySet.as_manager()
     select = ['category', 'box', 'thumbnail']
@@ -729,8 +746,8 @@ class Product(Base):
     required_fields = ['thumbnail', 'description']
     related_fields = []
     remove_fields = []
-    custom_m2m = {'tags': ProductTag}
-    m2m = ['categories', 'media', 'cities']
+    custom_m2m = {'tags': ProductTag, 'media': ProductMedia}
+    m2m = ['categories', 'cities']
     required_m2m = ['categories', 'tags', 'media']
     fields = {'thumbnail': 'تامبنیل', 'categories': 'دسته بندی', 'tags': 'تگ', 'media': 'مدیا'}
 
@@ -837,22 +854,6 @@ class Product(Base):
         ordering = ['-updated_at']
 
 
-class ProductMedia(models.Model):
-    related = ['storage']
-
-    def __str__(self):
-        return f"{self.id}"
-
-    id = models.BigAutoField(auto_created=True, primary_key=True)
-    product = models.ForeignKey(Product, on_delete=PROTECT)
-    media = models.ForeignKey(Media, on_delete=PROTECT)
-    priority = models.PositiveSmallIntegerField(null=True)
-
-    class Meta:
-        db_table = 'product_media'
-        ordering = ['-id']
-
-
 class FeatureStorage(models.Model):
     related = ['storage']
 
@@ -928,22 +929,29 @@ class Storage(Base):
         if self.product.type != 4:
             super().clean()
             if self.available_count < self.available_count_for_sale:
+                self.make_item_disable(self)
                 raise ActivationError(get_activation_warning_msg('موجودی انبار'))
             if self.supplier and self.supplier.is_verify is False:
+                self.make_item_disable(self)
                 raise ActivationError(get_activation_warning_msg('تامین کننده'))
             if (self.features_percent > 100 or self.discount_percent > 100) or (self.discount_price < self.start_price):
+                self.make_item_disable(self)
                 raise ActivationError(get_activation_warning_msg('درصد تخفیف'))
             if self.disable is True and self.priority == '0':
+                self.make_item_disable(self)
                 raise ActivationError(get_activation_warning_msg('انبار پیش فرض'))
             if self.deadline:
                 if self.deadline < timezone.now() and self.deadline is not None and self.disable is False:
+                    self.make_item_disable(self)
                     raise ActivationError(get_activation_warning_msg('ددلاین'))
             if not self.dimensions.get('width') or not self.dimensions.get('height') or not self.dimensions.get(
                     'length') \
                     or not self.dimensions.get('weight'):
+                self.make_item_disable(self)
                 raise ActivationError(get_activation_warning_msg('ابعاد'))
         else:
             if Storage.objects.get(pk=self.pk).items.filter(disable=True):
+                self.make_item_disable(self)
                 raise ActivationError(get_activation_warning_msg('یکی از انبار ها'))
         super().clean()
 
@@ -1261,7 +1269,7 @@ class InvoiceStorage(models.Model):
     # vip_discount_price = models.PositiveIntegerField(verbose_name='Discount price', default=0)
     # vip_discount_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount price percent')
     deliver_status = models.PositiveSmallIntegerField(choices=[(1, 'pending'), (2, 'packing'), (3, 'sending'),
-                                                               (4, 'deliver')], default=1)
+                                                               (4, 'delivered'), (5, 'Referred')], default=1)
 
     details = JSONField(null=True, help_text="package/storage/product details")
     features = JSONField(default=list)
