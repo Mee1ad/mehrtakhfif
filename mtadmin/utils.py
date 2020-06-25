@@ -11,6 +11,7 @@ from django.views import View
 from mtadmin.serializer import tables
 from server.models import *
 from server.utils import get_pagination, get_token_from_cookie, set_token, check_access_token, res_code
+import pysnooper
 
 rolls = ['superuser', 'backup', 'admin', 'accountants']
 
@@ -153,6 +154,7 @@ def get_m2m_fields(model, data):
     m2m = {}
     custom_m2m = {}
     remove_fields = {}
+    ordered_m2m = {}
     for item in model.m2m:
         try:
             m2m[item] = data.pop(item)
@@ -163,12 +165,17 @@ def get_m2m_fields(model, data):
             custom_m2m[item] = data.pop(item)
         except KeyError:
             continue
+    for item in model.ordered_m2m:
+        try:
+            ordered_m2m[item] = data.pop(item)
+        except KeyError:
+            continue
     for item in model.remove_fields:
         try:
             remove_fields[item] = data.pop(item)
         except KeyError:
             continue
-    return [data, m2m, custom_m2m, remove_fields]
+    return [data, m2m, custom_m2m, ordered_m2m, remove_fields]
 
 
 def create_object(request, model, box_key='box', return_item=False, serializer=None, error_null_box=True, data=None):
@@ -180,14 +187,14 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
     if box_key == 'product__box':
         if not Product.objects.filter(pk=data['product_id'], box__in=boxes).exists():
             raise PermissionDenied
-    data, m2m, custom_m2m, remove_fields = get_m2m_fields(model, data)
-    # todo debug
-    data.pop('city_id', None)
+    data, m2m, custom_m2m, ordered_m2m, remove_fields = get_m2m_fields(model, data)
     obj = model(**data, created_by=user, updated_by=user)
     obj.save(**remove_fields)
     [getattr(obj, field).set(m2m[field]) for field in m2m]
     for field in custom_m2m:
         add_custom_m2m(obj, field, custom_m2m[field])
+    for field in ordered_m2m:
+        add_ordered_m2m(obj, field, ordered_m2m[field])
     if return_item:
         request.GET._mutable = True
         request.GET['id'] = obj.pk
@@ -195,6 +202,18 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
                                    error_null_box=error_null_box)
         return JsonResponse(items, status=201)
     return JsonResponse({'id': obj.pk}, status=201)
+
+
+def add_ordered_m2m(obj, field, item_list):
+    getattr(obj, field).clear()
+    many_to_many_model = obj.ordered_m2m[field]
+    extra_fields = {obj.__class__.__name__.lower(): obj}
+    items = []
+    for pk in item_list:
+        related = {getattr(obj, field).model.__name__.lower() + '_id': pk}
+        items.append(many_to_many_model(priority=item_list.index(pk), **extra_fields, **related))
+
+    many_to_many_model.objects.bulk_create(items)
 
 
 def add_custom_m2m(obj, field, item_list):
@@ -210,20 +229,24 @@ def update_object(request, model, box_key='box', return_item=False, serializer=N
         raise PermissionDenied
     data = data or get_data(request, require_box=False)
     try:
-        data, m2m, custom_m2m, remove_fields = get_m2m_fields(model, data)
+        data, m2m, custom_m2m, ordered_m2m, remove_fields = get_m2m_fields(model, data)
     except AttributeError:
-        m2m, custom_m2m, remove_fields = [], [], []
+        m2m, custom_m2m, ordered_m2m, remove_fields = [], [], [], []
     pk = data['id']
     box_check = get_box_permission(request.user, box_key) if require_box else {}
     footprint = {'updated_by': request.user, 'updated_at': timezone.now()}
     items = model.objects.filter(pk=pk, **box_check)
+    print(ordered_m2m)
     try:
+        print(data)
         items.update(**data, remove_fields=remove_fields, **footprint)
     except FieldDoesNotExist:
         items.update(**data, **footprint)
     [getattr(items.first(), field).set(m2m[field]) for field in m2m]
     for field in custom_m2m:
         add_custom_m2m(items.first(), field, custom_m2m[field])
+    for field in ordered_m2m:
+        add_ordered_m2m(items.first(), field, ordered_m2m[field])
     try:
         item = items.first()
         if item.disable is False:

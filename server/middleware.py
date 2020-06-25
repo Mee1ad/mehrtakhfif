@@ -11,6 +11,7 @@ import time
 import pysnooper
 from django.contrib.auth import login
 from sentry_sdk import configure_scope
+from server.decorators import try_except
 
 
 class AuthMiddleware:
@@ -19,6 +20,7 @@ class AuthMiddleware:
         self.get_response = get_response
         # One-time configuration and initialization.
 
+    @try_except
     def __call__(self, request):
         # print(request.META.get('REMOTE_ADDR') or request.META.get('HTTP_X_FORWARDED_FOR'))
         path = request.path_info

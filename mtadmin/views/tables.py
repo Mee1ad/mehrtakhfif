@@ -254,6 +254,19 @@ class InvoiceView(TableView):
         return JsonResponse(serialized_objects(request, Invoice, InvoiceASchema, InvoiceESchema, error_null_box=False))
 
 
+class InvoiceProductView(TableView):
+    permission_required = 'server.view_invoice'
+
+    def get(self, request):
+        params = get_params(request, box_key='box_id')
+        params['filter']['invoice__status'] = 2
+        return JsonResponse(serialized_objects(request, InvoiceStorage, InvoiceStorageASchema, InvoiceStorageASchema,
+                                               error_null_box=False, params=params))
+
+    def put(self, request):
+        return update_object(request, InvoiceStorage, require_box=False, box_key='box_id')
+
+
 class MenuView(TableView):
     permission_required = 'server.view_menu'
 

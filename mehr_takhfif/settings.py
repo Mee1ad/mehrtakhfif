@@ -2,13 +2,20 @@ import os
 from django.utils.timezone import activate
 from re import compile
 from .settings_var import *
+import sys
+
+TESTING = 'test' in sys.argv
+
+if TESTING:
+    PASSWORD_HASHERS = [
+        'django.contrib.auth.hashers.MD5PasswordHasher',
+    ]
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SHORTLINK = "https://mhrt.ir"
 
 AUTH_USER_MODEL = 'server.User'
 IPRESTRICT_GEOIP_ENABLED = False
-
 
 INSTALLED_APPS = \
     [
@@ -30,10 +37,12 @@ INSTALLED_APPS = \
         'django_celery_beat',
         'iprestrict',
         'django_user_agents',
+        'django_seed',
         # 'cloudinary',
         # 'django.contrib.admindocs',
         # 'django.contrib.postgres',
     ] + MY_INSTALLED_APPS
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

@@ -248,6 +248,7 @@ class Base(SafeDeleteModel):
     m2m = []
     remove_fields = []
     custom_m2m = {}
+    orderd_m2m = {}
     required_m2m = []
     fields = {}
 
@@ -746,7 +747,8 @@ class Product(Base):
     required_fields = ['thumbnail', 'description']
     related_fields = []
     remove_fields = []
-    custom_m2m = {'tags': ProductTag, 'media': ProductMedia}
+    custom_m2m = {'tags': ProductTag}
+    ordered_m2m = {'media': ProductMedia}
     m2m = ['categories', 'cities']
     required_m2m = ['categories', 'tags', 'media']
     fields = {'thumbnail': 'تامبنیل', 'categories': 'دسته بندی', 'tags': 'تگ', 'media': 'مدیا'}

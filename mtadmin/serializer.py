@@ -154,7 +154,7 @@ class BaseAdminSchema(Schema):
 
 class SupplierESchema(BaseAdminSchema):
     class Meta:
-        additional = ('id', 'username', 'first_name', 'last_name', 'shaba', 'is_verify')
+        additional = ('id', 'username', 'first_name', 'last_name', 'shaba', 'is_verify', 'settings')
 
 
 class BoxASchema(BoxSchema):
@@ -412,6 +412,7 @@ class InvoiceStorageASchema(InvoiceStorageSchema):
     hl_profit = fields.Method('get_hl_profit')
     start_price = fields.Function(lambda o: o.storage.start_price)
     features = fields.Dict()
+    deliver_status = fields.Function(lambda o: o.get_deliver_status_display())
 
     def get_hl_profit(self, obj):
         storage = obj.storage

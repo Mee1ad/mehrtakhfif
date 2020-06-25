@@ -18,6 +18,7 @@ urlpatterns = [
     path('product', error_handler(ProductView.as_view()), name='product'),
     path('house', error_handler(HouseView.as_view()), name='house'),
     path('invoice', error_handler(InvoiceView.as_view()), name='invoice'),
+    path('invoice_product', error_handler(InvoiceProductView.as_view()), name='invoice_product'),
     path('special_offer', error_handler(SpecialOfferView.as_view()), name='special_offer'),
     path('special_product', error_handler(SpecialProductView.as_view()), name='special_product'),
     path('storage', error_handler(StorageView.as_view()), name='storage'),
