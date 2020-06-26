@@ -236,12 +236,13 @@ def update_object(request, model, box_key='box', return_item=False, serializer=N
     box_check = get_box_permission(request.user, box_key) if require_box else {}
     footprint = {'updated_by': request.user, 'updated_at': timezone.now()}
     items = model.objects.filter(pk=pk, **box_check)
-    print(ordered_m2m)
     try:
-        print(data)
         items.update(**data, remove_fields=remove_fields, **footprint)
     except FieldDoesNotExist:
-        items.update(**data, **footprint)
+        try:
+            items.update(**data, **footprint)
+        except FieldDoesNotExist:
+            items.update(**data)
     [getattr(items.first(), field).set(m2m[field]) for field in m2m]
     for field in custom_m2m:
         add_custom_m2m(items.first(), field, custom_m2m[field])

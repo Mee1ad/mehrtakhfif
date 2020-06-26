@@ -10,8 +10,14 @@ from server.views.client.tourism import *
 from server.views.client.user import *
 from server.views.payment import *
 from django.views.decorators.cache import cache_page
+from django.http import HttpResponseRedirect, StreamingHttpResponse
 
 app_name = 'server'
+
+
+def get_favicon(request):
+    return HttpResponseRedirect('https://mehrtakhfif.com/drawable/icons/mt/favicon.ico')
+
 
 home = [
     path('test', try_except(Test.as_view()), name='test'),
@@ -25,6 +31,7 @@ home = [
     path('suggest', try_except(ElasticSearch.as_view()), name='suggest'),
     path('search', try_except(ElasticSearch2.as_view()), name='search'),
     path('ads/<str:ads_type>', try_except(GetAds.as_view()), name='ads'),
+    path('favicon', get_favicon, name='favicon'),
 ]
 
 box = [

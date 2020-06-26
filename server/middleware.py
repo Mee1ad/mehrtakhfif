@@ -20,7 +20,6 @@ class AuthMiddleware:
         self.get_response = get_response
         # One-time configuration and initialization.
 
-    @try_except
     def __call__(self, request):
         # print(request.META.get('REMOTE_ADDR') or request.META.get('HTTP_X_FORWARDED_FOR'))
         path = request.path_info
@@ -39,8 +38,6 @@ class AuthMiddleware:
             request.user = User.objects.get(pk=3)
         if MT_ACCOUNTANTS:
             request.user = User.objects.get(pk=4)
-        if route == 'favicon.ico':
-            return JsonResponse({})
         delay = request.GET.get('delay', None)
         if delay:
             time.sleep(float(delay))

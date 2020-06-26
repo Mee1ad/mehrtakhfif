@@ -160,7 +160,8 @@ class MyQuerySet(SafeDeleteQueryset):
             return True
         remove_list = ['id', 'box_id', 'remove_fields']
         validations = {'storage': self.storage_validation, 'category': self.category_validation,
-                       'product': self.product_validation, 'ad': self.ad_validation, 'slider': self.ad_validation}
+                       'product': self.product_validation, 'ad': self.ad_validation, 'slider': self.ad_validation,
+                       'invoicestorage': self.storage_validation}
         model = self[0].__class__.__name__.lower()
         validations.update(dict.fromkeys(['feature', 'brand', 'tag'], self.default_validation))
         # noinspection PyArgumentList
@@ -198,9 +199,11 @@ class MyQuerySet(SafeDeleteQueryset):
         return kwargs
 
     def storage_validation(self, **kwargs):
+        # for storage and invoice_storage
         storage = self.first()
         kwargs = storage.pre_process(kwargs)
         storage.post_process(kwargs.get('remove_fields', None))
+        print('kwargs:', kwargs)
         return kwargs
 
     def product_validation(self, **kwargs):
@@ -363,7 +366,7 @@ class User(AbstractUser):
     m2m = []
     remove_fields = []
     custom_m2m = {}
-    orderd_m2m = {}
+    ordered_m2m = {}
     required_m2m = []
     fields = {}
 
@@ -435,7 +438,7 @@ class VipType(Base):
     m2m = []
     remove_fields = []
     custom_m2m = {}
-    orderd_m2m = {}
+    ordered_m2m = {}
     required_m2m = []
     fields = {}
 
@@ -457,7 +460,7 @@ class Client(models.Model):
     m2m = []
     remove_fields = []
     custom_m2m = {}
-    orderd_m2m = {}
+    ordered_m2m = {}
     required_m2m = []
     fields = {}
     id = models.BigAutoField(auto_created=True, primary_key=True)
@@ -476,7 +479,7 @@ class State(models.Model):
     m2m = []
     remove_fields = []
     custom_m2m = {}
-    orderd_m2m = {}
+    ordered_m2m = {}
     required_m2m = []
     fields = {}
     def __str__(self):
@@ -497,7 +500,7 @@ class City(models.Model):
     m2m = []
     remove_fields = []
     custom_m2m = {}
-    orderd_m2m = {}
+    ordered_m2m = {}
     required_m2m = []
     fields = {}
     def __str__(self):
@@ -524,7 +527,7 @@ class Address(models.Model):
     m2m = []
     remove_fields = []
     custom_m2m = {}
-    orderd_m2m = {}
+    ordered_m2m = {}
     required_m2m = []
     fields = {}
 
@@ -759,7 +762,7 @@ class ProductTag(models.Model):
     m2m = []
     remove_fields = []
     custom_m2m = {}
-    orderd_m2m = {}
+    ordered_m2m = {}
     required_m2m = []
     fields = {}
 
@@ -782,7 +785,7 @@ class ProductMedia(models.Model):
     m2m = []
     remove_fields = []
     custom_m2m = {}
-    orderd_m2m = {}
+    ordered_m2m = {}
     required_m2m = []
     fields = {}
 
@@ -926,7 +929,7 @@ class FeatureStorage(models.Model):
     m2m = []
     remove_fields = []
     custom_m2m = {}
-    orderd_m2m = {}
+    ordered_m2m = {}
     required_m2m = []
     fields = {}
 
@@ -968,7 +971,7 @@ class VipPrice(models.Model):
     m2m = []
     remove_fields = []
     custom_m2m = {}
-    orderd_m2m = {}
+    ordered_m2m = {}
     required_m2m = []
     fields = {}
 
@@ -1184,7 +1187,7 @@ class BasketProduct(models.Model):
     m2m = []
     remove_fields = []
     custom_m2m = {}
-    orderd_m2m = {}
+    ordered_m2m = {}
     required_m2m = []
     fields = {}
 
@@ -1336,7 +1339,7 @@ class InvoiceSuppliers(models.Model):
     m2m = []
     remove_fields = []
     custom_m2m = {}
-    orderd_m2m = {}
+    ordered_m2m = {}
     required_m2m = []
     fields = {}
 
@@ -1349,16 +1352,24 @@ class InvoiceSuppliers(models.Model):
         ordering = ['-id']
 
 
-class InvoiceStorage(models.Model):
-    required_fields = []
-    required_multi_lang = []
-    related_fields = []
-    m2m = []
-    remove_fields = []
-    custom_m2m = {}
-    orderd_m2m = {}
-    required_m2m = []
-    fields = {}
+class InvoiceStorage(Base):
+    objects = MyQuerySet.as_manager()
+
+    def pre_process(self, my_dict):
+        if my_dict.get('deliver_status'):
+            try:
+                my_dict['deliver_status'] = {'pending': 1, 'packing': 2, 'sending': 3, 'delivered': 4, 'referred': 5}[
+                    my_dict['deliver_status']]
+            except KeyError:
+                pass
+        return my_dict
+
+    def post_process(self, my_dict):
+        pass
+
+    def save(self, *args, **kwargs):
+        self.pre_process(self.__dict__)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.storage}"
@@ -1381,7 +1392,7 @@ class InvoiceStorage(models.Model):
     # vip_discount_price = models.PositiveIntegerField(verbose_name='Discount price', default=0)
     # vip_discount_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount price percent')
     deliver_status = models.PositiveSmallIntegerField(choices=[(1, 'pending'), (2, 'packing'), (3, 'sending'),
-                                                               (4, 'delivered'), (5, 'Referred')], default=1)
+                                                               (4, 'delivered'), (5, 'referred')], default=1)
 
     details = JSONField(null=True, help_text="package/storage/product details")
     features = JSONField(default=list)
@@ -1429,7 +1440,7 @@ class Rate(models.Model):
     m2m = []
     remove_fields = []
     custom_m2m = {}
-    orderd_m2m = {}
+    ordered_m2m = {}
     required_m2m = []
     fields = {}
 
@@ -1568,7 +1579,7 @@ class NotifyUser(models.Model):
     m2m = []
     remove_fields = []
     custom_m2m = {}
-    orderd_m2m = {}
+    ordered_m2m = {}
     required_m2m = []
     fields = {}
 
@@ -1690,7 +1701,7 @@ class Holiday(models.Model):
     m2m = []
     remove_fields = []
     custom_m2m = {}
-    orderd_m2m = {}
+    ordered_m2m = {}
     required_m2m = []
     fields = {}
 
