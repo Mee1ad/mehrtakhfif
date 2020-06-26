@@ -35,7 +35,7 @@ bp = {'terminal_id': 5290645, 'username': "takh252", 'password': "71564848",
       'ipg_url': "https://bpm.shaparak.ir/pgwchannel/startpay.mellat",
       'callback': 'https://api.mehrtakhfif.com/payment/callback'}  # mellat
 
-# client = zeep.Client(wsdl="https://bpm.shaparak.ir/pgwchannel/services/pgw?wsdl")
+client = zeep.Client(wsdl="https://bpm.shaparak.ir/pgwchannel/services/pgw?wsdl")
 
 saddad = {'merchant_id': None, 'terminal_id': None, 'terminal_key': None,
           'payment_request': 'https://sadad.shaparak.ir/VPG/api/v0/Request/PaymentRequest',
@@ -157,7 +157,8 @@ class PaymentRequest(View):
             storage = product.storage
             supplier = storage.supplier
             amount = product.start_price
-            if not InvoiceSuppliers.objects.filter(invoice=invoice, supplier=supplier).update(amount=F('amount') + amount):
+            if not InvoiceSuppliers.objects.filter(invoice=invoice, supplier=supplier).update(
+                    amount=F('amount') + amount):
                 InvoiceSuppliers.objects.create(invoice=invoice, supplier=supplier, amount=amount)
             tax = get_tax(storage.tax_type, storage.discount_price, storage.start_price)
             invoice_products.append(
@@ -167,7 +168,9 @@ class PaymentRequest(View):
                                start_price=storage.start_price, discount_percent=storage.discount_percent,
                                total_price=(storage.final_price - tax) * product.count,
                                discount_price_without_tax=(storage.discount_price - tax) * product.count,
-                               discount=(storage.final_price - storage.discount_price) * product.count))
+                               discount=(storage.final_price - storage.discount_price) * product.count,
+                               created_by=invoice.user, updated_by=invoice.user),
+            )
         InvoiceStorage.objects.bulk_create(invoice_products)
 
 
