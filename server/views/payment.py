@@ -148,7 +148,7 @@ class PaymentRequest(View):
             basket.sync = 1  # reserved
             basket.save()
             invoice.save()
-    @pysnooper.snoop()
+
     def submit_invoice_storages(self, invoice_id):
         invoice = Invoice.objects.filter(pk=invoice_id).select_related(*Invoice.select).first()
         basket = get_basket(invoice.user, basket=invoice.basket, return_obj=True)

@@ -217,6 +217,7 @@ class InvoiceESchema(InvoiceASchema):
 class ProductASchema(BaseAdminSchema):
     class Meta:
         additional = ('review', 'check_review', 'name')
+
     list_filter = [Category]
 
     permalink = fields.Str()
@@ -406,25 +407,13 @@ class TagASchema(TagSchema):
 
 class InvoiceStorageASchema(InvoiceStorageSchema):
     class Meta:
-        additional = ('id', 'count', 'final_price', 'discount_price', 'start_price', 'tax', 'details')
+        additional = ('id', 'count', 'invoice_id', 'discount_price')
 
-    mt_profit = fields.Method('get_mt_profit')
-    hl_profit = fields.Method('get_hl_profit')
-    start_price = fields.Function(lambda o: o.storage.start_price)
-    features = fields.Dict()
+    storage = fields.Method("get_storage")
     deliver_status = fields.Function(lambda o: o.get_deliver_status_display())
 
-    def get_hl_profit(self, obj):
-        storage = obj.storage
-        tax = get_tax(storage.tax_type, storage.discount_price, storage.start_price)
-        hl_profit = (storage.discount_price - storage.start_price - tax) * 0.05
-        return hl_profit
-
-    def get_mt_profit(self, obj):
-        storage = obj.storage
-        tax = get_tax(storage.tax_type, storage.discount_price, storage.start_price)
-        hl_profit = (storage.discount_price - storage.discount_price - tax) * 0.05
-        return storage.discount_price - storage.start_price - hl_profit
+    def get_storage(self, obj):
+        return StorageESchema().dump(obj.storage)
 
 
 class MenuASchema(BaseAdminSchema):

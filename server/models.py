@@ -248,7 +248,7 @@ class Base(SafeDeleteModel):
     m2m = []
     remove_fields = []
     custom_m2m = {}
-    orderd_m2m = {}
+    ordered_m2m = {}
     required_m2m = []
     fields = {}
 
@@ -358,10 +358,12 @@ class User(AbstractUser):
     prefetch = []
 
     required_fields = []
+    required_multi_lang = []
     related_fields = []
     m2m = []
-    remove_fields = []  # handle in post_process
+    remove_fields = []
     custom_m2m = {}
+    orderd_m2m = {}
     required_m2m = []
     fields = {}
 
@@ -427,6 +429,16 @@ class User(AbstractUser):
 
 
 class VipType(Base):
+    required_fields = []
+    required_multi_lang = []
+    related_fields = []
+    m2m = []
+    remove_fields = []
+    custom_m2m = {}
+    orderd_m2m = {}
+    required_m2m = []
+    fields = {}
+
     def __str__(self):
         return self.name
 
@@ -439,6 +451,15 @@ class VipType(Base):
 
 
 class Client(models.Model):
+    required_fields = []
+    required_multi_lang = []
+    related_fields = []
+    m2m = []
+    remove_fields = []
+    custom_m2m = {}
+    orderd_m2m = {}
+    required_m2m = []
+    fields = {}
     id = models.BigAutoField(auto_created=True, primary_key=True)
     device_id = models.CharField(max_length=255)
     user_agent = models.CharField(max_length=255)
@@ -449,6 +470,15 @@ class Client(models.Model):
 
 
 class State(models.Model):
+    required_fields = []
+    required_multi_lang = []
+    related_fields = []
+    m2m = []
+    remove_fields = []
+    custom_m2m = {}
+    orderd_m2m = {}
+    required_m2m = []
+    fields = {}
     def __str__(self):
         return self.name
 
@@ -461,6 +491,15 @@ class State(models.Model):
 
 
 class City(models.Model):
+    required_fields = []
+    required_multi_lang = []
+    related_fields = []
+    m2m = []
+    remove_fields = []
+    custom_m2m = {}
+    orderd_m2m = {}
+    required_m2m = []
+    fields = {}
     def __str__(self):
         return self.name
 
@@ -478,6 +517,16 @@ class Address(models.Model):
         Stores a single blog entry, related to :model:`auth.User` and
         :model:`server.Address`.
     """
+
+    required_fields = []
+    required_multi_lang = []
+    related_fields = []
+    m2m = []
+    remove_fields = []
+    custom_m2m = {}
+    orderd_m2m = {}
+    required_m2m = []
+    fields = {}
 
     def __str__(self):
         return self.city.name
@@ -705,10 +754,12 @@ class ProductTag(models.Model):
     filter = {}
 
     required_fields = []
+    required_multi_lang = []
     related_fields = []
+    m2m = []
     remove_fields = []
     custom_m2m = {}
-    m2m = []
+    orderd_m2m = {}
     required_m2m = []
     fields = {}
 
@@ -724,6 +775,16 @@ class ProductTag(models.Model):
 
 class ProductMedia(models.Model):
     related = ['storage']
+
+    required_fields = []
+    required_multi_lang = []
+    related_fields = []
+    m2m = []
+    remove_fields = []
+    custom_m2m = {}
+    orderd_m2m = {}
+    required_m2m = []
+    fields = {}
 
     def __str__(self):
         return f"{self.id}"
@@ -859,6 +920,16 @@ class Product(Base):
 class FeatureStorage(models.Model):
     related = ['storage']
 
+    required_fields = []
+    required_multi_lang = []
+    related_fields = []
+    m2m = []
+    remove_fields = []
+    custom_m2m = {}
+    orderd_m2m = {}
+    required_m2m = []
+    fields = {}
+
     def __str__(self):
         return f"{self.id}"
 
@@ -891,6 +962,15 @@ class Package(Base):
 
 
 class VipPrice(models.Model):
+    required_fields = []
+    required_multi_lang = []
+    related_fields = []
+    m2m = []
+    remove_fields = []
+    custom_m2m = {}
+    orderd_m2m = {}
+    required_m2m = []
+    fields = {}
 
     def __str__(self):
         return f"{self.storage.title['fa']}"
@@ -1098,6 +1178,16 @@ class Basket(Base):
 class BasketProduct(models.Model):
     related = ['storage']
 
+    required_fields = []
+    required_multi_lang = []
+    related_fields = []
+    m2m = []
+    remove_fields = []
+    custom_m2m = {}
+    orderd_m2m = {}
+    required_m2m = []
+    fields = {}
+
     def __str__(self):
         return f"{self.id}"
 
@@ -1240,6 +1330,16 @@ class Invoice(Base):
 
 # todo disable value_added type (half)
 class InvoiceSuppliers(models.Model):
+    required_fields = []
+    required_multi_lang = []
+    related_fields = []
+    m2m = []
+    remove_fields = []
+    custom_m2m = {}
+    orderd_m2m = {}
+    required_m2m = []
+    fields = {}
+
     invoice = models.ForeignKey(Invoice, on_delete=CASCADE)
     supplier = models.ForeignKey(User, on_delete=CASCADE)
     amount = models.PositiveIntegerField()
@@ -1250,6 +1350,16 @@ class InvoiceSuppliers(models.Model):
 
 
 class InvoiceStorage(models.Model):
+    required_fields = []
+    required_multi_lang = []
+    related_fields = []
+    m2m = []
+    remove_fields = []
+    custom_m2m = {}
+    orderd_m2m = {}
+    required_m2m = []
+    fields = {}
+
     def __str__(self):
         return f"{self.storage}"
 
@@ -1313,6 +1423,16 @@ class Menu(Base):
 
 
 class Rate(models.Model):
+    required_fields = []
+    required_multi_lang = []
+    related_fields = []
+    m2m = []
+    remove_fields = []
+    custom_m2m = {}
+    orderd_m2m = {}
+    required_m2m = []
+    fields = {}
+
     def __str__(self):
         return f"{self.rate}"
 
@@ -1442,6 +1562,16 @@ class WishList(Base):
 
 
 class NotifyUser(models.Model):
+    required_fields = []
+    required_multi_lang = []
+    related_fields = []
+    m2m = []
+    remove_fields = []
+    custom_m2m = {}
+    orderd_m2m = {}
+    required_m2m = []
+    fields = {}
+
     def __str__(self):
         return f"{self.user}"
 
@@ -1554,6 +1684,16 @@ class Booking(Base):
 
 
 class Holiday(models.Model):
+    required_fields = []
+    required_multi_lang = []
+    related_fields = []
+    m2m = []
+    remove_fields = []
+    custom_m2m = {}
+    orderd_m2m = {}
+    required_m2m = []
+    fields = {}
+
     def __str__(self):
         return self.occasion
 

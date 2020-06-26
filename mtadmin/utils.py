@@ -223,7 +223,7 @@ def add_custom_m2m(obj, field, item_list):
     items = [many_to_many_model(**item, **extra_fields) for item in item_list]
     many_to_many_model.objects.bulk_create(items)
 
-
+@pysnooper.snoop()
 def update_object(request, model, box_key='box', return_item=False, serializer=None, data=None, require_box=True):
     if not request.user.has_perm(f'server.change_{model.__name__.lower()}'):
         raise PermissionDenied
