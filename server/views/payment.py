@@ -70,6 +70,7 @@ class PaymentRequest(View):
         self.submit_invoice_storages(invoice.pk)
         return JsonResponse({"url": f"{bp['ipg_url']}?RefId={self.behpardakht_api(invoice.pk)}"})
 
+    @pysnooper.snoop()
     def behpardakht_api(self, invoice_id):
         invoice = Invoice.objects.get(pk=invoice_id)
         if invoice.user.first_name is None or invoice.user.last_name is None or invoice.user.meli_code is None or \
@@ -138,6 +139,7 @@ class PaymentRequest(View):
                                amount=basket['summary']['shipping_cost'], basket_id=basket['basket']['id'])
         return invoice
 
+    @pysnooper.snoop()
     def reserve_storage(self, basket, invoice):
         if basket.sync != 1:  # reserved
             sync_storage(basket, operator.sub)
