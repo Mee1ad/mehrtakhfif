@@ -11,6 +11,7 @@ import pytz
 from datetime import datetime
 from server.utils import get_basket, add_one_off_job, sync_storage, add_minutes, set_custom_signed_cookie
 from server.serialize import get_tax
+from mehr_takhfif.settings import SAFE_IP
 import pysnooper
 import json
 import zeep
@@ -55,7 +56,8 @@ class IPG(View):
 
 class PaymentRequest(View):
     def get(self, request, basket_id):
-        if not request.user.is_staff:
+        if not request.user.is_staff and request.META.get('REMOTE_ADDR') or request.META.get(
+                'HTTP_X_FORWARDED_FOR') != SAFE_IP:
             raise ValidationError(_('متاسفانه در حال حاضر امکان خرید وجود ندارد'))
         user = request.user
         if not Basket.objects.filter(pk=basket_id, user=user).exists():
