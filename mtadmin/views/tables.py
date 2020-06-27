@@ -16,14 +16,11 @@ class CategoryView(TableView):
 
     def get(self, request):
         params = get_params(request, 'box_id')
-        box_id = params['filter'].get('box_id')
         parent_id = params['filter'].get('parent_id')
         pk = request.GET.get('id', None)
         if pk:
             data = serialized_objects(request, Category, single_serializer=CategoryESchema, box_key='box_id')
             return JsonResponse(data)
-        if box_id is None and parent_id is None:
-            raise PermissionDenied
         if parent_id:
             params['filter'].pop('box_id', None)
             box_id = Category.objects.get(pk=parent_id).box_id

@@ -32,6 +32,7 @@ home = [
     path('search', try_except(ElasticSearch2.as_view()), name='search'),
     path('ads/<str:ads_type>', try_except(GetAds.as_view()), name='ads'),
     path('favicon', get_favicon, name='favicon'),
+    path('permalink_id/<str:permalink>', try_except(PermalinkToId.as_view()), name='permalink_id'),
 ]
 
 box = [

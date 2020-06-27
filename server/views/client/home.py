@@ -33,7 +33,8 @@ class BoxesGetSpecialProduct(View):
                 [(page - 1) * step:step * page]
             if box_special_product:
                 box = {'id': box.pk, 'name': box.name[language], 'key': box.permalink}
-                box['special_products'] = SpecialProductSchema(**request.schema_params).dump(box_special_product, many=True)
+                box['special_products'] = SpecialProductSchema(**request.schema_params).dump(box_special_product,
+                                                                                             many=True)
                 products.append(box)
         res = {'products': products}
         return JsonResponse(res)
@@ -87,6 +88,14 @@ class GetAds(View):
         agent = request.user_agent
         ads = Ad.objects.filter(priority__isnull=False, type=ads_type).select_related(*Ad.select).order_by('priority')
         return JsonResponse({'ads': AdSchema(is_mobile=agent.is_mobile).dump(ads, many=True)})
+
+
+class PermalinkToId(View):
+    def get(self, request, permalink):
+        try:
+            return JsonResponse({'id': Product.objects.get(permalink=permalink).pk})
+        except Product.DoesNotExist:
+            raise ValidationError('محصول پیدا نشد')
 
 
 class GetSlider(View):
