@@ -43,8 +43,6 @@ class Login(View):
         username = data['username']
         password = data.get('password', None)
         try:  # Login
-            if username == '09015518439':
-                username = 'Meelad'
             user = User.objects.get(username=username)
             is_staff = user.is_staff
             if user.is_ban:
