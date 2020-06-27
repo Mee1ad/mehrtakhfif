@@ -56,8 +56,8 @@ class IPG(View):
 
 class PaymentRequest(View):
     def get(self, request, basket_id):
-        if not request.user.is_staff and request.META.get('REMOTE_ADDR') or request.META.get(
-                'HTTP_X_FORWARDED_FOR') != SAFE_IP:
+        ip = request.META.get('REMOTE_ADDR') or request.META.get('HTTP_X_FORWARDED_FOR')
+        if not request.user.is_staff and ip != SAFE_IP:
             raise ValidationError(_('متاسفانه در حال حاضر امکان خرید وجود ندارد'))
         user = request.user
         if not Basket.objects.filter(pk=basket_id, user=user).exists():
