@@ -64,6 +64,8 @@ class PaymentRequest(View):
             raise ValidationError(_('سبد خرید نامعتبر است'))
         # def check_user_information
         # check for disabling in 15 minutes
+        if user.first_name is None or user.last_name is None or user.meli_code is None or user.username is None:
+            raise ValidationError(_('لطفا قبل از خرید پروفایل خود را تکمیل نمایید'))
         basket = Basket.objects.filter(user=request.user, id=basket_id).first()
         invoice = self.create_invoice(request)
         self.reserve_storage(basket, invoice)
@@ -73,9 +75,6 @@ class PaymentRequest(View):
     @pysnooper.snoop()
     def behpardakht_api(self, invoice_id):
         invoice = Invoice.objects.get(pk=invoice_id)
-        if invoice.user.first_name is None or invoice.user.last_name is None or invoice.user.meli_code is None or \
-                invoice.user.username is None:
-            raise ValidationError(_('لطفا قبل از خرید پروفایل خود را تکمیل نمایید'))
         basket = get_basket(invoice.user, basket=invoice.basket, return_obj=True, tax=True)
         tax = basket.summary["tax"]
         additional_data = [[1, int(basket.summary["mt_profit"] + basket.summary["ha_profit"] + tax +
@@ -93,7 +92,6 @@ class PaymentRequest(View):
                     break
             else:
                 additional_data.append([supplier.deposit_id, basket_product.start_price * 10, 0])
-        print('additional_data:', additional_data)
 
         additional_data = ';'.join(','.join(str(x) for x in b) for b in additional_data)
 

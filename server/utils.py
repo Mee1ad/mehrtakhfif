@@ -247,6 +247,8 @@ def create_qr(data, output):
 
 
 def get_barcode(data=None):
+    return None
+    # todo fix this later
     Barcode.default_writer_options['write_text'] = False
     barcode_directory = f'{MEDIA_ROOT}/barcode'
     # generate('code39', f'{data}', output=f'{barcode_directory}/{data}')

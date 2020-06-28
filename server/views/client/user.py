@@ -28,9 +28,15 @@ class Test(View):
 
 class Profile(LoginRequired):
     def get(self, request):
-        res = {'user': UserSchema().dump(request.user)}
-        if request.user.is_staff:
-            res['user']['is_staff'] = request.user.is_staff
+        user = request.user
+        res = {'user': UserSchema().dump(user)}
+        if user.is_staff:
+            res['user']['is_staff'] = True
+            try:
+                res['user']['roll'] = user.groups.first().name
+            except AttributeError:
+                if user.is_superuser:
+                    res['user']['roll'] = 'superuser'
         return JsonResponse(res)
 
     def put(self, request):

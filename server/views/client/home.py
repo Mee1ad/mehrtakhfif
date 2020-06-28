@@ -90,10 +90,12 @@ class GetAds(View):
         return JsonResponse({'ads': AdSchema(is_mobile=agent.is_mobile).dump(ads, many=True)})
 
 
-class PermalinkToId(View):
+class PermalinkToId(LoginRequired):
+    # todo admin required
     def get(self, request, permalink):
         try:
-            return JsonResponse({'id': Product.objects.get(permalink=permalink).pk})
+            product = Product.objects.get(permalink=permalink)
+            return JsonResponse({'id': product.pk, 'review': product.review})
         except Product.DoesNotExist:
             raise ValidationError('محصول پیدا نشد')
 

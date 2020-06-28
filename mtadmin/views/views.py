@@ -1,6 +1,7 @@
 from django.core.mail import send_mail
 from os import listdir
 from mtadmin.utils import *
+from django.http import HttpResponseBadRequest
 from server.utils import get_access_token, random_data
 import json
 from mtadmin.serializer import *
@@ -114,21 +115,30 @@ class Search(AdminView):
     def get(self, request):
         params = dict(request.GET)
         model = request.GET.get('type', None)
-        switch = {'supplier': self.supplier, 'tag': self.tag, 'product': self.product}
+        switch = {'supplier': self.supplier, 'tag': self.tag, 'product': self.product, 'cat': self.category}
         return JsonResponse(switch[model](**params))
 
     def tag(self, q, **kwargs):
         tags_id = []
         s = TagDocument.search()
         r = s.query("multi_match", query=q[0], fields=['name_fa', 'name'])
-        for hit in r:
-            print(hit.name)
         if r.count() == 0 and not q[0]:
             r = s.query("match_all")[:10]
         [tags_id.append(tag.id) for tag in r]
         tags = Tag.objects.in_bulk(tags_id)
         tags = [tags[x] for x in tags_id]
         return {'tags': TagASchema().dump(tags, many=True)}
+
+    def category(self, q, **kwargs):
+        categories_id = []
+        s = CategoryDocument.search()
+        r = s.query("multi_match", query=q[0], fields=['name_fa', 'name'])
+        if r.count() == 0 and not q[0]:
+            r = s.query("match_all")[:10]
+        [categories_id.append(category.id) for category in r]
+        categories = Category.objects.in_bulk(categories_id)
+        categories = [categories[x] for x in categories_id]
+        return {'categories': CategoryASchema().dump(categories, many=True)}
 
     def product(self, q, box_id, **kwargs):
         product_types = kwargs.get('types[]', [])

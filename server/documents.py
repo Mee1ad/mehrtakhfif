@@ -40,6 +40,7 @@ class ProductDocument(Document):
 @registry.register_document
 class CategoryDocument(Document):
     name_fa = fields.TextField(analyzer=ngram, attr='get_name_fa')
+    name = fields.TextField(attr='get_name_fa')
     media = fields.TextField(attr='get_media')
     id = fields.IntegerField()
 
