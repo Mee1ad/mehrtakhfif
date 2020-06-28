@@ -105,7 +105,8 @@ class PaymentRequest(View):
             r = client.service.bpCumulativeDynamicPayRequest(terminalId=bp['terminal_id'], userName=bp['username'],
                                                              userPassword=bp['password'], localTime=local_time,
                                                              localDate=local_date, orderId=invoice.id,
-                                                             amount=invoice.amount * 10,
+                                                             amount=invoice.amount + basket.summary[
+                                                                 'shipping_cost'] * 10,
                                                              additionalData=additional_data,
                                                              callBackUrl=bp['callback'])
 
