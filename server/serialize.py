@@ -82,8 +82,8 @@ class InvoiceStorageField(fields.Field):
 class BaseSchema(Schema):
     id = fields.Int()
 
-    def __init__(self, language='fa', vip=False, user=None, is_mobile=True):
-        super().__init__()
+    def __init__(self, language='fa', vip=False, user=None, is_mobile=True, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.lang = language
         self.default_lang = 'fa'
         self.vip = vip
@@ -254,9 +254,9 @@ class BaseSchema(Schema):
             return None
 
     def get_min_count_alert(self, obj):
-        if obj.available_count_for_sale <= obj.min_count_alert:
-            return obj.available_count_for_sale
-        return None
+        # if obj.available_count_for_sale <= obj.min_count_alert:
+        #     return obj.available_count_for_sale
+        return obj.min_count_alert
 
     def get_city(self, obj):
         try:
