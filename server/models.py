@@ -203,7 +203,6 @@ class MyQuerySet(SafeDeleteQueryset):
         storage = self.first()
         kwargs = storage.pre_process(kwargs)
         storage.post_process(kwargs.get('remove_fields', None))
-        print('kwargs:', kwargs)
         return kwargs
 
     def product_validation(self, **kwargs):
@@ -211,7 +210,7 @@ class MyQuerySet(SafeDeleteQueryset):
         kwargs = product.pre_process(kwargs)
         storages_id = kwargs.get('storages_id', [])
         if storages_id:
-            [Storage.objects.filter(pk=pk).update(priority=kwargs['storages_id'].index(pk), is_manage=True)
+            [Storage.objects.filter(pk=pk).update(priority=kwargs['storages_id'].index(pk))
              for pk in storages_id]
             kwargs.pop('storages_id')
             return kwargs
@@ -244,6 +243,7 @@ class Base(SafeDeleteModel):
     class Meta:
         abstract = True
 
+    serializer_exclude = ()
     no_box_type = [4, 5, 6, 8]
     required_fields = []
     required_multi_lang = []
@@ -329,9 +329,29 @@ class Base(SafeDeleteModel):
         raise WarningMessage('آیا میدانستی: محصولات ویژه و پکیج هایی که شامل این انبار بودن هم غیرفعال میشن؟! 🤭')
 
 
+class MyModel(models.Model):
+    class Meta:
+        abstract = True
+    id = models.BigAutoField(auto_created=True, primary_key=True)
+    # select = []
+    # prefetch = []
+    # related = []
+    # filter = {}
+    # serializer_exclude = ()
+    # required_fields = []
+    # required_multi_lang = []
+    # related_fields = []
+    # m2m = []
+    # remove_fields = []
+    # custom_m2m = {}
+    # ordered_m2m = {}
+    # required_m2m = []
+    # fields = {}
+
+
 class Ad(Base):
     select = ['media', 'storage']
-
+    serializer_exclude = ()
     required_fields = ['media', 'mobile_media', 'type']
     required_multi_lang = ['title']
     fields = {'title': 'عنوان', 'media': 'تصویر', 'mobile_media': 'تصویر موبایل', 'type': 'نوع'}
@@ -359,7 +379,7 @@ class Ad(Base):
 class User(AbstractUser):
     select = []
     prefetch = []
-
+    serializer_exclude = ()
     required_fields = []
     required_multi_lang = []
     related_fields = []
@@ -432,6 +452,7 @@ class User(AbstractUser):
 
 
 class VipType(Base):
+    serializer_exclude = ()
     required_fields = []
     required_multi_lang = []
     related_fields = []
@@ -453,17 +474,7 @@ class VipType(Base):
         ordering = ['-id']
 
 
-class Client(models.Model):
-    required_fields = []
-    required_multi_lang = []
-    related_fields = []
-    m2m = []
-    remove_fields = []
-    custom_m2m = {}
-    ordered_m2m = {}
-    required_m2m = []
-    fields = {}
-    id = models.BigAutoField(auto_created=True, primary_key=True)
+class Client(MyModel):
     device_id = models.CharField(max_length=255)
     user_agent = models.CharField(max_length=255)
     last_login_ip = models.CharField(max_length=31)
@@ -472,20 +483,10 @@ class Client(models.Model):
         ordering = ['-id']
 
 
-class State(models.Model):
-    required_fields = []
-    required_multi_lang = []
-    related_fields = []
-    m2m = []
-    remove_fields = []
-    custom_m2m = {}
-    ordered_m2m = {}
-    required_m2m = []
-    fields = {}
+class State(MyModel):
     def __str__(self):
         return self.name
 
-    id = models.AutoField(auto_created=True, primary_key=True)
     name = models.CharField(max_length=255)
 
     class Meta:
@@ -493,20 +494,10 @@ class State(models.Model):
         ordering = ['-id']
 
 
-class City(models.Model):
-    required_fields = []
-    required_multi_lang = []
-    related_fields = []
-    m2m = []
-    remove_fields = []
-    custom_m2m = {}
-    ordered_m2m = {}
-    required_m2m = []
-    fields = {}
+class City(MyModel):
     def __str__(self):
         return self.name
 
-    id = models.AutoField(auto_created=True, primary_key=True)
     name = models.CharField(max_length=255)
     state = models.ForeignKey(State, on_delete=CASCADE)
 
@@ -515,21 +506,11 @@ class City(models.Model):
         ordering = ['-id']
 
 
-class Address(models.Model):
+class Address(MyModel):
     """
         Stores a single blog entry, related to :model:`auth.User` and
         :model:`server.Address`.
     """
-
-    required_fields = []
-    required_multi_lang = []
-    related_fields = []
-    m2m = []
-    remove_fields = []
-    custom_m2m = {}
-    ordered_m2m = {}
-    required_m2m = []
-    fields = {}
 
     def __str__(self):
         return self.city.name
@@ -542,7 +523,6 @@ class Address(models.Model):
         self.validation()
         super().save(*args, **kwargs)
 
-    id = models.BigAutoField(auto_created=True, primary_key=True)
     state = models.ForeignKey(State, on_delete=PROTECT)
     city = models.ForeignKey(City, on_delete=PROTECT)
     name = models.CharField(max_length=255)
@@ -622,7 +602,7 @@ class Media(Base):
 class Category(Base):
     objects = MyQuerySet.as_manager()
     prefetch = ['feature_set']
-
+    serializer_exclude = ('box',)
     required_fields = []
     related_fields = []
     m2m = []
@@ -727,6 +707,23 @@ class Tag(Base):
         indexes = [GinIndex(fields=['name'])]
 
 
+class TagGroup(Base):
+    # objects = MyQuerySet.as_manager()
+
+    m2m = ['tags']
+
+    def __str__(self):
+        return f"{self.name['fa']}"
+
+    box = models.ForeignKey(Box, on_delete=PROTECT)
+    name = JSONField(default=multilanguage)
+    tags = models.ManyToManyField(Tag)
+
+    class Meta:
+        db_table = 'tag_group'
+        ordering = ['-id']
+
+
 class Brand(Base):
     objects = MyQuerySet.as_manager()
 
@@ -751,22 +748,8 @@ class Brand(Base):
         ordering = ['-id']
 
 
-class ProductTag(models.Model):
-    select = []
-    prefetch = []
-    filter = {}
+class ProductTag(MyModel):
 
-    required_fields = []
-    required_multi_lang = []
-    related_fields = []
-    m2m = []
-    remove_fields = []
-    custom_m2m = {}
-    ordered_m2m = {}
-    required_m2m = []
-    fields = {}
-
-    id = models.BigAutoField(auto_created=True, primary_key=True)
     product = models.ForeignKey("Product", on_delete=PROTECT)
     tag = models.ForeignKey(Tag, on_delete=PROTECT)
     show = models.BooleanField(default=False)
@@ -776,23 +759,12 @@ class ProductTag(models.Model):
         ordering = ['-id']
 
 
-class ProductMedia(models.Model):
+class ProductMedia(MyModel):
     related = ['storage']
-
-    required_fields = []
-    required_multi_lang = []
-    related_fields = []
-    m2m = []
-    remove_fields = []
-    custom_m2m = {}
-    ordered_m2m = {}
-    required_m2m = []
-    fields = {}
 
     def __str__(self):
         return f"{self.id}"
 
-    id = models.BigAutoField(auto_created=True, primary_key=True)
     product = models.ForeignKey("Product", on_delete=PROTECT)
     media = models.ForeignKey(Media, on_delete=PROTECT)
     priority = models.PositiveSmallIntegerField(null=True)
@@ -887,6 +859,7 @@ class Product(Base):
     default_storage = models.OneToOneField(null=True, blank=True, to="Storage", on_delete=CASCADE,
                                            related_name='product_default_storage')
     tags = models.ManyToManyField(Tag, through="ProductTag", related_name='products')
+    group_tags = models.ManyToManyField(TagGroup, related_name='products')
     media = models.ManyToManyField(Media, through='ProductMedia')
     income = models.BigIntegerField(default=0)
     profit = models.PositiveIntegerField(default=0)
@@ -920,23 +893,12 @@ class Product(Base):
         ordering = ['-updated_at']
 
 
-class FeatureStorage(models.Model):
+class FeatureStorage(MyModel):
     related = ['storage']
-
-    required_fields = []
-    required_multi_lang = []
-    related_fields = []
-    m2m = []
-    remove_fields = []
-    custom_m2m = {}
-    ordered_m2m = {}
-    required_m2m = []
-    fields = {}
 
     def __str__(self):
         return f"{self.id}"
 
-    id = models.BigAutoField(auto_created=True, primary_key=True)
     feature = models.ForeignKey(Feature, on_delete=PROTECT)
     storage = models.ForeignKey("Storage", on_delete=PROTECT)
     value = JSONField(default=feature_value_storage)
@@ -964,21 +926,11 @@ class Package(Base):
         ordering = ['-id']
 
 
-class VipPrice(models.Model):
-    required_fields = []
-    required_multi_lang = []
-    related_fields = []
-    m2m = []
-    remove_fields = []
-    custom_m2m = {}
-    ordered_m2m = {}
-    required_m2m = []
-    fields = {}
+class VipPrice(MyModel):
 
     def __str__(self):
         return f"{self.storage.title['fa']}"
 
-    id = models.BigAutoField(auto_created=True, primary_key=True)
     vip_type = models.ForeignKey(VipType, on_delete=PROTECT)
     storage = models.ForeignKey("Storage", on_delete=PROTECT)
     discount_price = models.PositiveIntegerField()
@@ -1178,18 +1130,8 @@ class Basket(Base):
         ordering = ['-id']
 
 
-class BasketProduct(models.Model):
+class BasketProduct(MyModel):
     related = ['storage']
-
-    required_fields = []
-    required_multi_lang = []
-    related_fields = []
-    m2m = []
-    remove_fields = []
-    custom_m2m = {}
-    ordered_m2m = {}
-    required_m2m = []
-    fields = {}
 
     def __str__(self):
         return f"{self.id}"
@@ -1214,7 +1156,6 @@ class BasketProduct(models.Model):
         self.validation()
         super().save(*args, **kwargs)
 
-    id = models.BigAutoField(auto_created=True, primary_key=True)
     storage = models.ForeignKey(Storage, on_delete=PROTECT)
     basket = models.ForeignKey(Basket, on_delete=PROTECT, null=True, blank=True)
     count = models.PositiveIntegerField(default=1)
@@ -1332,16 +1273,7 @@ class Invoice(Base):
 
 
 # todo disable value_added type (half)
-class InvoiceSuppliers(models.Model):
-    required_fields = []
-    required_multi_lang = []
-    related_fields = []
-    m2m = []
-    remove_fields = []
-    custom_m2m = {}
-    ordered_m2m = {}
-    required_m2m = []
-    fields = {}
+class InvoiceSuppliers(MyModel):
 
     invoice = models.ForeignKey(Invoice, on_delete=CASCADE)
     supplier = models.ForeignKey(User, on_delete=CASCADE)
@@ -1433,21 +1365,11 @@ class Menu(Base):
         ordering = ['-id']
 
 
-class Rate(models.Model):
-    required_fields = []
-    required_multi_lang = []
-    related_fields = []
-    m2m = []
-    remove_fields = []
-    custom_m2m = {}
-    ordered_m2m = {}
-    required_m2m = []
-    fields = {}
+class Rate(MyModel):
 
     def __str__(self):
         return f"{self.rate}"
 
-    id = models.BigAutoField(auto_created=True, primary_key=True)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
     user = models.ForeignKey(User, on_delete=CASCADE)
     rate = models.FloatField()
@@ -1523,7 +1445,6 @@ class SpecialOffer(Base):
 
 class SpecialProduct(Base):
     select = ['storage', 'thumbnail']
-    prefetch = []
     filter = {"disable": False}
 
     required_fields = ['storage', 'box']
@@ -1572,21 +1493,11 @@ class WishList(Base):
         ordering = ['-id']
 
 
-class NotifyUser(models.Model):
-    required_fields = []
-    required_multi_lang = []
-    related_fields = []
-    m2m = []
-    remove_fields = []
-    custom_m2m = {}
-    ordered_m2m = {}
-    required_m2m = []
-    fields = {}
+class NotifyUser(MyModel):
 
     def __str__(self):
         return f"{self.user}"
 
-    id = models.BigAutoField(auto_created=True, primary_key=True)
     user = models.ForeignKey(User, on_delete=CASCADE)
     type = models.PositiveSmallIntegerField(null=True, blank=True)
     category = models.ForeignKey(Category, on_delete=CASCADE)
@@ -1694,21 +1605,11 @@ class Booking(Base):
         ordering = ['-id']
 
 
-class Holiday(models.Model):
-    required_fields = []
-    required_multi_lang = []
-    related_fields = []
-    m2m = []
-    remove_fields = []
-    custom_m2m = {}
-    ordered_m2m = {}
-    required_m2m = []
-    fields = {}
+class Holiday(MyModel):
 
     def __str__(self):
         return self.occasion
 
-    id = models.AutoField(auto_created=True, primary_key=True)
     day_off = models.BooleanField(default=False)
     occasion = models.TextField(blank=True)
     date = models.DateField()

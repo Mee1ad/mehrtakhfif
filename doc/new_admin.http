@@ -201,6 +201,41 @@ Content-Type: application/json
 DELETE {{admin_host}}/brand?id=6
 ###
 
+### GroupTag CRUD
+POST {{admin_host}}/tag_group
+Content-Type: application/json
+
+{
+  "name": {
+    "fa": "'گروه تگ تست'",
+    "en": "",
+    "ar": ""
+  },
+  "box_id": 1,
+  "tags": [1, 2, 3, 4, 5]
+}
+###
+GET {{admin_host}}/tag_group?b=1
+###
+GET {{admin_host}}/tag_group?id=1
+###
+PUT {{admin_host}}/tag_group
+Content-Type: application/json
+
+{
+  "id":1,
+  "name": {
+    "fa": "'گروه تگ تست'",
+    "en": "",
+    "ar": ""
+  },
+  "box_id": 1,
+  "tags": [1, 2]
+}
+###
+DELETE {{admin_host}}/tag_group?id=1
+###
+
 ### Invoice R
 GET {{admin_host}}/invoice
 

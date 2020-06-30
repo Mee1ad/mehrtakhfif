@@ -24,6 +24,7 @@ urlpatterns = [
     path('storage', error_handler(StorageView.as_view()), name='storage'),
     path('package', error_handler(PackageView.as_view()), name='package'),
     path('tag', error_handler(TagView.as_view()), name='tag'),
+    path('tag_group', error_handler(TagGroupView.as_view()), name='tag_group'),
     path('token', error_handler(Token.as_view()), name='token'),
     path('media', error_handler(MediaView.as_view()), name='media'),
     path('comment', error_handler(CommentView.as_view()), name='comment'),

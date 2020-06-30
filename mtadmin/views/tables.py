@@ -29,7 +29,9 @@ class CategoryView(TableView):
                 raise PermissionDenied
         else:
             params['filter']['parent_id'] = None
-        categories = Category.objects.filter(**params['filter']).order_by(*params['order'])
+        categories = Category.objects.filter(
+            Q(**params['filter']) | Q(box_id=params['filter']['box_id'], permalink__isnull=True,
+                                      parent__isnull=False)).order_by(*params['order'])
         for category in categories:
             children = self.get_child_count(category)
             if children == 0:
@@ -297,6 +299,22 @@ class TagView(TableView):
 
     def delete(self, request):
         return delete_base(request, Tag)
+
+
+class TagGroupView(TableView):
+    permission_required = 'server.view_grouptag'
+
+    def get(self, request):
+        return JsonResponse(serialized_objects(request, TagGroup, TagGroupASchema, TagGroupASchema))
+
+    def post(self, request):
+        return create_object(request, TagGroup, serializer=TagGroupASchema)
+
+    def put(self, request):
+        return update_object(request, TagGroup, serializer=TagGroupASchema, return_item=True)
+
+    def delete(self, request):
+        return delete_base(request, TagGroup)
 
 
 class SpecialOfferView(TableView):

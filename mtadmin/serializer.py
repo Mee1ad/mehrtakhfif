@@ -61,6 +61,12 @@ class ProductTagField(fields.Field):
         return ProductTagASchema().dump(items, many=True)
 
 
+class TagGroupField(fields.Field):
+    def _serialize(self, value, attr, obj, **kwargs):
+        items = obj.tags.all()
+        return TagASchema().dump(items, many=True)
+
+
 # Serializer
 class BaseAdminSchema(Schema):
     """
@@ -372,14 +378,8 @@ class CategoryASchema(BaseAdminSchema, CategorySchema):
         additional = CategorySchema.Meta.additional + ('child_count', 'category_child_product_count', 'product_count',
                                                        'disable')
 
-    parent = fields.Method("get_parent")
-
-    def get_parent(self, obj):
-        try:
-            parent = obj.parent
-            return {'id': parent.pk, 'name': parent.name, 'permalink': parent.permalink}
-        except Exception:
-            pass
+    parent = fields.Nested("CategoryASchema")
+    box = fields.Nested(BoxASchema)
 
 
 class CategoryESchema(CategoryASchema):
@@ -403,6 +403,11 @@ class FeatureStorageASchema(Schema):
 class TagASchema(TagSchema):
     permalink = fields.Str()
     name = fields.Dict()
+
+
+class TagGroupASchema(BaseAdminSchema):
+    name = fields.Dict()
+    tags = TagGroupField()
 
 
 class InvoiceStorageASchema(InvoiceStorageSchema):

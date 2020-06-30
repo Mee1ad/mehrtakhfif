@@ -95,7 +95,7 @@ class PermalinkToId(LoginRequired):
     def get(self, request, permalink):
         try:
             product = Product.objects.get(permalink=permalink)
-            return JsonResponse({'id': product.pk, 'review': product.review})
+            return JsonResponse({'id': product.pk, 'disable': product.disable, 'review': product.review})
         except Product.DoesNotExist:
             raise ValidationError('محصول پیدا نشد')
 

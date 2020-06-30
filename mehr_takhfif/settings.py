@@ -35,7 +35,7 @@ INSTALLED_APPS = \
         'push_notifications',
         'django_celery_results',
         'django_celery_beat',
-        'iprestrict',
+        # 'iprestrict',
         'django_user_agents',
         'django_seed',
         # 'cloudinary',
@@ -47,7 +47,7 @@ INSTALLED_APPS = \
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'iprestrict.middleware.IPRestrictMiddleware',
+    # 'iprestrict.middleware.IPRestrictMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
