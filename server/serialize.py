@@ -118,7 +118,7 @@ class BaseSchema(Schema):
         return self.get(obj.short_description)
 
     def get_description(self, obj):
-        return self.get(obj.description)
+        return self.get(obj.description['data'])
 
     def get_properties(self, obj):
         if obj.properties:
