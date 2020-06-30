@@ -709,7 +709,7 @@ class Tag(Base):
 
 
 class TagGrouptTag(MyModel):
-    group = models.ForeignKey("TagGroup", on_delete=PROTECT)
+    taggroup = models.ForeignKey("TagGroup", on_delete=PROTECT)
     tag = models.ForeignKey(Tag, on_delete=PROTECT)
     show = models.BooleanField(default=False)
 

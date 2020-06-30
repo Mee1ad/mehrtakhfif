@@ -308,7 +308,12 @@ class TagGroupView(TableView):
         return JsonResponse(serialized_objects(request, TagGroup, TagGroupASchema, TagGroupASchema))
 
     def post(self, request):
-        return create_object(request, TagGroup, serializer=TagGroupASchema)
+        data = get_data(request)
+        tags = []
+        for tag in data['tags']:
+            tags.append({'tag_id': tag, 'show': False})
+        data['tags'] = tags
+        return create_object(request, TagGroup, serializer=TagGroupASchema, data=data)
 
     def put(self, request):
         return update_object(request, TagGroup, serializer=TagGroupASchema, return_item=True)
