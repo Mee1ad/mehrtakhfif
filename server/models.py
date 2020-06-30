@@ -332,6 +332,7 @@ class Base(SafeDeleteModel):
 class MyModel(models.Model):
     class Meta:
         abstract = True
+
     id = models.BigAutoField(auto_created=True, primary_key=True)
     # select = []
     # prefetch = []
@@ -707,17 +708,27 @@ class Tag(Base):
         indexes = [GinIndex(fields=['name'])]
 
 
+# class TagGrouptTag(MyModel):
+#     group = models.ForeignKey("TagGroup", on_delete=PROTECT)
+#     tag = models.ForeignKey(Tag, on_delete=PROTECT)
+#     show = models.BooleanField(default=False)
+#
+#     class Meta:
+#         db_table = 'tag_group_tags'
+#         ordering = ['-id']
+
+
 class TagGroup(Base):
     # objects = MyQuerySet.as_manager()
 
-    m2m = ['tags']
+    # custom_m2m = {'tags': TagGrouptTag}
 
     def __str__(self):
         return f"{self.name['fa']}"
 
     box = models.ForeignKey(Box, on_delete=PROTECT)
     name = JSONField(default=multilanguage)
-    tags = models.ManyToManyField(Tag)
+    # tags = models.ManyToManyField(Tag, through="TagGrouptTag", related_name='groups')
 
     class Meta:
         db_table = 'tag_group'
@@ -749,7 +760,6 @@ class Brand(Base):
 
 
 class ProductTag(MyModel):
-
     product = models.ForeignKey("Product", on_delete=PROTECT)
     tag = models.ForeignKey(Tag, on_delete=PROTECT)
     show = models.BooleanField(default=False)
@@ -1274,7 +1284,6 @@ class Invoice(Base):
 
 # todo disable value_added type (half)
 class InvoiceSuppliers(MyModel):
-
     invoice = models.ForeignKey(Invoice, on_delete=CASCADE)
     supplier = models.ForeignKey(User, on_delete=CASCADE)
     amount = models.PositiveIntegerField()
