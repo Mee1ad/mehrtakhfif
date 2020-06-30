@@ -22,7 +22,7 @@ class CategoryView(TableView):
             data = serialized_objects(request, Category, single_serializer=CategoryESchema, box_key='box_id')
             return JsonResponse(data)
         if parent_id:
-            params['filter'].pop('box_id', None)
+            # params['filter'].pop('box_id', None)
             box_id = Category.objects.get(pk=parent_id).box_id
             box_permissions = request.user.box_permission.all().values_list('id', flat=True)
             if box_id not in box_permissions:
