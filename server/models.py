@@ -708,27 +708,27 @@ class Tag(Base):
         indexes = [GinIndex(fields=['name'])]
 
 
-# class TagGrouptTag(MyModel):
-#     group = models.ForeignKey("TagGroup", on_delete=PROTECT)
-#     tag = models.ForeignKey(Tag, on_delete=PROTECT)
-#     show = models.BooleanField(default=False)
-#
-#     class Meta:
-#         db_table = 'tag_group_tags'
-#         ordering = ['-id']
+class TagGrouptTag(MyModel):
+    group = models.ForeignKey("TagGroup", on_delete=PROTECT)
+    tag = models.ForeignKey(Tag, on_delete=PROTECT)
+    show = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = 'tag_group_tags'
+        ordering = ['-id']
 
 
 class TagGroup(Base):
     # objects = MyQuerySet.as_manager()
 
-    # custom_m2m = {'tags': TagGrouptTag}
+    custom_m2m = {'tags': TagGrouptTag}
 
     def __str__(self):
         return f"{self.name['fa']}"
 
     box = models.ForeignKey(Box, on_delete=PROTECT)
     name = JSONField(default=multilanguage)
-    # tags = models.ManyToManyField(Tag, through="TagGrouptTag", related_name='groups')
+    tags = models.ManyToManyField(Tag, through="TagGrouptTag", related_name='groups')
 
     class Meta:
         db_table = 'tag_group'
