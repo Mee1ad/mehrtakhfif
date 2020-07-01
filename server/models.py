@@ -795,7 +795,7 @@ class Product(Base):
     remove_fields = []
     custom_m2m = {'tags': ProductTag}
     ordered_m2m = {'media': ProductMedia}
-    m2m = ['categories', 'cities']
+    m2m = ['categories', 'cities', 'tag_groups']
     required_m2m = ['categories', 'tags', 'media']
     fields = {'thumbnail': 'تامبنیل', 'categories': 'دسته بندی', 'tags': 'تگ', 'media': 'مدیا'}
 
@@ -869,7 +869,7 @@ class Product(Base):
     default_storage = models.OneToOneField(null=True, blank=True, to="Storage", on_delete=CASCADE,
                                            related_name='product_default_storage')
     tags = models.ManyToManyField(Tag, through="ProductTag", related_name='products')
-    group_tags = models.ManyToManyField(TagGroup, related_name='products')
+    tag_groups = models.ManyToManyField(TagGroup, related_name='products')
     media = models.ManyToManyField(Media, through='ProductMedia')
     income = models.BigIntegerField(default=0)
     profit = models.PositiveIntegerField(default=0)
