@@ -63,8 +63,8 @@ class ProductTagField(fields.Field):
 
 class TagGroupField(fields.Field):
     def _serialize(self, value, attr, obj, **kwargs):
-        items = obj.tags.all()
-        return TagASchema().dump(items, many=True)
+        items = TagGrouptTag.objects.filter(taggroup=obj)
+        return TagGroupTagASchema().dump(items, many=True)
 
 
 # Serializer
@@ -403,6 +403,13 @@ class FeatureStorageASchema(Schema):
 class TagASchema(TagSchema):
     permalink = fields.Str()
     name = fields.Dict()
+
+
+class TagGroupTagASchema(Schema):
+    name = fields.Function(lambda o: o.tag.name)
+    permalink = fields.Function(lambda o: o.tag.permalink)
+    id = fields.Function(lambda o: o.tag.pk)
+    show = fields.Boolean()
 
 
 class TagGroupASchema(BaseAdminSchema):

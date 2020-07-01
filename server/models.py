@@ -992,11 +992,11 @@ class Storage(Base):
                     self.make_item_disable(self)
                     raise ActivationError(get_activation_warning_msg('ددلاین'))
             if not self.dimensions.get('width') or not self.dimensions.get('height') or not self.dimensions.get(
-                    'length') \
-                    or not self.dimensions.get('weight'):
+                    'length') or not self.dimensions.get('weight'):
                 self.make_item_disable(self)
                 raise ActivationError(get_activation_warning_msg('ابعاد'))
         else:
+            self.required_fields = ['dimensions']
             if Storage.objects.get(pk=self.pk).items.filter(disable=True):
                 self.make_item_disable(self)
                 raise ActivationError(get_activation_warning_msg('یکی از انبار ها'))
@@ -1056,6 +1056,10 @@ class Storage(Base):
             for package_item in package_items:
                 self.discount_price += package_item.package_item.discount_price * package_item.count
                 self.final_price += package_item.package_item.final_price * package_item.count
+                self.dimensions = {"width": self.dimensions['width'] + package_item.package_item.dimensions['width'],
+                                   "height": self.dimensions['height'] + package_item.package_item.dimensions['height'],
+                                   "length": self.dimensions['length'] + package_item.package_item.dimensions['length'],
+                                   "weight": self.dimensions['weight'] + package_item.package_item.dimensions['weight']}
             self.discount_percent = int(100 - self.discount_price / self.final_price * 100)
             self.save()
 
