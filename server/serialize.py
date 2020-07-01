@@ -42,8 +42,10 @@ class PackegeItemsField(fields.Field):
 
 class TagField(fields.Field):
     def _serialize(self, value, attr, obj, **kwargs):
-        tags = value.all()
-        return TagSchema().dump(tags, many=True)
+        tags = list(ProductTag.objects.filter(product=obj))
+        for tag_group in obj.tag_groups.all():
+            tags += TagGrouptTag.objects.filter(taggroup=tag_group)
+        return TagSchema().dump(set(tags), many=True)
 
 
 class CityField(fields.Field):
@@ -409,9 +411,13 @@ class FeatureStorageSchema(BaseSchema):
 
 
 class TagSchema(BaseSchema):
-    id = fields.Int()
+    id = fields.Function(lambda o: o.tag.pk)
     name = fields.Method('get_name')
-    permalink = fields.Str()
+    permalink = fields.Function(lambda o: o.tag.permalink)
+    show = fields.Boolean()
+
+    def get_name(self, obj):
+        return self.get(obj.tag.name)
 
 
 class BrandSchema(BaseSchema):
@@ -447,7 +453,7 @@ class ProductSchema(MinProductSchema):
     box = fields.Method("get_box")
     categories = fields.Method("get_category")
     house = fields.Method("get_house")
-    tag = TagField()
+    tags = TagField()
     media = MediaField()
     short_description = fields.Method("get_short_description")
     description = fields.Method("get_description")

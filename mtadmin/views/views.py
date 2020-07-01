@@ -113,32 +113,26 @@ class CheckLoginToken(AdminView):
 class Search(AdminView):
 
     def get(self, request):
-        params = dict(request.GET)
         model = request.GET.get('type', None)
         switch = {'supplier': self.supplier, 'tag': self.tag, 'product': self.product, 'cat': self.category}
-        return JsonResponse(switch[model](**params))
+        return JsonResponse(switch[model](**request.GET.dict()))
+
+    def multi_match(self, q, model, serializer, document, output):
+        ids = []
+        s = document.search()
+        r = s.query("multi_match", query=q, fields=['name_fa', 'name'])
+        if r.count() == 0 and not q:
+            r = s.query("match_all")[:10]
+        [ids.append(item.id) for item in r]
+        items = model.objects.in_bulk(ids)
+        items = [items[x] for x in ids]
+        return {output: serializer().dump(items, many=True)}
 
     def tag(self, q, **kwargs):
-        tags_id = []
-        s = TagDocument.search()
-        r = s.query("multi_match", query=q[0], fields=['name_fa', 'name'])
-        if r.count() == 0 and not q[0]:
-            r = s.query("match_all")[:10]
-        [tags_id.append(tag.id) for tag in r]
-        tags = Tag.objects.in_bulk(tags_id)
-        tags = [tags[x] for x in tags_id]
-        return {'tags': TagASchema().dump(tags, many=True)}
+        return self.multi_match(q, Tag, TagASchema, TagDocument, 'tags')
 
     def category(self, q, **kwargs):
-        categories_id = []
-        s = CategoryDocument.search()
-        r = s.query("multi_match", query=q[0], fields=['name_fa', 'name'])
-        if r.count() == 0 and not q[0]:
-            r = s.query("match_all")[:10]
-        [categories_id.append(category.id) for category in r]
-        categories = Category.objects.in_bulk(categories_id)
-        categories = [categories[x] for x in categories_id]
-        return {'categories': CategoryASchema().dump(categories, many=True)}
+        return self.multi_match(q, Category, CategoryASchema, CategoryDocument, 'categories')
 
     def product(self, q, box_id, **kwargs):
         product_types = kwargs.get('types[]', [])

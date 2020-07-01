@@ -67,6 +67,12 @@ class TagGroupField(fields.Field):
         return TagGroupTagASchema().dump(items, many=True)
 
 
+class ProductTagGroupField(fields.Field):
+    def _serialize(self, value, attr, obj, **kwargs):
+        items = obj.tag_groups.all()
+        return TagGroupASchema().dump(items, many=True)
+
+
 # Serializer
 class BaseAdminSchema(Schema):
     """
@@ -254,6 +260,7 @@ class ProductESchema(ProductASchema, ProductSchema):
 
     media = fields.Method("get_media")
     tags = ProductTagField()
+    tag_groups = ProductTagGroupField()
     brand = fields.Method("get_brand")
     properties = fields.Dict()
     details = fields.Dict()
@@ -400,7 +407,8 @@ class FeatureStorageASchema(Schema):
     value = fields.Function(lambda o: o.value)
 
 
-class TagASchema(TagSchema):
+class TagASchema(Schema):
+    id = fields.Int()
     permalink = fields.Str()
     name = fields.Dict()
 
