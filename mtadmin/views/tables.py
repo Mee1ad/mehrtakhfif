@@ -302,19 +302,18 @@ class TagView(TableView):
 
 
 class TagGroupView(TableView):
-    permission_required = 'server.view_grouptag'
+    permission_required = 'server.view_taggroup'
 
     def get(self, request):
         return JsonResponse(serialized_objects(request, TagGroup, TagGroupASchema, TagGroupASchema))
 
-    @pysnooper.snoop()
     def post(self, request):
-        data = get_data(request)
-        tags = []
-        for tag in data['tags']:
-            tags.append({'tag_id': tag, 'show': False})
-        data['tags'] = tags
-        return create_object(request, TagGroup, serializer=TagGroupASchema, data=data)
+        # data = get_data(request)
+        # tags = []
+        # for tag in data['tags']:
+        #     tags.append({'tag_id': tag, 'show': False})
+        # data['tags'] = tags
+        return create_object(request, TagGroup, serializer=TagGroupASchema)
 
     def put(self, request):
         return update_object(request, TagGroup, serializer=TagGroupASchema, return_item=True)
