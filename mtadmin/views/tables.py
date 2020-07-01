@@ -307,6 +307,7 @@ class TagGroupView(TableView):
     def get(self, request):
         return JsonResponse(serialized_objects(request, TagGroup, TagGroupASchema, TagGroupASchema))
 
+    @pysnooper.snoop()
     def post(self, request):
         data = get_data(request)
         tags = []
