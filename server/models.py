@@ -1053,6 +1053,7 @@ class Storage(Base):
             Package.objects.bulk_create(package_items)
             self.discount_price = 0
             self.final_price = 0
+            self.dimensions = {"width": 0, "height": 0, "length": 0, "weight": 0}
             for package_item in package_items:
                 self.discount_price += package_item.package_item.discount_price * package_item.count
                 self.final_price += package_item.package_item.final_price * package_item.count
