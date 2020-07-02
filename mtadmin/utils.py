@@ -177,7 +177,7 @@ def get_m2m_fields(model, data):
             continue
     return [data, m2m, custom_m2m, ordered_m2m, remove_fields]
 
-
+@pysnooper.snoop()
 def create_object(request, model, box_key='box', return_item=False, serializer=None, error_null_box=True, data=None):
     if not request.user.has_perm(f'server.add_{model.__name__.lower()}'):
         raise PermissionDenied
@@ -223,7 +223,7 @@ def add_custom_m2m(obj, field, item_list):
     items = [many_to_many_model(**item, **extra_fields) for item in item_list]
     many_to_many_model.objects.bulk_create(items)
 
-
+@pysnooper.snoop()
 def update_object(request, model, box_key='box', return_item=False, serializer=None, data=None, require_box=True):
     if not request.user.has_perm(f'server.change_{model.__name__.lower()}'):
         raise PermissionDenied

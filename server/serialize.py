@@ -275,11 +275,10 @@ class BaseSchema(Schema):
 
 class MinUserSchema(Schema):
     class Meta:
-        additional = ('id', 'first_name', 'last_name', 'username')
+        additional = ('id', 'first_name', 'last_name', 'username', 'meli_code')
 
     name = fields.Method("get_username")
     email = fields.Email()
-    meli_code = fields.Str()
 
     def get_username(self, obj):
         try:
@@ -291,9 +290,9 @@ class MinUserSchema(Schema):
                 return None
 
 
-class UserSchema(BaseSchema):
+class UserSchema(MinUserSchema):
     class Meta:
-        additional = ('id', 'first_name', 'last_name', 'gender', 'username', 'meli_code', 'shaba')
+        additional = ('gender', 'shaba')
 
     avatar = fields.Method("get_avatar", data_key="avatar_id")
     birthday = fields.Method("get_birthday")
