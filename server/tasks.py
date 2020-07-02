@@ -16,6 +16,7 @@ from django.template.loader import render_to_string
 from mehr_takhfif.settings import ARVAN_API_KEY
 from time import sleep
 import requests
+import pysnooper
 
 
 @shared_task
@@ -31,6 +32,7 @@ def cancel_reservation(invoice_id, **kwargs):
 
 
 @task_postrun.connect
+@pysnooper.snoop()
 def task_postrun_handler(task_id=None, **kwargs):
     args = kwargs.get('kwargs', None)
     if args:
