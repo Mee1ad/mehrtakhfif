@@ -36,7 +36,7 @@ class SessionStore(OriginalSessionStore):
 
 
 class Login(View):
-    @pysnooper.snoop()
+
     def post(self, request):
         data = load_data(request, check_token=False)
         cookie_age = 30 * 60
@@ -81,7 +81,6 @@ class Login(View):
             return JsonResponse({}, status=res_code['invalid_password'])
 
     @staticmethod
-    @pysnooper.snoop()
     def send_activation(user, request=None):
         resend_timeout = 0.5
         activation_expire = 2
@@ -156,6 +155,7 @@ class Activate(View):
             user.save()
             login(request, user, backend='django.contrib.auth.backends.ModelBackend')
             res = {'user': UserSchema().dump(user)}  # signup without password
+            print(res)
             if user.is_staff:
                 res['user']['is_staff'] = user.is_staff
             basket = Basket.objects.filter(user=user).order_by('-id')

@@ -273,9 +273,9 @@ class BaseSchema(Schema):
             pass
 
 
-class MinUserSchema(Schema):
+class MinUserSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'first_name', 'last_name', 'username', 'meli_code')
+        additional = ('first_name', 'last_name', 'username', 'meli_code')
 
     name = fields.Method("get_username")
     email = fields.Email()
@@ -292,7 +292,7 @@ class MinUserSchema(Schema):
 
 class UserSchema(MinUserSchema):
     class Meta:
-        additional = ('gender', 'shaba')
+        additional = MinUserSchema.Meta.additional + ('gender', 'shaba')
 
     avatar = fields.Method("get_avatar", data_key="avatar_id")
     birthday = fields.Method("get_birthday")
