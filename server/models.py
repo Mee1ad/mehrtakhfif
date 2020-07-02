@@ -796,7 +796,7 @@ class Product(Base):
     custom_m2m = {'tags': ProductTag}
     ordered_m2m = {'media': ProductMedia}
     m2m = ['categories', 'cities', 'tag_groups']
-    required_m2m = ['categories', 'tags', 'media']
+    required_m2m = ['categories', 'media']
     fields = {'thumbnail': 'تامبنیل', 'categories': 'دسته بندی', 'tags': 'تگ', 'media': 'مدیا'}
 
     def pre_process(self, my_dict):
@@ -810,6 +810,9 @@ class Product(Base):
 
     def clean(self):
         super().clean()
+        if not self.tags.all() and not self.tag_groups.all():
+            self.make_item_disable(self)
+            raise ActivationError('نه تگ داری نه گروه تک، نمیشه ک اینجوری میشه؟')
         if not self.storages.filter(disable=False):
             self.make_item_disable(self)
             raise ActivationError(get_activation_warning_msg('انبار فعال'))
