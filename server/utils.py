@@ -32,8 +32,8 @@ from server.serialize import InvoiceSchema
 import jdatetime
 from django.utils.translation import gettext_lazy as _
 from server.serialize import UserSchema
-from barcode import generate
-from barcode.base import Barcode
+# from barcode import generate
+# from barcode.base import Barcode
 from server.views.post import get_shipping_cost
 
 random_data = string.ascii_lowercase + string.digits
@@ -176,6 +176,16 @@ def filter_params(params, lang):
     return filters
 
 
+def get_request_params(request):
+    param_dict = dict(request.GET)
+    for key, value in param_dict.items():
+        if type(value) is list and len(value) < 2:
+            param_dict[key] = value[0]
+            continue
+        param_dict[key.replace('[]', '')] = param_dict.pop(key)
+    return param_dict
+
+
 def get_rank(q, lang):
     sv = SearchVector(KeyTextTransform(lang, 'name'), weight='A')  # + \
     # SearchVector(KeyTextTransform('fa', 'product__category__name'), weight='B')
@@ -249,11 +259,11 @@ def create_qr(data, output):
 def get_barcode(data=None):
     return None
     # todo fix this later
-    Barcode.default_writer_options['write_text'] = False
-    barcode_directory = f'{MEDIA_ROOT}/barcode'
+    # Barcode.default_writer_options['write_text'] = False
+    # barcode_directory = f'{MEDIA_ROOT}/barcode'
     # generate('code39', f'{data}', output=f'{barcode_directory}/{data}')
-    generate('code39', f'1234567891', output=f'{barcode_directory}/{data}')
-    return HOST + f'/media/barcode/{data}.svg'
+    # generate('code39', f'1234567891', output=f'{barcode_directory}/{data}')
+    # return HOST + f'/media/barcode/{data}.svg'
 
 
 # Utils

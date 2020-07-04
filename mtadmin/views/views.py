@@ -90,7 +90,8 @@ class TableFilter(AdminView):
             return JsonResponse({'types': [{'id': item.type, 'name': item.get_type_display()} for item in media_types]})
         elif table == 'invoice':
             invoice_status = Invoice.objects.order_by('status').distinct('status')
-            return JsonResponse({'types': [{'id': item.status, 'name': item.get_status_display()} for item in invoice_status]})
+            return JsonResponse(
+                {'types': [{'id': item.status, 'name': item.get_status_display()} for item in invoice_status]})
         filters = get_table_filter(table, box)
         return JsonResponse({'data': filters})
 
@@ -115,7 +116,8 @@ class Search(AdminView):
     def get(self, request):
         model = request.GET.get('type', None)
         switch = {'supplier': self.supplier, 'tag': self.tag, 'product': self.product, 'cat': self.category}
-        return JsonResponse(switch[model](**request.GET.dict()))
+        params = get_request_params(request)
+        return JsonResponse(switch[model](**params))
 
     def multi_match(self, q, model, serializer, document, output):
         ids = []
@@ -134,11 +136,10 @@ class Search(AdminView):
     def category(self, q, **kwargs):
         return self.multi_match(q, Category, CategoryASchema, CategoryDocument, 'categories')
 
-    def product(self, q, box_id, **kwargs):
-        product_types = kwargs.get('types[]', [])
+    def product(self, q, box_id, types, **kwargs):
         products_id = []
         s = ProductDocument.search()
-        type_query = Q('bool', should=[Q("match", type=product_type) for product_type in product_types])
+        type_query = Q('bool', should=[Q("match", type=product_type) for product_type in types])
         r = s.query('match', box_id=box_id[0]).query(type_query).query('match', name_fa=q)
         if r.count() == 0 and not q:
             r = s.query('match', box_id=box_id[0]).query(type_query).query('match_all')[:10]
