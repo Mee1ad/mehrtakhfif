@@ -152,7 +152,8 @@ class BaseAdminSchema(Schema):
 
     def get_media(self, obj):
         try:
-            medias = obj.media.all()
+            medias = ProductMedia.objects.filter(product=obj).order_by('priority')
+            medias = [media.media for media in medias]
         except AttributeError:
             if obj.media is not None:
                 return MediaSchema().dump(obj.media)

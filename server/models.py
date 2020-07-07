@@ -824,10 +824,12 @@ class Product(Base):
 
     def assign_default_value(self):
         storages = self.storages.filter(available_count_for_sale__gt=0)
+        if not storages:
+            storages = self.storages.all()
         try:
             Product.objects.filter(pk=self.pk).update(default_storage=min(storages, key=attrgetter('discount_price')))
         except ValueError:
-            pass
+            print(f'product {self.id} has not any storage, cant assign default storage')
 
     def save(self, *args, **kwargs):
         self.pre_process(self.__dict__)
@@ -975,6 +977,7 @@ class Storage(Base):
         else:
             super().full_clean(exclude=None, validate_unique=True)
 
+    @pysnooper.snoop()
     def clean(self):
         if self.product.type != 4:
             super().clean()
@@ -1030,8 +1033,9 @@ class Storage(Base):
             my_dict['manage'] = True
         return my_dict
 
+    # @pysnooper.snoop()
     def post_process(self, my_dict):
-        if not my_dict:
+        if my_dict is None:
             return True
         if self.product.manage or self.product.default_storage.available_count_for_sale < 1:
             self.product.assign_default_value()

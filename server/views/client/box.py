@@ -80,12 +80,13 @@ class Filter(View):
     def get(self, request):
         params = filter_params(request.GET, request.lang)
         query = Q(verify=True, **params['filter'])
+        query = Q(categories__permalink='اسباب-بازی-و-اکسسوری')
         disable = get_product_filter_params(request.user.is_staff)
+        print(params)
         if params['related']:
             query = Q(verify=True, **params['filter']) | Q(verify=True, **params['related'])
         products = Product.objects.annotate(**params['annotate']).filter(query, Q(**disable), ~Q(type=5)).order_by(
-            params['order'], '-id')
-            # params['order'], '-id').distinct('id', params['order'].replace('-', ''))
+            params['order'], '-id').distinct('id', params['order'].replace('-', ''))
         # params['order']).order_by('-id').distinct('id')
         pg = get_pagination(request, products, MinProductSchema)
         return JsonResponse(pg)

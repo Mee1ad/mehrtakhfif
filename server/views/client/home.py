@@ -4,6 +4,39 @@ from server.documents import *
 from server.serialize import *
 from server.utils import *
 import pysnooper
+from django.contrib.auth import logout
+
+
+class Test(View):
+    def get(self, request):
+        print(request.COOKIES)
+        # print(get_custom_signed_cookie(request, 'y'))
+        res = JsonResponse({})
+        set_custom_signed_cookie(res, 'x', 'oskole')
+        y = 1
+        try:
+            y = int(get_custom_signed_cookie(request, 'y')) + 1
+        except Exception:
+            pass
+        set_custom_signed_cookie(res, 'y', y)
+        return res
+
+    def delete(self, request):
+        res = JsonResponse({})
+        res = delete_custom_signed_cookie(res, 'x')
+        res = delete_custom_signed_cookie(res, 'y')
+        return res
+
+
+class Init(View):
+    @pysnooper.snoop()
+    def get(self, request):
+        res = JsonResponse({})
+        if request.user.is_authenticated:
+            res = set_custom_signed_cookie(res, 'is_login', True)
+        else:
+            res = set_custom_signed_cookie(res, 'is_login', False)
+        return res
 
 
 class GetSpecialOffer(View):
