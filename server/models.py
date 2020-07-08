@@ -155,6 +155,7 @@ class MyQuerySet(SafeDeleteQueryset):
     _queryset_class = SafeDeleteQueryset
 
     def update(self, *args, **kwargs):
+        warning = kwargs.pop('warning', True)
         # todo say if enabled or disabled
         if not self:
             return True
@@ -175,7 +176,7 @@ class MyQuerySet(SafeDeleteQueryset):
                 if storage.product.storages.count() <= 1:
                     storage.product.disable = True
                 # storage.related_packages.update(package__disable=True)
-                storage.cascade_disabling(storage)
+                storage.cascade_disabling(storage, warning)
 
         elif model == 'product':
             product = self.first()
@@ -311,10 +312,11 @@ class Base(SafeDeleteModel):
             if not getattr(self, field)['fa']:
                 raise ActivationError(get_activation_warning_msg(self.fields[field]))
 
-    def make_item_disable(self, obj):
-        obj.__class__.objects.filter(pk=obj.pk).update(disable=True)
+    def make_item_disable(self, obj, warning=True):
+        obj.__class__.objects.filter(pk=obj.pk).update(disable=True, warning=warning)
 
-    def cascade_disabling(self, storages=None):
+    @pysnooper.snoop()
+    def cascade_disabling(self, storages=None, warning=True):
         if type(storages) != list and storages is not None:
             storages = [storages]
         for storage in storages:
@@ -326,7 +328,8 @@ class Base(SafeDeleteModel):
             package_records = storage.related_packages.all()
             for package_record in package_records:
                 Storage.objects.filter(pk=package_record.package_id).update(disable=True)
-        raise WarningMessage('آیا میدانستی: محصولات ویژه و پکیج هایی که شامل این انبار بودن هم غیرفعال میشن؟! 🤭')
+        if warning:
+            raise WarningMessage('آیا میدانستی: محصولات ویژه و پکیج هایی که شامل این انبار بودن هم غیرفعال میشن؟! 🤭')
 
 
 class MyModel(models.Model):
@@ -999,7 +1002,7 @@ class Storage(Base):
                     raise ActivationError(get_activation_warning_msg('ددلاین'))
             if not self.dimensions.get('width') or not self.dimensions.get('height') or not self.dimensions.get(
                     'length') or not self.dimensions.get('weight'):
-                self.make_item_disable(self)
+                self.make_item_disable(self, warning=False)
                 raise ActivationError(get_activation_warning_msg('ابعاد'))
         else:
             self.required_fields = ['dimensions']

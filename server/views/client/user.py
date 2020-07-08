@@ -18,14 +18,6 @@ from django.utils.translation import gettext_lazy as _
 
 # from selenium import webdriver
 
-
-class Test(View):
-    def get(self, request):
-        # raise ValidationError('error happend')
-        raise ValidationError(_(f'لطفا محصول را وارد نمایید'))
-        return JsonResponse({"message": "Done"})
-
-
 class Profile(LoginRequired):
     def get(self, request):
         user = request.user

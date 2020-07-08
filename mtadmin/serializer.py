@@ -158,6 +158,10 @@ class BaseAdminSchema(Schema):
             if obj.media is not None:
                 return MediaSchema().dump(obj.media)
             return None
+        except ValueError:
+            if obj.media:
+                return MediaASchema().dump(obj.media)
+            return
         return MediaASchema().dump(medias, many=True)
 
     def get_tag(self, obj):
