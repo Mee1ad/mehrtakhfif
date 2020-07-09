@@ -55,8 +55,6 @@ class IPG(View):
 
 
 class PaymentRequest(View):
-
-    @pysnooper.snoop()
     def get(self, request, basket_id):
         ip = request.META.get('REMOTE_ADDR') or request.META.get('HTTP_X_FORWARDED_FOR')
 
@@ -71,7 +69,8 @@ class PaymentRequest(View):
             invoice.card_holder = '012345******6789'
             invoice.final_amount = invoice.amount
             invoice.save()
-            return HttpResponseRedirect(f'https://mehrtakhfif.com/invoice/{invoice.id}')
+            # return JsonResponse({"url": f"http://mt.com:3002/invoice/{invoice.id}"})
+            return JsonResponse({"url": f"https://mehrtakhfif.com/invoice/{invoice.id}"})
 
         user = request.user
         if not Basket.objects.filter(pk=basket_id, user=user).exists():
