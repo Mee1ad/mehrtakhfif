@@ -36,7 +36,7 @@ bp = {'terminal_id': 5290645, 'username': "takh252", 'password': "71564848",
       'ipg_url': "https://bpm.shaparak.ir/pgwchannel/startpay.mellat",
       'callback': 'https://api.mehrtakhfif.com/payment/callback'}  # mellat
 
-client = zeep.Client(wsdl="https://bpm.shaparak.ir/pgwchannel/services/pgw?wsdl")
+# client = zeep.Client(wsdl="https://bpm.shaparak.ir/pgwchannel/services/pgw?wsdl")
 
 saddad = {'merchant_id': None, 'terminal_id': None, 'terminal_key': None,
           'payment_request': 'https://sadad.shaparak.ir/VPG/api/v0/Request/PaymentRequest',
@@ -57,8 +57,20 @@ class IPG(View):
 class PaymentRequest(View):
     def get(self, request, basket_id):
         ip = request.META.get('REMOTE_ADDR') or request.META.get('HTTP_X_FORWARDED_FOR')
-        if not request.user.is_staff and ip != SAFE_IP:
+
+        # debug
+        if not request.user.is_staff:
             raise ValidationError(_('متاسفانه در حال حاضر امکان خرید وجود ندارد'))
+        if request.user.is_staff:
+            invoice = self.create_invoice(request)
+            self.submit_invoice_storages(invoice.pk)
+            invoice.status = 2
+            invoice.payed_at = timezone.now()
+            invoice.card_holder = '012345******6789'
+            invoice.final_amount = invoice.amount
+            invoice.save()
+            return HttpResponseRedirect(f'https://mehrtakhfif.com/invoice/{invoice.id}')
+
         user = request.user
         if not Basket.objects.filter(pk=basket_id, user=user).exists():
             raise ValidationError(_('سبد خرید نامعتبر است'))
