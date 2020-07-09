@@ -36,7 +36,7 @@ bp = {'terminal_id': 5290645, 'username': "takh252", 'password': "71564848",
       'ipg_url': "https://bpm.shaparak.ir/pgwchannel/startpay.mellat",
       'callback': 'https://api.mehrtakhfif.com/payment/callback'}  # mellat
 
-# client = zeep.Client(wsdl="https://bpm.shaparak.ir/pgwchannel/services/pgw?wsdl")
+client = zeep.Client(wsdl="https://bpm.shaparak.ir/pgwchannel/services/pgw?wsdl")
 
 saddad = {'merchant_id': None, 'terminal_id': None, 'terminal_key': None,
           'payment_request': 'https://sadad.shaparak.ir/VPG/api/v0/Request/PaymentRequest',
@@ -55,6 +55,7 @@ class IPG(View):
 
 
 class PaymentRequest(View):
+    @pysnooper.snoop()
     def get(self, request, basket_id):
         ip = request.META.get('REMOTE_ADDR') or request.META.get('HTTP_X_FORWARDED_FOR')
 
