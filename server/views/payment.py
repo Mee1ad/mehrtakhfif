@@ -55,6 +55,7 @@ class IPG(View):
 
 
 class PaymentRequest(View):
+
     @pysnooper.snoop()
     def get(self, request, basket_id):
         ip = request.META.get('REMOTE_ADDR') or request.META.get('HTTP_X_FORWARDED_FOR')
