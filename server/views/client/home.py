@@ -6,6 +6,8 @@ from server.utils import *
 import pysnooper
 from django.contrib.auth import logout
 
+print('this is master')
+
 
 class Test(View):
     def get(self, request):
