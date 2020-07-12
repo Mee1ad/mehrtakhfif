@@ -6,7 +6,7 @@ from server.utils import *
 import pysnooper
 from django.contrib.auth import logout
 
-print('this is master')
+print('this bug fix must apply to alpha')
 
 
 class Test(View):
