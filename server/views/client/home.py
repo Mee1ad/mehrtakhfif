@@ -27,6 +27,11 @@ class Test(View):
         res = delete_custom_signed_cookie(res, 'y')
         return res
 
+    def patch(self, request):
+        is_login = get_custom_signed_cookie(request, 'is_login') == 'True'
+        res = JsonResponse({})
+        return set_custom_signed_cookie(res, 'is_login', not is_login)
+
 
 class Init(View):
     @pysnooper.snoop()

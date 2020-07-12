@@ -35,6 +35,7 @@ from server.serialize import UserSchema
 # from barcode import generate
 # from barcode.base import Barcode
 from server.views.post import get_shipping_cost
+from django.http import JsonResponse
 
 random_data = string.ascii_lowercase + string.digits
 default_step = 10
