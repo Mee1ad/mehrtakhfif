@@ -43,7 +43,6 @@ INSTALLED_APPS = \
         # 'django.contrib.postgres',
     ] + MY_INSTALLED_APPS
 
-
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -147,10 +146,6 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # https://github.com/jazzband/django-push-notifications
 
-PUSH_NOTIFICATIONS_SETTINGS = {
-    "FCM_API_KEY": "[your api key]",
-}
-
 # Internationalization
 # https://docs.djangoproject.com/en/2.2/topics/i18n/
 
@@ -171,3 +166,14 @@ USE_TZ = True
 # CELERY_TIMEZONE = "UTC"
 
 USER_AGENTS_CACHE = 'default'
+
+PUSH_NOTIFICATIONS_SETTINGS = {
+    "FCM_API_KEY": "AIzaSyAPoyIJc-tp_fCPafgnOsW8FzrLJjs9cIs",
+    # "GCM_API_KEY": "AIzaSyAPoyIJc-tp_fCPafgnOsW8FzrLJjs9cIs",
+    # "APNS_CERTIFICATE": "/path/to/your/certificate.pem",
+    # "APNS_TOPIC": "com.example.push_test",
+    # "WNS_PACKAGE_SECURITY_ID": "[your package security id, e.g: 'ms-app://e-3-4-6234...']",
+    # "WNS_SECRET_KEY": "[your app secret key, e.g.: 'KDiejnLKDUWodsjmewuSZkk']",
+    # "WP_PRIVATE_KEY": "/path/to/your/private.pem",
+    # "WP_CLAIMS": {'sub': "mailto: development@example.com"}
+}
