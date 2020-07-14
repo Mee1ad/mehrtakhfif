@@ -64,11 +64,14 @@ class PaymentRequest(View):
         if request.user.is_staff:
             invoice = self.create_invoice(request)
             self.submit_invoice_storages(invoice.pk)
+            invoice.basket.sync = 3
+            invoice.basket.save()
             invoice.status = 2
             invoice.payed_at = timezone.now()
             invoice.card_holder = '012345******6789'
             invoice.final_amount = invoice.amount
             invoice.save()
+            Basket.objects.create(user=invoice.user, created_by=invoice.user, updated_by=invoice.user)
             # return JsonResponse({"url": f"http://mt.com:3002/invoice/{invoice.id}"})
             return JsonResponse({"url": f"https://mehrtakhfif.com/invoice/{invoice.id}"})
 
@@ -85,7 +88,6 @@ class PaymentRequest(View):
         self.submit_invoice_storages(invoice.pk)
         return JsonResponse({"url": f"{bp['ipg_url']}?RefId={self.behpardakht_api(invoice.pk)}"})
 
-    @pysnooper.snoop()
     def behpardakht_api(self, invoice_id):
         invoice = Invoice.objects.get(pk=invoice_id)
         basket = get_basket(invoice.user, basket=invoice.basket, return_obj=True, tax=True)
@@ -152,7 +154,6 @@ class PaymentRequest(View):
                                amount=basket['summary']['shipping_cost'], basket_id=basket['basket']['id'])
         return invoice
 
-    @pysnooper.snoop()
     def reserve_storage(self, basket, invoice):
         if basket.sync != 1:  # reserved
             sync_storage(basket, operator.sub)
@@ -192,11 +193,10 @@ class PaymentRequest(View):
 
 
 class CallBack(View):
-
+    # todo dor debug
     def get(self, request):
         return HttpResponseRedirect("https://mehrtakhfif.com")
 
-    @pysnooper.snoop()
     def post(self, request):
         # todo redirect to site anyway
         data = request.body.decode().split('&')
@@ -234,7 +234,6 @@ class CallBack(View):
         if cancel:
             cancel_reservation(invoice.pk)
 
-    @pysnooper.snoop()
     def verify(self, invoice_id, sale_ref_id):
         r = client.service.bpVerifyRequest(terminalId=bp['terminal_id'], userName=bp['username'],
                                            userPassword=bp['password'], orderId=invoice_id,
