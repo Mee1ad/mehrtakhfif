@@ -85,6 +85,7 @@ user = [
 
 auth = [
     path('login', try_except(Login.as_view()), name='login'),
+    path('add_device', try_except(AddDevice.as_view()), name='add_device'),
     path('logout', try_except(LogoutView.as_view()), name='logout'),
     path('activate', try_except(Activate.as_view()), name='activate'),
     path('resend_code', try_except(ResendCode.as_view()), name='resend_code'),

@@ -36,3 +36,13 @@ class ProductCount(AdminView):
     def get(self, request):
         boxes = Box.objects.all()
         return JsonResponse({'boxes': ProductCountSchema().dump(boxes, many=True)})
+
+
+class SoldProductCount(AdminView):
+    def get(self, request):
+        box_id = request.GET.get('b')
+        data = {}
+        products = InvoiceStorage.objects.filter(box_id=box_id, invoice__status=2)
+        for status in deliver_status:
+            data[status[1]] = products.filter(deliver_status=status[0]).count()
+        return JsonResponse(data)

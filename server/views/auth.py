@@ -14,6 +14,7 @@ from django.contrib.sessions.backends.db import SessionStore as OriginalSessionS
 from django.utils.crypto import get_random_string
 from django.core.exceptions import PermissionDenied
 from django.utils.translation import gettext_lazy as _
+from push_notifications.models import APNSDevice, GCMDevice
 
 
 class Backend(ModelBackend):
@@ -186,3 +187,19 @@ class LogoutView(View):
             return res
         except Exception:
             return JsonResponse({}, status=res_code['forbidden'])
+
+
+class AddDevice(View):
+    def post(self, request):
+        data = load_data(request, check_token=False)
+        print(data)
+        app_id = "1:14720050507:web:0b061137e84a94bb4534ce"
+        device = GCMDevice.objects.filter(device_id=data['device_id'])
+        name = "test"
+        if device.exists():
+            device.update(registration_id=data['token'], name=name, device_id=data['device_id'])
+            return JsonResponse({})
+        GCMDevice.objects.create(registration_id=data['token'], cloud_message_type="FCM", active=True,
+                                 name=name,
+                                 user=request.user, application_id=app_id, device_id=data['device_id'])
+        return JsonResponse({})

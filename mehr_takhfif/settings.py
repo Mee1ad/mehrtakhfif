@@ -168,7 +168,8 @@ USE_TZ = True
 USER_AGENTS_CACHE = 'default'
 
 PUSH_NOTIFICATIONS_SETTINGS = {
-    "FCM_API_KEY": "AIzaSyAPoyIJc-tp_fCPafgnOsW8FzrLJjs9cIs",
+    "FCM_API_KEY": "AAAAA21iJUs:APA91bHcTsXcWom96zJlUd6pokWud0zjPdo5lba5t2V_eh5s8ZoOtHTiuvya3NEBO73X3HOKJjnU57Mp_rRDWMW"
+                   "iaN5uiKwQtWJqmpgUeB-SP48ObqUNU-_hX0OUmEU_wg_LIt-NQYHT",
     # "GCM_API_KEY": "AIzaSyAPoyIJc-tp_fCPafgnOsW8FzrLJjs9cIs",
     # "APNS_CERTIFICATE": "/path/to/your/certificate.pem",
     # "APNS_TOPIC": "com.example.push_test",

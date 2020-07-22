@@ -8,7 +8,6 @@ from django.contrib.auth import logout
 
 class Test(View):
     def get(self, request):
-        print(request.COOKIES)
         # print(get_custom_signed_cookie(request, 'y'))
         res = JsonResponse({})
         set_custom_signed_cookie(res, 'x', 'oskole')

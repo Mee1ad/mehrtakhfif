@@ -15,7 +15,9 @@ class ProductView(View):
         if product_obj is None:
             return JsonResponse({}, status=404)
         purchased = False
-        product = ProductSchema(**request.schema_params).dump(product_obj)
+        # todo debug
+        # product = ProductSchema(**request.schema_params).dump(product_obj)
+        product = {}
         if product_obj.type < 3:
             storages = product_obj.storages.filter(Q(start_time__lte=timezone.now()) & Q(**preview),
                                                    (Q(deadline__gte=timezone.now()) | Q(deadline__isnull=True)))
@@ -29,7 +31,8 @@ class ProductView(View):
             storages = product_obj.storages.filter(Q(start_time__lte=timezone.now()) & Q(**preview),
                                                    (Q(deadline__gte=timezone.now()) | Q(deadline__isnull=True)))
             product['storages'] = PackageSchema(**request.schema_params).dump(storages, many=True)
-        product['categories'] = [self.get_category(c) for c in product['categories']]
+        # todo debug
+        # product['categories'] = [self.get_category(c) for c in product['categories']]
         return JsonResponse({'product': product, 'purchased': purchased})
 
     def get_category(self, category):

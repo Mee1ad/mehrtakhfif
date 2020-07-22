@@ -29,6 +29,7 @@ from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import FieldDoesNotExist
 
 product_types = [(1, 'service'), (2, 'product'), (3, 'tourism'), (4, 'package'), (5, 'package_item')]
+deliver_status = [(1, 'pending'), (2, 'packing'), (3, 'sending'), (4, 'delivered'), (5, 'referred')]
 
 
 def get_activation_warning_msg(field_name):
@@ -126,7 +127,7 @@ def reduce_image_quality(img):
         ph = ph.filter(ImageFilter.GaussianBlur(1.6))
     return ph
 
-
+0
 def is_list_of_dict(data):
     if type(data) is list:
         for d in data:
@@ -1347,8 +1348,7 @@ class InvoiceStorage(Base):
     discount_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount price percent')
     # vip_discount_price = models.PositiveIntegerField(verbose_name='Discount price', default=0)
     # vip_discount_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount price percent')
-    deliver_status = models.PositiveSmallIntegerField(choices=[(1, 'pending'), (2, 'packing'), (3, 'sending'),
-                                                               (4, 'delivered'), (5, 'referred')], default=1)
+    deliver_status = models.PositiveSmallIntegerField(choices=deliver_status, default=1)
 
     details = JSONField(null=True, help_text="package/storage/product details")
     features = JSONField(default=list)

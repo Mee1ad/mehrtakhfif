@@ -12,11 +12,14 @@ from math import ceil
 
 
 def get_tax(tax_type, discount_price, start_price=None):
-    return int({
-                   1: 0,
-                   2: ceil(discount_price - discount_price / 1.09),
-                   3: ceil((discount_price - start_price) - (discount_price - start_price) / 0.09)
-               }[tax_type])
+    try:
+        return int({
+                       1: 0,
+                       2: ceil(discount_price - discount_price / 1.09),
+                       3: ceil((discount_price - start_price) - (discount_price - start_price) / 0.09)
+                   }[tax_type])
+    except KeyError:
+        return 0
 
 
 # ManyToMany Relations
@@ -447,7 +450,6 @@ class ProductSchema(MinProductSchema):
     address = fields.Method("get_address")
     short_address = fields.Method("get_short_address")
     type = fields.Function(lambda o: o.get_type_display())
-    # type = fields.Int(load_only=True)
     brand = fields.Method("get_brand")
     box = fields.Method("get_box")
     categories = fields.Method("get_category")
@@ -466,6 +468,7 @@ class ProductMediaSchema(BaseSchema):
     media = fields.Method("get_media")
 
 
+# todo debug
 class MinStorageSchema(BaseSchema):
     vip_discount_price = fields.Method("get_vip_discount_price")
     discount_price = fields.Method("get_discount_price")
@@ -473,9 +476,9 @@ class MinStorageSchema(BaseSchema):
     vip_discount_percent = fields.Method("get_vip_discount_percent")
     discount_percent = fields.Method("get_discount_percent")
     title = fields.Method('get_title')
-    deadline = fields.Method("get_deadline")
-    max_count_for_sale = fields.Method("get_max_count_for_sale")
-    min_count_alert = fields.Method("get_min_count_alert")
+    # deadline = fields.Method("get_deadline")
+    # max_count_for_sale = fields.Method("get_max_count_for_sale")
+    # min_count_alert = fields.Method("get_min_count_alert")
     vip_type = fields.Method("get_vip_type")
     vip_max_count_for_sale = fields.Method("get_vip_max_count_for_sale")
 
@@ -507,9 +510,10 @@ class MinStorageSchema(BaseSchema):
         return 0
 
     def get_vip_discount_price(self, obj):
+        user_groups = self.user.vip_types.all()
         try:
-            prices = VipPrice.objects.filter(storage_id=obj.pk, available_count_for_sale__gt=0).values_list(
-                'discount_price', flat=True)
+            prices = VipPrice.objects.filter(storage_id=obj.pk, available_count_for_sale__gt=0,
+                                             vip_type__in=user_groups).values_list('discount_price', flat=True)
             return min(prices)
         except Exception:
             return 0
@@ -523,12 +527,16 @@ class MinStorageSchema(BaseSchema):
             return 0
 
 
+# todo debug
 class StorageSchema(MinStorageSchema):
-    class Meta:
-        additional = ('shipping_cost', 'priority', 'gender', 'disable')
+    pass
 
-    default = fields.Function(lambda o: o == o.product.default_storage)
-    features = FeatureField()
+    class Meta:
+        # additional = ('shipping_cost', 'priority', 'gender', 'disable')
+        additional = ()
+
+    # default = fields.Function(lambda o: o == o.product.default_storage)
+    # features = FeatureField()
 
 
 class PackageSchema(StorageSchema):
