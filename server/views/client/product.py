@@ -15,9 +15,7 @@ class ProductView(View):
         if product_obj is None:
             return JsonResponse({}, status=404)
         purchased = False
-        # todo debug
-        # product = ProductSchema(**request.schema_params).dump(product_obj)
-        product = {}
+        product = ProductSchema(**request.schema_params).dump(product_obj)
         if product_obj.type < 3:
             storages = product_obj.storages.filter(Q(start_time__lte=timezone.now()) & Q(**preview),
                                                    (Q(deadline__gte=timezone.now()) | Q(deadline__isnull=True)))

@@ -468,17 +468,14 @@ class ProductMediaSchema(BaseSchema):
     media = fields.Method("get_media")
 
 
-# todo debug
 class MinStorageSchema(BaseSchema):
-    vip_discount_price = fields.Method("get_vip_discount_price")
     discount_price = fields.Method("get_discount_price")
     final_price = fields.Method("get_final_price")
-    vip_discount_percent = fields.Method("get_vip_discount_percent")
     discount_percent = fields.Method("get_discount_percent")
     title = fields.Method('get_title')
-    # deadline = fields.Method("get_deadline")
-    # max_count_for_sale = fields.Method("get_max_count_for_sale")
-    # min_count_alert = fields.Method("get_min_count_alert")
+    deadline = fields.Method("get_deadline")
+    max_count_for_sale = fields.Method("get_max_count_for_sale")
+    min_count_alert = fields.Method("get_min_count_alert")
     vip_type = fields.Method("get_vip_type")
     vip_max_count_for_sale = fields.Method("get_vip_max_count_for_sale")
 
@@ -495,9 +492,15 @@ class MinStorageSchema(BaseSchema):
             pass
 
     def get_discount_price(self, obj):
-        if obj.available_count_for_sale:
-            return obj.discount_price
-        return 0
+        try:
+            user_groups = self.user.vip_types.all()
+            prices = VipPrice.objects.filter(storage_id=obj.pk, available_count_for_sale__gt=0,
+                                             vip_type__in=user_groups).values_list('discount_price', flat=True)
+            return min(prices)
+        except Exception:
+            if obj.available_count_for_sale:
+                return obj.discount_price
+            return 0
 
     def get_final_price(self, obj):
         if obj.available_count_for_sale:
@@ -505,38 +508,23 @@ class MinStorageSchema(BaseSchema):
         return 0
 
     def get_discount_percent(self, obj):
-        if obj.available_count_for_sale:
-            return obj.discount_percent
-        return 0
-
-    def get_vip_discount_price(self, obj):
-        user_groups = self.user.vip_types.all()
         try:
+            user_groups = self.user.vip_types.all()
             prices = VipPrice.objects.filter(storage_id=obj.pk, available_count_for_sale__gt=0,
-                                             vip_type__in=user_groups).values_list('discount_price', flat=True)
+                                             vip_type__in=user_groups).values_list('discount_percent', flat=True)
             return min(prices)
         except Exception:
-            return 0
-
-    def get_vip_discount_percent(self, obj):
-        try:
-            prices = VipPrice.objects.filter(storage_id=obj.pk, available_count_for_sale__gt=0).values_list(
-                'discount_percent', flat=True)
-            return min(prices)
-        except Exception:
+            if obj.available_count_for_sale:
+                return obj.discount_percent
             return 0
 
 
-# todo debug
 class StorageSchema(MinStorageSchema):
-    pass
-
     class Meta:
-        # additional = ('shipping_cost', 'priority', 'gender', 'disable')
-        additional = ()
+        additional = ('shipping_cost', 'priority', 'gender', 'disable')
 
-    # default = fields.Function(lambda o: o == o.product.default_storage)
-    # features = FeatureField()
+    default = fields.Function(lambda o: o == o.product.default_storage)
+    features = FeatureField()
 
 
 class PackageSchema(StorageSchema):

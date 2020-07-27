@@ -1,40 +1,40 @@
 ### Home
+GET {{host}}/test
+
+###
+GET {{host}}/init
+
+###
 GET {{host}}/slider/home
 
 ###
-
 GET {{host}}/special_offer
 
 ###
-
 GET {{host}}/box_special_product
 
 ###
-
 GET {{host}}/special_product
 
 ###
-
 GET {{host}}/best_seller
 
 ###
-
 GET {{host}}/box_with_category
 
 ###
-
 GET {{host}}/menu
 
 ###
-
 GET {{host}}/suggest?id='test'
 
 ###
+GET {{host}}/search?id='test'
 
+###
 GET {{host}}/ads
 
 ###
-
 ### Box
 GET {{host}}/filter
 
@@ -137,3 +137,12 @@ GET {{host}}/wishlist
 
 ###
 
+POST {{host}}//add_device
+Content-Type: application/json
+
+{
+  "token": "test",
+  "device_id": 1
+}
+
+###
