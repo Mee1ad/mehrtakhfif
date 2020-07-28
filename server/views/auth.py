@@ -37,7 +37,7 @@ class SessionStore(OriginalSessionStore):
 
 
 class Login(View):
-
+    @pysnooper.snoop()
     def post(self, request):
         data = load_data(request, check_token=False)
         cookie_age = 30 * 60
@@ -194,12 +194,12 @@ class AddDevice(View):
         data = load_data(request, check_token=False)
         print(data)
         app_id = "1:14720050507:web:0b061137e84a94bb4534ce"
-        device = GCMDevice.objects.filter(device_id=data['device_id'])
+        device = Client.objects.filter(device_id=data['device_id'])
         name = "test"
         if device.exists():
-            device.update(registration_id=data['token'], name=name, device_id=data['device_id'])
+            device.gcm_device.update(registration_id=data['token'], name=name)
             return JsonResponse({})
         GCMDevice.objects.create(registration_id=data['token'], cloud_message_type="FCM", active=True,
                                  name=name,
-                                 user=request.user, application_id=app_id, device_id=data['device_id'])
+                                 user=request.user, application_id=app_id)
         return JsonResponse({})

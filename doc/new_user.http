@@ -32,9 +32,8 @@ GET {{host}}/suggest?id='test'
 GET {{host}}/search?id='test'
 
 ###
-GET {{host}}/ads
+GET {{host}}/ads/home
 
-###
 ### Box
 GET {{host}}/filter
 

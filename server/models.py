@@ -27,6 +27,7 @@ from mtadmin.exception import *
 from random import randint
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import FieldDoesNotExist
+from push_notifications.models import APNSDevice, GCMDevice
 
 product_types = [(1, 'service'), (2, 'product'), (3, 'tourism'), (4, 'package'), (5, 'package_item')]
 deliver_status = [(1, 'pending'), (2, 'packing'), (3, 'sending'), (4, 'delivered'), (5, 'referred')]
@@ -127,7 +128,10 @@ def reduce_image_quality(img):
         ph = ph.filter(ImageFilter.GaussianBlur(1.6))
     return ph
 
+
 0
+
+
 def is_list_of_dict(data):
     if type(data) is list:
         for d in data:
@@ -481,8 +485,9 @@ class VipType(Base):
 
 class Client(MyModel):
     device_id = models.CharField(max_length=255)
-    user_agent = models.CharField(max_length=255)
-    last_login_ip = models.CharField(max_length=31)
+    user_agent = models.CharField(max_length=255, null=True, blank=True)
+    last_login_ip = models.CharField(max_length=31, null=True, blank=True)
+    gcm_device = models.ForeignKey(GCMDevice, on_delete=CASCADE, related_name="gcm_device")
 
     class Meta:
         ordering = ['-id']
