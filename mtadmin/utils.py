@@ -129,6 +129,11 @@ def get_data(request, require_box=True):
     return data
 
 
+def get_message(key):
+    res_pattern = {'updated': 'دسترسی شما محدود شده است لطفا بعدا تلاش کنید'}
+    return {'message': res_pattern[key]}
+
+
 def clean_permalink(permalink):
     permalink = permalink.strip()
     if permalink[-1] == '-':

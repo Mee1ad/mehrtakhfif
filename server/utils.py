@@ -40,7 +40,9 @@ from django.http import JsonResponse
 random_data = string.ascii_lowercase + string.digits
 default_step = 10
 default_page = 1
-default_response = {'ok': {'message': 'ok'}, 'bad': {'message': 'bad request'}}
+def get_message(key):
+    res_pattern = {'user_is_ban': 'دسترسی شما محدود شده است لطفا بعدا تلاش کنید'}
+    return {'message': res_pattern[key]}
 res_code = {'success': 200, 'bad_request': 400, 'unauthorized': 401, 'forbidden': 403, 'token_issue': 401,
             'integrity': 406, 'banned': 493, 'activation_warning': 250, 'updated_and_disable': 251,
             'object_does_not_exist': 444, 'signup_with_pp': 203, 'invalid_password': 450,
@@ -125,6 +127,7 @@ def filter_params(params, lang):
                     'discount': f'-{ds}{dis}_percent'}
     box_permalink = params.get('b', None)
     q = params.get('q', None)
+    # todo test and fix s
     s = params.get('s', None)
     orderby = params.get('o', '-created_at')
     category = params.get('cat', None)

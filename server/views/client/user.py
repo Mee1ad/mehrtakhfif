@@ -133,7 +133,7 @@ class AddressView(LoginRequired):
 
     def get(self, request):
         addresses = user_data_with_pagination(Address, AddressSchema, request, show_all=request.all)
-        default_address = AddressSchema().dump(request.user.default_address)
+        default_address = AddressSchema().dump(request.user.default_address) if request.user.default_address else None
         return JsonResponse({'addresses': addresses, 'default_address': default_address})
 
     # add address
@@ -159,7 +159,7 @@ class AddressView(LoginRequired):
         try:
             request.user.default_address_id = data['id']
             request.user.save()
-            return JsonResponse({'message': 'ok'})
+            return JsonResponse({})
         except Exception:
             return JsonResponse({}, status=400)
 
@@ -179,6 +179,7 @@ class AddressView(LoginRequired):
     def delete(self, request):
         address_id = request.GET.get('id', None)
         Address.objects.filter(pk=address_id, user=request.user).delete()
+        request.user.default_address = Address.objects.filter(user=request.user).order_by('-id').first()
         return JsonResponse({})
 
 

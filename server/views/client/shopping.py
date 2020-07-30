@@ -51,7 +51,7 @@ class BasketView(LoginRequired):
                 res = get_basket(request.user, request.lang)
             return JsonResponse(res)
         except (AssertionError, Basket.DoesNotExist):
-            return JsonResponse(default_response['bad'], status=400)
+            return JsonResponse(default_response['bad_request'], status=400)
 
     def add_to_basket(self, basket, products):
         # {"id": 1, "count": 5, "features": [{"fsid": 16, "fvid": [1, 2]}]}

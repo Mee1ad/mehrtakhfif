@@ -695,6 +695,8 @@ class CommentSchema(BaseSchema):
                                           storages__product=obj.product).order_by('id').first().payed_at.timestamp()
         except Invoice.DoesNotExist:
             return None
+        except AttributeError:
+            return None
 
     def get_reply_count(self, obj):
         comments = Comment.objects.filter(product=obj.product, type=obj.type, reply_to=obj)

@@ -1,5 +1,0 @@
-GET {{host}}/test
-###
-
-DELETE {{host}}/test
-###

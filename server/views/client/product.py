@@ -52,7 +52,7 @@ class ProductView(View):
 
 class RelatedProduct(View):
     def get(self, request, permalink):
-        product = Product.objects.get(permalink=permalink, disable=False)
+        product = Product.objects.get(permalink=permalink)
         tags = product.tags.all()
         products = Product.objects.filter(tags__in=tags, disable=False).order_by('-id').distinct('id')
         return JsonResponse(get_pagination(request, products, MinProductSchema))

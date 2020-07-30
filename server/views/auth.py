@@ -192,14 +192,14 @@ class LogoutView(View):
 class AddDevice(View):
     def post(self, request):
         data = load_data(request, check_token=False)
-        print(data)
         app_id = "1:14720050507:web:0b061137e84a94bb4534ce"
-        device = Client.objects.filter(device_id=data['device_id'])
-        name = "test"
-        if device.exists():
-            device.gcm_device.update(registration_id=data['token'], name=name)
+        client = Client.objects.filter(device_id=data['device_id'])
+        if client.exists():
+            GCMDevice.objects.filter(client=client.first()).update(registration_id=data['token'],
+                                                                   name=request.user_agent.device.family)
             return JsonResponse({})
-        GCMDevice.objects.create(registration_id=data['token'], cloud_message_type="FCM", active=True,
-                                 name=name,
+        gcm_device = GCMDevice.objects.create(registration_id=data['token'], cloud_message_type="FCM", active=True,
+                                 name=request.user_agent.device.family,
                                  user=request.user, application_id=app_id)
+        Client.objects.create(device_id=data['device_id'], user_agent=request.user_agent, gcm_device=gcm_device)
         return JsonResponse({})

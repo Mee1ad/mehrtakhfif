@@ -487,9 +487,10 @@ class Client(MyModel):
     device_id = models.CharField(max_length=255)
     user_agent = models.CharField(max_length=255, null=True, blank=True)
     last_login_ip = models.CharField(max_length=31, null=True, blank=True)
-    gcm_device = models.ForeignKey(GCMDevice, on_delete=CASCADE, related_name="gcm_device")
+    gcm_device = models.ForeignKey(GCMDevice, on_delete=CASCADE, related_name="client")
 
     class Meta:
+        db_table = 'client'
         ordering = ['-id']
 
 

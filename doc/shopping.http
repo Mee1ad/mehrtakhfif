@@ -1,16 +1,25 @@
 ### Basket
 GET http://{{host}}/basket
+
 ###
 DELETE http://{{host}}/basket?basket_product_id=16
+
 ### add to basket
 POST {{host}}/basket
 Content-Type: Application/json
 
 {
-  "products": [{"id": 266, "count":  2, "features": []}],
+  "products": [
+    {
+      "id": 266,
+      "count": 2,
+      "features": []
+    }
+  ],
   "override": true,
   "add": true
 }
+
 ###
 
 
@@ -19,7 +28,20 @@ POST {{host}}/product
 Content-Type: Application/json
 
 {
-	"basket": [{"id": 13, "count": 1}, {"id": 17, "count": 1}, {"id": 18, "count": 1}]
+  "basket": [
+    {
+      "id": 13,
+      "count": 1
+    },
+    {
+      "id": 17,
+      "count": 1
+    },
+    {
+      "id": 18,
+      "count": 1
+    }
+  ]
 }
 
 
@@ -31,8 +53,8 @@ POST {{host}}/callback
 Content-Type: Application/json
 
 {
-	"OrderId": 102,
-	"Description": "this is a test payment"
+  "OrderId": 102,
+  "Description": "this is a test payment"
 }
 
 ###   all   tax  price_without_tax  discount  final_price  unit_price
