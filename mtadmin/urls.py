@@ -1,6 +1,5 @@
 from django.urls import path, include
 from mtadmin.views.tables import *
-from mtadmin.views.auth import *
 from mtadmin.views.views import *
 from mtadmin.views.dashboard import *
 from mtadmin.decorator import error_handler
