@@ -981,7 +981,7 @@ class GCMDeviceSchema(Schema):
     class Meta:
         additional = ('id', 'name')
 
-    user = fields.Method('get_user')
+    # user = fields.Method('get_user')
 
     def get_user(self, obj):
         return obj.user.first_name + " " + obj.user.last_name
