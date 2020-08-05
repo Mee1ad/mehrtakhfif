@@ -810,6 +810,8 @@ class Product(Base):
     fields = {'thumbnail': 'تامبنیل', 'categories': 'دسته بندی', 'tags': 'تگ', 'media': 'مدیا'}
 
     def pre_process(self, my_dict):
+        if (self.review is not None) and (my_dict.get('review') != self.review):
+            my_dict['check_review'] = False
         if my_dict.get('type'):
             try:
                 my_dict['type'] = {'service': 1, 'product': 2, 'tourism': 3, 'package': 4, 'package_item': 5}[
