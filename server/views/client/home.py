@@ -1,10 +1,11 @@
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseNotFound
 
 from server.documents import *
 from server.serialize import *
 from server.utils import *
 import pysnooper
 from django.contrib.auth import logout
+
 
 class Test(View):
     def get(self, request):
@@ -29,6 +30,20 @@ class Test(View):
         is_login = get_custom_signed_cookie(request, 'is_login') == 'True'
         res = JsonResponse({})
         return set_custom_signed_cookie(res, 'is_login', not is_login)
+
+
+class NotifTest(View):
+    def get(self, request, pk):
+        if not request.user.is_superuser:
+            return HttpResponseNotFound()
+        message = request.GET.get('m')
+        title = request.GET.get('t')
+        if not pk:
+            devices = GCMDevice.objects.all()
+            return JsonResponse({'devices': GCMDeviceSchema().dump(devices, many=True)})
+        device = GCMDevice.objects.get(pk=pk)
+        device.send_message(message, extra={'title': title})
+        return JsonResponse({"message": "ok"})
 
 
 class Init(View):

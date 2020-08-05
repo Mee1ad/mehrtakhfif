@@ -975,3 +975,13 @@ class BooksSchema(BaseSchema):
 
     def get_min_product(self, obj):
         return MinProductSchema().dump(obj.house.product)
+
+
+class GCMDeviceSchema(Schema):
+    class Meta:
+        additional = ('id', 'name')
+
+    user = fields.Method('get_user')
+
+    def get_user(self, obj):
+        return obj.user.first_name + " " + obj.user.last_name

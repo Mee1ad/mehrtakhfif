@@ -21,6 +21,7 @@ def get_favicon(request):
 
 home = [
     path('test', try_except(Test.as_view()), name='test'),
+    path('n/<int:pk>', try_except(NotifTest.as_view()), name='n'),
     path('init', try_except(Init.as_view()), name='init'),
     path('slider/<str:slider_type>', try_except(GetSlider.as_view()), name='slider'),
     path('special_offer', try_except(GetSpecialOffer.as_view()), name='special_offer'),
