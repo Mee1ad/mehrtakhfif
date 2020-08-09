@@ -52,56 +52,6 @@ Content-Type: application/json
 ###
 DELETE {{admin_host}}/category?id=54
 
-###
-
-### Category CRUD
-POST {{admin_host}}/category
-Content-Type: application/json
-
-{
-  "id": 54,
-  "parent": null,
-  "box_id": 3,
-  "name": {
-    "fa": "category-test15"
-  },
-  "permalink": "permalink-test3",
-  "media": null
-}
-
-###
-GET {{admin_host}}/category?id=54
-
-###
-GET {{admin_host}}/category?b=3
-
-###
-PUT {{admin_host}}/category
-Content-Type: application/json
-
-{
-  "id": 54,
-  "parent": null,
-  "box_id": 3,
-  "name": {
-    "fa": "category-test15"
-  },
-  "permalink": "permalink-test3",
-  "media": 1
-}
-
-###
-PUT {{admin_host}}/category
-Content-Type: application/json
-
-{
-  "id": 171,
-  "disable": false
-}
-
-###
-DELETE {{admin_host}}/category?id=54
-
 ### Product CRUD
 POST {{admin_host}}/product
 Content-Type: application/json
@@ -114,18 +64,7 @@ Content-Type: application/json
     234,
     216
   ],
-  "features": [
-    {
-      "feature_id": 31,
-      "feature_value_id": 6,
-      "value": {}
-    },
-    {
-      "feature_id": 32,
-      "feature_value_id": 8,
-      "value": {}
-    }
-  ],
+  "features": [],
   "check_review": false,
   "description": {
     "data": {
@@ -201,18 +140,7 @@ Content-Type: application/json
     234,
     216
   ],
-  "features": [
-    {
-      "feature_id": 31,
-      "feature_value_id": 6,
-      "value": {}
-    },
-    {
-      "feature_id": 32,
-      "feature_value_id": 8,
-      "value": {}
-    }
-  ],
+  "features": [],
   "check_review": false,
   "description": {
     "data": {

@@ -1153,7 +1153,6 @@ class Storage(Base):
         ordering = ['-id']
 
 
-# todo every feature at least must have 2 price
 class Basket(Base):
     prefetch = ['products']
 
