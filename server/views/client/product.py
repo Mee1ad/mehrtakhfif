@@ -77,7 +77,7 @@ class CommentView(View):
             try:
                 post = BlogPost.objects.get(permalink=product_permalink)
             except BlogPost.DoesNotExist:
-                return JsonResponse({} ,status=404)
+                return JsonResponse({}, status=404)
             filterby = {"blog_post": post}
         filterby = {"type": int(comment_type), **filterby}
         comments = Comment.objects.filter(**filterby, approved=True).exclude(reply_to__isnull=False)

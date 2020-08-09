@@ -41,7 +41,7 @@ def error_handler(func):
             pattern = r'(\((\w+)\))='
             try:
                 field = re.search(pattern, str(e))[2]
-                return JsonResponse({'type': 'duplicate', 'field': field}, status=res_code['integrity'])
+                return JsonResponse({"type": "duplicate or does'nt exist", "field": field}, status=res_code['integrity'])
             except (TypeError, IntegrityError):
                 e = str(e).split('DETAIL', 1)[0][:-1]
                 print(e)

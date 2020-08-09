@@ -49,7 +49,7 @@ class StorageField(fields.Field):
         return StorageESchema().dump(storages, many=True)
 
 
-class PackegeItemsField(fields.Field):
+class PackageItemsField(fields.Field):
     def _serialize(self, value, attr, obj, **kwargs):
         items = Package.objects.filter(package_id=obj)
         return PackageItemASchema().dump(items, many=True)
@@ -63,7 +63,7 @@ class ProductTagField(fields.Field):
 
 class TagGroupField(fields.Field):
     def _serialize(self, value, attr, obj, **kwargs):
-        items = TagGrouptTag.objects.filter(taggroup=obj)
+        items = TagGroupTag.objects.filter(taggroup=obj)
         return TagGroupTagASchema().dump(items, many=True)
 
 
@@ -171,7 +171,7 @@ class BaseAdminSchema(Schema):
 
 class SupplierESchema(BaseAdminSchema):
     class Meta:
-        additional = ('id', 'username', 'first_name', 'last_name', 'shaba', 'is_verify', 'settings')
+        additional = ('id', 'username', 'first_name', 'last_name', 'shaba', 'is_verify', 'settings', 'deposit_id')
 
 
 class BoxASchema(BoxSchema):
@@ -319,7 +319,7 @@ class StorageESchema(StorageASchema):
 
     supplier = fields.Function(lambda o: UserSchema().dump(o.supplier))
     features = FeatureField()
-    items = PackegeItemsField()
+    items = PackageItemsField()
     tax = fields.Function(lambda o: o.get_tax_type_display())
     vip_discount_price = fields.Function(lambda o: None)
     vip_discount_percent = fields.Function(lambda o: None)
@@ -327,7 +327,7 @@ class StorageESchema(StorageASchema):
 
 
 class PackageASchema(StorageESchema):
-    items = PackegeItemsField()
+    items = PackageItemsField()
     discount_price = fields.Int()
     final_price = fields.Int()
 

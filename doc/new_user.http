@@ -466,6 +466,7 @@ GET {{host}}/ipg
         client.assert(response.status === 200, "Response status is not 200");
     });
 %}
+
 ###
 GET {{host}}/payment/31
 
@@ -474,6 +475,7 @@ GET {{host}}/payment/31
         client.assert(response.status === 200, "Response status is not 200");
     });
 %}
+
 ###
 GET {{host}}/invoice/5ZaBzK
 
@@ -491,6 +493,7 @@ GET {{host}}/profile
         client.assert(response.status === 200, "Response status is not 200");
     });
 %}
+
 ###
 GET {{host}}/states
 
@@ -499,6 +502,7 @@ GET {{host}}/states
         client.assert(response.status === 200, "Response status is not 200");
     });
 %}
+
 ###
 GET {{host}}/cities/1
 
@@ -507,6 +511,7 @@ GET {{host}}/cities/1
         client.assert(response.status === 200, "Response status is not 200");
     });
 %}
+
 ###
 GET {{host}}/orders
 
@@ -515,6 +520,7 @@ GET {{host}}/orders
         client.assert(response.status === 200, "Response status is not 200");
     });
 %}
+
 ###
 GET {{host}}/orders?id=100
 
@@ -523,6 +529,7 @@ GET {{host}}/orders?id=100
         client.assert(response.status === 200, "Response status is not 200");
     });
 %}
+
 ###
 GET {{host}}/trips
 
@@ -531,6 +538,7 @@ GET {{host}}/trips
         client.assert(response.status === 200, "Response status is not 200");
     });
 %}
+
 ###
 GET {{host}}/wishlist
 
@@ -539,6 +547,7 @@ GET {{host}}/wishlist
         client.assert(response.status === 200, "Response status is not 200");
     });
 %}
+
 ###
 POST {{host}}//add_device
 Content-Type: application/json

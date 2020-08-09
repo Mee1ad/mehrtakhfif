@@ -154,6 +154,13 @@ def permalink_validation(permalink):
     return permalink.lower()
 
 
+def get_name(name, self):
+    try:
+        return name['fa']
+    except Exception:
+        return self.id
+
+
 class MyQuerySet(SafeDeleteQueryset):
     _safedelete_visibility = DELETED_INVISIBLE
     _safedelete_visibility_field = 'pk'
@@ -718,7 +725,7 @@ class Tag(Base):
         indexes = [GinIndex(fields=['name'])]
 
 
-class TagGrouptTag(MyModel):
+class TagGroupTag(MyModel):
     taggroup = models.ForeignKey("TagGroup", on_delete=PROTECT)
     tag = models.ForeignKey(Tag, on_delete=PROTECT)
     show = models.BooleanField(default=False)
@@ -731,14 +738,14 @@ class TagGrouptTag(MyModel):
 class TagGroup(Base):
     # objects = MyQuerySet.as_manager()
 
-    custom_m2m = {'tags': TagGrouptTag}
+    m2m = {'tags': TagGroupTag}
 
     def __str__(self):
         return f"{self.name['fa']}"
 
     box = models.ForeignKey(Box, on_delete=PROTECT)
     name = JSONField(default=multilanguage)
-    tags = models.ManyToManyField(Tag, through="TagGrouptTag", related_name='groups')
+    tags = models.ManyToManyField(Tag, through="TagGroupTag", related_name='groups')
 
     class Meta:
         db_table = 'tag_group'
@@ -1114,6 +1121,8 @@ class Storage(Base):
     available_count = models.PositiveIntegerField(default=0, verbose_name='Available count')
     sold_count = models.PositiveIntegerField(default=0, verbose_name='Sold count')
     start_price = models.PositiveIntegerField(default=0, verbose_name='Start price')
+    qty = models.CharField(max_length=255, null=True, blank=True, help_text="quantity")
+    sku = models.CharField(max_length=255, null=True, blank=True, help_text="stock keeping unit")
     final_price = models.PositiveIntegerField(default=0, verbose_name='Final price')
     discount_price = models.PositiveIntegerField(default=0, verbose_name='Discount price')
     shipping_cost = models.PositiveIntegerField(null=True, blank=True)
@@ -1137,6 +1146,7 @@ class Storage(Base):
     vip_prices = models.ManyToManyField(VipType, through='VipPrice', related_name="storages")
     dimensions = JSONField(help_text="{'weight': '', 'height: '', 'width': '', 'length': ''}",
                            validators=[validate_vip_price], default=dict)
+    max_shipping_time = models.PositiveIntegerField(null=True, blank=True)
 
     class Meta:
         db_table = 'storage'

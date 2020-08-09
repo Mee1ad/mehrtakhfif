@@ -34,7 +34,7 @@ from django.utils.translation import gettext_lazy as _
 from server.serialize import UserSchema
 # from barcode import generate
 # from barcode.base import Barcode
-from server.views.post import get_shipping_cost
+from server.views.post import get_shipping_cost, get_shipping_cost_temp
 from django.http import JsonResponse
 
 random_data = string.ascii_lowercase + string.digits
@@ -415,7 +415,8 @@ def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=Non
         summary['ha_profit'] += ha_profit
         summary['mt_profit'] += basket_product.discount_price - basket_product.start_price - ha_profit
     basket.basket_products = basket_products
-    summary['shipping_cost'] = get_shipping_cost(user, basket)
+    # summary['shipping_cost'] = get_shipping_cost(user, basket)
+    summary['shipping_cost'] = get_shipping_cost_temp(user, basket)
     if return_obj:
         basket.summary = summary
         basket.address_required = address_required

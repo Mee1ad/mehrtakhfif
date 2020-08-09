@@ -116,7 +116,7 @@ def get_params(request, box_key=None, date_key='created_at'):
 def get_data(request, require_box=True):
     data = json.loads(request.body)
     remove = ['created_at', 'created_by', 'updated_at', 'updated_by', 'deleted_by', 'income', 'profit',
-              'rate', 'default_storage', 'sold_count', 'is_superuser', 'is_staff', 'deposit_id',
+              'rate', 'default_storage', 'sold_count', 'is_superuser', 'is_staff',
               'box_permission', 'wallet_credit', 'suspend_expire_date', 'activation_expire'] + ['feature', ]
     if data.get('permalink'):
         data['permalink'] = clean_permalink(data['permalink'])
@@ -183,7 +183,8 @@ def get_m2m_fields(model, data):
     return [data, m2m, custom_m2m, ordered_m2m, remove_fields]
 
 
-def create_object(request, model, box_key='box', return_item=False, serializer=None, error_null_box=True, data=None):
+def create_object(request, model, box_key='box', return_item=False, serializer=None, error_null_box=True, data=None,
+                  return_obj=False):
     if not request.user.has_perm(f'server.add_{model.__name__.lower()}'):
         raise PermissionDenied
     data = data or get_data(request, require_box=error_null_box)
@@ -206,7 +207,10 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
         items = serialized_objects(request, model, single_serializer=serializer, box_key=box_key,
                                    error_null_box=error_null_box)
         return JsonResponse(items, status=201)
+    if return_obj:
+        return obj
     return JsonResponse({'id': obj.pk}, status=201)
+
 
 def add_ordered_m2m(obj, field, item_list):
     getattr(obj, field).clear()

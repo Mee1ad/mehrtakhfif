@@ -489,7 +489,7 @@ class SliderView(TableView):
 
 class SupplierView(TableView):
     permission_required = 'server.view_user'
-    rm_list = ['email', 'password', 'is_ban', 'is_active', 'is_verify', 'privacy_agreement', ]
+    rm_list = ['email', 'password', 'is_ban', 'is_active', 'privacy_agreement', ]
 
     def get(self, request):
         params = get_params(request)

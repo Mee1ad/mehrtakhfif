@@ -57,6 +57,16 @@ def get_state_position(destination, origin=25):
         return 'out'
 
 
+def get_shipping_cost_temp(user, basket):
+    if not user.is_authenticated or not user.default_address:
+        # todo fix
+        return 0
+    state = user.default_address.state_id
+    state_position = get_state_position(destination=state)
+    prices = {'in': 9000, 'neighbor': 15000}
+    return prices[state_position]
+
+
 def get_shipping_cost(user, basket=None, basket_id=None):
     if not user.is_authenticated or not user.default_address:
         # todo fix

@@ -9,6 +9,13 @@ from django.contrib.auth import logout
 
 class Test(View):
     def get(self, request):
+        print('old', request.session.get('basket'))
+        if request.session.get('basket') is None:
+            request.session['basket'] = []
+            request.session['basket'].append({'fuck': 'yeah'})
+            request.session.save()
+        print('new', request.session.get('basket'))
+
         # print(get_custom_signed_cookie(request, 'y'))
         res = JsonResponse({})
         set_custom_signed_cookie(res, 'x', 'oskole')

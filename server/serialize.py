@@ -37,7 +37,7 @@ class FeatureField(fields.Field):
         return FeatureStorageSchema().dump(features, many=True)
 
 
-class PackegeItemsField(fields.Field):
+class PackageItemsField(fields.Field):
     def _serialize(self, value, attr, obj, **kwargs):
         items = Package.objects.filter(package_id=obj)
         return PackageItemSchema().dump(items, many=True)
@@ -47,7 +47,7 @@ class TagField(fields.Field):
     def _serialize(self, value, attr, obj, **kwargs):
         tags = list(ProductTag.objects.filter(product=obj))
         for tag_group in obj.tag_groups.all():
-            tags += TagGrouptTag.objects.filter(taggroup=tag_group)
+            tags += TagGroupTag.objects.filter(taggroup=tag_group)
         return TagSchema().dump(set(tags), many=True)
 
 
@@ -109,6 +109,9 @@ class BaseSchema(Schema):
     def get_brand(self, obj):
         if obj.brand:
             return {"id": obj.brand_id, "name": self.get(obj.brand.name)}
+
+    def get_value(self, obj):
+        return self.get(obj.value)
 
     def get_title(self, obj):
         return self.get(obj.title)
@@ -462,6 +465,8 @@ class ProductSchema(MinProductSchema):
     details = fields.Method("get_details")
     location = fields.Method("get_location")
     cities = CityField()
+    # todo make it day for long hours
+    max_shipping_time = fields.Int()
 
 
 class ProductMediaSchema(BaseSchema):
@@ -528,7 +533,7 @@ class StorageSchema(MinStorageSchema):
 
 
 class PackageSchema(StorageSchema):
-    items = PackegeItemsField()
+    items = PackageItemsField()
     discount_price = fields.Int()
     final_price = fields.Int()
 
