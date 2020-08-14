@@ -57,10 +57,6 @@ class IPG(View):
 class PaymentRequest(View):
     def get(self, request, basket_id):
         ip = request.META.get('REMOTE_ADDR') or request.META.get('HTTP_X_FORWARDED_FOR')
-
-        # debug
-        if not request.user.is_staff:
-            raise ValidationError(_('متاسفانه در حال حاضر امکان خرید وجود ندارد'))
         if request.user.is_staff:
             invoice = self.create_invoice(request)
             self.submit_invoice_storages(invoice.pk)
@@ -72,7 +68,8 @@ class PaymentRequest(View):
             invoice.final_amount = invoice.amount
             invoice.save()
             Basket.objects.create(user=invoice.user, created_by=invoice.user, updated_by=invoice.user)
-            # return JsonResponse({"url": f"http://mt.com:3002/invoice/{invoice.id}"})
+            if DEBUG:
+                return JsonResponse({"url": f"http://mt.com:3002/invoice/{invoice.id}"})
             return JsonResponse({"url": f"https://mehrtakhfif.com/invoice/{invoice.id}"})
 
         user = request.user
