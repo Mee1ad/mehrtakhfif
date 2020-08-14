@@ -530,6 +530,7 @@ class StorageSchema(MinStorageSchema):
 
     default = fields.Function(lambda o: o == o.product.default_storage)
     features = FeatureField()
+    max_shipping_time = fields.Int()
 
 
 class PackageSchema(StorageSchema):

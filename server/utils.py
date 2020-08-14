@@ -182,7 +182,7 @@ def filter_params(params, lang):
 
 def get_request_params(request):
     param_dict = dict(request.GET)
-    for key, value in param_dict.items():
+    for key, value in param_dict.copy().items():
         if type(value) is list and len(value) < 2:
             param_dict[key] = value[0]
             continue
