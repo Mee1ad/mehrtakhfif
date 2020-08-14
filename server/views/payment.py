@@ -56,8 +56,13 @@ class IPG(View):
 
 class PaymentRequest(View):
     def get(self, request, basket_id):
-        ip = request.META.get('REMOTE_ADDR') or request.META.get('HTTP_X_FORWARDED_FOR')
-        if request.user.is_staff:
+        # ip = request.META.get('REMOTE_ADDR') or request.META.get('HTTP_X_FORWARDED_FOR')
+
+        # debug
+        # if not request.user.is_staff:
+        #     raise ValidationError(_('متاسفانه در حال حاضر امکان خرید وجود ندارد'))
+        # if request.user.is_staff:
+        if DEBUG is True:
             invoice = self.create_invoice(request)
             self.submit_invoice_storages(invoice.pk)
             invoice.basket.sync = 3
@@ -68,14 +73,13 @@ class PaymentRequest(View):
             invoice.final_amount = invoice.amount
             invoice.save()
             Basket.objects.create(user=invoice.user, created_by=invoice.user, updated_by=invoice.user)
-            if DEBUG:
+            if DEBUG is True:
                 return JsonResponse({"url": f"http://mt.com:3002/invoice/{invoice.id}"})
             return JsonResponse({"url": f"https://mehrtakhfif.com/invoice/{invoice.id}"})
 
         user = request.user
         if not Basket.objects.filter(pk=basket_id, user=user).exists():
             raise ValidationError(_('سبد خرید نامعتبر است'))
-        # def check_user_information
         # check for disabling in 15 minutes
         if user.first_name is None or user.last_name is None or user.meli_code is None or user.username is None:
             raise ValidationError(_('لطفا قبل از خرید پروفایل خود را تکمیل نمایید'))
