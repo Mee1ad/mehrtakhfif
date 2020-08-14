@@ -239,9 +239,9 @@ class BaseSchema(Schema):
         return new_value
 
     def get_max_count_for_sale(self, obj):
-        if (obj.available_count_for_sale >= obj.max_count_for_sale) and (obj.max_count_for_sale != 0):
-            return obj.max_count_for_sale
-        return obj.available_count_for_sale
+        # if (obj.available_count_for_sale >= obj.max_count_for_sale) and (obj.max_count_for_sale != 0):
+        return obj.max_count_for_sale
+        # return obj.available_count_for_sale
 
     def get_vip_max_count_for_sale(self, obj):
         try:
