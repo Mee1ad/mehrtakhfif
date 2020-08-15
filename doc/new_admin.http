@@ -401,7 +401,8 @@ DELETE {{admin_host}}/tag_group?id=1
 ### Invoice R
 GET {{admin_host}}/invoice
 
-###
+### Invoice Product
+GET {{admin_host}}//invoice_product
 
 ### Seupplier CRU
 POST {{admin_host}}/supplier

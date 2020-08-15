@@ -1307,6 +1307,7 @@ class Invoice(Base):
     expire = models.DateTimeField(null=True, blank=True)
     status = models.PositiveSmallIntegerField(default=1, choices=((1, 'pending'), (2, 'payed'), (3, 'canceled'),
                                                                   (4, 'rejected')))
+    delivery_status = models.CharField(help_text="0/3 - 1/3 - 2/3 - ready - posted", default="0", max_length=255)
     suppliers = models.ManyToManyField(User, through="InvoiceSuppliers", related_name='invoice_supplier')
     post_tracking_code = models.CharField(max_length=255, null=True, blank=True)
 
