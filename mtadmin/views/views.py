@@ -16,7 +16,7 @@ from mehr_takhfif.telegram_settings import *
 from time import sleep
 from os import listdir
 from elasticsearch_dsl import Q
-from django.shortcuts import render_to_response
+from django.shortcuts import render_to_response, render
 
 
 class Token(AdminView):
