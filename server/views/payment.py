@@ -145,14 +145,22 @@ class PaymentRequest(View):
             basket['summary']['discount_price'] -= basket['summary']['shipping_cost']
             if shipping_price < 0:
                 raise ValidationError('لطفا آدرس خود را در پروفایل ثبت کنید')
+        max_shipping_time = 0
+        for product in basket['basket']['products']:
+            if max_shipping_time < product['product']['default_storage']['max_shipping_time']:
+                max_shipping_time = product['product']['default_storage']['max_shipping_time']
+
+        post_invoice = Invoice.objects.create(created_by=user, updated_by=user, user=user, address=address,
+                                              expire=add_minutes(15),
+                                              amount=basket['summary']['shipping_cost'],
+                                              basket_id=basket['basket']['id'])
         invoice = Invoice.objects.create(created_by=user, updated_by=user, user=user,
                                          mt_profit=basket['summary']['mt_profit'], expire=add_minutes(15),
                                          invoice_discount=basket['summary']['invoice_discount'], address=address,
                                          ha_profit=basket['summary']['ha_profit'], basket_id=basket['basket']['id'],
                                          amount=basket['summary']['discount_price'] + basket['summary']['tax'],
-                                         final_price=basket['summary']['total_price'])
-        Invoice.objects.create(created_by=user, updated_by=user, user=user, address=address, expire=add_minutes(15),
-                               amount=basket['summary']['shipping_cost'], basket_id=basket['basket']['id'])
+                                         final_price=basket['summary']['total_price'],
+                                         max_shipping_time=max_shipping_time, post_invoice=post_invoice)
         return invoice
 
     def reserve_storage(self, basket, invoice):

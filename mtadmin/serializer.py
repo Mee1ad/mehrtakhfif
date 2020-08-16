@@ -192,11 +192,16 @@ class InvoiceASchema(BaseAdminSchema, InvoiceSchema):
         additional = ('basket_id',)
 
     user = fields.Nested(MinUserSchema)
-    product_count = fields.Method("get_product_count")
+    deliver_status = fields.Method("get_deliver_status")
+    products_count = fields.Method("get_products_count")
 
-    def get_product_count(self, obj):
-        product_counts = obj.invoice_storages.all().values_list('count', flat=True)
-        return sum(product_counts)
+    def get_products_count(self, obj):
+        return obj.invoice_storages.all().values_list('count', flat=True)
+
+    def get_deliver_status(self, obj):
+        product_counts = obj.invoice_storages.all().count()
+        ready_product_counts = InvoiceStorage.objects.filter(invoice=obj, deliver_status=2).count()  # packing
+        return f'{ready_product_counts} / {product_counts}'
 
 
 class InvoiceESchema(InvoiceASchema):
@@ -214,6 +219,7 @@ class InvoiceESchema(InvoiceASchema):
     tax = fields.Method("calculate_invoice_tax")
     shipping_cost = fields.Int()
     start_price = fields.Method('get_start_price')
+    post_invoice = fields.Nested("InvoiceASchema")
 
     def get_start_price(self, obj):
         invoice_storages = InvoiceStorage.objects.filter(invoice=obj).values_list('start_price', flat=True)

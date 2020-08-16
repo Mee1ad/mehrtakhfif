@@ -129,9 +129,6 @@ def reduce_image_quality(img):
     return ph
 
 
-0
-
-
 def is_list_of_dict(data):
     if type(data) is list:
         for d in data:
@@ -174,7 +171,7 @@ class MyQuerySet(SafeDeleteQueryset):
         remove_list = ['id', 'box_id', 'remove_fields']
         validations = {'storage': self.storage_validation, 'category': self.category_validation,
                        'product': self.product_validation, 'ad': self.ad_validation, 'slider': self.ad_validation,
-                       'invoicestorage': self.storage_validation}
+                       'invoicestorage': self.invoice_storage_validation, 'invoice': self.invoice_validation}
         model = self[0].__class__.__name__.lower()
         validations.update(dict.fromkeys(['feature', 'brand', 'tag'], self.default_validation))
         # noinspection PyArgumentList
@@ -216,6 +213,16 @@ class MyQuerySet(SafeDeleteQueryset):
         storage = self.first()
         kwargs = storage.pre_process(kwargs)
         storage.post_process(kwargs.get('remove_fields', None))
+        return kwargs
+
+    def invoice_validation(self, **kwargs):
+        invoice = self.first()
+        kwargs = invoice.pre_process(kwargs)
+        return kwargs
+
+    def invoice_storage_validation(self, **kwargs):
+        invoice = self.first()
+        kwargs = invoice.pre_process(kwargs)
         return kwargs
 
     def product_validation(self, **kwargs):
@@ -996,7 +1003,6 @@ class Storage(Base):
         else:
             super().full_clean(exclude=None, validate_unique=True)
 
-    @pysnooper.snoop()
     def clean(self):
         if self.product.type != 4:
             super().clean()
@@ -1052,7 +1058,6 @@ class Storage(Base):
             my_dict['manage'] = True
         return my_dict
 
-    # @pysnooper.snoop()
     def post_process(self, my_dict):
         if my_dict is None:
             return True
@@ -1275,10 +1280,19 @@ class Comment(Base):
 
 
 class Invoice(Base):
+    objects = MyQuerySet.as_manager()
     select = ['basket']
 
     def __str__(self):
         return f"{self.user}"
+
+    def pre_process(self, my_dict):  # only for update
+        if type(my_dict.get('status')) is str:
+            try:
+                my_dict['status'] = {'payed': 2, 'sent': 6}[my_dict['status']]
+            except KeyError:
+                pass
+        return my_dict
 
     suspended_at = models.DateTimeField(blank=True, null=True, verbose_name='Suspended at')
     suspended_by = models.ForeignKey(User, on_delete=CASCADE, blank=True, null=True, verbose_name='Suspended by',
@@ -1306,10 +1320,11 @@ class Invoice(Base):
     ipg = models.PositiveSmallIntegerField(default=1)
     expire = models.DateTimeField(null=True, blank=True)
     status = models.PositiveSmallIntegerField(default=1, choices=((1, 'pending'), (2, 'payed'), (3, 'canceled'),
-                                                                  (4, 'rejected')))
-    delivery_status = models.CharField(help_text="0/3 - 1/3 - 2/3 - ready - posted", default="0", max_length=255)
+                                                                  (4, 'rejected'), (5, 'sent')))
+    max_shipping_time = models.IntegerField(default=0)
     suppliers = models.ManyToManyField(User, through="InvoiceSuppliers", related_name='invoice_supplier')
     post_tracking_code = models.CharField(max_length=255, null=True, blank=True)
+    post_invoice = models.ForeignKey("Invoice", on_delete=CASCADE, related_name='main_invoice', null=True, blank=True)
 
     class Meta:
         db_table = 'invoice'

@@ -22,7 +22,8 @@ import pysnooper
 @shared_task
 def cancel_reservation(invoice_id, **kwargs):
     invoice = Invoice.objects.get(pk=invoice_id)
-    if invoice.status != 2:  # payed
+    successful_status = [2, 5]  # payed, posted
+    if invoice.status not in successful_status:
         invoice.status = 3  # canceled
         invoice.suspended_at = timezone.now()
         invoice.save()

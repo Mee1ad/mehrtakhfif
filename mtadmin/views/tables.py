@@ -250,17 +250,25 @@ class InvoiceView(TableView):
     permission_required = 'server.view_invoice'
 
     def get(self, request):
-        return JsonResponse(serialized_objects(request, Invoice, InvoiceASchema, InvoiceESchema, error_null_box=False))
+        params = get_params(request, box_key='box_id')
+        status = params['filter'].get('status', None)
+        if status:
+            params['filter']['status'] = {'pending': 1, 'payed': 2, 'canceled': 3, 'rejected': 4, 'ready': 5, 'sent': 6}[status]
+        params['filter']['final_price__isnull'] = False
+        return JsonResponse(serialized_objects(request, Invoice, InvoiceASchema, InvoiceESchema, error_null_box=False,
+                                               params=params))
+
+    def put(self, request):
+        # todo limit fields for update
+        return update_object(request, Invoice, require_box=False)
 
 
 class InvoiceProductView(TableView):
     permission_required = 'server.view_invoice'
 
     def get(self, request):
-        params = get_params(request, box_key='box_id')
-        params['filter']['invoice__status'] = 2
         return JsonResponse(serialized_objects(request, InvoiceStorage, InvoiceStorageASchema, InvoiceStorageASchema,
-                                               error_null_box=False, params=params))
+                                               error_null_box=False))
 
     def put(self, request):
         return update_object(request, InvoiceStorage, require_box=False, box_key='box_id')
