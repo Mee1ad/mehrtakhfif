@@ -40,9 +40,14 @@ from django.http import JsonResponse
 random_data = string.ascii_lowercase + string.digits
 default_step = 10
 default_page = 1
+
+
 def get_message(key):
     res_pattern = {'user_is_ban': 'دسترسی شما محدود شده است لطفا بعدا تلاش کنید'}
     return {'message': res_pattern[key]}
+
+
+box_with_own_post = [2, 7, 10]  # golkade, adavat_moosighi, super market
 res_code = {'success': 200, 'bad_request': 400, 'unauthorized': 401, 'forbidden': 403, 'token_issue': 401,
             'integrity': 406, 'banned': 493, 'activation_warning': 250, 'updated_and_disable': 251,
             'object_does_not_exist': 444, 'signup_with_pp': 203, 'invalid_password': 450,
@@ -416,6 +421,7 @@ def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=Non
         summary['mt_profit'] += basket_product.discount_price - basket_product.start_price - ha_profit
     basket.basket_products = basket_products
     # summary['shipping_cost'] = get_shipping_cost(user, basket)
+
     summary['shipping_cost'] = get_shipping_cost_temp(user, basket)
     if return_obj:
         basket.summary = summary

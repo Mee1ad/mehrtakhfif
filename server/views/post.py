@@ -57,13 +57,21 @@ def get_state_position(destination, origin=25):
         return 'out'
 
 
+def get_state_position_temp(destination):
+    rasht = [365, 366, 456, 458]
+    if destination in rasht:
+        return 'in'
+    return 'out'
+
+
 def get_shipping_cost_temp(user, basket):
     if not user.is_authenticated or not user.default_address:
         # todo fix
         return 0
-    state = user.default_address.state_id
-    state_position = get_state_position(destination=state)
-    prices = {'in': 9000, 'neighbor': 15000}
+    city = user.default_address.city_id
+    state_position = get_state_position_temp(destination=city)
+
+    prices = {'in': 9000, 'out': 15000}
     return prices[state_position]
 
 
