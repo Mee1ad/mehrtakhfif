@@ -196,7 +196,7 @@ class InvoiceASchema(BaseAdminSchema, InvoiceSchema):
     products_count = fields.Method("get_products_count")
 
     def get_products_count(self, obj):
-        return obj.invoice_storages.all().values_list('count', flat=True)
+        return sum(obj.invoice_storages.all().values_list('count', flat=True))
 
     def get_deliver_status(self, obj):
         product_counts = obj.invoice_storages.all().count()
@@ -220,6 +220,11 @@ class InvoiceESchema(InvoiceASchema):
     shipping_cost = fields.Int()
     start_price = fields.Method('get_start_price')
     post_invoice = fields.Nested("InvoiceASchema")
+    recipient_info = fields.Method("recipient_info")
+
+    def get_recipient_info(self, obj):
+        return render_to_response('recipient_info A5.html', user)
+
 
     def get_start_price(self, obj):
         invoice_storages = InvoiceStorage.objects.filter(invoice=obj).values_list('start_price', flat=True)
@@ -235,6 +240,17 @@ class InvoiceESchema(InvoiceASchema):
 
     def get_ipg(self, obj):
         return [ip for ip in ipg['data'] if ip['id'] == obj.ipg][0]
+
+
+class InvoiceStorageASchema(InvoiceStorageSchema):
+    class Meta:
+        additional = ('id', 'count', 'invoice_id', 'discount_price')
+
+    storage = fields.Method("get_storage")
+    deliver_status = fields.Function(lambda o: o.get_deliver_status_display())
+
+    def get_storage(self, obj):
+        return StorageESchema().dump(obj.storage)
 
 
 class ProductASchema(BaseAdminSchema):
@@ -434,17 +450,6 @@ class TagGroupTagASchema(Schema):
 class TagGroupASchema(BaseAdminSchema):
     name = fields.Dict()
     tags = TagGroupField()
-
-
-class InvoiceStorageASchema(InvoiceStorageSchema):
-    class Meta:
-        additional = ('id', 'count', 'invoice_id', 'discount_price')
-
-    storage = fields.Method("get_storage")
-    deliver_status = fields.Function(lambda o: o.get_deliver_status_display())
-
-    def get_storage(self, obj):
-        return StorageESchema().dump(obj.storage)
 
 
 class MenuASchema(BaseAdminSchema):
