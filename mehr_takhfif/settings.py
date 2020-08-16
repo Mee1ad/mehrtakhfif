@@ -3,6 +3,7 @@ from django.utils.timezone import activate
 from re import compile
 from .settings_var import *
 import sys
+from .telegram_settings import *
 
 TESTING = 'test' in sys.argv
 
@@ -42,6 +43,7 @@ INSTALLED_APPS = \
         # 'django.contrib.admindocs',
         # 'django.contrib.postgres',
         'prettyjson',
+        'django_telegram_login'
     ] + MY_INSTALLED_APPS
 
 MIDDLEWARE = [

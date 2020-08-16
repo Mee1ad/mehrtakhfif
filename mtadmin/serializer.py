@@ -222,13 +222,19 @@ class InvoiceESchema(InvoiceASchema):
     post_invoice = fields.Nested("InvoiceASchema")
     recipient_info_a5 = fields.Method("get_recipient_info_a5")
     recipient_info_a6 = fields.Method("get_recipient_info_a6")
+    max_shipping_time = fields.Method('get_max_shipping_time')
+
+    def get_max_shipping_time(self, obj):
+        success_status = Invoice.success_status
+        if obj.status in success_status:
+            return add_minutes(obj.max_shipping_time * 60, obj.payed_at).timestamp()
+        return None
 
     def get_recipient_info_a5(self, obj):
         return HOST + f'/admin/recipient_info?i={obj.pk}'
 
     def get_recipient_info_a6(self, obj):
         return HOST + f'/admin/recipient_info?i={obj.pk}&s=6'
-
 
     def get_start_price(self, obj):
         invoice_storages = InvoiceStorage.objects.filter(invoice=obj).values_list('start_price', flat=True)

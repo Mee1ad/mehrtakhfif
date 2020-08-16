@@ -1,7 +1,7 @@
 from django.core.mail import send_mail
 from os import listdir
 from mtadmin.utils import *
-from django.http import HttpResponseBadRequest
+from django.http import HttpResponseBadRequest, HttpResponse
 from server.utils import get_access_token, random_data
 import json
 from mtadmin.serializer import *
@@ -12,6 +12,7 @@ from django.contrib.auth import login
 from server.documents import *
 import requests
 from mehr_takhfif.settings import ARVAN_API_KEY
+from mehr_takhfif.telegram_settings import *
 from time import sleep
 from os import listdir
 from elasticsearch_dsl import Q
@@ -262,4 +263,23 @@ class RecipientInfo(AdminView):
 
 
 class TelegramLogin(AdminView):
-    pass
+    def get(self, request):
+        tg_login_widget = create_redirect_login_widget(
+            TELEGRAM_LOGIN_REDIRECT_URL, TELEGRAM_BOT_NAME, size=LARGE, user_photo=DISABLE_USER_PHOTO)
+
+        context = {'telegram_login_widget': tg_login_widget}
+        return render(request, 'tg_login.html', context)
+
+
+class TelegramRegister(View):
+    def get(self, request):
+        try:
+            params = verify_telegram_authentication(bot_token=TELEGRAM_BOT_TOKEN, request_data=request.GET).dict()
+            User.objects.filter(pk=request.user.pk).update(tg_id=params['id'], tg_username=params['username'],
+                                                           tg_first_name=params['first_name'])
+        except TelegramDataIsOutdatedError:
+            return HttpResponse('Authentication was received more than a day ago.')
+
+        except NotTelegramDataError:
+            return HttpResponse('The data is not related to Telegram!')
+        return JsonResponse({})

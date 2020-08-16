@@ -43,4 +43,7 @@ urlpatterns = [
     path('ads', error_handler(AdsView.as_view()), name='ads'),
     path('slider', error_handler(SliderView.as_view()), name='slider'),
     path('recipient_info', error_handler(RecipientInfo.as_view()), name='recipient_info'),
+
+    path('tg_login', error_handler(TelegramLogin.as_view()), name='tg_login'),
+    path('tg_register', error_handler(TelegramRegister.as_view()), name='tg_register'),
 ]

@@ -36,7 +36,8 @@ bp = {'terminal_id': 5290645, 'username': "takh252", 'password': "71564848",
       'ipg_url': "https://bpm.shaparak.ir/pgwchannel/startpay.mellat",
       'callback': 'https://api.mehrtakhfif.com/payment/callback'}  # mellat
 
-client = zeep.Client(wsdl="https://bpm.shaparak.ir/pgwchannel/services/pgw?wsdl")
+if not DEBUG:
+    client = zeep.Client(wsdl="https://bpm.shaparak.ir/pgwchannel/services/pgw?wsdl")
 
 saddad = {'merchant_id': None, 'terminal_id': None, 'terminal_key': None,
           'payment_request': 'https://sadad.shaparak.ir/VPG/api/v0/Request/PaymentRequest',
@@ -221,6 +222,7 @@ class CallBack(View):
             return HttpResponseRedirect("https://mehrtakhfif.com")
         # todo https://memoryleaks.ir/unlimited-charge-of-mytehran-account/
         invoice.status = 2
+        Invoice.objects.filter(pk=invoice.post_invoice_id).update(status=2)
         invoice.payed_at = timezone.now()
         invoice.card_holder = data_dict['CardHolderPan']
         invoice.final_amount = data_dict['FinalAmount']

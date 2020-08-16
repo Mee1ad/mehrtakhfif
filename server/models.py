@@ -432,6 +432,9 @@ class User(AbstractUser):
         # self.full_clean()
         super().save(*args, **kwargs)
 
+    tg_id = models.PositiveIntegerField(null=True, blank=True)
+    tg_username = models.CharField(max_length=255, null=True, blank=True)
+    tg_first_name = models.CharField(max_length=255, null=True, blank=True)
     first_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='First name')
     last_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='Last name')
     username = models.CharField(max_length=150, unique=True)
@@ -1274,6 +1277,8 @@ class Comment(Base):
 class Invoice(Base):
     objects = MyQuerySet.as_manager()
     select = ['basket']
+
+    success_status = [2, 5]
 
     def __str__(self):
         return f"{self.user}"
