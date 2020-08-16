@@ -5,7 +5,7 @@ from django_telegram_login.errors import (NotTelegramDataError, TelegramDataIsOu
 
 TELEGRAM_BOT_NAME = 'mhrtbot'
 TELEGRAM_BOT_TOKEN = '1155951648:AAF71ubf6Y_GWt0vnbjvdTPIuhwA7aos-4E'
-TELEGRAM_LOGIN_REDIRECT_URL = 'https://mehrtakhfif.com/tg_register'
+TELEGRAM_LOGIN_REDIRECT_URL = 'https://api.mehrtakhfif.com/admin/tg_register'
 
 telegram_login_widget = create_redirect_login_widget(
     TELEGRAM_LOGIN_REDIRECT_URL, TELEGRAM_BOT_NAME, size=LARGE, user_photo=DISABLE_USER_PHOTO
