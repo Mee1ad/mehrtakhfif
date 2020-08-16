@@ -186,7 +186,7 @@ class BoxASchema(BoxSchema):
 
 
 class InvoiceASchema(BaseAdminSchema, InvoiceSchema):
-    list_filter = [Box, Category]
+    list_filter = [Category]
 
     class Meta:
         additional = ('basket_id',)
@@ -557,4 +557,4 @@ class SliderASchema(BaseSchema):
             return None
 
 
-tables = {'product': ProductASchema, 'media': MediaASchema, 'invoice': InvoiceASchema}
+tables = {'product': ProductASchema, 'media': MediaASchema, 'invoice': InvoiceASchema, 'feature': FeatureASchema}

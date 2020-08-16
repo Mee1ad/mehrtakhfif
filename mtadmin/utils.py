@@ -359,8 +359,10 @@ def delete_object(request, model, pk):
 def get_model_filter(model, box):
     filter_list = model.objects.filter(**box).extra(select={'name': "name->>'fa'"}).values('id', 'name')
     name = model.__name__.lower()
-    if name == 'category':
-        name = 'categories'
+    try:
+        name = {'category': 'categories', 'featuregroup': 'group_id'}[name]
+    except KeyError:
+        name = name
     return {'name': name, 'filters': list(filter_list)}
 
 

@@ -465,6 +465,7 @@ class ProductSchema(MinProductSchema):
     details = fields.Method("get_details")
     location = fields.Method("get_location")
     cities = CityField()
+    states = CityField()
     # todo make it day for long hours
     max_shipping_time = fields.Int()
 

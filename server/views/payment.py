@@ -73,7 +73,7 @@ class PaymentRequest(View):
             invoice.final_amount = invoice.amount
             invoice.save()
             Basket.objects.create(user=invoice.user, created_by=invoice.user, updated_by=invoice.user)
-            if DEBUG is True:
+            if DEBUG:
                 return JsonResponse({"url": f"http://mt.com:3002/invoice/{invoice.id}"})
             return JsonResponse({"url": f"https://mehrtakhfif.com/invoice/{invoice.id}"})
 

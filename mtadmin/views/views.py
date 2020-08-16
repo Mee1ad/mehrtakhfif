@@ -91,7 +91,9 @@ class TableFilter(AdminView):
         elif table == 'invoice':
             invoice_status = Invoice.objects.order_by('status').distinct('status')
             return JsonResponse(
-                {'types': [{'id': item.status, 'name': item.get_status_display()} for item in invoice_status]})
+                {'data': {'name': 'types',
+                          'filters': [{'id': item.status, 'name': item.get_status_display()} for item in
+                                      invoice_status]}})
         filters = get_table_filter(table, box)
         return JsonResponse({'data': filters})
 

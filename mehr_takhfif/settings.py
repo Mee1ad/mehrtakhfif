@@ -41,6 +41,7 @@ INSTALLED_APPS = \
         # 'cloudinary',
         # 'django.contrib.admindocs',
         # 'django.contrib.postgres',
+        'prettyjson',
     ] + MY_INSTALLED_APPS
 
 MIDDLEWARE = [

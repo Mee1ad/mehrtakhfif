@@ -36,6 +36,7 @@ from server.serialize import UserSchema
 # from barcode.base import Barcode
 from server.views.post import get_shipping_cost, get_shipping_cost_temp
 from django.http import JsonResponse
+from mehr_takhfif.settings import DEBUG
 
 random_data = string.ascii_lowercase + string.digits
 default_step = 10

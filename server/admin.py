@@ -15,6 +15,24 @@ from django.contrib.postgres.fields.jsonb import KeyTextTransform
 import pysnooper
 from django.core.exceptions import FieldError
 from server.serialize import get_tax
+import pprint
+from django.contrib.sessions.models import Session
+from prettyjson import PrettyJSONWidget
+
+
+class SessionAdmin(admin.ModelAdmin):
+    def _session_data(self, obj):
+        return pprint.pformat(obj.get_decoded()).replace('\n', '<br>\n')
+
+    _session_data.allow_tags = True
+    list_display = ['session_key', '_session_data', 'expire_date']
+    readonly_fields = ['_session_data']
+    exclude = ['session_data']
+    date_hierarchy = 'expire_date'
+    formfield_overrides = {
+        JSONField: {'widget': PrettyJSONWidget(attrs={'initial': 'parsed'})},
+    }
+
 
 UserAdmin.list_display += ('updated_at',)
 UserAdmin.list_filter = ('groups', 'box_permission', 'is_staff')
@@ -54,6 +72,9 @@ class BoxAdmin(SafeDeleteAdmin):
     search_fields = ['name']
     autocomplete_fields = ['owner']
     list_per_page = 10
+    formfield_overrides = {
+        JSONField: {'widget': PrettyJSONWidget(attrs={'initial': 'parsed'})}
+    }
 
     # ordering = ('-created_at',)
 
@@ -385,38 +406,15 @@ class HolidayAdmin(SafeDeleteAdmin):
         return obj.name['fa']
 
 
-admin.site.register(User, UserAdmin)
-admin.site.register(Box, BoxAdmin)
-admin.site.register(Category, CategoryAdmin)
-admin.site.register(Feature)
-admin.site.register(Address)
-admin.site.register(Media, MediaAdmin)
-admin.site.register(Product, ProductAdmin)
-admin.site.register(House, HouseAdmin)
-admin.site.register(HousePrice, HousePriceAdmin)
-admin.site.register(ResidenceType, ResidenceTypeAdmin)
-admin.site.register(Booking, BookAdmin)
-admin.site.register(Storage, StorageAdmin)
-admin.site.register(Basket)
-admin.site.register(Comment, CommentAdmin)
-admin.site.register(Invoice, InvoiceAdmin)
-admin.site.register(InvoiceStorage, InvoiceStorageAdmin)
-admin.site.register(InvoiceSuppliers, InvoiceSupplierAdmin)
-admin.site.register(Menu, MenuAdmin)
-admin.site.register(Tag)
-admin.site.register(Rate)
-admin.site.register(Slider, SliderAdmin)
-admin.site.register(SpecialOffer, SpecialOfferAdmin)
-admin.site.register(SpecialProduct, SpecialProductAdmin)
-# admin.site.register(WalletDetail)
-admin.site.register(Blog)
-admin.site.register(BlogPost)
-admin.site.register(WishList)
-admin.site.register(NotifyUser)
-admin.site.register(Ad, AdAdmin)
-admin.site.register(State, StateAdmin)
-admin.site.register(City, CityAdmin)
-admin.site.register(Permission)
-admin.site.register(Holiday, HolidayAdmin)
+register_list = [(Session, SessionAdmin), (User, UserAdmin), (Box, BoxAdmin), (Category, CategoryAdmin),
+                 (Feature,), (Address,), (Media, MediaAdmin), (Product, ProductAdmin), (House, HouseAdmin),
+                 (HousePrice, HousePriceAdmin), (ResidenceType, ResidenceTypeAdmin), (Booking, BookAdmin),
+                 (Storage, StorageAdmin), (Basket,), (Comment, CommentAdmin), (Invoice, InvoiceAdmin),
+                 (InvoiceStorage, InvoiceStorageAdmin), (InvoiceSuppliers, InvoiceSupplierAdmin), (Menu, MenuAdmin),
+                 (Tag,), (Rate,), (Slider, SliderAdmin), (SpecialOffer, SpecialOfferAdmin), (Holiday, HolidayAdmin),
+                 (SpecialProduct, SpecialProductAdmin), (Blog,), (BlogPost,), (WishList,), (NotifyUser,), (Ad, AdAdmin),
+                 (State, StateAdmin), (City, CityAdmin), (Permission,)]
+for item in register_list:
+    admin.site.register(*item)
 admin.site.site_header = "Mehr Takhfif"
 admin.site.site_title = "Mehr Takhfif"

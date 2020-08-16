@@ -28,6 +28,7 @@ from random import randint
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import FieldDoesNotExist
 from push_notifications.models import APNSDevice, GCMDevice
+from django.contrib.sessions.models import Session
 
 product_types = [(1, 'service'), (2, 'product'), (3, 'tourism'), (4, 'package'), (5, 'package_item')]
 deliver_status = [(1, 'pending'), (2, 'packing'), (3, 'sending'), (4, 'delivered'), (5, 'referred')]
@@ -120,13 +121,16 @@ def upload_to(instance, filename):
 
 
 def reduce_image_quality(img):
-    with Image.open(img) as img:
-        x, y = img.size
-        width = (60 / x)
-        height = int((y * width))
-        ph = img.resize((60, height), Image.ANTIALIAS)
-        ph = ph.filter(ImageFilter.GaussianBlur(1.6))
-    return ph
+    try:
+        with Image.open(img) as img:
+            x, y = img.size
+            width = (60 / x)
+            height = int((y * width))
+            ph = img.resize((60, height), Image.ANTIALIAS)
+            ph = ph.filter(ImageFilter.GaussianBlur(1.6))
+        return ph
+    except Exception:
+        raise ValidationError('بنظر میاد فرمت عکست درست نیست باید jpg باشه!')
 
 
 def is_list_of_dict(data):
@@ -203,9 +207,9 @@ class MyQuerySet(SafeDeleteQueryset):
             raise ValidationError(_("والد نامعتبر است"))
         if not category.media and kwargs.get('disable') is False:
             raise ValidationError(_('قبل از فعالسازی تصویر دسته بندی را مشخص کنید'))
-        features = Feature.objects.filter(pk__in=kwargs.get('features', []))
-        category.feature_set.clear()
-        category.feature_set.add(*features)
+        # features = Feature.objects.filter(pk__in=kwargs.get('features', []))
+        # category.feature_set.clear()
+        # category.feature_set.add(*features)
         return kwargs
 
     def storage_validation(self, **kwargs):
@@ -897,6 +901,7 @@ class Product(Base):
     brand = models.ForeignKey(Brand, on_delete=PROTECT, null=True, blank=True)
     thumbnail = models.ForeignKey(Media, on_delete=PROTECT, related_name='product_thumbnail', null=True, blank=True)
     cities = models.ManyToManyField(City)
+    states = models.ManyToManyField(State)
     default_storage = models.OneToOneField(null=True, blank=True, to="Storage", on_delete=CASCADE,
                                            related_name='product_default_storage')
     tags = models.ManyToManyField(Tag, through="ProductTag", related_name='products')
@@ -1185,20 +1190,7 @@ class BasketProduct(MyModel):
         return f"{self.id}"
 
     def validation(self):
-        for feature in self.features:
-            try:
-                item = FeatureStorage.objects.get(pk=feature['fsid'])
-                item = Feature.objects.get(pk=item.feature_id)
-                ids = [v.get('id') for v in item.value]
-                if not set(feature['fvid']).issubset(ids):
-                    raise ValidationError(_('invalid feature_value_id'))
-            except Feature.DoesNotExist:
-                raise ValidationError(_('invalid feature_id'))
-            except FeatureStorage.DoesNotExist:
-                raise ValidationError(_('invalid feature_storage_id'))
-            except Exception as e:
-                print(e)
-                raise ValidationError(_('invalid data'))
+        pass
 
     def save(self, *args, **kwargs):
         self.validation()

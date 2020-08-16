@@ -42,7 +42,12 @@ class SoldProductCount(AdminView):
     def get(self, request):
         box_id = request.GET.get('b')
         data = {}
-        products = InvoiceStorage.objects.filter(box_id=box_id, invoice__status=2)
-        for status in deliver_status:
-            data[status[1]] = products.filter(deliver_status=status[0]).count()
-        return JsonResponse(data)
+        allowed_rolls = {'admin', 'support'}
+        roll = request.user.groups.filter(name__in=allowed_rolls)
+        if roll.exists() or request.user.is_superuser:
+            products = InvoiceStorage.objects.filter(box_id=box_id, invoice__status=2)
+            for status in deliver_status:
+                data[status[1]] = products.filter(deliver_status=status[0]).count()
+            return JsonResponse(data)
+        return JsonResponse({})
+
