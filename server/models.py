@@ -902,7 +902,7 @@ class Product(Base):
     thumbnail = models.ForeignKey(Media, on_delete=PROTECT, related_name='product_thumbnail', null=True, blank=True)
     cities = models.ManyToManyField(City)
     states = models.ManyToManyField(State)
-    default_storage = models.OneToOneField(null=True, blank=True, to="Storage", on_delete=CASCADE,
+    default_storage = models.OneToOneField(null=True, blank=True, to="Storage", on_delete=PROTECT,
                                            related_name='product_default_storage')
     tags = models.ManyToManyField(Tag, through="ProductTag", related_name='products')
     tag_groups = models.ManyToManyField(TagGroup, related_name='products')
@@ -1124,7 +1124,7 @@ class Storage(Base):
         super().save(*args)
         self.post_process(kwargs)
 
-    product = models.ForeignKey(Product, on_delete=PROTECT, related_name='storages')
+    product = models.ForeignKey(Product, on_delete=CASCADE, related_name='storages')
     features = models.ManyToManyField(Feature, through='FeatureStorage', related_query_name="features")
     items = models.ManyToManyField("self", through='Package', symmetrical=False)
     features_percent = models.PositiveSmallIntegerField(default=0)

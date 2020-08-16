@@ -302,6 +302,12 @@ class StorageAdmin(Base):
         except AttributeError:
             return None
 
+    def lookup_allowed(self, key, value):
+        # if key in ('related__pk', 'related__custom_field'):
+        return True
+
+        # return super(StorageAdmin, self).lookup_allowed(key, value)
+
     storage_name.short_description = 'title'
     get_supplier.short_description = 'supplier'
 

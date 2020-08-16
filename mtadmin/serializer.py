@@ -220,10 +220,14 @@ class InvoiceESchema(InvoiceASchema):
     shipping_cost = fields.Int()
     start_price = fields.Method('get_start_price')
     post_invoice = fields.Nested("InvoiceASchema")
-    recipient_info = fields.Method("recipient_info")
+    recipient_info_a5 = fields.Method("get_recipient_info_a5")
+    recipient_info_a6 = fields.Method("get_recipient_info_a6")
 
-    def get_recipient_info(self, obj):
-        return render_to_response('recipient_info A5.html', user)
+    def get_recipient_info_a5(self, obj):
+        return HOST + f'/admin/recipient_info?i={obj.pk}'
+
+    def get_recipient_info_a6(self, obj):
+        return HOST + f'/admin/recipient_info?i={obj.pk}&s=6'
 
 
     def get_start_price(self, obj):

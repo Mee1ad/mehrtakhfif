@@ -42,4 +42,5 @@ urlpatterns = [
     path('vip_type', error_handler(VipTypeView.as_view()), name='vip_type'),
     path('ads', error_handler(AdsView.as_view()), name='ads'),
     path('slider', error_handler(SliderView.as_view()), name='slider'),
+    path('recipient_info', error_handler(RecipientInfo.as_view()), name='recipient_info'),
 ]

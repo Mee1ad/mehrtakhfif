@@ -15,6 +15,7 @@ from mehr_takhfif.settings import ARVAN_API_KEY
 from time import sleep
 from os import listdir
 from elasticsearch_dsl import Q
+from django.shortcuts import render_to_response
 
 
 class Token(AdminView):
@@ -245,3 +246,20 @@ class Icon(AdminView):
             icon_list.append({'name': i, 'feature': True})
         with open("icons.json", "w") as read_file:
             json.dump(icon_list, read_file)
+
+
+class RecipientInfo(AdminView):
+    def get(self, request):
+        invoice_id = request.GET.get('i')
+        size = request.GET.get('s', None)
+        invoice = Invoice.objects.get(pk=invoice_id)
+        success_status = [2, 5]
+        if invoice.status in success_status:
+            if size == '6':
+                return render_to_response('recipient_info A6.html', invoice.address)
+            return render_to_response('recipient_info A5.html', invoice.address)
+        return JsonResponse({})
+
+
+class TelegramLogin(AdminView):
+    pass
