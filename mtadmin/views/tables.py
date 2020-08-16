@@ -264,7 +264,7 @@ class InvoiceView(TableView):
 
 
 class InvoiceProductView(TableView):
-    permission_required = 'server.view_invoice'
+    permission_required = 'server.view_invoicestorage'
 
     def get(self, request):
         return JsonResponse(serialized_objects(request, InvoiceStorage, InvoiceStorageASchema, InvoiceStorageASchema,
