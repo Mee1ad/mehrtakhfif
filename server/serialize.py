@@ -300,7 +300,6 @@ class UserSchema(MinUserSchema):
     class Meta:
         additional = MinUserSchema.Meta.additional + ('gender', 'shaba')
 
-    avatar = fields.Method("get_avatar", data_key="avatar_id")
     birthday = fields.Method("get_birthday")
     vip_type = fields.Method("get_vip_type")
     default_address = fields.Method('get_default_address')

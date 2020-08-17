@@ -38,7 +38,6 @@ def cancel_reservation(invoice_id, **kwargs):
 
 
 @task_postrun.connect
-@pysnooper.snoop()
 def task_postrun_handler(task_id=None, **kwargs):
     args = kwargs.get('kwargs', None)
     if args:
