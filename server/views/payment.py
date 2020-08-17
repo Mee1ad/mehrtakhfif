@@ -224,6 +224,11 @@ class CallBack(View):
             return HttpResponseRedirect("https://mehrtakhfif.com")
         # todo https://memoryleaks.ir/unlimited-charge-of-mytehran-account/
         invoice.status = 2
+        try:
+            invoice.post_invoice.status = 2
+            invoice.post_invoice.save()
+        except Exception:
+            pass
         Invoice.objects.filter(pk=invoice.post_invoice_id).update(status=2)
         invoice.payed_at = timezone.now()
         invoice.card_holder = data_dict['CardHolderPan']

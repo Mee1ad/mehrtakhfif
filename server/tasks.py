@@ -25,6 +25,11 @@ def cancel_reservation(invoice_id, **kwargs):
     successful_status = [2, 5]  # payed, posted
     if invoice.status not in successful_status:
         invoice.status = 3  # canceled
+        try:
+            invoice.post_invoice.status = 3
+            invoice.post_invoice.save()
+        except Exception:
+            pass
         invoice.suspended_at = timezone.now()
         invoice.save()
         sync_storage(invoice.basket_id, add)
