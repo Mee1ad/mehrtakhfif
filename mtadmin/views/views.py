@@ -264,11 +264,7 @@ class RecipientInfo(AdminView):
 
 class TelegramLogin(AdminView):
     def get(self, request):
-        tg_login_widget = create_redirect_login_widget(
-            TELEGRAM_LOGIN_REDIRECT_URL, TELEGRAM_BOT_NAME, size=LARGE, user_photo=DISABLE_USER_PHOTO)
-
-        context = {'telegram_login_widget': tg_login_widget}
-        return render(request, 'tg_login.html', context)
+        return render(request, 'tg_login.html')
 
 
 class TelegramRegister(View):
