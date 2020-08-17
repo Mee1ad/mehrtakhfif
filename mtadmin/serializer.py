@@ -171,7 +171,7 @@ class BaseAdminSchema(Schema):
 
 class UserASchema(UserSchema):
     class Meta:
-        additional = UserSchema.Meta.additional + ('tg_image', )
+        additional = UserSchema.Meta.additional + ('avatar', )
 
 
 class SupplierESchema(BaseAdminSchema):

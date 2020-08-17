@@ -435,7 +435,7 @@ class User(AbstractUser):
     tg_id = models.PositiveIntegerField(null=True, blank=True)
     tg_username = models.CharField(max_length=255, null=True, blank=True)
     tg_first_name = models.CharField(max_length=255, null=True, blank=True)
-    tg_photo_url = models.URLField(null=True, blank=True)
+    avatar = models.URLField(null=True, blank=True)
     first_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='First name')
     last_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='Last name')
     username = models.CharField(max_length=150, unique=True)
@@ -461,7 +461,6 @@ class User(AbstractUser):
     box_permission = models.ManyToManyField("Box", blank=True)
     email_verified = models.BooleanField(default=False, verbose_name='Email verified')
     subscribe = models.BooleanField(default=True)
-    avatar = models.PositiveSmallIntegerField(null=True, blank=True)
     meli_code = models.CharField(max_length=15, blank=True, null=True, verbose_name='National code',
                                  validators=[validate_meli_code])
     wallet_credit = models.IntegerField(default=0)
