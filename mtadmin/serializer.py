@@ -173,6 +173,13 @@ class UserASchema(UserSchema):
     class Meta:
         additional = UserSchema.Meta.additional + ('avatar', )
 
+    telegram_logged_in = fields.Method('get_telegram_logged_in')
+
+    def get_telegram_logged_in(self, obj):
+        if obj.tg_id:
+            return True
+        return False
+
 
 class SupplierESchema(BaseAdminSchema):
     class Meta:
