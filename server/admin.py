@@ -276,7 +276,7 @@ class ResidenceTypeAdmin(SafeDeleteAdmin):
 
 
 class StorageAdmin(Base):
-    list_display = ('id', 'storage_name', 'available_count', 'available_count_for_sale', 'max_count_for_sale',
+    list_display = ('id', 'storage_name', 'sold_count', 'available_count_for_sale', 'max_count_for_sale',
                     'discount_price', 'disable', 'tax_type', 'get_supplier') + SafeDeleteAdmin.list_display
     list_filter = () + SafeDeleteAdmin.list_filter
     list_display_links = ('storage_name',)

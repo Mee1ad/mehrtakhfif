@@ -1,7 +1,7 @@
 from django.core.mail import send_mail
 from os import listdir
 from mtadmin.utils import *
-from django.http import HttpResponseBadRequest, HttpResponse
+from django.http import HttpResponseBadRequest, HttpResponse, HttpResponseRedirect
 from server.utils import get_access_token, random_data
 import json
 from mtadmin.serializer import *
@@ -279,4 +279,4 @@ class TelegramRegister(View):
 
         except NotTelegramDataError:
             return HttpResponse('The data is not related to Telegram!')
-        return JsonResponse({})
+        return HttpResponseRedirect(f'https://admin.{HOST}')

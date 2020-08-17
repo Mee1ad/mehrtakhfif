@@ -1133,7 +1133,7 @@ class Storage(Base):
     items = models.ManyToManyField("self", through='Package', symmetrical=False)
     features_percent = models.PositiveSmallIntegerField(default=0)
     available_count = models.PositiveIntegerField(default=0, verbose_name='Available count')
-    sold_count = models.PositiveIntegerField(default=0, verbose_name='Sold count')
+    sold_count = models.IntegerField(default=0, verbose_name='Sold count')
     start_price = models.PositiveIntegerField(default=0, verbose_name='Start price')
     qty = models.CharField(max_length=255, null=True, blank=True, help_text="quantity")
     sku = models.CharField(max_length=255, null=True, blank=True, help_text="stock keeping unit")
