@@ -279,4 +279,4 @@ class TelegramRegister(View):
 
         except NotTelegramDataError:
             return HttpResponse('The data is not related to Telegram!')
-        return HttpResponseRedirect(f'https://admin.{HOST}')
+        return HttpResponseRedirect('https://admin.mehrtakhfif.com')
