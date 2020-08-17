@@ -82,7 +82,7 @@ class AuthMiddleware:
                 pass
                 # raise PermissionDenied
         elif app_name == 'admin':
-            if request.user.is_superuser is False or request.user.groups.filter('mt_accountants').exists() is False:
+            if request.user.is_superuser is False and request.user.groups.filter(name='mt_accountants').exists() is False:
                 return HttpResponseNotFound()
         # set new basket count in cookie
         with configure_scope() as scope:
