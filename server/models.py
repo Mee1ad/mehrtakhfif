@@ -435,6 +435,7 @@ class User(AbstractUser):
     tg_id = models.PositiveIntegerField(null=True, blank=True)
     tg_username = models.CharField(max_length=255, null=True, blank=True)
     tg_first_name = models.CharField(max_length=255, null=True, blank=True)
+    tg_photo_url = models.URLField(null=True, blank=True)
     first_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='First name')
     last_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='Last name')
     username = models.CharField(max_length=150, unique=True)
@@ -1159,7 +1160,7 @@ class Storage(Base):
     vip_prices = models.ManyToManyField(VipType, through='VipPrice', related_name="storages")
     dimensions = JSONField(help_text="{'weight': '', 'height: '', 'width': '', 'length': ''}",
                            validators=[validate_vip_price], default=dict)
-    max_shipping_time = models.PositiveIntegerField(null=True, blank=True)
+    max_shipping_time = models.PositiveIntegerField(default=0)
 
     class Meta:
         db_table = 'storage'
@@ -1284,6 +1285,8 @@ class Invoice(Base):
         return f"{self.user}"
 
     def pre_process(self, my_dict):  # only for update
+        print(self.status)
+        print(my_dict['status'])
         if type(my_dict.get('status')) is str:
             try:
                 my_dict['status'] = {'payed': 2, 'sent': 6}[my_dict['status']]

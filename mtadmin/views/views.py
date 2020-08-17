@@ -109,7 +109,7 @@ class CheckLoginToken(AdminView):
         permissions = user.box_permission.all()
         boxes = BoxASchema(user=request.user).dump(permissions, many=True)
         roll = get_roll(user)
-        user = UserSchema().dump(user)
+        user = UserASchema().dump(user)
         user['roll'] = roll
         res = {'user': user, 'boxes': boxes}
         return JsonResponse(res)
@@ -276,7 +276,8 @@ class TelegramRegister(View):
         try:
             params = verify_telegram_authentication(bot_token=TELEGRAM_BOT_TOKEN, request_data=request.GET).dict()
             User.objects.filter(pk=request.user.pk).update(tg_id=params['id'], tg_username=params['username'],
-                                                           tg_first_name=params['first_name'])
+                                                           tg_first_name=params['first_name'],
+                                                           tg_photo_url=params['photo_url'])
         except TelegramDataIsOutdatedError:
             return HttpResponse('Authentication was received more than a day ago.')
 

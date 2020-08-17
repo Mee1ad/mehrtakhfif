@@ -141,6 +141,8 @@ class PaymentRequest(View):
         basket = basket or get_basket(user, request.lang, require_profit=True)
         shipping_price = 0
         if basket['address_required']:
+            if user.default_address.state_id != 25:
+                raise ValidationError('در حال حاضر محصولات فقط در گیلان قابل ارسال میباشد')
             address = AddressSchema().dump(user.default_address)
             basket['summary']['total_price'] -= basket['summary']['shipping_cost']
             basket['summary']['discount_price'] -= basket['summary']['shipping_cost']

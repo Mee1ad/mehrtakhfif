@@ -169,6 +169,11 @@ class BaseAdminSchema(Schema):
         return TagASchema().dump(tags, many=True)
 
 
+class UserASchema(UserSchema):
+    class Meta:
+        additional = UserSchema.Meta.additional + ('tg_image', )
+
+
 class SupplierESchema(BaseAdminSchema):
     class Meta:
         additional = ('id', 'username', 'first_name', 'last_name', 'shaba', 'is_verify', 'settings', 'deposit_id')

@@ -421,9 +421,10 @@ def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=Non
         summary['ha_profit'] += ha_profit
         summary['mt_profit'] += basket_product.discount_price - basket_product.start_price - ha_profit
     basket.basket_products = basket_products
-    # summary['shipping_cost'] = get_shipping_cost(user, basket)
+    if address_required:
+        # summary['shipping_cost'] = get_shipping_cost(user, basket)
 
-    summary['shipping_cost'] = get_shipping_cost_temp(user, basket)
+        summary['shipping_cost'] = get_shipping_cost_temp(user, basket)
     if return_obj:
         basket.summary = summary
         basket.address_required = address_required
