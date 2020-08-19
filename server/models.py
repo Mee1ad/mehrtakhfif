@@ -444,7 +444,6 @@ class User(AbstractUser):
     email = models.CharField(max_length=255, blank=True, null=True, validators=[validate_email])
     password = models.CharField(max_length=255, blank=True, null=True)
     gender = models.BooleanField(blank=True, null=True)  # True: man, False: woman
-    updated_at = models.DateTimeField(blank=True, auto_now=True, verbose_name='Updated at')
     is_ban = models.BooleanField(default=False)
     shaba = models.CharField(max_length=255, null=True, blank=True)
     birthday = models.DateField(null=True, blank=True)
@@ -475,6 +474,7 @@ class User(AbstractUser):
     updated_by = models.ForeignKey('User', on_delete=PROTECT, related_name="%(app_label)s_%(class)s_updated_by",
                                    null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(blank=True, auto_now=True, verbose_name='Updated at')
 
     class Meta:
         db_table = 'user'

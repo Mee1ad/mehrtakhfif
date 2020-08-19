@@ -251,7 +251,7 @@ class CallBack(View):
         invoice_storages = InvoiceStorage.objects.filter(invoice=invoice)
         for invoice_storage in invoice_storages:
             owner = invoice_storage.storage.product.box.owner
-            message = f"محصول: {invoice_storage.storage.title['fa']}  تعداد {invoice_storage.count}"
+            message = f"محصول: {invoice_storage.storage.title['fa']}  تعداد: {invoice_storage.count} عدد"
             # send_email('گزارش فروش', owner.email, message=message)
             devices = GCMDevice.objects.filter(user=owner)
             [device.send_message(message, extra={'title': "گزارش فروش"}) for device in devices]

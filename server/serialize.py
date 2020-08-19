@@ -281,7 +281,7 @@ class BaseSchema(Schema):
 
 class MinUserSchema(BaseSchema):
     class Meta:
-        additional = ('first_name', 'last_name', 'username', 'meli_code')
+        additional = ('username', 'meli_code')
 
     name = fields.Method("get_username")
     email = fields.Email()

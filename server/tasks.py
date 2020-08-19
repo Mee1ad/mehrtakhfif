@@ -53,7 +53,7 @@ def sale_summary_notification(**kwargs):
             duplicate_data[0]['count'] += invoice_storage.count
     for item in notify_list:
         if item['owner'].username == '09015518439':
-            send_sms(item['owner'].username, content=f"تعداد سفارشات: {item['count']}")
+            send_sms(item['owner'].username, pattern="jalx4fpe3d", input_data={"order_count": item['count']})
     superusers = [User.objects.get(pk=1)]
     item_count = sum([item['count'] for item in notify_list])
     [send_sms(user.username, content=f"تعداد سفارشات: {item_count}") for user in superusers]
