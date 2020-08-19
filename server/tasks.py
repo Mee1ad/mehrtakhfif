@@ -57,6 +57,7 @@ def sale_summary_notification(**kwargs):
     superusers = [User.objects.get(pk=1)]
     item_count = sum([item['count'] for item in notify_list])
     [send_sms(user.username, content=f"تعداد سفارشات: {item_count}") for user in superusers]
+    return {'notified admins': [admin['owner'].first_name + " " + admin['owner'].last_name for admin in notify_list]}
 
 
 @task_postrun.connect
