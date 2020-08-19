@@ -1,14 +1,15 @@
 from os import listdir
 from time import sleep
 
-import requests
 from django.core.mail import send_mail
 from django.http import HttpResponseBadRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import render_to_response, render
 from django.utils.crypto import get_random_string
+from django_telegram_login.authentication import verify_telegram_authentication
+from django_telegram_login.errors import TelegramDataIsOutdatedError, NotTelegramDataError
 from elasticsearch_dsl import Q
 
-from mehr_takhfif.settings import ARVAN_API_KEY
+from mehr_takhfif.settings import ARVAN_API_KEY, TELEGRAM_BOT_TOKEN
 from mtadmin.serializer import *
 from mtadmin.utils import *
 from server.documents import *

@@ -1,4 +1,4 @@
-from mehr_takhfif.settings import TOKEN_SALT, ADMIN, DEFAULT_COOKIE_DOMAIN, HA_ACCOUNTANTS, MT_ACCOUNTANTS
+from mehr_takhfif.settings import TOKEN_SALT, ADMIN, DEFAULT_COOKIE_DOMAIN, POST, MT_ACCOUNTANTS
 from server.utils import default_step, default_page, res_code, set_csrf_cookie, check_csrf_token, \
     get_custom_signed_cookie, set_custom_signed_cookie
 from server.models import User, Basket
@@ -33,8 +33,8 @@ class AuthMiddleware:
         if ADMIN:
             request.user = User.objects.order_by('id').first()
             # request.user = User.objects.get(pk=133)
-        if HA_ACCOUNTANTS:
-            request.user = User.objects.get(pk=3)
+        if POST:
+            request.user = User.objects.get(pk=10)
         if MT_ACCOUNTANTS:
             request.user = User.objects.get(pk=4)
         delay = request.GET.get('delay', None)
