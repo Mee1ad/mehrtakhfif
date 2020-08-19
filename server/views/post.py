@@ -69,7 +69,7 @@ def get_shipping_cost_temp(user, basket):
         return 0
     if not user.is_authenticated or not user.default_address:
         # todo fix
-        return 0
+        return -1
     city = user.default_address.city_id
     state_position = get_state_position_temp(destination=city)
 

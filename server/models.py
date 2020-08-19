@@ -461,7 +461,6 @@ class User(AbstractUser):
     box_permission = models.ManyToManyField("Box", blank=True)
     email_verified = models.BooleanField(default=False, verbose_name='Email verified')
     subscribe = models.BooleanField(default=True)
-    avatar = models.PositiveSmallIntegerField(null=True, blank=True)
     meli_code = models.CharField(max_length=15, blank=True, null=True, verbose_name='National code',
                                  validators=[validate_meli_code])
     wallet_credit = models.IntegerField(default=0)

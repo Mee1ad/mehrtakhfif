@@ -1,27 +1,17 @@
-import pdfkit
-import os
-from mehr_takhfif.settings import BASE_DIR
-from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
-from django.views import View
 import operator
-from server.models import InvoiceStorage, Basket, DiscountCode, InvoiceSuppliers
-from django_celery_beat.models import PeriodicTask
-from server.serialize import *
-import pytz
 from datetime import datetime
-from server.utils import get_basket, add_one_off_job, sync_storage, add_minutes, set_custom_signed_cookie
-from server.serialize import get_tax
-from mehr_takhfif.settings import SAFE_IP
-import pysnooper
-import json
-import zeep
 
-from django.core.exceptions import ValidationError
-from mehr_takhfif.settings import INVOICE_ROOT, SHORTLINK, STATIC_ROOT, DEBUG
+import zeep
+from django.http import JsonResponse, HttpResponseRedirect
 from django.utils.translation import gettext_lazy as _
-from django_celery_beat.models import PeriodicTask, IntervalSchedule
+from django.views import View
+
+from mehr_takhfif.settings import DEBUG
+from server.serialize import *
+from server.serialize import get_tax
 from server.tasks import cancel_reservation
-from server.views.post import get_shipping_cost, get_shipping_cost_temp
+from server.utils import get_basket, add_one_off_job, sync_storage, add_minutes, send_email
+import pysnooper
 
 ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'disable': False},
                 {'id': 2, 'key': 'melli', 'name': 'ملی', 'hide': True, 'disable': True},
@@ -74,9 +64,8 @@ class PaymentRequest(View):
             invoice.final_amount = invoice.amount
             invoice.save()
             Basket.objects.create(user=invoice.user, created_by=invoice.user, updated_by=invoice.user)
-            if DEBUG:
-                return JsonResponse({"url": f"http://mt.com:3002/invoice/{invoice.id}"})
-            return JsonResponse({"url": f"https://mehrtakhfif.com/invoice/{invoice.id}"})
+            CallBack.notification_admin(invoice)
+            return JsonResponse({"url": f"http://mt.com:3002/invoice/{invoice.id}"})
 
         user = request.user
         if not Basket.objects.filter(pk=basket_id, user=user).exists():
@@ -153,10 +142,12 @@ class PaymentRequest(View):
             if max_shipping_time < product['product']['default_storage']['max_shipping_time']:
                 max_shipping_time = product['product']['default_storage']['max_shipping_time']
 
-        post_invoice = Invoice.objects.create(created_by=user, updated_by=user, user=user, address=address,
-                                              expire=add_minutes(15),
-                                              amount=basket['summary']['shipping_cost'],
-                                              basket_id=basket['basket']['id'])
+        post_invoice = None
+        if basket['summary']['shipping_cost']:
+            post_invoice = Invoice.objects.create(created_by=user, updated_by=user, user=user, address=address,
+                                                  expire=add_minutes(15),
+                                                  amount=basket['summary']['shipping_cost'],
+                                                  basket_id=basket['basket']['id'])
         invoice = Invoice.objects.create(created_by=user, updated_by=user, user=user,
                                          mt_profit=basket['summary']['mt_profit'], expire=add_minutes(15),
                                          invoice_discount=basket['summary']['invoice_discount'], address=address,
@@ -239,6 +230,7 @@ class CallBack(View):
                                              task='server.tasks.send_invoice')
         invoice.save()
         self.finish_invoice_jobs(invoice, finish=True)
+        self.notification_admin(invoice)
         return HttpResponseRedirect(f"https://mehrtakhfif.com/invoice/{invoice_id}")
 
     def finish_invoice_jobs(self, invoice, cancel=None, finish=None):
@@ -251,6 +243,18 @@ class CallBack(View):
             PeriodicTask.objects.filter(name=task_name).update(enabled=False, description=description)
         if cancel:
             cancel_reservation(invoice.pk)
+
+
+    @staticmethod
+    @pysnooper.snoop()
+    def notification_admin(invoice):
+        invoice_storages = InvoiceStorage.objects.filter(invoice=invoice)
+        for invoice_storage in invoice_storages:
+            owner = invoice_storage.storage.product.box.owner
+            message = f"محصول: {invoice_storage.storage.title['fa']}  تعداد {invoice_storage.count}"
+            # send_email('گزارش فروش', owner.email, message=message)
+            devices = GCMDevice.objects.filter(user=owner)
+            [device.send_message(message, extra={'title': "گزارش فروش"}) for device in devices]
 
     def verify(self, invoice_id, sale_ref_id):
         r = client.service.bpVerifyRequest(terminalId=bp['terminal_id'], userName=bp['username'],
