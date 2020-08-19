@@ -272,6 +272,7 @@ class InvoiceStorageASchema(InvoiceStorageSchema):
 
     storage = fields.Method("get_storage")
     deliver_status = fields.Function(lambda o: o.get_deliver_status_display())
+    user = fields.Nested(UserSchema)
 
     def get_storage(self, obj):
         return StorageESchema().dump(obj.storage)

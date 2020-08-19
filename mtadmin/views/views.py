@@ -9,7 +9,6 @@ from django.utils.crypto import get_random_string
 from elasticsearch_dsl import Q
 
 from mehr_takhfif.settings import ARVAN_API_KEY
-from mehr_takhfif.telegram_settings import *
 from mtadmin.serializer import *
 from mtadmin.utils import *
 from server.documents import *

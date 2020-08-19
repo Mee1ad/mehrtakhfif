@@ -1,9 +1,10 @@
 import os
-from django.utils.timezone import activate
-from re import compile
-from .settings_var import *
 import sys
-from .telegram_settings import *
+from re import compile
+
+from django.utils.timezone import activate
+
+from .settings_var import *
 
 TESTING = 'test' in sys.argv
 
