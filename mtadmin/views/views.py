@@ -1,22 +1,19 @@
-from django.core.mail import send_mail
 from os import listdir
-from mtadmin.utils import *
-from django.http import HttpResponseBadRequest, HttpResponse, HttpResponseRedirect
-from server.utils import get_access_token, random_data
-import json
-from mtadmin.serializer import *
-from django.utils.crypto import get_random_string
-import pysnooper
-from server.utils import *
-from django.contrib.auth import login
-from server.documents import *
+from time import sleep
+
 import requests
+from django.core.mail import send_mail
+from django.http import HttpResponseBadRequest, HttpResponse, HttpResponseRedirect
+from django.shortcuts import render_to_response, render
+from django.utils.crypto import get_random_string
+from elasticsearch_dsl import Q
+
 from mehr_takhfif.settings import ARVAN_API_KEY
 from mehr_takhfif.telegram_settings import *
-from time import sleep
-from os import listdir
-from elasticsearch_dsl import Q
-from django.shortcuts import render_to_response, render
+from mtadmin.serializer import *
+from mtadmin.utils import *
+from server.documents import *
+from server.utils import *
 
 
 class Token(AdminView):

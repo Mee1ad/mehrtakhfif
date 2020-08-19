@@ -57,5 +57,65 @@ Content-Type: Application/json
   "Description": "this is a test payment"
 }
 
-###   all   tax  price_without_tax  discount  final_price  unit_price
-###   4000  330        3670           2000        6000        1835
+### get basket
+GET {{host}}/basket?use_session=False
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+### get basket from session
+GET {{host}}/basket?use_session=True
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+### add to basket
+POST {{host}}/basket
+Content-Type: application/json
+
+{
+  "products": [
+    {
+      "id": 329,
+      "count": 3
+    }
+  ],
+  "use_session": false
+}
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+### add to basket using session
+POST {{host}}/basket
+Content-Type: application/json
+
+{
+  "products": [
+    {
+      "storage_id": 329,
+      "count": 3
+    }
+  ],
+  "use_session": true
+}
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET http://api.mt.com/test
+
+###

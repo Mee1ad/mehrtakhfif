@@ -14,9 +14,9 @@ from mehr_takhfif.settings import INVOICE_ROOT, STATIC_ROOT, SHORTLINK
 import pdfkit
 from django.template.loader import render_to_string
 from mehr_takhfif.settings import ARVAN_API_KEY
-from time import sleep
-import requests
-import pysnooper
+from mehr_takhfif.settings import INVOICE_ROOT, STATIC_ROOT, SHORTLINK
+from server.models import Invoice, InvoiceStorage, User
+from server.utils import sync_storage, send_sms, send_email, random_data, add_days
 
 
 @shared_task
@@ -35,6 +35,28 @@ def cancel_reservation(invoice_id, **kwargs):
         sync_storage(invoice.basket_id, add)
         invoice.basket.sync = 2  # canceled
         return 'invoice canceled, storage synced successfully'
+
+
+@shared_task
+def sale_summary_notification(**kwargs):
+    yesterday = add_days(-1)
+    invoices = Invoice.objects.filter(payed_at__gt=yesterday)
+    notify_list = []
+    for invoice in invoices:
+        invoice_storages = InvoiceStorage.objects.filter(invoice=invoice)
+        for invoice_storage in invoice_storages:
+            owner = invoice_storage.storage.product.box.owner
+            duplicate_data = [item for item in notify_list if item['owner'] == owner]
+            if not duplicate_data:
+                notify_list.append({'owner': owner, 'count': invoice_storage.count})
+                continue
+            duplicate_data[0]['count'] += invoice_storage.count
+    for item in notify_list:
+        if item['owner'].username == '09015518439':
+            send_sms(item['owner'].username, content=f"تعداد سفارشات: {item['count']}")
+    superusers = [User.objects.get(pk=1)]
+    item_count = sum([item['count'] for item in notify_list])
+    [send_sms(user.username, content=f"تعداد سفارشات: {item_count}") for user in superusers]
 
 
 @task_postrun.connect

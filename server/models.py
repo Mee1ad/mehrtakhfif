@@ -461,6 +461,7 @@ class User(AbstractUser):
     box_permission = models.ManyToManyField("Box", blank=True)
     email_verified = models.BooleanField(default=False, verbose_name='Email verified')
     subscribe = models.BooleanField(default=True)
+    avatar = models.PositiveSmallIntegerField(null=True, blank=True)
     meli_code = models.CharField(max_length=15, blank=True, null=True, verbose_name='National code',
                                  validators=[validate_meli_code])
     wallet_credit = models.IntegerField(default=0)
@@ -826,9 +827,10 @@ class Product(Base):
     remove_fields = []
     custom_m2m = {'tags': ProductTag}
     ordered_m2m = {'media': ProductMedia}
-    m2m = ['categories', 'cities', 'tag_groups']
+    m2m = ['categories', 'cities', 'tag_groups', 'states']
     required_m2m = ['categories', 'media']
-    fields = {'thumbnail': 'تامبنیل', 'categories': 'دسته بندی', 'tags': 'تگ', 'media': 'مدیا'}
+    fields = {'thumbnail': 'تامبنیل', 'categories': 'دسته بندی', 'tags': 'تگ', 'media': 'مدیا',
+              'description': 'توضیحات'}
 
     def pre_process(self, my_dict):
         if (self.review is not None) and (my_dict.get('review') != self.review):
@@ -1369,7 +1371,7 @@ class InvoiceStorage(Base):
     box = models.ForeignKey(Box, on_delete=CASCADE)
     tax = models.PositiveIntegerField()
     storage = models.ForeignKey(Storage, on_delete=PROTECT)
-    invoice = models.ForeignKey(Invoice, on_delete=PROTECT, related_name='invoice_storages')
+    invoice = models.ForeignKey(Invoice, on_delete=CASCADE, related_name='invoice_storages')
     count = models.PositiveIntegerField(default=1)
     final_price = models.PositiveIntegerField()
     total_price = models.PositiveIntegerField()

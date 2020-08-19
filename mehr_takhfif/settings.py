@@ -43,7 +43,6 @@ INSTALLED_APPS = \
         # 'django.contrib.admindocs',
         # 'django.contrib.postgres',
         'prettyjson',
-        'django_telegram_login'
     ] + MY_INSTALLED_APPS
 
 MIDDLEWARE = [

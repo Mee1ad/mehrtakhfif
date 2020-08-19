@@ -199,6 +199,114 @@ Content-Type: application/json
 ###
 DELETE {{admin_host}}/product?id=54
 
+### ProductFeature CRUD
+GET {{admin_host}}/product?id=513
+
+### Storage CRUD
+POST {{admin_host}}/storage
+Content-Type: application/json
+
+{
+  "available_count": 987,
+  "available_count_for_sale": 987,
+  "deadline": null,
+  "dimensions": {
+    "weight": 1500,
+    "height": 20,
+    "length": 40,
+    "width": 26
+  },
+  "discount_price": 305000,
+  "features": [],
+  "final_price": 338000,
+  "invoice_description": {
+    "fa": "<p></p>",
+    "en": "",
+    "ar": ""
+  },
+  "invoice_title": {
+    "fa": "کفش ورزشی زنانه Adidas مدل MTS-1",
+    "en": "",
+    "ar": ""
+  },
+  "max_count_for_sale": 3,
+  "min_count_alert": 0,
+  "product_id": 51,
+  "shipping_cost": 0,
+  "start_price": 270000,
+  "start_time": 1591004832,
+  "supplier_id": 6,
+  "tax_type": "has_not",
+  "title": {
+    "fa": "کفش ورزشی زنانه Adidas مدل MTS-1",
+    "en": "",
+    "ar": ""
+  },
+  "vip_prices": []
+}
+
+###
+GET {{admin_host}}/storage?id=516
+
+###
+GET {{admin_host}}/storage
+
+###
+PUT {{admin_host}}/storage
+Content-Type: application/json
+
+{
+  "id": 330,
+  "available_count": 987,
+  "available_count_for_sale": 987,
+  "deadline": null,
+  "dimensions": {
+    "weight": 1500,
+    "height": 20,
+    "length": 40,
+    "width": 26
+  },
+  "discount_price": 305000,
+  "features": [
+    {
+      "product_feature_id": 15,
+      "extra_data": {}
+    },
+    {
+      "product_feature_id": 19,
+      "extra_data": {}
+    }
+  ],
+  "final_price": 338000,
+  "invoice_description": {
+    "fa": "<p></p>",
+    "en": "",
+    "ar": ""
+  },
+  "invoice_title": {
+    "fa": "کفش ورزشی زنانه Adidas مدل MTS-1",
+    "en": "",
+    "ar": ""
+  },
+  "max_count_for_sale": 3,
+  "min_count_alert": 0,
+  "product_id": 51,
+  "shipping_cost": 0,
+  "start_price": 270000,
+  "start_time": 1591004832,
+  "supplier_id": 6,
+  "tax_type": "has_not",
+  "title": {
+    "fa": "کفش ورزشی زنانه Adidas مدل MTS-1",
+    "en": "",
+    "ar": ""
+  },
+  "vip_prices": []
+}
+
+###
+DELETE {{admin_host}}/storage?id=54
+
 ### Feature CRUD
 POST {{admin_host}}/feature
 Content-Type: application/json
