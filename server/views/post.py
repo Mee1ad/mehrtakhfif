@@ -65,7 +65,7 @@ def get_state_position_temp(destination):
 
 
 def get_shipping_cost_temp(user, basket):
-    if user.groups.filter(name="mehrtakhfif").exists():
+    if user.vip_types.filter(name__fa="MehrTakhfif").exists():
         return 0
     if not user.is_authenticated or not user.default_address:
         # todo fix
