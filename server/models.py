@@ -494,10 +494,10 @@ class VipType(Base):
     fields = {}
 
     def __str__(self):
-        return self.name
+        return self.name['fa']
 
     name = JSONField()
-    media = models.CharField(max_length=255)
+    media = models.CharField(max_length=255, null=True, blank=True)
 
     class Meta:
         db_table = 'vip_type'

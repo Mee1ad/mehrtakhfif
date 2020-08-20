@@ -1,23 +1,19 @@
+import pprint
+from datetime import date
+
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import *
-from safedelete.admin import SafeDeleteAdmin, highlight_deleted
 from django.contrib.auth.models import Permission
+from django.contrib.postgres.fields.jsonb import KeyTextTransform
+from django.core.exceptions import FieldError
 from django.urls import reverse
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
-from mehr_takhfif import settings
-import os
-from mehr_takhfif.settings import HOST
 from django.utils.translation import gettext_lazy as _
-from datetime import date
-from django.contrib.postgres.fields.jsonb import KeyTextTransform
-import pysnooper
-from django.core.exceptions import FieldError
-from server.serialize import get_tax
-import pprint
-from django.contrib.sessions.models import Session
 from prettyjson import PrettyJSONWidget
+from safedelete.admin import SafeDeleteAdmin
+
+from .models import *
 
 
 class SessionAdmin(admin.ModelAdmin):
@@ -412,6 +408,21 @@ class HolidayAdmin(SafeDeleteAdmin):
         return obj.name['fa']
 
 
+class VipTypeAdmin(SafeDeleteAdmin):
+    list_display = ('name_fa', 'media')
+    # list_filter = ('day_off',)
+    search_fields = ['name', ]
+    list_per_page = 10
+
+    ordering = ('-created_at',)
+
+    def name_fa(self, obj):
+        return obj.name['fa']
+
+    def url(self, obj):
+        return mark_safe(f'<a href="{HOST}{obj.media.url}">{obj.media.name}</a>')
+
+
 register_list = [(Session, SessionAdmin), (User, UserAdmin), (Box, BoxAdmin), (Category, CategoryAdmin),
                  (Feature,), (Address,), (Media, MediaAdmin), (Product, ProductAdmin), (House, HouseAdmin),
                  (HousePrice, HousePriceAdmin), (ResidenceType, ResidenceTypeAdmin), (Booking, BookAdmin),
@@ -419,7 +430,7 @@ register_list = [(Session, SessionAdmin), (User, UserAdmin), (Box, BoxAdmin), (C
                  (InvoiceStorage, InvoiceStorageAdmin), (InvoiceSuppliers, InvoiceSupplierAdmin), (Menu, MenuAdmin),
                  (Tag,), (Rate,), (Slider, SliderAdmin), (SpecialOffer, SpecialOfferAdmin), (Holiday, HolidayAdmin),
                  (SpecialProduct, SpecialProductAdmin), (Blog,), (BlogPost,), (WishList,), (NotifyUser,), (Ad, AdAdmin),
-                 (State, StateAdmin), (City, CityAdmin), (Permission,)]
+                 (State, StateAdmin), (City, CityAdmin), (Permission,), (VipType, VipTypeAdmin)]
 for item in register_list:
     admin.site.register(*item)
 admin.site.site_header = "Mehr Takhfif"
