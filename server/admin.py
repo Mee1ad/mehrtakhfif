@@ -34,7 +34,8 @@ UserAdmin.list_display += ('updated_at',)
 UserAdmin.list_filter = ('groups', 'box_permission', 'is_staff')
 UserAdmin.ordering = ('-id',)
 UserAdmin.list_per_page = 10
-UserAdmin.fieldsets[2][1]['fields'] = ('is_supplier',) + UserAdmin.fieldsets[2][1]['fields'] + ('box_permission',)
+UserAdmin.fieldsets[2][1]['fields'] = ('is_supplier',) + UserAdmin.fieldsets[2][1]['fields'] + ('box_permission',
+                                                                                                'vip_types')
 UserAdmin.filter_horizontal += ('box_permission',)
 
 
