@@ -1289,7 +1289,7 @@ class Invoice(Base):
         print(my_dict['status'])
         if type(my_dict.get('status')) is str:
             try:
-                my_dict['status'] = {'payed': 2, 'sent': 6}[my_dict['status']]
+                my_dict['status'] = {'sent': 6}[my_dict['status']]
             except KeyError:
                 pass
         return my_dict

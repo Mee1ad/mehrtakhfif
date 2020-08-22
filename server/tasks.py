@@ -1,22 +1,23 @@
 from __future__ import absolute_import, unicode_literals
 
+import random
+from operator import add
+from time import sleep
+
+import pdfkit
+import requests
 from celery import shared_task
 from celery.signals import task_postrun
-from server.models import Invoice
-from operator import add
-from server.utils import sync_storage, send_sms, send_email, random_data
+from django.template.loader import render_to_string
 from django.utils import timezone
-from server.models import InvoiceStorage
 from django_celery_beat.models import PeriodicTask
 from django_celery_results.models import TaskResult
-import random
-from mehr_takhfif.settings import INVOICE_ROOT, STATIC_ROOT, SHORTLINK
-import pdfkit
-from django.template.loader import render_to_string
+
 from mehr_takhfif.settings import ARVAN_API_KEY
 from mehr_takhfif.settings import INVOICE_ROOT, STATIC_ROOT, SHORTLINK
 from server.models import Invoice, InvoiceStorage, User
 from server.utils import sync_storage, send_sms, send_email, random_data, add_days
+from push_notifications.models import GCMDevice
 
 
 @shared_task
@@ -38,7 +39,21 @@ def cancel_reservation(invoice_id, **kwargs):
 
 
 @shared_task
-def sale_summary_notification(**kwargs):
+def sale_report(invoice_id, **kwargs):
+    invoice_storages = InvoiceStorage.objects.filter(invoice_id=invoice_id)
+    for invoice_storage in invoice_storages:
+        owner = invoice_storage.storage.product.box.owner
+        message = f"""عنوان محصول:
+                      {invoice_storage.storage.title['fa']}
+                      تعداد:{invoice_storage.count}"""
+        send_email('گزارش فروش', owner.email, message=message)
+        devices = GCMDevice.objects.filter(user=owner)
+        [device.send_message(message, extra={'title': "گزارش فروش"}) for device in devices]
+    return f"{invoice_id}-successfully reported"
+
+
+@shared_task
+def sale_report_summary(**kwargs):
     yesterday = add_days(-1)
     invoices = Invoice.objects.filter(payed_at__gt=yesterday)
     notify_list = []

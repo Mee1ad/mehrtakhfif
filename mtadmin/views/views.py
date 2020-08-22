@@ -113,7 +113,6 @@ class CheckLoginToken(AdminView):
 
 
 class Search(AdminView):
-
     def get(self, request):
         model = request.GET.get('type', None)
         switch = {'supplier': self.supplier, 'tag': self.tag, 'product': self.product, 'cat': self.category}
@@ -141,9 +140,12 @@ class Search(AdminView):
         products_id = []
         s = ProductDocument.search()
         type_query = Q('bool', should=[Q("match", type=product_type) for product_type in types])
-        r = s.query('match', box_id=box_id).query(type_query).query('match', name_fa=q)
+        print(type_query)
+        r = s.query('match', box_id=box_id).query('match', name_fa=q)
+        # r = s.query('match', box_id=box_id).query(type_query).query('match', name_fa=q)
         if r.count() == 0 and not q:
-            r = s.query('match', box_id=box_id).query(type_query).query('match_all')[:10]
+            # r = s.query('match', box_id=box_id).query(type_query).query('match_all')[:10]
+            r = s.query('match', box_id=box_id).query('match_all')[:10]
         [products_id.append(product.id) for product in r]
         products = Product.objects.in_bulk(products_id)
         products = [products[x] for x in products_id]

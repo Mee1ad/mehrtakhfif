@@ -1,8 +1,9 @@
 import operator
 from datetime import datetime
 
+import pysnooper
 import zeep
-from django.http import JsonResponse, HttpResponseRedirect
+from django.http import JsonResponse, HttpResponseRedirect, Http404
 from django.utils.translation import gettext_lazy as _
 from django.views import View
 
@@ -11,7 +12,7 @@ from server.serialize import *
 from server.serialize import get_tax
 from server.tasks import cancel_reservation
 from server.utils import get_basket, add_one_off_job, sync_storage, add_minutes, send_email
-import pysnooper
+from time import sleep
 
 ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'disable': False},
                 {'id': 2, 'key': 'melli', 'name': 'ملی', 'hide': True, 'disable': True},
@@ -65,6 +66,8 @@ class PaymentRequest(View):
             invoice.save()
             Basket.objects.create(user=invoice.user, created_by=invoice.user, updated_by=invoice.user)
             CallBack.notification_admin(invoice)
+            sleep(5)
+            return Http404("ها؟")
             return JsonResponse({"url": f"http://mt.com:3002/invoice/{invoice.id}"})
 
         user = request.user
@@ -128,14 +131,13 @@ class PaymentRequest(View):
         user = request.user
         address = None
         basket = basket or get_basket(user, request.lang, require_profit=True)
-        shipping_price = 0
         if basket['address_required']:
             if user.default_address.state_id != 25:
                 raise ValidationError('در حال حاضر محصولات فقط در گیلان قابل ارسال میباشد')
             address = AddressSchema().dump(user.default_address)
             basket['summary']['total_price'] -= basket['summary']['shipping_cost']
             basket['summary']['discount_price'] -= basket['summary']['shipping_cost']
-            if shipping_price < 0:
+            if basket['summary']['shipping_cost'] < 0:
                 raise ValidationError('لطفا آدرس خود را در پروفایل ثبت کنید')
         max_shipping_time = 0
         for product in basket['basket']['products']:
@@ -244,17 +246,12 @@ class CallBack(View):
         if cancel:
             cancel_reservation(invoice.pk)
 
-
     @staticmethod
     @pysnooper.snoop()
     def notification_admin(invoice):
-        invoice_storages = InvoiceStorage.objects.filter(invoice=invoice)
-        for invoice_storage in invoice_storages:
-            owner = invoice_storage.storage.product.box.owner
-            message = f"محصول: {invoice_storage.storage.title['fa']}  تعداد: {invoice_storage.count} عدد"
-            # send_email('گزارش فروش', owner.email, message=message)
-            devices = GCMDevice.objects.filter(user=owner)
-            [device.send_message(message, extra={'title': "گزارش فروش"}) for device in devices]
+        kwargs = {"invoice_id": invoice.pk}
+        invoice.sync_task = add_one_off_job(name=f"sales report - {invoice.pk}", kwargs=kwargs, interval=0,
+                                            task='server.tasks.sale_report')
 
     def verify(self, invoice_id, sale_ref_id):
         r = client.service.bpVerifyRequest(terminalId=bp['terminal_id'], userName=bp['username'],

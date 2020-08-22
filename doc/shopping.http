@@ -31,15 +31,18 @@ Content-Type: Application/json
   "basket": [
     {
       "id": 13,
-      "count": 1
+      "count": 1,
+      "features": []
     },
     {
       "id": 17,
-      "count": 1
+      "count": 1,
+      "features": []
     },
     {
       "id": 18,
-      "count": 1
+      "count": 1,
+      "features": []
     }
   ]
 }

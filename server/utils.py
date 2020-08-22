@@ -382,7 +382,10 @@ def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=Non
     summary = {"total_price": 0, "discount_price": 0, "profit": 0, "mt_profit": 0, 'ha_profit': 0,
                "shipping_cost": 0, "tax": 0, "final_price": 0}
     address_required = False
+    summary['max_shipping_time'] = 0
     for basket_product in basket_products:
+        if summary['max_shipping_time'] < basket_product.storage.max_shipping_time:
+            summary['max_shipping_time'] = basket_product.storage.max_shipping_time
         storage = basket_product.storage
         basket_product.product = storage.product
         basket_product.product.default_storage = storage
