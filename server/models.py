@@ -1103,7 +1103,7 @@ class Storage(Base):
                                    "weight": self.dimensions['weight'] + package_item.package_item.dimensions['weight']}
             self.discount_percent = int(100 - self.discount_price / self.final_price * 100)
             self.save()
-
+    @pysnooper.snoop()
     def update_price(self):
         packages = list(self.packages.all().order_by('package_id').distinct('package_id')) + \
                    list(self.related_packages.all().order_by('package_id').distinct('package_id'))
@@ -1279,17 +1279,15 @@ class Invoice(Base):
     objects = MyQuerySet.as_manager()
     select = ['basket']
 
-    success_status = [2, 5]
+    success_status = [2, 5, 6]
 
     def __str__(self):
         return f"{self.user}"
 
     def pre_process(self, my_dict):  # only for update
-        print(self.status)
-        print(my_dict['status'])
-        if type(my_dict.get('status')) is str:
+        if type(my_dict.get('status', None)) is str:
             try:
-                my_dict['status'] = {'sent': 6}[my_dict['status']]
+                my_dict['status'] = {'payed': 2, 'sent': 5, 'ready': 6}[my_dict['status']]
             except KeyError:
                 pass
         return my_dict
@@ -1320,7 +1318,7 @@ class Invoice(Base):
     ipg = models.PositiveSmallIntegerField(default=1)
     expire = models.DateTimeField(null=True, blank=True)
     status = models.PositiveSmallIntegerField(default=1, choices=((1, 'pending'), (2, 'payed'), (3, 'canceled'),
-                                                                  (4, 'rejected'), (5, 'sent')))
+                                                                  (4, 'rejected'), (5, 'sent'), (6, 'ready')))
     max_shipping_time = models.IntegerField(default=0)
     suppliers = models.ManyToManyField(User, through="InvoiceSuppliers", related_name='invoice_supplier')
     post_tracking_code = models.CharField(max_length=255, null=True, blank=True)
