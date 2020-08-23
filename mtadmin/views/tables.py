@@ -253,7 +253,8 @@ class InvoiceView(TableView):
         params = get_params(request, box_key='box_id')
         status = params['filter'].get('status', None)
         if status:
-            params['filter']['status'] = {'pending': 1, 'payed': 2, 'canceled': 3, 'rejected': 4, 'ready': 5, 'sent': 6}[status]
+            params['filter']['status'] = {'pending': 1, 'payed': 2, 'canceled': 3, 'rejected': 4,
+                                          'ready': 5, 'sent': 6}[status]
         params['filter']['final_price__isnull'] = False
         return JsonResponse(serialized_objects(request, Invoice, InvoiceASchema, InvoiceESchema, error_null_box=False,
                                                params=params))

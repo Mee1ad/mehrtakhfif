@@ -103,7 +103,7 @@ def get_mimetype(image):
 
 def upload(request, titles, media_type, box=None):
     image_formats = ['.jpeg', '.jpg', '.gif', '.png']
-    audio_formats = ['.jpeg', '.jpg', '.gif', '.png']
+    # audio_formats = ['.jpeg', '.jpg', '.gif', '.png']
     media_list = []
     for file, title in zip(request.FILES.getlist('file'), titles):
         if file is not None:
@@ -112,8 +112,8 @@ def upload(request, titles, media_type, box=None):
             if (mimetype == 'image' and file_format not in image_formats) or \
                     (mimetype != 'image'):
                 return False
-            if media_type == 'avatar' and type(title) == dict:
-                file.name = f"{title['user_id']} {timezone.now().strftime('%Y-%m-%d, %H-%M-%S')}{file_format}"
+            # if media_type == 'avatar' and type(title) == dict:
+            #     file.name = f"{title['user_id']} {timezone.now().strftime('%Y-%m-%d, %H-%M-%S')}{file_format}"
             media = Media(image=file, box_id=box, created_by_id=1, type=media_type,
                           title=title, updated_by=request.user)
             media.save()

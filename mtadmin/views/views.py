@@ -253,8 +253,7 @@ class RecipientInfo(AdminView):
         invoice_id = request.GET.get('i')
         size = request.GET.get('s', None)
         invoice = Invoice.objects.get(pk=invoice_id)
-        success_status = [2, 5]
-        if invoice.status in success_status:
+        if invoice.status in Invoice.success_status:
             if size == '6':
                 return render_to_response('recipient_info A6.html', invoice.address)
             return render_to_response('recipient_info A5.html', invoice.address)

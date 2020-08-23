@@ -93,7 +93,7 @@ class Orders(LoginRequired):
 class InvoiceView(LoginRequired):
     def get(self, request, invoice_id):
         permission_group = ['support', 'mt_accountant', 'superuser']
-        user = {'user': request.user, 'status': 2}  # payed
+        user = {'user': request.user, 'status__in': Invoice.success_status}  # payed
         if request.user.groups.filter(name__in=permission_group) or request.user.is_superuser:
             user = {}
         invoice = get_invoice_file(request, invoice_id=invoice_id, user=user)

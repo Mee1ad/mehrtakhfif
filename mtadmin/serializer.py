@@ -215,6 +215,11 @@ class InvoiceASchema(BaseAdminSchema, InvoiceSchema):
     def get_deliver_status(self, obj):
         product_counts = obj.invoice_storages.all().count()
         ready_product_counts = InvoiceStorage.objects.filter(invoice=obj, deliver_status=2).count()  # packing
+        try:
+            if ready_product_counts / product_counts == 1:
+                Invoice.objects.filter(pk=obj.pk).update()
+        except ZeroDivisionError:
+            pass
         return f'{ready_product_counts} / {product_counts}'
 
 
@@ -239,8 +244,7 @@ class InvoiceESchema(InvoiceASchema):
     max_shipping_time = fields.Method('get_max_shipping_time')
 
     def get_max_shipping_time(self, obj):
-        success_status = Invoice.success_status
-        if obj.status in success_status:
+        if obj.status in Invoice.success_status:
             return add_minutes(obj.max_shipping_time * 60, obj.payed_at).timestamp()
         return None
 
