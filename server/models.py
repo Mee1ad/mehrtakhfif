@@ -1,34 +1,35 @@
+import datetime
 import os
-from PIL import Image
+from operator import attrgetter
+from random import randint
+
+import pysnooper
+import pytz
+from PIL import Image, ImageFilter
 from django.contrib.auth.models import AbstractUser
-from django.contrib.postgres.fields import JSONField, ArrayField
+from django.contrib.postgres.fields import JSONField
 from django.contrib.postgres.indexes import GinIndex
+from django.contrib.sessions.models import Session
+from django.core.exceptions import FieldDoesNotExist
 from django.core.validators import *
 from django.db import models
 from django.db.models import CASCADE, PROTECT, SET_NULL, Q, F
 from django.db.utils import IntegrityError
-from safedelete.signals import post_softdelete
 from django.dispatch import receiver
 from django.utils import timezone
-from push_notifications.models import GCMDevice
-from safedelete.models import SafeDeleteModel, SOFT_DELETE_CASCADE, NO_DELETE
+from django.utils.translation import gettext_lazy as _
 from django_celery_beat.models import PeriodicTask
 from django_celery_results.models import TaskResult
-from mehr_takhfif.settings import HOST, MEDIA_ROOT
-import datetime
-import pysnooper
-from PIL import Image, ImageFilter
-from safedelete.managers import SafeDeleteQueryset
-from safedelete.config import DELETED_INVISIBLE
-from operator import attrgetter
-import pytz
-from server.field_validation import *
-from mtadmin.exception import *
-from random import randint
-from django.utils.translation import gettext_lazy as _
-from django.core.exceptions import FieldDoesNotExist
 from push_notifications.models import APNSDevice, GCMDevice
-from django.contrib.sessions.models import Session
+from push_notifications.models import GCMDevice
+from safedelete.config import DELETED_INVISIBLE
+from safedelete.managers import SafeDeleteQueryset
+from safedelete.models import SafeDeleteModel, SOFT_DELETE_CASCADE
+from safedelete.signals import post_softdelete
+
+from mehr_takhfif.settings import HOST, MEDIA_ROOT
+from mtadmin.exception import *
+from server.field_validation import *
 
 product_types = [(1, 'service'), (2, 'product'), (3, 'tourism'), (4, 'package'), (5, 'package_item')]
 deliver_status = [(1, 'pending'), (2, 'packing'), (3, 'sending'), (4, 'delivered'), (5, 'referred')]
@@ -338,7 +339,6 @@ class Base(SafeDeleteModel):
     def make_item_disable(self, obj, warning=True):
         obj.__class__.objects.filter(pk=obj.pk).update(disable=True, warning=warning)
 
-    @pysnooper.snoop()
     def cascade_disabling(self, storages=None, warning=True):
         if type(storages) != list and storages is not None:
             storages = [storages]
@@ -351,8 +351,8 @@ class Base(SafeDeleteModel):
             package_records = storage.related_packages.all()
             for package_record in package_records:
                 Storage.objects.filter(pk=package_record.package_id).update(disable=True)
-        if warning:
-            raise WarningMessage('آیا میدانستی: محصولات ویژه و پکیج هایی که شامل این انبار بودن هم غیرفعال میشن؟! 🤭')
+        # if warning:
+        #     raise WarningMessage('آیا میدانستی: محصولات ویژه و پکیج هایی که شامل این انبار بودن هم غیرفعال میشن؟! 🤭')
 
 
 class MyModel(models.Model):
@@ -1037,9 +1037,10 @@ class Storage(Base):
                 raise ActivationError(get_activation_warning_msg('ابعاد'))
         else:
             self.required_fields = ['dimensions']
-            if Storage.objects.get(pk=self.pk).items.filter(disable=True):
+            items = self.items.filter(Q(disable=True) | Q(available_count_for_sale=0))
+            if items.exists():
                 self.make_item_disable(self)
-                raise ActivationError(get_activation_warning_msg('یکی از انبار ها'))
+                raise ActivationError(get_activation_warning_msg(f'انبار: {items[0]}'))
         super().clean()
 
     def __str__(self):
@@ -1085,6 +1086,7 @@ class Storage(Base):
                           my_dict.get('vip_prices')]
             VipPrice.objects.bulk_create(vip_prices)
         if self.product.type == 4 and my_dict:  # package
+            print(my_dict)
             # {'is_package': True, 'items': [{'package_item_id':1, 'count': 5}, {'package_item_id':2, 'count': 10}]}
             self.items.clear()
             user = self.created_by
@@ -1103,8 +1105,9 @@ class Storage(Base):
                                    "weight": self.dimensions['weight'] + package_item.package_item.dimensions['weight']}
             self.discount_percent = int(100 - self.discount_price / self.final_price * 100)
             self.save()
-    @pysnooper.snoop()
+
     def update_price(self):
+        print(self.pk)
         packages = list(self.packages.all().order_by('package_id').distinct('package_id')) + \
                    list(self.related_packages.all().order_by('package_id').distinct('package_id'))
         for package in packages:
