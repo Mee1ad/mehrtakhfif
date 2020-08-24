@@ -1084,7 +1084,7 @@ class Storage(Base):
                           for item in
                           my_dict.get('vip_prices')]
             VipPrice.objects.bulk_create(vip_prices)
-        if self.product.type == 4:  # package
+        if self.product.type == 4 and my_dict:  # package
             # {'is_package': True, 'items': [{'package_item_id':1, 'count': 5}, {'package_item_id':2, 'count': 10}]}
             self.items.clear()
             user = self.created_by

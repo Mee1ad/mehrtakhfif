@@ -1,42 +1,34 @@
-import difflib
+import json
+import hashlib
 import json
 import math
-import traceback
-import hashlib
+import string
 import uuid
-import magic
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import padding
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.core import serializers
-from django.db.models import F
-from django.core.mail import EmailMultiAlternatives
-from django.views import View
-from django_celery_beat.models import PeriodicTask, IntervalSchedule
 from datetime import datetime
-import pysnooper
 from operator import add, sub
-from secrets import token_hex
-from mehr_takhfif.settings import CSRF_SALT, TOKEN_SALT, DEFAULT_COOKIE_DOMAIN
-from server.models import *
+
+import jdatetime
+import magic
 import requests
-from server.serialize import get_tax, BoxCategoriesSchema, BasketSchema, MinProductSchema
+from MyQR import myqr
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.postgres.fields.jsonb import KeyTextTransform
 from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
-import string
+from django.core import serializers
 from django.core.exceptions import PermissionDenied
-from MyQR import myqr
-from mehr_takhfif.settings import BASE_DIR
-from server.serialize import InvoiceSchema
-import jdatetime
+from django.core.mail import EmailMultiAlternatives
 from django.utils.translation import gettext_lazy as _
+from django.views import View
+from django_celery_beat.models import IntervalSchedule
+
+from mehr_takhfif.settings import CSRF_SALT, TOKEN_SALT, DEFAULT_COOKIE_DOMAIN
+from server.models import *
+from server.serialize import InvoiceSchema
 from server.serialize import UserSchema
+from server.serialize import get_tax, BoxCategoriesSchema, BasketSchema, MinProductSchema
 # from barcode import generate
 # from barcode.base import Barcode
-from server.views.post import get_shipping_cost, get_shipping_cost_temp
-from django.http import JsonResponse
-from mehr_takhfif.settings import DEBUG
+from server.views.post import get_shipping_cost_temp
 
 random_data = string.ascii_lowercase + string.digits
 default_step = 10
