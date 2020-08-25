@@ -12,12 +12,12 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 from django_celery_beat.models import PeriodicTask
 from django_celery_results.models import TaskResult
+from push_notifications.models import GCMDevice
 
 from mehr_takhfif.settings import ARVAN_API_KEY
 from mehr_takhfif.settings import INVOICE_ROOT, STATIC_ROOT, SHORTLINK
 from server.models import Invoice, InvoiceStorage, User
 from server.utils import sync_storage, send_sms, send_email, random_data, add_days
-from push_notifications.models import GCMDevice
 
 
 @shared_task
@@ -76,6 +76,7 @@ def sale_report_summary(**kwargs):
 
 @task_postrun.connect
 def task_postrun_handler(task_id=None, **kwargs):
+    print('this is postrun kwargs:', kwargs)
     args = kwargs.get('kwargs', None)
     if args:
         task_result = TaskResult.objects.filter(task_id=task_id).first()
@@ -168,3 +169,8 @@ def server_backup():
                     continue
                 break
     return 'backup synced'
+
+
+@shared_task
+def send_invoice(**kwargs):
+    return "test"

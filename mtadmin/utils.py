@@ -62,10 +62,13 @@ def serialized_objects(request, model, serializer=None, single_serializer=None, 
             annotate = {}
             for index, item in enumerate(common_items):
                 annotate[item[0] + '__' + item[1]] = KeyTextTransform(item[1], item[0])
-            query = model.objects.annotate(**annotate).filter(**params['filter']).order_by(*params['order']).distinct(
-                *distinct_by)
-
-        return get_pagination(request, query, serializer, show_all=request.all)
+            try:
+                query = model.objects.annotate(**annotate).filter(**params['filter']).distinct(*distinct_by)\
+                    .order_by(*params['order'])
+                return get_pagination(request, query, serializer, show_all=request.all)
+            except Exception:
+                query = model.objects.annotate(**annotate).filter(**params['filter'])
+                return {**get_pagination(request, query, serializer, show_all=request.all), 'ignore_order': True}
     except (FieldError, ValueError):
         raise FieldError
 
