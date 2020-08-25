@@ -23,7 +23,7 @@ class TableView(LoginRequiredMixin, PermissionRequiredMixin, View):
 class AdminView(LoginRequiredMixin, View):
     pass
 
-
+@pysnooper.snoop()
 def serialized_objects(request, model, serializer=None, single_serializer=None, box_key='box_id', error_null_box=True,
                        params=None):
     pk = request.GET.get('id', None)
@@ -69,6 +69,7 @@ def serialized_objects(request, model, serializer=None, single_serializer=None, 
             except Exception:
                 query = model.objects.annotate(**annotate).filter(**params['filter'])
                 return {**get_pagination(request, query, serializer, show_all=request.all), 'ignore_order': True}
+        return get_pagination(request, query, serializer, show_all=request.all)
     except (FieldError, ValueError):
         raise FieldError
 
