@@ -87,7 +87,7 @@ class AuthMiddleware:
         elif app_name == 'admin':
             print('superuser:', request.user.is_superuser)
             print('accountants:', request.user.groups.filter(name='mt_accountants').exists())
-            if request.user.is_superuser is False and request.user.groups.filter(name='mt_accountants').exists() is False:
+            if not request.user.is_superuser and not request.user.groups.filter(name='mt_accountants').exists():
                 return HttpResponseNotFound()
         # set new basket count in cookie
         with configure_scope() as scope:
