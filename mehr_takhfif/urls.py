@@ -19,11 +19,6 @@ from mehr_takhfif import settings
 from django.conf.urls.static import static
 from django.contrib.staticfiles import views
 
-
-def trigger_error(request):
-    division_by_zero = 1 / 0
-
-
 urlpatterns = [
     path('admin/', include('mtadmin.urls')),
     path('jet/', include('jet.urls', 'jet')),

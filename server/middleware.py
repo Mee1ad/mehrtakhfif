@@ -48,9 +48,12 @@ class AuthMiddleware:
         # print(json.loads(request.body))
 
         # assign request attributes
-        request.step = int(request.GET.get('s', default_step))
-        request.page = int(request.GET.get('p', default_page))
-        request.all = request.GET.get('all', False)
+        try:
+            request.step = int(request.GET.get('s', default_step))
+            request.page = int(request.GET.get('p', default_page))
+            request.all = request.GET.get('all', False)
+        except ValueError:
+            pass
         try:
             request.lang = request.headers['language']
         except Exception:
@@ -82,6 +85,8 @@ class AuthMiddleware:
                 pass
                 # raise PermissionDenied
         elif app_name == 'admin':
+            print('superuser:', request.user.is_superuser)
+            print('accountants:', request.user.groups.filter(name='mt_accountants').exists())
             if request.user.is_superuser is False and request.user.groups.filter(name='mt_accountants').exists() is False:
                 return HttpResponseNotFound()
         # set new basket count in cookie
