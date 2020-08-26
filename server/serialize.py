@@ -504,12 +504,12 @@ class MinStorageSchema(BaseSchema):
                                              vip_type__in=user_groups).values_list('discount_price', flat=True)
             return min(prices)
         except Exception:
-            if obj.available_count_for_sale:
+            if obj.available_count_for_sale > 0:
                 return obj.discount_price
             return 0
 
     def get_final_price(self, obj):
-        if obj.available_count_for_sale:
+        if obj.available_count_for_sale > 0:
             return obj.final_price
         return 0
 
@@ -520,7 +520,7 @@ class MinStorageSchema(BaseSchema):
                                              vip_type__in=user_groups).values_list('discount_percent', flat=True)
             return min(prices)
         except Exception:
-            if obj.available_count_for_sale:
+            if obj.available_count_for_sale > 0:
                 return obj.discount_percent
             return 0
 
