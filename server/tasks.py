@@ -172,5 +172,5 @@ def server_backup():
 
 
 @shared_task
-def send_invoice(**kwargs):
+def test(**kwargs):
     return "test"
