@@ -3,7 +3,6 @@ import os
 from operator import attrgetter
 from random import randint
 
-import pysnooper
 import pytz
 from PIL import Image, ImageFilter
 from django.contrib.auth.models import AbstractUser
@@ -30,6 +29,7 @@ from safedelete.signals import post_softdelete
 from mehr_takhfif.settings import HOST, MEDIA_ROOT
 from mtadmin.exception import *
 from server.field_validation import *
+import pysnooper
 
 product_types = [(1, 'service'), (2, 'product'), (3, 'tourism'), (4, 'package'), (5, 'package_item')]
 deliver_status = [(1, 'pending'), (2, 'packing'), (3, 'sending'), (4, 'delivered'), (5, 'referred')]
@@ -572,6 +572,12 @@ class Address(MyModel):
 class Box(Base):
     def __str__(self):
         return self.name['fa']
+
+    def clean(self, **kwargs):
+        super().clean()
+        if self.disable:
+            special_products = SpecialProduct.objects.filter(box=self)
+            [special_product.safe_delete() for special_product in special_products]
 
     name = JSONField(default=multilanguage)
     permalink = models.CharField(max_length=255, db_index=True, unique=True)
