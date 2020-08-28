@@ -1,6 +1,4 @@
-import json
 import hashlib
-import json
 import math
 import string
 import uuid
@@ -9,7 +7,6 @@ from operator import add, sub
 
 import jdatetime
 import magic
-import requests
 from MyQR import myqr
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.postgres.fields.jsonb import KeyTextTransform
@@ -20,8 +17,9 @@ from django.core.mail import EmailMultiAlternatives
 from django.utils.translation import gettext_lazy as _
 from django.views import View
 from django_celery_beat.models import IntervalSchedule
+from kavenegar import *
 
-from mehr_takhfif.settings import CSRF_SALT, TOKEN_SALT, DEFAULT_COOKIE_DOMAIN
+from mehr_takhfif.settings import CSRF_SALT, TOKEN_SALT, DEFAULT_COOKIE_DOMAIN, SMS_KEY
 from server.models import *
 from server.serialize import InvoiceSchema
 from server.serialize import UserSchema

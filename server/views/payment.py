@@ -1,6 +1,4 @@
 import operator
-from datetime import datetime
-
 import pysnooper
 import zeep
 from django.http import JsonResponse, HttpResponseRedirect, Http404
@@ -9,7 +7,6 @@ from django.views import View
 
 from mehr_takhfif.settings import DEBUG
 from server.serialize import *
-from server.serialize import get_tax
 from server.tasks import cancel_reservation
 from server.utils import get_basket, add_one_off_job, sync_storage, add_minutes, send_email
 from time import sleep
@@ -108,7 +105,7 @@ class PaymentRequest(View):
         # DEBUG:
         # invoice.amount = 1000
         # additional_data = '1,5000,0;2,5000,0'
-        local_time = pytz.timezone("Iran").localize(datetime.now()).strftime("%H%M%S")
+        local_time = pytz.timezone("Iran").localize(datetime.datetime.now()).strftime("%H%M%S")
         r = "0,123456789"
         if not DEBUG:
             r = client.service.bpCumulativeDynamicPayRequest(terminalId=bp['terminal_id'], userName=bp['username'],

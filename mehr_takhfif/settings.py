@@ -181,4 +181,3 @@ PUSH_NOTIFICATIONS_SETTINGS = {
     # "WP_PRIVATE_KEY": "/path/to/your/private.pem",
     # "WP_CLAIMS": {'sub': "mailto: development@example.com"}
 }
-TELEGRAM_BOT_TOKEN = "1155951648:AAF71ubf6Y_GWt0vnbjvdTPIuhwA7aos-4E"

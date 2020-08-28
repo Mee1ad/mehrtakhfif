@@ -456,7 +456,7 @@ class User(AbstractUser):
     deposit_id = models.PositiveSmallIntegerField(null=True, blank=True)
     default_address = models.OneToOneField(to="Address", on_delete=SET_NULL, null=True, blank=True,
                                            related_name="user_default_address")
-    vip_types = models.ManyToManyField(to="VipType", related_name="users")
+    vip_types = models.ManyToManyField(to="VipType", related_name="users", blank=True)
     box_permission = models.ManyToManyField("Box", blank=True)
     email_verified = models.BooleanField(default=False, verbose_name='Email verified')
     subscribe = models.BooleanField(default=True)
