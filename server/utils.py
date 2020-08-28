@@ -282,6 +282,24 @@ def send_sms(to, pattern="gs3vltcvoi", content=None, input_data=None):
     return requests.post('http://ippanel.com/api/select', data=json.dumps(data))
 
 
+def new_send_sms(to, template, token):
+    try:
+        api = KavenegarAPI(SMS_KEY)
+        params = {
+            'sender': '10008000330033',
+            'receptor': '09015518439',  # multiple mobile number, split by comma
+            'template': 'verify',
+            'token': token,
+            'type': 'sms',#sms vs call
+        }
+        response = api.verify_lookup(params)
+        print(response)
+    except APIException as e:
+        print(e)
+    except HTTPException as e:
+        print(e)
+
+
 def send_email(subject, to, from_email='support@mehrtakhfif.com', message=None, html_content=None, attach=None):
     if type(to) != list:
         to = [to]

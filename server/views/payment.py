@@ -1,7 +1,7 @@
 import operator
 import pysnooper
 import zeep
-from django.http import JsonResponse, HttpResponseRedirect, Http404
+from django.http import JsonResponse, HttpResponseRedirect, HttpResponseNotFound
 from django.utils.translation import gettext_lazy as _
 from django.views import View
 
@@ -44,6 +44,7 @@ class IPG(View):
 
 
 class PaymentRequest(View):
+    @pysnooper.snoop()
     def get(self, request, basket_id):
         # ip = request.META.get('REMOTE_ADDR') or request.META.get('HTTP_X_FORWARDED_FOR')
 
@@ -63,9 +64,7 @@ class PaymentRequest(View):
             invoice.save()
             Basket.objects.create(user=invoice.user, created_by=invoice.user, updated_by=invoice.user)
             CallBack.notification_admin(invoice)
-            sleep(5)
-            return Http404("ها؟")
-            return JsonResponse({"url": f"http://mt.com:3002/invoice/{invoice.id}"})
+            return HttpResponseRedirect(f"http://mt.com:3002/invoice/{invoice.id}")
 
         user = request.user
         if not Basket.objects.filter(pk=basket_id, user=user).exists():
