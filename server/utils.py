@@ -268,7 +268,7 @@ def get_barcode(data=None):
 
 # Utils
 
-def send_sms(to, pattern="gs3vltcvoi", content=None, input_data=None):
+def send_sms_old(to, pattern="gs3vltcvoi", content=None, input_data=None):
     # +985000125475
     if to == "Meelad":
         to = "09015518439"
@@ -282,18 +282,16 @@ def send_sms(to, pattern="gs3vltcvoi", content=None, input_data=None):
     return requests.post('http://ippanel.com/api/select', data=json.dumps(data))
 
 
-def new_send_sms(to, template, token):
+def send_sms(to, template, token):
     try:
         api = KavenegarAPI(SMS_KEY)
         params = {
-            'sender': '10008000330033',
-            'receptor': '09015518439',  # multiple mobile number, split by comma
-            'template': 'verify',
+            'receptor': to,  # multiple mobile number, split by comma
+            'template': template,
             'token': token,
-            'type': 'sms',#sms vs call
+            'type': 'sms',  # sms vs call
         }
-        response = api.verify_lookup(params)
-        print(response)
+        api.verify_lookup(params)
     except APIException as e:
         print(e)
     except HTTPException as e:
