@@ -429,7 +429,7 @@ register_list = [(Session, SessionAdmin), (User, UserAdmin), (Box, BoxAdmin), (C
                  (HousePrice, HousePriceAdmin), (ResidenceType, ResidenceTypeAdmin), (Booking, BookAdmin),
                  (Storage, StorageAdmin), (Basket,), (Comment, CommentAdmin), (Invoice, InvoiceAdmin),
                  (InvoiceStorage, InvoiceStorageAdmin), (InvoiceSuppliers, InvoiceSupplierAdmin), (Menu, MenuAdmin),
-                 (Tag,), (Rate,), (Slider, SliderAdmin), (SpecialOffer, SpecialOfferAdmin), (Holiday, HolidayAdmin),
+                 (Tag,), (TagGroup,), (Rate,), (Slider, SliderAdmin), (SpecialOffer, SpecialOfferAdmin), (Holiday, HolidayAdmin),
                  (SpecialProduct, SpecialProductAdmin), (Blog,), (BlogPost,), (WishList,), (NotifyUser,), (Ad, AdAdmin),
                  (State, StateAdmin), (City, CityAdmin), (Permission,), (VipType, VipTypeAdmin)]
 for item in register_list:

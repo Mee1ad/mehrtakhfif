@@ -269,9 +269,9 @@ class TelegramRegister(View):
     def get(self, request):
         try:
             params = verify_telegram_authentication(bot_token=TELEGRAM_BOT_TOKEN, request_data=request.GET).dict()
-            User.objects.filter(pk=request.user.pk).update(tg_id=params['id'], tg_username=params['username'],
-                                                           tg_first_name=params['first_name'],
-                                                           avatar=params['photo_url'])
+            User.objects.filter(pk=request.user.pk).update(tg_id=params['id'], tg_username=params.get('username'),
+                                                           tg_first_name=params.get('first_name'),
+                                                           avatar=params.get('photo_url'))
         except TelegramDataIsOutdatedError:
             return HttpResponse('Authentication was received more than a day ago.')
 

@@ -93,7 +93,7 @@ class Login(View):
         ip = request.META.get('REMOTE_ADDR') or request.META.get('HTTP_X_FORWARDED_FOR')
         res = {'resend_timeout': resend_timeout, 'timeout': activation_expire, 'code': user.activation_code}
         if not (DEBUG or (ip in SAFE_IP and user.username == TEST_USER)):
-            send_sms(user.username, input_data=[{'code': user.activation_code}])
+            send_sms(user.username, "verify", user.activation_code)
             res = {'resend_timeout': resend_timeout, 'timeout': activation_expire}
         return JsonResponse(res, status=res_code['updated'])
 

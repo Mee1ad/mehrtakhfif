@@ -67,10 +67,10 @@ def sale_report_summary(**kwargs):
                 continue
             duplicate_data[0]['count'] += invoice_storage.count
     for item in notify_list:
-        send_sms(item['owner'].username, pattern="jalx4fpe3d", input_data=[{"order_count": item['count']}])
+        send_sms(item['owner'].username, "order-summary", item['count'])
     superusers = [User.objects.get(pk=1)]
     item_count = sum([item['count'] for item in notify_list])
-    [send_sms(user.username, content=f"تعداد سفارشات: {item_count}") for user in superusers]
+    [send_sms(user.username, "order-summary", item_count) for user in superusers]
     return {'notified admins': [admin['owner'].first_name + " " + admin['owner'].last_name for admin in notify_list]}
 
 
@@ -124,9 +124,9 @@ def send_invoice(invoice_id, lang, **kwargs):
         pdf_list.append(pdf)
         all_renders += rendered
         sms_content += f'\n{storage.invoice_title[lang]}\n{SHORTLINK}/{key}'
-    send_sms(user.username, pattern="f0ozn1ee5k", input_data=[{'order_id': f"Mt-{invoice_id}"}])
+    send_sms(user.username, "order-summary", f"Mt-{invoice_id}")
     if sms_content:
-        send_sms(user.username, pattern="dj0l65mq3x", input_data=[{'products': sms_content}])
+        send_sms(user.username, "digital-order-details", sms_content)
     res = 'sms sent'
     if user.email and all_renders:
         send_email("صورتحساب خرید", user.email, html_content=all_renders, attach=pdf_list)
