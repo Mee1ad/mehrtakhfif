@@ -2,6 +2,7 @@ $TTL 120        ; 2 minutes default TTL
 
 ; MX Records - 1
  @                 IN      MX 10   box.mehrtakhfif.com.
+ box               IN      MX 10   box.mehrtakhfif.com.
 
 
 ; Machine Names - 8

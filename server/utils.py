@@ -519,7 +519,6 @@ def get_product_filter_params(is_staff):
 
 
 # Security
-
 def get_access_token(user, model=None, pk=None, try_again=None):
     pk = 0 if pk is None else pk
     time = add_minutes(0).strftime("%Y-%m-%d-%H") if try_again is None else add_minutes(-60).strftime("%Y-%m-%d-%H")
