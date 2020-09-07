@@ -1,9 +1,13 @@
-from server.models import *
-from mtadmin.views.tables import AdminView
+from datetime import timedelta
+
+import pytz
+from django.db.models import Sum
 from django.http import JsonResponse
-from mtadmin.dashboard_serializer import *
-from datetime import datetime, timedelta
 from jdatetime import datetime as jdatetime, timedelta as jtimedelta
+
+from mtadmin.dashboard_serializer import *
+from mtadmin.views.tables import AdminView
+from server.models import *
 
 
 class DateProductCount(AdminView):
@@ -51,3 +55,35 @@ class SoldProductCount(AdminView):
             return JsonResponse(data)
         return JsonResponse({})
 
+
+class ProfitSummary(AdminView):
+    permission_required = 'server.view_invoice'
+
+    def get(self, request):
+        start = request.GET.get('start')
+        start = timezone.datetime.fromtimestamp(int(start)).replace(tzinfo=pytz.utc)
+        end = request.GET.get('end')
+        end = timezone.datetime.fromtimestamp(int(end)).replace(tzinfo=pytz.utc)
+        boxes = Box.objects.all()
+        box_list = []
+        for box in boxes:
+            profit = InvoiceStorage.objects.filter(storage__product__box=box, invoice__payed_at__range=[start, end],
+                                                   invoice__status__in=Invoice.success_status) \
+                .aggregate(sold_count=Sum('count'), charity_profit=Sum('discount_price') * 0.005,
+                           total_payment=Sum('discount_price'), start_prices=Sum('start_price'),
+                           mt_profit=Sum('discount_price') - Sum('start_price'),
+                           post_price=Sum('invoice__post_invoice__amount'))
+
+            data = {'id': box.id, 'name': box.name, 'mt_profit': profit['mt_profit'] or 0, 'settings': box.settings,
+                    'charity_profit': profit['charity_profit'] or 0, 'sold_count': profit['sold_count'] or 0,
+                    'total_payment': profit['total_payment'] or 0, 'start_price': profit['start_prices'] or 0,
+                    'post_price': profit['post_price'] or 0}
+            box_list.append(data)
+        total = {'charity_profit': 0, 'total_payment': 0, 'mt_profit': 0, 'start_price': 0, 'post_price': 0}
+        for b in box_list:
+            total['charity_profit'] += b['charity_profit']
+            total['mt_profit'] += b['mt_profit']
+            total['total_payment'] += b['total_payment']
+            total['start_price'] += b['start_price']
+            total['post_price'] += b['post_price']
+        return JsonResponse({'boxes': box_list, 'total': total})

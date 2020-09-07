@@ -1,6 +1,7 @@
 from os import listdir
 from time import sleep
 
+import pysnooper
 from django.core.mail import send_mail
 from django.http import HttpResponseBadRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import render_to_response, render
@@ -117,7 +118,8 @@ class Search(AdminView):
         model = request.GET.get('type', None)
         switch = {'supplier': self.supplier, 'tag': self.tag, 'product': self.product, 'cat': self.category}
         params = get_request_params(request)
-        return JsonResponse(switch[model](**params))
+        username = request.user.username
+        return JsonResponse(switch[model](**params, username=username))
 
     def multi_match(self, q, model, serializer, document, output):
         ids = []
@@ -136,25 +138,25 @@ class Search(AdminView):
     def category(self, q, **kwargs):
         return self.multi_match(q, Category, CategoryASchema, CategoryDocument, 'categories')
 
+    @pysnooper.snoop()
     def product(self, q, box_id, types, **kwargs):
         products_id = []
         s = ProductDocument.search()
         type_query = Q('bool', should=[Q("match", type=product_type) for product_type in types])
-        print(type_query)
-        r = s.query('match', box_id=box_id).query('match', name_fa=q)
+        r = s.query('match', box_id=box_id).query(must=[Q('match', name_fa=q), Q('match', disable=False)])
         # r = s.query('match', box_id=box_id).query(type_query).query('match', name_fa=q)
         if r.count() == 0 and not q:
-            # r = s.query('match', box_id=box_id).query(type_query).query('match_all')[:10]
-            r = s.query('match', box_id=box_id).query('match_all')[:10]
+            r = s.query('match', box_id=box_id).query(must=[Q('match', name_fa=q), Q('match', disable='false')]).query(type_query).query('match_all')[:10]
+            # r = s.query('match', box_id=box_id).query('match_all')[:10]
         [products_id.append(product.id) for product in r]
         products = Product.objects.in_bulk(products_id)
         products = [products[x] for x in products_id]
         return {'products': ProductESchema().dump(products, many=True)}
 
-    def supplier(self, q, **kwargs):
+    def supplier(self, q, username, **kwargs):
         items = []
         s = SupplierDocument.search()
-        r = s.query("multi_match", query=q,
+        r = s.query("multi_match", query=q or username,
                     fields=['first_name', 'last_name', 'username']).filter("term", is_supplier="true")[:5]
         if r.count() == 0:
             r = s.query("match_all").filter("term", is_supplier="true")[:5]

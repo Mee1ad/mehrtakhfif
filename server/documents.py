@@ -34,7 +34,7 @@ class ProductDocument(Document):
         model = Product  # The model associated with this Document
 
         # The fields of the model you want to be indexed in Elasticsearch
-        fields = ['permalink']
+        fields = ['permalink', 'disable']
 
 
 @registry.register_document
@@ -55,7 +55,7 @@ class CategoryDocument(Document):
         model = Category  # The model associated with this Document
 
         # The fields of the model you want to be indexed in Elasticsearch
-        fields = ['permalink']
+        fields = ['permalink', 'disable']
 
 
 @registry.register_document
