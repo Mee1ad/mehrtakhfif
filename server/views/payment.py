@@ -122,7 +122,7 @@ class PaymentRequest(View):
             invoice.save()
             return ref_id
         else:
-            raise ValueError(_("can not get ipg page"))
+            raise ValueError(_(f"can not get ipg page: {r}"))
 
     def create_invoice(self, request, basket=None):
         user = request.user
