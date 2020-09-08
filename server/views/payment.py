@@ -87,17 +87,29 @@ class PaymentRequest(View):
                                    basket.summary['shipping_cost']) * 10, 0]]
         # bug '1,49000,0;1,16000,0'
         # todo add feature price
-        for basket_product in basket.basket_products:
+        suppliers_invoice = InvoiceSuppliers.objects.filter(invoice_id=invoice_id)
+        for supplier_invoice in suppliers_invoice:
             try:
-                supplier = basket_product.supplier
+                supplier = supplier_invoice.supplier
             except AttributeError:
                 continue
             for data in additional_data:
                 if supplier.deposit_id == data[0]:
-                    data[1] += basket_product.start_price * 10
+                    data[1] += supplier_invoice.amount * 10
                     break
             else:
-                additional_data.append([supplier.deposit_id, basket_product.start_price * 10, 0])
+                additional_data.append([supplier.deposit_id, supplier_invoice.amount * 10, 0])
+        # for basket_product in basket.basket_products:
+        #     try:
+        #         supplier = basket_product.supplier
+        #     except AttributeError:
+        #         continue
+        #     for data in additional_data:
+        #         if supplier.deposit_id == data[0]:
+        #             data[1] += basket_product.start_price * 10
+        #             break
+        #     else:
+        #         additional_data.append([supplier.deposit_id, basket_product.start_price * 10, 0])
 
         additional_data = ';'.join(','.join(str(x) for x in b) for b in additional_data)
 
