@@ -128,6 +128,8 @@ class PaymentRequest(View):
                                                              additionalData=additional_data,
                                                              callBackUrl=bp['callback'])
 
+        print(additional_data)
+        print((invoice.amount + basket.summary['shipping_cost']))
         if r[0:2] == "0,":
             ref_id = r[2:]
             invoice.reference_id = ref_id
