@@ -1092,7 +1092,6 @@ class Storage(Base):
                           my_dict.get('vip_prices')]
             VipPrice.objects.bulk_create(vip_prices)
         if self.product.type == 4 and my_dict:  # package
-            print(my_dict)
             # {'is_package': True, 'items': [{'package_item_id':1, 'count': 5}, {'package_item_id':2, 'count': 10}]}
             self.items.clear()
             user = self.created_by
@@ -1101,19 +1100,24 @@ class Storage(Base):
             Package.objects.bulk_create(package_items)
             self.discount_price = 0
             self.final_price = 0
+            self.start_price = 0
             self.dimensions = {"width": 0, "height": 0, "length": 0, "weight": 0}
             for package_item in package_items:
                 self.discount_price += package_item.package_item.discount_price * package_item.count
+                self.start_price += package_item.package_item.start_price * package_item.count
                 self.final_price += package_item.package_item.final_price * package_item.count
                 self.dimensions = {"width": self.dimensions['width'] + package_item.package_item.dimensions['width'],
                                    "height": self.dimensions['height'] + package_item.package_item.dimensions['height'],
                                    "length": self.dimensions['length'] + package_item.package_item.dimensions['length'],
                                    "weight": self.dimensions['weight'] + package_item.package_item.dimensions['weight']}
             self.discount_percent = int(100 - self.discount_price / self.final_price * 100)
+            try:
+                self.supplier = package_items[0].package_item.supplier
+            except Exception:
+                pass
             self.save()
 
     def update_price(self):
-        print(self.pk)
         packages = list(self.packages.all().order_by('package_id').distinct('package_id')) + \
                    list(self.related_packages.all().order_by('package_id').distinct('package_id'))
         for package in packages:

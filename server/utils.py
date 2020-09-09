@@ -474,21 +474,26 @@ def get_best_seller(request, box, invoice_ids):
 
 
 def sync_storage(basket_id, op):
+    def update_storage_counts(s, c):  # Storage, Count
+        s.available_count = op(s.available_count, c)
+        s.available_count_for_sale = op(s.available_count_for_sale, c)
+        if op == sub:
+            s.sold_count = add(s.sold_count, c)
+        if op == add:
+            s.sold_count = sub(s.sold_count, c)
+
     basket_products = BasketProduct.objects.filter(basket_id=basket_id)
     for basket_product in basket_products:
-        storage = basket_product.storage
+        if basket_product.storage.product.get_type_display() == 'package':
+            package_items = Package.objects.filter(package=basket_product.storage)
+            for package_item in package_items:
+                storage = package_item.package_item
+                count = package_item.count
+                update_storage_counts(storage, count)
+                storage.save()
         count = basket_product.count
-        # storage.available_count = op(F('available_count'), count)
-        storage.available_count = op(storage.available_count, count)
-        # storage.available_count_for_sale = op(F('available_count_for_sale'), count)
-        storage.available_count_for_sale = op(storage.available_count_for_sale, count)
-        if op == sub:
-            # storage.sold_count = add(F('sold_count'), count)
-            storage.sold_count = add(storage.sold_count, count)
-        if op == add:
-            # storage.sold_count = sub(F('sold_count'), count)
-            storage.sold_count = sub(storage.sold_count, count)
-
+        storage = basket_product.storage
+        update_storage_counts(storage, count)
         storage.save()
 
 

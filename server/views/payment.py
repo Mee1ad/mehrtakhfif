@@ -193,12 +193,6 @@ class PaymentRequest(View):
             amount = product.start_price
             if not InvoiceSuppliers.objects.filter(invoice=invoice, supplier=supplier).update(
                     amount=F('amount') + amount):
-                if storage.product.type == 4:
-                    items = Package.objects.filter(package_id=storage)
-                    supplier = items.first().package_item.supplier
-                    amount = 0
-                    for item in items:
-                        amount += item.package_item.start_price * item.count
                 InvoiceSuppliers.objects.create(invoice=invoice, supplier=supplier, amount=amount)
             tax = get_tax(storage.tax_type, storage.discount_price, storage.start_price)
             invoice_products.append(

@@ -79,10 +79,13 @@ def task_postrun_handler(task_id=None, **kwargs):
     args = kwargs.get('kwargs', None)
     if args:
         task_result = TaskResult.objects.filter(task_id=task_id).first()
-        task_name = args.get('name', '')
-        description = f'{task_result.date_done}:, {task_result.result}, {task_result.traceback or ""}'
-        PeriodicTask.objects.filter(name=task_name).update(description=description)
-        return f'Return {task_id}'
+        try:
+            task_name = args['name']
+            description = f'{task_result.date_done}:, {task_result.result}, {task_result.traceback or ""}'
+            PeriodicTask.objects.filter(name=task_name).update(description=description)
+            return f'Return {task_id}'
+        except KeyError:
+            return 'no response'
 
 
 @shared_task
