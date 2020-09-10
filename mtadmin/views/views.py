@@ -138,7 +138,6 @@ class Search(AdminView):
     def category(self, q, **kwargs):
         return self.multi_match(q, Category, CategoryASchema, CategoryDocument, 'categories')
 
-    @pysnooper.snoop()
     def product(self, q, box_id, types, **kwargs):
         products_id = []
         s = ProductDocument.search()
@@ -158,8 +157,8 @@ class Search(AdminView):
         s = SupplierDocument.search()
         r = s.query("multi_match", query=q or username,
                     fields=['first_name', 'last_name', 'username']).filter("term", is_supplier="true")[:5]
-        if r.count() == 0:
-            r = s.query("match_all").filter("term", is_supplier="true")[:5]
+        # if r.count() == 0:
+        #     r = s.query("match_all").filter("term", is_supplier="true")[:5]
 
         for hit in r:
             supplier = {'id': hit.id, 'first_name': hit.first_name, 'last_name': hit.last_name,

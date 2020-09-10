@@ -268,8 +268,10 @@ class InvoiceProductView(TableView):
     permission_required = 'server.view_invoicestorage'
 
     def get(self, request):
+        params = get_params(request, box_key='box_id')
+        params['filter']['invoice__status__in'] = Invoice.success_status
         return JsonResponse(serialized_objects(request, InvoiceStorage, InvoiceStorageASchema, InvoiceStorageASchema,
-                                               error_null_box=False))
+                                               error_null_box=False, params=params))
 
     def put(self, request):
         return update_object(request, InvoiceStorage, require_box=False, box_key='box_id')
