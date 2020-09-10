@@ -49,6 +49,9 @@ def sale_report(invoice_id, **kwargs):
         send_email('گزارش فروش', owner.email, message=message)
         devices = GCMDevice.objects.filter(user=owner)
         [device.send_message(message, extra={'title': "گزارش فروش"}) for device in devices]
+        # todo make it better
+        [send_email('گزارش فروش', user.email, message=message) for user in notif_users]
+        [device.send_message(message, extra={'title': "گزارش فروش"}) for device in notif_devices]
     return f"{invoice_id}-successfully reported"
 
 
@@ -126,7 +129,7 @@ def send_invoice(invoice_id, lang, **kwargs):
         pdf_list.append(pdf)
         all_renders += rendered
         sms_content += f'\n{storage.invoice_title[lang]}\n{SHORTLINK}/{key}'
-    send_sms(user.username, "order-summary", f"Mt-{invoice_id}")
+    send_sms(user.username, "user-order", f"Mt-{invoice_id}")
     if sms_content:
         send_sms(user.username, "digital-order-details", sms_content)
     res = 'sms sent'

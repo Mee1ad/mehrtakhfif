@@ -44,7 +44,6 @@ class IPG(View):
 
 
 class PaymentRequest(View):
-    @pysnooper.snoop()
     def get(self, request, basket_id):
         # ip = request.META.get('REMOTE_ADDR') or request.META.get('HTTP_X_FORWARDED_FOR')
 
@@ -127,9 +126,6 @@ class PaymentRequest(View):
                                                                  'shipping_cost']) * 10,
                                                              additionalData=additional_data,
                                                              callBackUrl=bp['callback'])
-
-        print(additional_data)
-        print((invoice.amount + basket.summary['shipping_cost']))
         if r[0:2] == "0,":
             ref_id = r[2:]
             invoice.reference_id = ref_id
@@ -258,7 +254,6 @@ class CallBack(View):
             cancel_reservation(invoice.pk)
 
     @staticmethod
-    @pysnooper.snoop()
     def notification_admin(invoice):
         kwargs = {"invoice_id": invoice.pk}
         invoice.sync_task = add_one_off_job(name=f"sales report - {invoice.pk}", kwargs=kwargs, interval=0,
