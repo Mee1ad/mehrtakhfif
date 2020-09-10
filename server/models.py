@@ -1113,8 +1113,8 @@ class Storage(Base):
             self.discount_percent = int(100 - self.discount_price / self.final_price * 100)
             try:
                 self.supplier = package_items[0].package_item.supplier
-            except Exception:
-                pass
+            except Exception as e:
+                print(e)
             self.save()
 
     def update_price(self):
