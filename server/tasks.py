@@ -132,6 +132,9 @@ def send_invoice(invoice_id, lang, **kwargs):
         all_renders += rendered
         sms_content += f'\n{storage.invoice_title[lang]}\n{SHORTLINK}/{key}'
     send_sms(user.username, "user-order", f"Mt-{invoice_id}")
+    email_content = """سفارش شما با شماره %token با موفقیت ثبت شد برای مشاهده صورتحساب و جزئیات خرید به پنل کاربری خود مراجعه کنید
+                    mhrt.ir/invoice/%token"""
+    send_email("صورتحساب خرید", user.email, message=email_content)
     if sms_content:
         send_sms(user.username, "digital-order-details", sms_content)
     res = 'sms sent'

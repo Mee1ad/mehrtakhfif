@@ -372,7 +372,7 @@ class StorageESchema(StorageASchema):
                       'invoice_title', 'dimensions', 'package_discount_price')
 
     supplier = fields.Function(lambda o: UserSchema().dump(o.supplier))
-    features = FeatureField()
+    # features = FeatureField()
     items = PackageItemsField()
     tax = fields.Function(lambda o: o.get_tax_type_display())
     vip_discount_price = fields.Function(lambda o: None)

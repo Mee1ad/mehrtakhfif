@@ -1,13 +1,14 @@
 import functools
-import traceback
 import re
+import traceback
 
-from django.http import JsonResponse, HttpResponseForbidden, HttpResponseBadRequest
-from django.core.exceptions import FieldDoesNotExist, ValidationError, PermissionDenied, FieldError
+from django.core.exceptions import FieldDoesNotExist, PermissionDenied, FieldError
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.utils import IntegrityError
-from server.utils import res_code
-from django.core.exceptions import NON_FIELD_ERRORS, ObjectDoesNotExist
+from django.http import JsonResponse, HttpResponseForbidden, HttpResponseBadRequest
+
 from mtadmin.exception import *
+from server.utils import res_code
 
 
 def error_handler(func):
@@ -41,7 +42,9 @@ def error_handler(func):
             pattern = r'(\((\w+)\))='
             try:
                 field = re.search(pattern, str(e))[2]
-                return JsonResponse({"type": "duplicate or does'nt exist", "field": field}, status=res_code['integrity'])
+                return JsonResponse(
+                    {"type": "یا پرمالینکو تکراری زدی یا پرمالینکی که درخواست کردی وجود نداره حالا تشخیصش با خودته!", "field": field},
+                    status=res_code['integrity'])
             except (TypeError, IntegrityError):
                 e = str(e).split('DETAIL', 1)[0][:-1]
                 print(e)
@@ -49,4 +52,5 @@ def error_handler(func):
         except FieldDoesNotExist:
             traceback.print_exc()
             return JsonResponse({'message': 'fields name is incorrect'}, status=res_code['bad_request'])
+
     return wrapper
