@@ -18,6 +18,7 @@ from mehr_takhfif.settings import ARVAN_API_KEY
 from mehr_takhfif.settings import INVOICE_ROOT, STATIC_ROOT, SHORTLINK
 from server.models import Invoice, InvoiceStorage, User
 from server.utils import sync_storage, send_sms, send_email, random_data, add_days
+from urllib.error import URLError
 
 
 @shared_task
@@ -47,13 +48,16 @@ def sale_report(invoice_id, **kwargs):
         owner = invoice_storage.storage.product.box.owner
         message = f"""عنوان محصول:
                       {invoice_storage.storage.title['fa']}
-                      تعداد:{invoice_storage.count}"""
-        send_email('گزارش فروش', owner.email, message=message)
+                      تعداد:{invoice_storage.count}
+                     قیمت: {invoice_storage.storage.discount_price}"""
+        notif_users |= User.objects.filter(pk=owner.pk)
         devices = GCMDevice.objects.filter(user=owner)
-        [device.send_message(message, extra={'title': "گزارش فروش"}) for device in devices]
-        # todo make it better
+        for device in devices | notif_devices:
+            try:
+                device.send_message(message, extra={'title': "گزارش فروش"})
+            except URLError:
+                continue
         [send_email('گزارش فروش', user.email, message=message) for user in notif_users]
-        [device.send_message(message, extra={'title': "گزارش فروش"}) for device in notif_devices]
     return f"{invoice_id}-successfully reported"
 
 
