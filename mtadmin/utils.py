@@ -1,5 +1,4 @@
 import json
-from operator import attrgetter
 
 from django.contrib.admin.utils import NestedObjects
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
@@ -11,7 +10,6 @@ from django.views import View
 from mtadmin.serializer import tables
 from server.models import *
 from server.utils import get_pagination, get_token_from_cookie, set_token, check_access_token, res_code
-import pysnooper
 
 rolls = ['superuser', 'backup', 'admin', 'accountants']
 
@@ -22,6 +20,7 @@ class TableView(LoginRequiredMixin, PermissionRequiredMixin, View):
 
 class AdminView(LoginRequiredMixin, View):
     pass
+
 
 @pysnooper.snoop()
 def serialized_objects(request, model, serializer=None, single_serializer=None, box_key='box_id', error_null_box=True,
@@ -52,9 +51,9 @@ def serialized_objects(request, model, serializer=None, single_serializer=None, 
         if params.get('aggregate', None):
             # todo tax
             pass
-        annotate_list = ['name__fa']  # http://localhost/admin/product?box_id=15&name__fa=نامیرا
-        common_items = list(set(params['filter']).intersection(annotate_list))
-        if common_items:
+        # http://localhost/admin/product?box_id=15&name__fa=نامیرا
+        common_items = list(set(params['filter']).intersection(['name__fa']))
+        if common_items or params['annotate']:
             for item in common_items:
                 params['filter'][item + '__contains'] = params['filter'][item]
                 params['filter'].pop(item)
@@ -63,11 +62,11 @@ def serialized_objects(request, model, serializer=None, single_serializer=None, 
             for index, item in enumerate(common_items):
                 annotate[item[0] + '__' + item[1]] = KeyTextTransform(item[1], item[0])
             try:
-                query = model.objects.annotate(**annotate).filter(**params['filter']).distinct(*distinct_by)\
-                    .order_by(*params['order'])
+                query = model.objects.annotate(**annotate, **params['annotate']).filter(**params['filter']).distinct(
+                    *distinct_by).order_by(*params['order'])
                 return get_pagination(request, query, serializer, show_all=request.all)
             except Exception:
-                query = model.objects.annotate(**annotate).filter(**params['filter'])
+                query = model.objects.annotate(**annotate, **params['annotate']).filter(**params['filter'])
                 return {**get_pagination(request, query, serializer, show_all=request.all), 'ignore_order': True}
         return get_pagination(request, query, serializer, show_all=request.all)
     except (FieldError, ValueError):

@@ -1,5 +1,6 @@
-import boto3
+import os
 
+import boto3
 from mehr_takhfif.settings_var import STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY
 
 access_key = STORAGE_ACCESS_KEY
@@ -13,9 +14,6 @@ s3_client = session.client(
     aws_secret_access_key=secret_key,
     endpoint_url=endpoint,
 )
-
-bucket_name = 'mtbackup'
-upload_testfile = '/home/ubuntu/backup/done'
 
 
 def list_buckets():
@@ -39,6 +37,11 @@ def get_bucket_keys(bucket):
 def upload_file(filename, bucket_name, name_in_bucket):
     s3_client.upload_file(filename, bucket_name, name_in_bucket)
 
+
 # s3_client.generate_presigned_url('get_object', Params={'Bucket': 'newnew', 'Key': 'boyo.py-test'})
 
 # s3_client.delete_object(Bucket='newnew', Key='s3-test2')
+
+files = os.listdir('/home/ubuntu/backup')
+for file in files:
+    upload_file(f'/home/ubuntu/backup/{file}', 'mtbackup', file)

@@ -5,7 +5,7 @@ from mtadmin.utils import *
 from mtadmin.serializer import *
 import pysnooper
 from django.db.utils import IntegrityError
-from django.db.models import Sum
+from django.db.models import Sum, F
 import json
 from server.documents import TagDocument
 from server.models import Media
@@ -269,6 +269,9 @@ class InvoiceProductView(TableView):
 
     def get(self, request):
         params = get_params(request, box_key='box_id')
+        # params['annotate'] = {'tax': F('discount_price') * 0.09,
+        #                       'charity': F('discount_price')
+        #                       'dev': F('discount_price') - F('start_price')}
         params['filter']['invoice__status__in'] = Invoice.success_status
         return JsonResponse(serialized_objects(request, InvoiceStorage, InvoiceStorageASchema, InvoiceStorageASchema,
                                                error_null_box=False, params=params))
