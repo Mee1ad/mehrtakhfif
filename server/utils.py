@@ -427,7 +427,7 @@ def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=Non
         # basket_product.amer = ""
         tax = get_tax(storage.tax_type, storage.discount_price, storage.start_price)
         # ha_profit = (basket_product.discount_price - basket_product.start_price - tax) * 0.05
-        ha_profit = basket_product.discount_price * 0.005
+        ha_profit = round(basket_product.discount_price * 0.005)
         summary['ha_profit'] += ha_profit
         summary['mt_profit'] += basket_product.discount_price - basket_product.start_price - ha_profit
     basket.basket_products = basket_products
