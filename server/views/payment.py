@@ -134,6 +134,7 @@ class PaymentRequest(View):
             invoice.save()
             return ref_id
         else:
+            print(additional_data)
             raise ValueError(_(f"can not get ipg page: {r}"))
 
     def create_invoice(self, request, basket=None, charity_id=1):
