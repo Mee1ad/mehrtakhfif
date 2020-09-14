@@ -197,7 +197,7 @@ class PaymentRequest(View):
             tax = get_tax(storage.tax_type, storage.discount_price, storage.start_price)
             charity = round(storage.discount_price * 0.005)
             dev = round((storage.discount_price - storage.start_price - tax - charity) * 0.069)
-            admin = round((storage.discount_price - storage.start_price - tax - charity - dev) * storage.product.box.settings['share'])
+            admin = round((storage.discount_price - storage.start_price - tax - charity - dev) * storage.product.box.settings['share']/100)
             mt_profit = storage.discount_price - tax - charity - dev - admin
             print("discount_price: ", storage.discount_price)
             print("tax: ", tax)
