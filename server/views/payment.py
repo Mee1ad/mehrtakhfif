@@ -202,7 +202,7 @@ class PaymentRequest(View):
                                final_price=(storage.final_price - tax) * product.count, box=product.box,
                                discount_price=storage.discount_price * product.count, charity=charity * product.count,
                                start_price=storage.start_price * product.count, admin=admin * product.count,
-                               discount_percent=storage.discount_percent, features=product.features,
+                               features=product.features,
                                total_price=(storage.final_price - tax) * product.count, dev=dev * product.count,
                                discount_price_without_tax=(storage.discount_price - tax) * product.count,
                                discount=(storage.final_price - storage.discount_price) * product.count,
