@@ -402,14 +402,14 @@ def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=Non
         basket_product.__dict__.update(
             {'item_final_price': storage.final_price, 'discount_percent': get_discount_percent(storage),
              'item_discount_price': get_discount_price(storage), 'start_price': storage.start_price})
-        for feature in basket_product.features:
-            feature_storage = FeatureStorage.objects.get(id=feature['fsid'], storage_id=storage.pk)
-            for value in feature['fvid']:
-                feature_price = next(
-                    storage['price'] for storage in feature_storage.value if storage['fvid'] == value)
-                basket_product.item_final_price += feature_price
-                basket_product.item_discount_price += feature_price
-                basket_product.start_price += feature_price
+        # for feature in basket_product.features:
+        #     feature_storage = FeatureStorage.objects.get(id=feature['fsid'], storage_id=storage.pk)
+        #     for value in feature['fvid']:
+        #         feature_price = next(
+        #             storage['price'] for storage in feature_storage.value if storage['fvid'] == value)
+        #         basket_product.item_final_price += feature_price
+        #         basket_product.item_discount_price += feature_price
+        #         basket_product.start_price += feature_price
         if tax:
             basket_product.amer = storage.product.box.name['fa']
             # storage = basket_product.storage
@@ -426,7 +426,8 @@ def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=Non
         # basket_product.tax = 0
         # basket_product.amer = ""
         tax = get_tax(storage.tax_type, storage.discount_price, storage.start_price)
-        ha_profit = (basket_product.discount_price - basket_product.start_price - tax) * 0.05
+        # ha_profit = (basket_product.discount_price - basket_product.start_price - tax) * 0.05
+        ha_profit = basket_product.discount_price * 0.005
         summary['ha_profit'] += ha_profit
         summary['mt_profit'] += basket_product.discount_price - basket_product.start_price - ha_profit
     basket.basket_products = basket_products

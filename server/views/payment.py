@@ -77,12 +77,15 @@ class PaymentRequest(View):
         self.submit_invoice_storages(invoice.pk)
         return JsonResponse({"url": f"{bp['ipg_url']}?RefId={self.behpardakht_api(invoice.pk)}"})
 
-    def behpardakht_api(self, invoice_id):
+    def behpardakht_api(self, invoice_id, charity_id=1):
         invoice = Invoice.objects.get(pk=invoice_id)
         basket = get_basket(invoice.user, basket=invoice.basket, return_obj=True, tax=True)
         tax = basket.summary["tax"]
+        charity = basket.summary["ha_profit"]
+        charity_deposit = Charity.objects.get(pk=charity_id).deposit_id
         additional_data = [[1, int(basket.summary["mt_profit"] + basket.summary["ha_profit"] + tax +
-                                   basket.summary['shipping_cost']) * 10, 0]]
+                                   basket.summary['shipping_cost'] - charity) * 10, 0],
+                           [charity_deposit, charity * 10, 0]]
         # bug '1,49000,0;1,16000,0'
         # todo add feature price
         suppliers_invoice = InvoiceSuppliers.objects.filter(invoice_id=invoice_id)
@@ -133,7 +136,7 @@ class PaymentRequest(View):
         else:
             raise ValueError(_(f"can not get ipg page: {r}"))
 
-    def create_invoice(self, request, basket=None):
+    def create_invoice(self, request, basket=None, charity_id=1):
         user = request.user
         address = None
         basket = basket or get_basket(user, request.lang, require_profit=True)
@@ -149,17 +152,17 @@ class PaymentRequest(View):
         for product in basket['basket']['products']:
             if max_shipping_time < product['product']['default_storage']['max_shipping_time']:
                 max_shipping_time = product['product']['default_storage']['max_shipping_time']
-
         post_invoice = None
         if basket['summary']['shipping_cost']:
             post_invoice = Invoice.objects.create(created_by=user, updated_by=user, user=user, address=address,
                                                   expire=add_minutes(15),
                                                   amount=basket['summary']['shipping_cost'],
                                                   basket_id=basket['basket']['id'])
-        invoice = Invoice.objects.create(created_by=user, updated_by=user, user=user,
-                                         mt_profit=basket['summary']['mt_profit'], expire=add_minutes(15),
+        invoice = Invoice.objects.create(created_by=user, updated_by=user, user=user, charity_id=charity_id,
+                                         # mt_profit=basket['summary']['mt_profit'],
+                                         expire=add_minutes(15), basket_id=basket['basket']['id'],
                                          invoice_discount=basket['summary']['invoice_discount'], address=address,
-                                         ha_profit=basket['summary']['ha_profit'], basket_id=basket['basket']['id'],
+                                         # ha_profit=basket['summary']['ha_profit'],
                                          amount=basket['summary']['discount_price'] + basket['summary']['tax'],
                                          final_price=basket['summary']['total_price'],
                                          max_shipping_time=max_shipping_time, post_invoice=post_invoice)

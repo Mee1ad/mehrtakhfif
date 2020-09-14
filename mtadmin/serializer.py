@@ -1,9 +1,9 @@
-from server.models import *
+from django.db.models import Sum
+from marshmallow import EXCLUDE
+
 from server.serialize import *
-from marshmallow import INCLUDE, EXCLUDE
-import pysnooper
-from server.views.payment import ipg
 from server.utils import *
+from server.views.payment import ipg
 
 
 def list_view(obj_list):
@@ -171,7 +171,7 @@ class BaseAdminSchema(Schema):
 
 class UserASchema(UserSchema):
     class Meta:
-        additional = UserSchema.Meta.additional + ('avatar', )
+        additional = UserSchema.Meta.additional + ('avatar',)
 
     telegram_username = fields.Method('get_telegram_username')
 
@@ -228,7 +228,7 @@ class InvoiceESchema(InvoiceASchema):
         additional = InvoiceASchema.Meta.additional + (
             'id', 'basket_id', 'amount', 'status', 'final_price', 'special_offer_id',
             'address', 'description', 'reference_id', 'sale_order_id', 'sale_reference_id',
-            'card_holder', 'post_tracking_code', 'mt_profit', 'ha_profit')
+            'card_holder', 'post_tracking_code')
 
     ipg = fields.Method('get_ipg')
     suspended_by = fields.Function(lambda o: o.suspended_by.first_name + " "
@@ -242,6 +242,18 @@ class InvoiceESchema(InvoiceASchema):
     recipient_info_a5 = fields.Method("get_recipient_info_a5")
     recipient_info_a6 = fields.Method("get_recipient_info_a6")
     max_shipping_time = fields.Method('get_max_shipping_time')
+    mt_profit = fields.Method("get_mt_profit")
+    charity = fields.Method("get_charity")
+    dev = fields.Method("get_dev")
+
+    def get_mt_profit(self, obj):
+        return InvoiceStorage.objects.filter(invoice=obj).aggregate(mt_profit=Sum('mt_profit')).get('mt_profit', 0)
+
+    def get_charity(self, obj):
+        return InvoiceStorage.objects.filter(invoice=obj).aggregate(charity=Sum('charity')).get('charity', 0)
+
+    def get_dev(self, obj):
+        return InvoiceStorage.objects.filter(invoice=obj).aggregate(dev=Sum('dev')).get('dev', 0)
 
     def get_max_shipping_time(self, obj):
         if obj.status in Invoice.success_status:
@@ -263,8 +275,7 @@ class InvoiceESchema(InvoiceASchema):
         return InvoiceStorageASchema().dump(storages, many=True)
 
     def calculate_invoice_tax(self, obj):
-        taxes = obj.invoice_storages.all().values_list('tax', flat=True)
-        return sum(taxes)
+        return InvoiceStorage.objects.filter(invoice=obj).aggregate(tax=Sum('tax')).get('tax', 0)
 
     def get_ipg(self, obj):
         return [ip for ip in ipg['data'] if ip['id'] == obj.ipg][0]
