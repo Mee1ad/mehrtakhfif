@@ -199,7 +199,7 @@ class PaymentRequest(View):
             invoice_products.append(
                 InvoiceStorage(storage=storage, invoice_id=invoice_id, count=product.count, tax=tax * product.count,
                                final_price=(storage.final_price - tax) * product.count, box=product.box,
-                               discount_price=storage.discount_price * product.count, caharity=charity * product.count,
+                               discount_price=storage.discount_price * product.count, charity=charity * product.count,
                                start_price=storage.start_price * product.count, admin=admin * product.count,
                                discount_percent=storage.discount_percent, features=product.features,
                                total_price=(storage.final_price - tax) * product.count, dev=dev * product.count,
