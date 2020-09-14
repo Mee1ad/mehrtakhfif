@@ -191,12 +191,16 @@ class PaymentRequest(View):
                     amount=F('amount') + amount):
                 InvoiceSuppliers.objects.create(invoice=invoice, supplier=supplier, amount=amount)
             tax = get_tax(storage.tax_type, storage.discount_price, storage.start_price)
+            charity = storage.discount_price * 0.005
+            dev = (storage.discount_price - storage.start_price - tax - charity) * 0.069
+            admin = (storage.discount_price - storage.start_price - tax - charity - dev) * 0.035
             invoice_products.append(
                 InvoiceStorage(storage=storage, invoice_id=invoice_id, count=product.count, tax=tax * product.count,
-                               final_price=storage.final_price - tax, box=product.box, features=product.features,
-                               discount_price=storage.discount_price * product.count,
-                               start_price=storage.start_price, discount_percent=storage.discount_percent,
-                               total_price=(storage.final_price - tax) * product.count,
+                               final_price=(storage.final_price - tax) * product.count, box=product.box,
+                               discount_price=storage.discount_price * product.count, caharity=charity * product.count,
+                               start_price=storage.start_price * product.count, admin=admin * product.count,
+                               discount_percent=storage.discount_percent, features=product.features,
+                               total_price=(storage.final_price - tax) * product.count, dev=dev * product.count,
                                discount_price_without_tax=(storage.discount_price - tax) * product.count,
                                discount=(storage.final_price - storage.discount_price) * product.count,
                                created_by=invoice.user, updated_by=invoice.user),

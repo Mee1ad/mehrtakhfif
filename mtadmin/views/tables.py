@@ -270,8 +270,10 @@ class InvoiceProductView(TableView):
     def get(self, request):
         params = get_params(request, box_key='box_id')
         # params['annotate'] = {'tax': F('discount_price') * 0.09,
-        #                       'charity': F('discount_price')
-        #                       'dev': F('discount_price') - F('start_price')}
+        #                       'charity': F('discount_price') * 0.005,
+        #                       'dev': (F('discount_price') - F('start_price') - F('tax') - F('charity')) * 0.069,
+        #                       'admin': (F('discount_price') - F('start_price') - F('tax') - F('charity') - F('dev'))
+        #                                * 0.035}
         params['filter']['invoice__status__in'] = Invoice.success_status
         return JsonResponse(serialized_objects(request, InvoiceStorage, InvoiceStorageASchema, InvoiceStorageASchema,
                                                error_null_box=False, params=params))

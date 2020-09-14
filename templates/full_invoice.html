@@ -316,7 +316,7 @@
                 </td>
                 <td><span class="ltr">{{ product.count }}</span></td>
                 <td><span class="ltr">
-                                            {{ product.final_price|to_rial }}
+                                            {{ product.final_price|div:product.count }}
                                         </span></td>
 
                 <td><span class="ltr">
@@ -368,9 +368,6 @@
                     <div class="flex-grow"></div>
                     <div class="flex-grow"></div>
                 </div>
-                <h3> به هنگام ارسال در سامانه معاملات فصلی ( ماده 169 مکرر) گزینه خرید از طریق حق العمل کار را انتخاب
-                    کنید
-                </h3>
             </td>
         </tr>
         </tfoot>
