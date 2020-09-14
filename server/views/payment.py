@@ -199,12 +199,12 @@ class PaymentRequest(View):
             dev = round((storage.discount_price - storage.start_price - tax - charity) * 0.069)
             admin = round((storage.discount_price - storage.start_price - tax - charity - dev) * storage.product.box.settings['share']/100)
             mt_profit = storage.discount_price - tax - charity - dev - admin
-            print("discount_price: ", storage.discount_price)
-            print("tax: ", tax)
-            print("charity: ", charity)
-            print("dev: ", dev)
-            print("admin: ", admin)
-            print("mt_profit: ", mt_profit)
+            # print("discount_price: ", storage.discount_price)
+            # print("tax: ", tax)
+            # print("charity: ", charity)
+            # print("dev: ", dev)
+            # print("admin: ", admin)
+            # print("mt_profit: ", mt_profit)
             invoice_products.append(
                 InvoiceStorage(storage=storage, invoice_id=invoice_id, count=product.count, tax=tax * product.count,
                                final_price=(storage.final_price - tax) * product.count, box=product.box,

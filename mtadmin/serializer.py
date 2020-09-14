@@ -84,15 +84,41 @@ class BaseAdminSchema(Schema):
     #     super().__init__()
 
     id = fields.Int()
-    created_at = fields.Function(lambda o: o.created_at.timestamp())
+    created_at = fields.Method("get_created_at")
     created_by = fields.Method("get_created_by")
-    updated_at = fields.Function(lambda o: o.updated_at.timestamp())
+    updated_at = fields.Method("get_updated_at")
     updated_by = fields.Method("get_updated_by")
+
+    def dump(self, *args, **kwargs):
+        raw_data = super().dump(*args, **kwargs)
+        if type(raw_data) is not list:
+            return raw_data
+        data = []
+        for d in raw_data:
+            if d not in data:
+                data.append(d)
+        try:
+            data = sorted(data, key=lambda i: i['priority'])
+        except (KeyError, TypeError):
+            pass
+        return data
+
+    def get_created_at(self, obj):
+        try:
+            return obj.created_at.timestamp()
+        except AttributeError:
+            return None
 
     def get_created_by(self, obj):
         try:
             user = obj.created_by
             return {'id': obj.pk, 'name': f"{user.first_name} {user.last_name}"}
+        except AttributeError:
+            return None
+
+    def get_updated_at(self, obj):
+        try:
+            return obj.updated_at.timestamp()
         except AttributeError:
             return None
 
