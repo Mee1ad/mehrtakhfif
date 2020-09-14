@@ -1,15 +1,14 @@
 import operator
-import pysnooper
+
 import zeep
-from django.http import JsonResponse, HttpResponseRedirect, HttpResponseNotFound
+from django.http import JsonResponse, HttpResponseRedirect
 from django.utils.translation import gettext_lazy as _
 from django.views import View
 
 from mehr_takhfif.settings import DEBUG
 from server.serialize import *
 from server.tasks import cancel_reservation
-from server.utils import get_basket, add_one_off_job, sync_storage, add_minutes, send_email
-from time import sleep
+from server.utils import get_basket, add_one_off_job, sync_storage, add_minutes
 
 ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'disable': False},
                 {'id': 2, 'key': 'melli', 'name': 'ملی', 'hide': True, 'disable': True},
@@ -193,7 +192,7 @@ class PaymentRequest(View):
             tax = get_tax(storage.tax_type, storage.discount_price, storage.start_price)
             charity = storage.discount_price * 0.005
             dev = (storage.discount_price - storage.start_price - tax - charity) * 0.069
-            admin = (storage.discount_price - storage.start_price - tax - charity - dev) * 0.035
+            admin = (storage.discount_price - storage.start_price - tax - charity - dev) * storage.product.box.settings['share']
             invoice_products.append(
                 InvoiceStorage(storage=storage, invoice_id=invoice_id, count=product.count, tax=tax * product.count,
                                final_price=(storage.final_price - tax) * product.count, box=product.box,

@@ -272,7 +272,7 @@ class InvoiceESchema(InvoiceASchema):
 
 class InvoiceStorageASchema(InvoiceStorageSchema):
     class Meta:
-        additional = ('id', 'count', 'invoice_id', 'discount_price', 'dev', 'admin', 'mt', 'tax')
+        additional = ('id', 'count', 'invoice_id', 'discount_price', 'dev', 'admin', 'mt', 'tax', 'charity')
 
     storage = fields.Method("get_storage")
     deliver_status = fields.Function(lambda o: o.get_deliver_status_display())

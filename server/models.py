@@ -29,7 +29,6 @@ from safedelete.signals import post_softdelete
 from mehr_takhfif.settings import HOST, MEDIA_ROOT
 from mtadmin.exception import *
 from server.field_validation import *
-import pysnooper
 
 product_types = [(1, 'service'), (2, 'product'), (3, 'tourism'), (4, 'package'), (5, 'package_item')]
 deliver_status = [(1, 'pending'), (2, 'packing'), (3, 'sending'), (4, 'delivered'), (5, 'referred')]
@@ -515,6 +514,15 @@ class Client(MyModel):
         ordering = ['-id']
 
 
+class Charity(Base):
+    name = JSONField(default=multilanguage)
+    deposit_id = models.PositiveSmallIntegerField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'charity'
+        ordering = ['-id']
+
+
 class State(MyModel):
     def __str__(self):
         return self.name
@@ -582,7 +590,7 @@ class Box(Base):
     name = JSONField(default=multilanguage)
     permalink = models.CharField(max_length=255, db_index=True, unique=True)
     owner = models.OneToOneField(User, on_delete=PROTECT)
-    settings = JSONField(default=dict, blank=True)
+    settings = JSONField(default=dict, blank=True, help_text="{share: 35}")
     disable = models.BooleanField(default=True)
     priority = models.PositiveSmallIntegerField(default=0)
     media = models.ForeignKey("Media", on_delete=CASCADE, null=True, blank=True, related_name="box_image_box_id")
@@ -1336,6 +1344,7 @@ class Invoice(Base):
     suppliers = models.ManyToManyField(User, through="InvoiceSuppliers", related_name='invoice_supplier')
     post_tracking_code = models.CharField(max_length=255, null=True, blank=True)
     post_invoice = models.ForeignKey("Invoice", on_delete=CASCADE, related_name='main_invoice', null=True, blank=True)
+    charity = models.ForeignKey(Charity, on_delete=PROTECT)
 
     class Meta:
         db_table = 'invoice'

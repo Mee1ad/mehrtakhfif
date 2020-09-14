@@ -22,7 +22,6 @@ class AdminView(LoginRequiredMixin, View):
     pass
 
 
-@pysnooper.snoop()
 def serialized_objects(request, model, serializer=None, single_serializer=None, box_key='box_id', error_null_box=True,
                        params=None):
     pk = request.GET.get('id', None)
