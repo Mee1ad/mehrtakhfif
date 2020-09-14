@@ -1,14 +1,11 @@
-from marshmallow import Schema, fields, post_load, validates
-from mehr_takhfif.settings import HOST, MEDIA_URL
-import pysnooper
-from secrets import token_hex
-from datetime import date
-from django.utils import timezone
-from server.models import *
-from jdatetime import date, timedelta
-from django.db.models import F
 import time
+from datetime import date
 from math import ceil
+
+from jdatetime import date, timedelta
+from marshmallow import Schema, fields
+
+from server.models import *
 
 
 def get_tax(tax_type, discount_price, start_price=None):
@@ -94,6 +91,20 @@ class BaseSchema(Schema):
         self.vip = vip
         self.user = user
         self.is_mobile = is_mobile
+
+    def dump(self, *args, **kwargs):
+        raw_data = super().dump(*args, **kwargs)
+        if type(raw_data) is not list:
+            return raw_data
+        data = []
+        for d in raw_data:
+            if d not in data:
+                data.append(d)
+        try:
+            data = sorted(data, key=lambda i: i['priority'])
+        except (KeyError, TypeError):
+            pass
+        return data
 
     def get(self, name):
         try:

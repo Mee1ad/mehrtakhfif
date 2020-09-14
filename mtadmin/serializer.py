@@ -89,6 +89,7 @@ class BaseAdminSchema(Schema):
     updated_at = fields.Method("get_updated_at")
     updated_by = fields.Method("get_updated_by")
 
+    # noinspection DuplicatedCode
     def dump(self, *args, **kwargs):
         raw_data = super().dump(*args, **kwargs)
         if type(raw_data) is not list:
