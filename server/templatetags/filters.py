@@ -11,17 +11,17 @@ def to_rial(price):
 
 @register.filter(name="sub")
 def sub(a, b):
-    return f"{(a - b) * 10:,}"
+    return f"{int((a - b) * 10):,}"
 
 
 @register.filter(name="mul")
 def mul(a, b):
-    return f"{(a * b) * 10:,}"
+    return f"{int((a * b) * 10):,}"
 
 
 @register.filter(name="div")
 def div(a, b):
-    return f"{(a / b) * 10:,}"
+    return f"{int((a / b) * 10):,}"
 
 
 @register.filter(name="get_value_added")
