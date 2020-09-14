@@ -1344,7 +1344,7 @@ class Invoice(Base):
     suppliers = models.ManyToManyField(User, through="InvoiceSuppliers", related_name='invoice_supplier')
     post_tracking_code = models.CharField(max_length=255, null=True, blank=True)
     post_invoice = models.ForeignKey("Invoice", on_delete=CASCADE, related_name='main_invoice', null=True, blank=True)
-    charity = models.ForeignKey(Charity, on_delete=PROTECT)
+    charity = models.ForeignKey(Charity, on_delete=PROTECT, null=True, blank=True)
 
     class Meta:
         db_table = 'invoice'
