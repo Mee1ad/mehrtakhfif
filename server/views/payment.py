@@ -9,6 +9,7 @@ from mehr_takhfif.settings import DEBUG
 from server.serialize import *
 from server.tasks import cancel_reservation
 from server.utils import get_basket, add_one_off_job, sync_storage, add_minutes
+from math import ceil, floor
 
 ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'disable': False},
                 {'id': 2, 'key': 'melli', 'name': 'ملی', 'hide': True, 'disable': True},
@@ -194,10 +195,11 @@ class PaymentRequest(View):
                     amount=F('amount') + amount):
                 InvoiceSuppliers.objects.create(invoice=invoice, supplier=supplier, amount=amount)
             tax = get_tax(storage.tax_type, storage.discount_price, storage.start_price)
-            charity = storage.discount_price * 0.005
-            dev = (storage.discount_price - storage.start_price - tax - charity) * 0.069
-            admin = (storage.discount_price - storage.start_price - tax - charity - dev) * storage.product.box.settings['share']
+            charity = round(storage.discount_price * 0.005)
+            dev = round((storage.discount_price - storage.start_price - tax - charity) * 0.069)
+            admin = round((storage.discount_price - storage.start_price - tax - charity - dev) * storage.product.box.settings['share'])
             mt_profit = storage.discount_price - tax - charity - dev - admin
+            print("mt_profit: ", mt_profit)
             invoice_products.append(
                 InvoiceStorage(storage=storage, invoice_id=invoice_id, count=product.count, tax=tax * product.count,
                                final_price=(storage.final_price - tax) * product.count, box=product.box,
@@ -207,8 +209,7 @@ class PaymentRequest(View):
                                total_price=(storage.final_price - tax) * product.count, dev=dev * product.count,
                                discount_price_without_tax=(storage.discount_price - tax) * product.count,
                                discount=(storage.final_price - storage.discount_price) * product.count,
-                               created_by=invoice.user, updated_by=invoice.user),
-            )
+                               created_by=invoice.user, updated_by=invoice.user))
         InvoiceStorage.objects.bulk_create(invoice_products)
 
 
