@@ -221,6 +221,12 @@ class ProductAdmin(SafeDeleteAdmin):
     list_per_page = 10
     ordering = ('-created_at',)
 
+    def lookup_allowed(self, key, value):
+        # if key in ('related__pk', 'related__custom_field'):
+        return True
+
+        # return super(StorageAdmin, self).lookup_allowed(key, value)
+
     def get_search_results(self, request, queryset, search_term):
         try:
             queryset, use_distinct = super().get_search_results(request, queryset, search_term)
@@ -429,7 +435,8 @@ register_list = [(Session, SessionAdmin), (User, UserAdmin), (Box, BoxAdmin), (C
                  (HousePrice, HousePriceAdmin), (ResidenceType, ResidenceTypeAdmin), (Booking, BookAdmin),
                  (Storage, StorageAdmin), (Basket,), (Comment, CommentAdmin), (Invoice, InvoiceAdmin),
                  (InvoiceStorage, InvoiceStorageAdmin), (InvoiceSuppliers, InvoiceSupplierAdmin), (Menu, MenuAdmin),
-                 (Tag,), (TagGroup,), (Rate,), (Slider, SliderAdmin), (SpecialOffer, SpecialOfferAdmin), (Holiday, HolidayAdmin),
+                 (Tag,), (TagGroup,), (Rate,), (Slider, SliderAdmin), (SpecialOffer, SpecialOfferAdmin),
+                 (Holiday, HolidayAdmin),
                  (SpecialProduct, SpecialProductAdmin), (Blog,), (BlogPost,), (WishList,), (NotifyUser,), (Ad, AdAdmin),
                  (State, StateAdmin), (City, CityAdmin), (Permission,), (VipType, VipTypeAdmin)]
 for item in register_list:
