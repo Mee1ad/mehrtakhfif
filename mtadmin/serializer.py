@@ -31,10 +31,10 @@ def related_objects(objects):
 
 # ManyToMany Relations
 
-class FeatureField(fields.Field):
+class ProductFeatureField(fields.Field):
     def _serialize(self, value, attr, obj, **kwargs):
-        features = FeatureStorage.objects.filter(storage=obj)
-        return FeatureStorageASchema().dump(features, many=True)
+        features = ProductFeature.objects.filter(product=obj)
+        return ProductFeatureASchema().dump(features, many=True)
 
 
 class VipPriceField(fields.Field):
@@ -162,12 +162,15 @@ class BaseAdminSchema(Schema):
             return None
 
     def get_features(self, obj):
-        features = obj.feature.all()
-        storage_list = []
-        for index, feature in enumerate(features):
-            storage_list.append({'id': feature.pk, 'name': feature.name,
-                                 'count': feature.available_count_for_sale, 'disable': feature.disable})
-        return storage_list
+        return FeatureASchema(exclude=['groups']).dump(obj.features.all(), many=True)
+
+    # def get_features(self, obj):
+    #     features = obj.feature.all()
+    #     storage_list = []
+    #     for index, feature in enumerate(features):
+    #         storage_list.append({'id': feature.pk, 'name': feature.name,
+    #                              'count': feature.available_count_for_sale, 'disable': feature.disable})
+    #     return storage_list
 
     def get_storage(self, obj):
         storages = obj.storages.all()
@@ -194,6 +197,31 @@ class BaseAdminSchema(Schema):
     def get_tag(self, obj):
         tags = ProductTag.objects.filter(product=obj)
         return TagASchema().dump(tags, many=True)
+
+    def get_feature_groups(self, obj, product=None):
+        # features = ProductFeature.objects.filter(product=obj)
+        # return self.get_product_features(features, model='product')
+
+        if obj.__class__ == Feature:
+            # return FeatureGroupASchema(exclude=['features']).dump(obj.groups.all(), many=True)
+            return FeatureGroupASchema().dump(obj.groups.all(), many=True)
+        if obj.__class__ == Category:
+            # return FeatureGroupASchema(exclude=['features']).dump(obj.feature_groups.all(), many=True)
+            return FeatureGroupASchema().dump(obj.feature_groups.all(), many=True)
+        if obj.__class__ == Product:
+            # return FeatureGroupASchema(exclude=['features']).dump(obj.feature_groups.all(), many=True)
+            return FeatureGroupASchema().dump(obj.feature_groups.all(), many=True)
+
+    def get_product_features(self, features, model):
+        features_distinct = features.order_by('feature_id').distinct('feature_id')
+        for product_feature in features_distinct:
+            for pf in features.filter(feature=product_feature.feature):
+                try:
+                    product_feature.values.append(pf.feature_value)
+                except AttributeError:
+                    product_feature.values = []
+                    product_feature.values.append(pf.feature_value)
+        return ProductFeatureASchema(model=model).dump(features_distinct, many=True)
 
 
 class UserASchema(UserSchema):
@@ -302,7 +330,8 @@ class InvoiceESchema(InvoiceASchema):
         return InvoiceStorageASchema().dump(storages, many=True)
 
     def calculate_invoice_tax(self, obj):
-        return InvoiceStorage.objects.filter(invoice=obj).aggregate(tax=Sum('tax')).get('tax', 0)
+        taxes = obj.invoice_storages.all().values_list('tax', flat=True)
+        return sum(taxes)
 
     def get_ipg(self, obj):
         return [ip for ip in ipg['data'] if ip['id'] == obj.ipg][0]
@@ -310,7 +339,7 @@ class InvoiceESchema(InvoiceASchema):
 
 class InvoiceStorageASchema(InvoiceStorageSchema):
     class Meta:
-        additional = ('id', 'count', 'invoice_id', 'discount_price', 'dev', 'admin', 'mt', 'tax', 'charity')
+        additional = InvoiceStorageSchema.Meta.additional + ('id', 'count', 'invoice_id', 'discount_price')
 
     storage = fields.Method("get_storage")
     deliver_status = fields.Function(lambda o: o.get_deliver_status_display())
@@ -321,6 +350,11 @@ class InvoiceStorageASchema(InvoiceStorageSchema):
 
     def get_storage(self, obj):
         return StorageESchema().dump(obj.storage)
+
+
+class InvoiceStorageFDSchema(InvoiceStorageASchema):
+    class Meta:
+        additional = InvoiceStorageASchema.Meta.additional + ('dev', 'admin', 'mt', 'tax', 'charity')
 
 
 class ProductASchema(BaseAdminSchema):
@@ -366,6 +400,49 @@ class ProductESchema(ProductASchema, ProductSchema):
     description = fields.Dict()
     short_description = fields.Dict()
     default_storage_id = fields.Int()
+    features = fields.Method("get_features")
+    feature_groups = fields.Method("get_feature_groups")
+
+    def get_feature_groups(self, obj):
+        return FeatureGroupASchema(product=obj).dump(obj.feature_groups.all(), many=True)
+
+    def get_features(self, obj):
+        features = ProductFeature.objects.filter(product=obj)
+        return self.get_product_features(features, model='product')
+
+
+class ProductFeatureASchema(Schema):
+    def __init__(self, model, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.model = model
+
+    feature = fields.Nested("FeatureASchema")
+    values = fields.Method('get_values')
+
+    def get_feature(self, obj):
+        return {'id': obj.feature_id, 'name': obj.feature.name}
+
+    def get_values(self, obj):
+        product_features = ProductFeature.objects.filter(feature=obj.feature, product=obj.product)
+        values = []
+        for pf in product_features:
+            product_feature_storage = ProductFeatureStorage.objects.filter(storage__product=pf.product,
+                                                                           product_feature=pf)
+            selected = product_feature_storage.exists()
+            storages_id = list(product_feature_storage.values_list('storage_id', flat=True))
+            pk = pf.id
+            if self.model == 'product':
+                pk = pf.feature_value_id
+            values.append({'id': pk, 'name': pf.feature_value.value, 'selected': selected, 'storage_id': storages_id,
+                           'settings': pf.feature_value.settings.get('ui', {})})
+        return values
+
+
+class ProductFeatureStorageASchema(Schema):
+    id = fields.Int()
+    feature = fields.Nested("FeatureASchema")
+    feature_value = fields.Nested("FeatureValueASchema")
+    value = fields.Dict()
 
 
 class PriceSchema(Schema):
@@ -410,12 +487,19 @@ class StorageESchema(StorageASchema):
                       'invoice_title', 'dimensions', 'package_discount_price')
 
     supplier = fields.Function(lambda o: UserSchema().dump(o.supplier))
-    # features = FeatureField()
+    features = fields.Method('get_features')
     items = PackageItemsField()
     tax = fields.Function(lambda o: o.get_tax_type_display())
     vip_discount_price = fields.Function(lambda o: None)
     vip_discount_percent = fields.Function(lambda o: None)
     vip_prices = VipPriceField()
+
+    def get_features(self, obj):
+        # product_feature_storages = ProductFeatureStorage.objects.filter(storage=obj).values_list('product_feature_id',
+        #                                                                                          flat=True)
+        # features = ProductFeature.objects.filter(pk__in=product_feature_storages)
+        features = ProductFeature.objects.filter(product=obj.product, feature__type=3)  # selectable
+        return self.get_product_features(features, model='storage')
 
 
 class PackageASchema(StorageESchema):
@@ -486,22 +570,75 @@ class CategoryASchema(BaseAdminSchema, CategorySchema):
     box = fields.Nested(BoxASchema)
 
 
-class CategoryESchema(CategoryASchema):
+class CategoryESchema(CategoryASchema, BaseAdminSchema):
     class Meta:
         additional = CategoryASchema.Meta.additional + ('box_id',)
 
+    feature_groups = fields.Method("get_feature_groups")
+
 
 class FeatureASchema(BaseAdminSchema):
-    class Meta:
-        additional = ('icon', 'name', 'value')
+    def __init__(self, only_used_value=False, product=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.only_used_value = only_used_value
+        self.product = product
 
+    list_filter = [FeatureGroup]
+
+    name = fields.Dict()
     type = fields.Function(lambda o: o.get_type_display())
+    values = fields.Method("get_values")
+    groups = fields.Method("get_feature_groups")
+
+    def get_values(self, obj):
+        # product_feature = ProductFeature.objects.filter(feature=obj, product=self.product)
+        # if product_feature.exists():
+        #     return [FeatureValueASchema(product=self.product).dump(product_feature.first().feature_value)]
+        if getattr(obj, 'get_type_display')() == "text":
+            fv = FeatureValue.objects.filter(feature=obj).order_by('id').first()
+            if fv:
+                return [FeatureValueASchema(product=self.product).dump(fv)]
+            return []
+        product = {}
+        if self.only_used_value:
+            product = {'product': self.product}
+        values = FeatureValue.objects.filter(feature=obj, **product)
+        return FeatureValueASchema(product=self.product).dump(values, many=True)
 
 
-class FeatureStorageASchema(Schema):
-    id = fields.Int()
-    feature = fields.Nested(FeatureASchema)
-    value = fields.Function(lambda o: o.value)
+class FeatureValueASchema(BaseAdminSchema):
+    def __init__(self, product=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.product = product
+
+    class Meta:
+        additional = ('settings',)
+
+    name = fields.Function(lambda o: getattr(o, 'value', None))
+    selected = fields.Method("get_selected")
+
+    def get_selected(self, obj):
+        if self.product:
+            print(self.product.pk, obj.pk)
+        return ProductFeatureStorage.objects.filter(storage__product=self.product,
+                                                    product_feature__feature_value=obj).exists()
+
+
+class FeatureGroupASchema(BaseAdminSchema):
+    def __init__(self, product=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.product = product
+
+    name = fields.Dict()
+    features = fields.Method("get_features")
+
+    box = fields.Nested(BoxASchema)
+
+    def get_features(self, obj):
+        feature_ids = FeatureGroupFeature.objects.filter(featuregroup=obj).order_by('priority', 'id') \
+            .distinct('priority', 'id').values_list('feature', flat=True)
+        features = sort_by_list_of_id(Feature, feature_ids)
+        return FeatureASchema(exclude=['groups'], product=self.product).dump(features, many=True)
 
 
 class TagASchema(Schema):

@@ -42,7 +42,7 @@ box = [
     # path('special_offer/<str:name>', GetSpecialOffer.as_view(), name='special_offer'),
     # path('special_product/<str:permalink>', GetSpecialProduct.as_view(), name='special_product'),
     path('filter_detail', try_except(FilterDetail.as_view()), name='filter_detail'),
-    path('features', try_except(GetFeature.as_view()), name='features'),
+    # path('features', try_except(GetFeature.as_view()), name='features'),
     path('tag/<str:permalink>', try_except(TagView.as_view()), name='tag'),
     path('category/<str:permalink>', try_except(CategoryView.as_view()), name='category'),
 ]
@@ -50,6 +50,7 @@ box = [
 product = [
     path('product/<str:permalink>', try_except(ProductView.as_view()), name='single'),
     path('comment', try_except(CommentView.as_view()), name='comment'),
+    path('features/<str:permalink>', try_except(FeatureView.as_view()), name='features'),
     path('related_products/<str:permalink>', try_except(RelatedProduct.as_view()), name='related_products'),
 ]
 

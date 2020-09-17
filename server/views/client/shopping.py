@@ -1,31 +1,37 @@
-from server.utils import *
-from django.http import JsonResponse, HttpResponseBadRequest
-from mehr_takhfif.settings import TOKEN_SALT, DEBUG
-import pysnooper
-from django.db.models import F
+from django.http import JsonResponse
 from django.utils.translation import gettext_lazy as _
-from server.serialize import BasketProductSchema
+
+from mehr_takhfif.settings import DEBUG
+from server.serialize import BasketProductSchema, ProductFeatureSchema
+from server.utils import *
 from server.views.post import *
 
 
-class BasketView(LoginRequired):
+class BasketView(View):
     def get(self, request):
-        basket = Basket.objects.filter(user=request.user).order_by('-id').first()
+        try:
+            basket = Basket.objects.filter(user=request.user).order_by('-id').first()
+        except TypeError:
+            basket = None
         deleted_items = self.check_basket(basket)
-        return JsonResponse({**get_basket(request.user, request.lang, basket=basket, tax=True),
+        return JsonResponse({**get_basket(request, basket=basket, tax=True),
                              'deleted_items': deleted_items})
 
     def post(self, request):
         data = load_data(request)
-        try:
-            assert request.user.is_authenticated
-            basket = Basket.objects.filter(user=request.user).order_by('-id').first()
+        user = request.user
+        use_session = False
+        if not user.is_authenticated or (DEBUG is True and data.get('use_session', None) is True):
+            basket_count = self.add_to_session(request, data['products'])
+            use_session = True
+        else:
+            baskets = Basket.objects.filter(user=user).order_by('-id')
+            basket = baskets.first()
             if not basket:
-                basket = Basket.objects.create(user=request.user, created_by=request.user, updated_by=request.user)
-        except AssertionError:
-            return JsonResponse({}, status=401)
-        basket_count = self.add_to_basket(basket, data['products'])
-        res = {'basket_count': basket_count, **get_basket(request.user, request.lang)}
+                basket = Basket.objects.create(user=user, created_by=user, updated_by=user)
+            basket_count = self.add_to_basket(basket, data['products'])
+        res = {'basket_count': basket_count, **get_basket(request, use_session=use_session),
+               'message': 'محصول با موفقیت به سبد خرید افزوده شد'}
         res = JsonResponse(res)
         res = set_custom_signed_cookie(res, 'basket_count', basket_count)
         return res
@@ -38,7 +44,7 @@ class BasketView(LoginRequired):
         storage = BasketProduct.objects.filter(basket=basket, pk=pk).select_related('storage').first().storage
         assert storage.available_count_for_sale >= count and storage.max_count_for_sale >= count
         assert BasketProduct.objects.filter(id=pk, basket=basket).update(count=data['count'])
-        return JsonResponse(get_basket(request.user, request.lang))
+        return JsonResponse(get_basket(request))
 
     def delete(self, request):
         basket_product_id = request.GET.get('basket_product_id', None)
@@ -48,34 +54,51 @@ class BasketView(LoginRequired):
             BasketProduct.objects.filter(basket=basket, id=basket_product_id).delete()
             res = {}
             if summary:
-                res = get_basket(request.user, request.lang)
+                res = get_basket(request)
             return JsonResponse(res)
         except (AssertionError, Basket.DoesNotExist):
             return JsonResponse(default_response['bad_request'], status=400)
 
-    def add_to_basket(self, basket, products):
-        # {"id": 1, "count": 5, "features": [{"fsid": 16, "fvid": [1, 2]}]}
+    def add_to_session(self, request, products):
         for product in products:
-            pk = int(product['id'])
             count = int(product['count'])
-            features = product['features']
+            storage = Storage.objects.get(pk=product['storage_id'])
+            if storage.available_count_for_sale < count or storage.max_count_for_sale < count or storage.disable \
+                    or storage.product.disable:
+                raise ValidationError(_('متاسفانه این محصول ناموجود میباشد'))
+            basket = request.session.get('basket', [])
+            duplicate_basket_product_index = [basket.index(basket_product) for basket_product in basket if
+                                              basket_product['storage_id'] == storage.pk]
+            features = storage.features.all()
+            product['features'] = ProductFeatureSchema().dump(features, many=True)
+            product['box_id'] = storage.product.box_id
+            if duplicate_basket_product_index:
+                request.session['basket'][duplicate_basket_product_index[0]] = product
+                request.session.save()
+                return len(request.session['basket'])
+            if not basket:
+                request.session['basket'] = []
+            request.session['basket'].append(product)
+            request.session.save()
+            return len(request.session['basket'])
+
+    def add_to_basket(self, basket, products):
+        for product in products:
+            count = int(product['count'])
+            storage = Storage.objects.get(pk=product['storage_id'])
+            if storage.available_count_for_sale < count or storage.max_count_for_sale < count or storage.disable \
+                    or storage.product.disable:
+                raise ValidationError(_('متاسفانه این محصول ناموجود میباشد'))
             try:
-                basket_product = BasketProduct.objects.filter(basket=basket, storage_id=pk, features=features). \
-                    select_related('storage')
-                storage = basket_product.first().storage
-                if storage.available_count_for_sale < count or storage.max_count_for_sale < count or storage.disable \
-                        or storage.product.disable:
-                    raise ValidationError(_('متاسفانه این محصول ناموجود میباشد'))
+                basket_product = BasketProduct.objects.filter(basket=basket, storage=storage)
+                assert basket_product.exists()
                 basket_product.update(count=count)
-            except AttributeError:
-                box = Storage.objects.get(pk=pk).product.box
-                basket_product = BasketProduct(basket=basket, storage_id=pk, count=count, box=box, features=features)
-                basket_product.validation()
-                storage = basket_product.storage
-                if storage.available_count_for_sale < count or storage.max_count_for_sale < count or storage.disable \
-                        or storage.product.disable:
-                    raise ValidationError(_('متاسفانه این محصول ناموجود میباشد'))
-                basket_product.save()
+            except AssertionError:
+                box = storage.product.box
+                features = storage.features.all()
+                features = ProductFeatureSchema().dump(features, many=True)
+                BasketProduct.objects.create(basket=basket, storage=storage, count=count, box=box,
+                                             features=features)
 
         basket.count = basket.products.all().count()
         basket.save()
@@ -115,7 +138,7 @@ class GetProducts(View):
             obj.product.default_storage = storage
             basket.basket_products.append(obj)
 
-        basket = get_basket(request.user, request.lang, basket=basket, basket_products=basket.basket_products)
+        basket = get_basket(request, basket=basket, basket_products=basket.basket_products)
         return JsonResponse(basket)
 
     def patch(self, request):

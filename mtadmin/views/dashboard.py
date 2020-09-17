@@ -1,6 +1,5 @@
 from datetime import timedelta
 
-import pytz
 from django.db.models import Sum
 from django.http import JsonResponse
 from jdatetime import datetime as jdatetime, timedelta as jtimedelta
@@ -69,21 +68,25 @@ class ProfitSummary(AdminView):
         for box in boxes:
             profit = InvoiceStorage.objects.filter(storage__product__box=box, invoice__payed_at__range=[start, end],
                                                    invoice__status__in=Invoice.success_status) \
-                .aggregate(sold_count=Sum('count'), charity_profit=Sum('discount_price') * 0.005,
+                .aggregate(sold_count=Sum('count'), charity=Sum('charity'), dev=Sum('dev'), admin=Sum('admin'),
                            total_payment=Sum('discount_price'), start_prices=Sum('start_price'),
-                           mt_profit=Sum('discount_price') - Sum('start_price'),
-                           post_price=Sum('invoice__post_invoice__amount'))
+                           mt_profit=Sum('mt_profit'), post_price=Sum('invoice__post_invoice__amount'), tax=Sum('tax'))
 
             data = {'id': box.id, 'name': box.name, 'mt_profit': profit['mt_profit'] or 0, 'settings': box.settings,
-                    'charity_profit': profit['charity_profit'] or 0, 'sold_count': profit['sold_count'] or 0,
+                    'charity': profit['charity'] or 0, 'sold_count': profit['sold_count'] or 0,
                     'total_payment': profit['total_payment'] or 0, 'start_price': profit['start_prices'] or 0,
-                    'post_price': profit['post_price'] or 0}
+                    'post_price': profit['post_price'] or 0, 'dev': profit['dev'] or 0, 'admin': profit['admin'] or 0,
+                    'tax': profit['tax'] or 0}
             box_list.append(data)
-        total = {'charity_profit': 0, 'total_payment': 0, 'mt_profit': 0, 'start_price': 0, 'post_price': 0}
+        total = {'charity': 0, 'total_payment': 0, 'mt_profit': 0, 'start_price': 0, 'post_price': 0, 'dev': 0,
+                 'admin': 0, 'tax': 0}
         for b in box_list:
-            total['charity_profit'] += b['charity_profit']
+            total['charity'] += b['charity']
             total['mt_profit'] += b['mt_profit']
+            total['dev'] += b['dev']
+            total['admin'] += b['admin']
             total['total_payment'] += b['total_payment']
             total['start_price'] += b['start_price']
             total['post_price'] += b['post_price']
+            total['tax'] += b['tax']
         return JsonResponse({'boxes': box_list, 'total': total})

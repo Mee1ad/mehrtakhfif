@@ -102,13 +102,51 @@ class FeatureView(TableView):
     permission_required = 'server.view_feature'
 
     def get(self, request):
-        return JsonResponse(serialized_objects(request, Feature, FeatureASchema, FeatureASchema))
+        return JsonResponse(serialized_objects(request, Feature, FeatureASchema, FeatureASchema, error_null_box=False))
 
     def post(self, request):
-        return create_object(request, Feature)
+        feature = create_object(request, Feature, error_null_box=False, return_obj=True)
+        return JsonResponse({'id': feature.pk})
 
     def put(self, request):
-        return update_object(request, Feature)
+        return update_object(request, Feature, serializer=FeatureASchema, require_box=False, return_item=True)
+
+    def delete(self, request):
+        return delete_base(request, Feature)
+
+
+class FeatureValueView(TableView):
+    permission_required = 'server.view_featurevalue'
+
+    def get(self, request):
+        return JsonResponse(serialized_objects(request, FeatureValue, FeatureValueASchema, FeatureValueASchema,
+                                               error_null_box=False))
+
+    def post(self, request):
+        return create_object(request, FeatureValue, serializer=FeatureValueASchema, error_null_box=False, return_item=True)
+
+    def put(self, request):
+        return update_object(request, FeatureValue, serializer=FeatureValueASchema, require_box=False, return_item=True)
+
+    def delete(self, request):
+        return delete_base(request, FeatureValue)
+
+
+class FeatureGroupView(TableView):
+    permission_required = 'server.view_featuregroup'
+
+    def get(self, request):
+        required_box = {'error_null_box': True}
+        if request.GET.get('id', None) or request.GET.get('name__fa', None):
+            required_box = {'error_null_box': False}
+        return JsonResponse(serialized_objects(request, FeatureGroup, FeatureGroupASchema, FeatureGroupASchema,
+                                               **required_box))
+
+    def post(self, request):
+        return create_object(request, FeatureGroup)
+
+    def put(self, request):
+        return update_object(request, FeatureGroup)
 
     def delete(self, request):
         return delete_base(request, Feature)
@@ -140,6 +178,19 @@ class ProductView(TableView):
 
     def delete(self, request):
         return delete_base(request, Product)
+
+
+class ProductFeatureView(TableView):
+    permission_required = 'server.view_productfeature'
+
+    def get(self, request):
+        params = get_params(request)
+        params['order'].append('feature_id')
+        params['distinct'] = True
+        if not request.GET.get('product_id', None):
+            return JsonResponse({'data': []})
+        return JsonResponse(serialized_objects(request, ProductFeature, ProductFeatureASchema, ProductFeatureASchema,
+                                               error_null_box=False, params=params))
 
 
 class HouseView(TableView):
@@ -269,13 +320,12 @@ class InvoiceProductView(TableView):
 
     def get(self, request):
         params = get_params(request, box_key='box_id')
-        # params['annotate'] = {'tax': F('discount_price') * 0.09,
-        #                       'charity': F('discount_price') * 0.005,
-        #                       'dev': (F('discount_price') - F('start_price') - F('tax') - F('charity')) * 0.069,
-        #                       'admin': (F('discount_price') - F('start_price') - F('tax') - F('charity') - F('dev'))
-        #                                * 0.035}
+        serializer = InvoiceStorageASchema
+        print(get_group(request.user))
+        if get_group(request.user) in ['superuser', 'mt_accountants'] or request.user.is_superuser:
+            serializer = InvoiceStorageFDSchema
         params['filter']['invoice__status__in'] = Invoice.success_status
-        return JsonResponse(serialized_objects(request, InvoiceStorage, InvoiceStorageASchema, InvoiceStorageASchema,
+        return JsonResponse(serialized_objects(request, InvoiceStorage, serializer, serializer,
                                                error_null_box=False, params=params))
 
     def put(self, request):

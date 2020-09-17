@@ -53,7 +53,7 @@ class PaymentRequest(View):
         # if request.user.is_staff:
         if DEBUG is True:
             invoice = self.create_invoice(request)
-            self.submit_invoice_storages(invoice.pk)
+            self.submit_invoice_storages(request, invoice.pk)
             invoice.basket.sync = 3
             invoice.basket.save()
             invoice.status = 2
@@ -75,16 +75,16 @@ class PaymentRequest(View):
         basket = Basket.objects.filter(user=request.user, id=basket_id).first()
         invoice = self.create_invoice(request)
         self.reserve_storage(basket, invoice)
-        self.submit_invoice_storages(invoice.pk)
+        self.submit_invoice_storages(request, invoice.pk)
         return JsonResponse({"url": f"{bp['ipg_url']}?RefId={self.behpardakht_api(invoice.pk)}"})
 
     def behpardakht_api(self, invoice_id, charity_id=1):
         invoice = Invoice.objects.get(pk=invoice_id)
-        basket = get_basket(invoice.user, basket=invoice.basket, return_obj=True, tax=True)
+        basket = get_basket(request, basket=invoice.basket, return_obj=True, tax=True)
         tax = basket.summary["tax"]
-        charity = basket.summary["ha_profit"]
+        charity = basket.summary["charity"]
         charity_deposit = Charity.objects.get(pk=charity_id).deposit_id
-        additional_data = [[1, int(basket.summary["mt_profit"] + basket.summary["ha_profit"] + tax +
+        additional_data = [[1, int(basket.summary["mt_profit"] + basket.summary["charity"] + tax +
                                    basket.summary['shipping_cost'] - charity) * 10, 0],
                            [charity_deposit, charity * 10, 0]]
         # bug '1,49000,0;1,16000,0'
@@ -141,7 +141,8 @@ class PaymentRequest(View):
     def create_invoice(self, request, basket=None, charity_id=1):
         user = request.user
         address = None
-        basket = basket or get_basket(user, request.lang, require_profit=True)
+        basket = basket or get_basket(request, require_profit=True)
+        shipping_price = 0
         if basket['address_required']:
             if user.default_address.state_id != 25:
                 raise ValidationError('در حال حاضر محصولات فقط در گیلان قابل ارسال میباشد')
@@ -164,7 +165,7 @@ class PaymentRequest(View):
                                          # mt_profit=basket['summary']['mt_profit'],
                                          expire=add_minutes(15), basket_id=basket['basket']['id'],
                                          invoice_discount=basket['summary']['invoice_discount'], address=address,
-                                         # ha_profit=basket['summary']['ha_profit'],
+                                         # charity=basket['summary']['charity'],
                                          amount=basket['summary']['discount_price'] + basket['summary']['tax'],
                                          final_price=basket['summary']['total_price'],
                                          max_shipping_time=max_shipping_time, post_invoice=post_invoice)
@@ -183,9 +184,9 @@ class PaymentRequest(View):
             basket.save()
             invoice.save()
 
-    def submit_invoice_storages(self, invoice_id):
+    def submit_invoice_storages(self, request, invoice_id):
         invoice = Invoice.objects.filter(pk=invoice_id).select_related(*Invoice.select).first()
-        basket = get_basket(invoice.user, basket=invoice.basket, return_obj=True)
+        basket = get_basket(request, basket=invoice.basket, return_obj=True)
         invoice_products = []
         for product in basket.basket_products:
             storage = product.storage
@@ -196,15 +197,10 @@ class PaymentRequest(View):
                 InvoiceSuppliers.objects.create(invoice=invoice, supplier=supplier, amount=amount)
             tax = get_tax(storage.tax_type, storage.discount_price, storage.start_price)
             charity = round(storage.discount_price * 0.005)
-            dev = round((storage.discount_price - storage.start_price - tax - charity) * 0.069)
-            admin = round((storage.discount_price - storage.start_price - tax - charity - dev) * storage.product.box.settings['share']/100)
+            dev = round((storage.discount_price - storage.start_price - tax) * 0.069)
+            admin = round((storage.discount_price - storage.start_price - tax - charity - dev) *
+                          storage.product.box.share)
             mt_profit = storage.discount_price - tax - charity - dev - admin
-            # print("discount_price: ", storage.discount_price)
-            # print("tax: ", tax)
-            # print("charity: ", charity)
-            # print("dev: ", dev)
-            # print("admin: ", admin)
-            # print("mt_profit: ", mt_profit)
             invoice_products.append(
                 InvoiceStorage(storage=storage, invoice_id=invoice_id, count=product.count, tax=tax * product.count,
                                final_price=(storage.final_price - tax) * product.count, box=product.box,

@@ -343,7 +343,7 @@ GET {{host}}/filter_detail?s=20&p=1&b=%D9%88%D8%B1%D8%B2%D8%B4&brand[]=7&min_pri
 
 ### features
 
-GET {{host}}/features?box=پت-شاپ
+GET {{host}}/features/کفش-آدیداس-تستی
 
 > {%
     client.test("Request executed successfully", function() {
@@ -407,49 +407,10 @@ GET {{host}}/related_products/هفت-سین-سفالی
     });
 %}
 
-### Shopping
-GET {{host}}/basket
-
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
-
-### add to basket
-POST {{host}}/product
-Content-Type: application/json
-
-{
-  "basket": [
-    {
-      "id": 126,
-      "count": 5
-    }
-  ]
-}
-
-> response.http
-
-### add to basket with feature
-POST {{host}}/product
-Content-Type: application/json
-
-{
-  "basket": [
-    {
-      "id": 126,
-      "count": 5,
-      "features": []
-    }
-  ]
-}
-
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+###
+GET {{host}}/features/کفش-آدیداس-تستی
+###
+GET {{host}}/features/کفش-آدیداس-تستی?select[]=4&select[]=7
 
 ### Payment
 GET {{host}}/ipg

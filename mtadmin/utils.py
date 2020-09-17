@@ -43,8 +43,11 @@ def serialized_objects(request, model, serializer=None, single_serializer=None, 
                     raise PermissionDenied
             except KeyError:
                 raise PermissionDenied
-        distinct_by = [item.replace('-', '') for item in params['order'] if item.replace('-', '') not in model.m2m]
-        query = model.objects.filter(**params['filter']).order_by(*params['order'], '-id')
+        distinct_by = []
+        if params['distinct']:
+            distinct_by = [item.replace('-', '') for item in params['order'] if item.replace('-', '') not in model.m2m]
+        # query = model.objects.filter(**params['filter']).order_by(*params['order'], '-id')
+        query = model.objects.filter(**params['filter']).order_by(*params['order']).distinct(*distinct_by)
         # todo duplicate data when order by manytomany fields, need distinct
         # query = model.objects.filter(**params['filter']).order_by(*params['order'])
         if params.get('aggregate', None):
@@ -77,13 +80,14 @@ def get_params(request, box_key=None, date_key='created_at'):
     filterby = {}
     orderby = []
     annotate = {}
+    distinct = False
     try:
         params = request.GET
         new_params = dict(params)
         [new_params.pop(key, None) for key in remove_param]
         keys = new_params.keys()
     except AttributeError:
-        return {'filter': filterby, 'order': orderby, 'annotate': annotate}
+        return {'filter': filterby, 'order': orderby, 'annotate': annotate, 'distinct': False}
     for key in keys:
         value = params.getlist(key)
         if key == 'sd':
@@ -101,7 +105,9 @@ def get_params(request, box_key=None, date_key='created_at'):
         if key == 'has_review':
             filterby['review__isnull'] = False
             continue
-
+        if key == 'distinct':
+            distinct = True
+            continue
         if key == 'q':
             annotate['text'] = KeyTextTransform('fa', 'name')
             filterby['text__contains'] = value[0]
@@ -112,7 +118,7 @@ def get_params(request, box_key=None, date_key='created_at'):
             continue
         filterby[key] = value[0]
 
-    return {'filter': filterby, 'order': orderby, 'annotate': annotate}
+    return {'filter': filterby, 'order': orderby, 'annotate': annotate, 'distinct': distinct}
 
 
 def get_data(request, require_box=True):
@@ -200,9 +206,9 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
     obj.save(**remove_fields)
     [getattr(obj, field).set(m2m[field]) for field in m2m]
     for field in custom_m2m:
-        add_custom_m2m(obj, field, custom_m2m[field])
+        add_custom_m2m(obj, field, custom_m2m[field], user)
     for field in ordered_m2m:
-        add_ordered_m2m(obj, field, ordered_m2m[field])
+        add_ordered_m2m(obj, field, ordered_m2m[field], user)
     if return_item:
         request.GET._mutable = True
         request.GET['id'] = obj.pk
@@ -214,27 +220,48 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
     return JsonResponse({'id': obj.pk}, status=201)
 
 
-def add_ordered_m2m(obj, field, item_list):
-    getattr(obj, field).clear()
-    many_to_many_model = obj.ordered_m2m[field]
+def get_m2m_field(obj, field, m2m):
+    many_to_many_model = getattr(obj, m2m)[field]
+    try:
+        getattr(obj, field).clear()
+    except AttributeError:
+        getattr(obj, field).all().delete()
+    return many_to_many_model
+
+
+def m2m_footprint(many_to_many_model, user):
+    user = {'created_by_id': user.pk, 'updated_by_id': user.pk}
+    if many_to_many_model not in m2m_footprint_required:
+        user = {}
+    return user
+
+
+def add_ordered_m2m(obj, field, item_list, user):
+    many_to_many_model = get_m2m_field(obj, field, 'ordered_m2m')
+    user = m2m_footprint(many_to_many_model, user)
     extra_fields = {obj.__class__.__name__.lower(): obj}
     items = []
     for pk in item_list:
         related = {getattr(obj, field).model.__name__.lower() + '_id': pk}
-        items.append(many_to_many_model(priority=item_list.index(pk), **extra_fields, **related))
+        try:
+            items.append(many_to_many_model(priority=item_list.index(pk), **extra_fields, **related))
+        except TypeError:
+            related = related[getattr(obj, field).model.__name__.lower() + '_id']
+            items.append(many_to_many_model(priority=item_list.index(pk), **extra_fields, **related, **user))
     many_to_many_model.objects.bulk_create(items)
 
 
-def add_custom_m2m(obj, field, item_list):
-    getattr(obj, field).clear()
-    many_to_many_model = obj.custom_m2m[field]
+def add_custom_m2m(obj, field, item_list, user):
+    many_to_many_model = get_m2m_field(obj, field, 'custom_m2m')
+    user = m2m_footprint(many_to_many_model, user)
     extra_fields = {obj.__class__.__name__.lower(): obj}
-    items = [many_to_many_model(**item, **extra_fields) for item in item_list]
+    items = [many_to_many_model(**item, **extra_fields, **user) for item in item_list]
     many_to_many_model.objects.bulk_create(items)
 
 
 def update_object(request, model, box_key='box', return_item=False, serializer=None, data=None, require_box=True):
-    if not request.user.has_perm(f'server.change_{model.__name__.lower()}'):
+    user = request.user
+    if not user.has_perm(f'server.change_{model.__name__.lower()}'):
         raise PermissionDenied
     data = data or get_data(request, require_box=False)
     try:
@@ -242,8 +269,8 @@ def update_object(request, model, box_key='box', return_item=False, serializer=N
     except AttributeError:
         m2m, custom_m2m, ordered_m2m, remove_fields = [], [], [], []
     pk = data['id']
-    box_check = get_box_permission(request.user, box_key) if require_box else {}
-    footprint = {'updated_by': request.user, 'updated_at': timezone.now()}
+    box_check = get_box_permission(user, box_key) if require_box else {}
+    footprint = {'updated_by': user, 'updated_at': timezone.now()}
     items = model.objects.filter(pk=pk, **box_check)
     try:
         items.update(**data, remove_fields=remove_fields, **footprint)
@@ -254,35 +281,15 @@ def update_object(request, model, box_key='box', return_item=False, serializer=N
             items.update(**data)
     [getattr(items.first(), field).set(m2m[field]) for field in m2m]
     for field in custom_m2m:
-        add_custom_m2m(items.first(), field, custom_m2m[field])
+        add_custom_m2m(items.first(), field, custom_m2m[field], user)
     for field in ordered_m2m:
-        add_ordered_m2m(items.first(), field, ordered_m2m[field])
+        add_ordered_m2m(items.first(), field, ordered_m2m[field], user)
     try:
         item = items.first()
         if item.disable is False:
             items.first().full_clean()
     except AttributeError:
         pass
-    if return_item:
-        request.GET._mutable = True
-        request.GET['id'] = items.first().pk
-        items = serialized_objects(request, model, single_serializer=serializer, error_null_box=require_box)
-        return JsonResponse({"data": items}, status=res_code['updated'])
-    return JsonResponse({}, status=res_code['updated'])
-
-
-def update_object_old(request, model, box_key='box', return_item=False, serializer=None, data=None, require_box=True):
-    if not request.user.has_perm(f'server.change_{model.__name__.lower()}'):
-        raise PermissionDenied
-    # data = get_data(request)
-    data = data or json.loads(request.body)
-    pk = data['id']
-    box_check = get_box_permission(request.user, box_key) if require_box else {}
-    items = model.objects.filter(pk=pk, **box_check)
-    try:
-        items.update(**data, validation=True)
-    except FieldDoesNotExist:
-        items.update(**data)
     if return_item:
         request.GET._mutable = True
         request.GET['id'] = items.first().pk
@@ -377,3 +384,7 @@ def get_table_filter(table, box):
         return filters
     except AttributeError:
         return {}
+
+
+def get_group(user):
+    return getattr(User.objects.get(pk=user.pk).groups.first(), 'name', None)

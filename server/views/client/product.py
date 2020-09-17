@@ -4,6 +4,7 @@ from server.serialize import *
 from server.utils import View, get_pagination, load_data
 import pysnooper
 from django.db.models import Q
+import collections
 
 
 class ProductView(View):
@@ -12,6 +13,7 @@ class ProductView(View):
         preview = {'disable': False} if user.is_staff is False else {}
         product_obj = Product.objects.filter(permalink=permalink, **preview).prefetch_related(
             *Product.prefetch).first()
+        features = self.get_features(product_obj, request.lang)
         if product_obj is None:
             return JsonResponse({}, status=404)
         purchased = False
@@ -31,7 +33,24 @@ class ProductView(View):
             product['storages'] = PackageSchema(**request.schema_params).dump(storages, many=True)
         # todo debug
         # product['categories'] = [self.get_category(c) for c in product['categories']]
-        return JsonResponse({'product': product, 'purchased': purchased})
+        return JsonResponse({'product': product, 'features': features, 'purchased': purchased})
+
+    def get_features(self, product, lang):
+        product_features = ProductFeature.objects.filter(product=product)
+        unique_features = [item for item, count in collections.Counter(
+            product_features.values_list('feature_id', flat=True)).items() if count < 2]
+        product_features = ProductFeature.objects.filter(product=product, feature_id__in=unique_features)
+        # todo debug
+        # groups_id = list(set(filter(None.__ne__, ProductFeature.objects.all().values_list('feature__group', flat=True))))
+        groups_id = []
+        features_list = []
+        for group_id in groups_id:
+            group = FeatureGroup.objects.get(pk=group_id)
+            features = product_features.filter(feature__group_id=group_id)
+            features = ProductFeatureSchema().dump(features, many=True)
+            features_list.append({'title': group.name[lang], 'features': features})
+
+        return features_list
 
     def get_category(self, category):
         try:
@@ -122,3 +141,83 @@ class CommentView(View):
         pk = request.GET.get('id', None)
         Comment.objects.filter(pk=pk, user=request.user).delete()
         return JsonResponse({})
+
+
+class FeatureView(View):
+    @pysnooper.snoop()
+    def get(self, request, permalink):
+        product = Product.objects.get(permalink=permalink)
+        selected = request.GET.getlist('select[]')
+        selected = list(map(int, selected))
+        # product = Product.objects.get(pk=513)
+        product_features = ProductFeature.objects.filter(product=product)
+        feature_count = collections.Counter(product_features.values_list('feature_id', flat=True)).items()
+        multi_select_features = [item for item, count in feature_count if count > 1]
+        product_features = product_features.filter(feature_id__in=multi_select_features)
+        product_feature_storages = ProductFeatureStorage.objects.filter(product_feature__in=product_features,
+                                                                        storage__available_count_for_sale__gt=0) \
+            .order_by('product_feature_id')
+        if selected:
+            selected_pfs = product_feature_storages.filter(product_feature_id__in=selected)
+            default_storage = selected_pfs.first().storage
+            for pfs in selected_pfs.order_by('storage_id').distinct('storage_id'):
+                if selected_pfs.filter(storage=pfs.storage).count() > selected_pfs.filter(
+                        storage=default_storage).count():
+                    default_storage = selected_pfs.filter(storage=pfs.storage).first().storage
+        else:
+            # try:
+            default_storage = min(product_feature_storages, key=attrgetter('storage.discount_price')).storage
+            # except ValueError:
+            #     return JsonResponse({})
+            selected = list(product_feature_storages.filter(storage=default_storage).values_list('product_feature_id',
+                                                                                                 flat=True))
+        features_list = self.get_features(product_features, product_feature_storages, default_storage, selected)
+        return JsonResponse({'features': features_list, 'storage': StorageSchema().dump(default_storage)})
+
+    def get_features(self, product_features, product_feature_storages, default_storage=None, selected=None):
+        if not selected:
+            selected = []
+        features_list = []
+        product_features_distinct = product_features.order_by('feature_id').distinct('feature_id')
+        selected_feature = list(
+            product_feature_storages.filter(storage=default_storage).values_list('product_feature_id', flat=True))
+        available_combos = []
+        for pf in product_feature_storages.order_by('storage_id').distinct('storage_id'):
+            available_combos.append(
+                list(product_feature_storages.filter(storage_id=pf.storage_id).values_list(
+                    'product_feature_id', flat=True)))
+        print(available_combos)
+        print('first selected:', selected)
+        print(selected_feature)
+        for product_f in product_features_distinct:
+            values = []
+            select = list(product_features.filter(
+                feature=product_f.feature, pk__in=selected_feature).values_list('pk', flat=True))
+            if len(select) < 2:
+                select = select[0]
+            for pf in product_features.filter(feature=product_f.feature):
+                feature_dict = {}
+                feature_dict['id'] = pf.id
+                feature_dict['settings'] = pf.feature_value.settings.get('ui', {})
+                feature_dict['name'] = pf.feature_value.value['fa']
+                # feature_dict['selected'] = pf.id in selected_feature or pf.id in selected
+                feature_dict['available'] = False
+                feature_dict['selectable'] = True if {pf.pk}.issubset(set(sum(available_combos, []))) else False
+                # feature_dict['available'] = pf.feature_id in product_features.filter(pk__in=selected).values_list(
+                #     'feature_id', flat=True)
+                try:
+                    print('feature:', pf.id)
+                    print('feature:', pf.feature)
+                    print('selected:', selected)
+                    feature_combo = list(product_features.exclude(feature=pf.feature).filter(
+                        pk__in=selected_feature).values_list('pk', flat=True))[0]
+                except IndexError:
+                    feature_combo = -1
+                for l in available_combos:
+                    if set(selected + [pf.pk]).issubset(l) or set([feature_combo] + [pf.pk]).issubset(l):
+                        feature_dict['available'] = True
+                values.append(feature_dict)
+            features_list.append(
+                {'id': product_f.feature_id, 'name': product_f.feature.name['fa'], 'values': values,
+                 'selected': select})
+        return features_list

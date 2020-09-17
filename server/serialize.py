@@ -30,7 +30,7 @@ class MediaField(fields.Field):
 
 class FeatureField(fields.Field):
     def _serialize(self, value, attr, obj, **kwargs):
-        features = FeatureStorage.objects.filter(storage=obj)
+        features = obj.features.all()
         return FeatureStorageSchema().dump(features, many=True)
 
 
@@ -250,7 +250,7 @@ class BaseSchema(Schema):
         return new_value
 
     def get_max_count_for_sale(self, obj):
-        if obj.available_count_for_sale >= obj.max_count_for_sale:
+        if (obj.available_count_for_sale >= obj.max_count_for_sale) and (obj.max_count_for_sale != 0):
             return obj.max_count_for_sale
         return obj.available_count_for_sale
 
@@ -413,10 +413,27 @@ class ParentSchema(BaseSchema):
 
 
 class FeatureSchema(BaseSchema):
-    id = fields.Int()
-    name = fields.Method('get_feature_name')
-    type = fields.Function(lambda o: o.get_type_display())
-    value = fields.Method('get_feature_value')
+    name = fields.Method('get_name')
+
+
+class FeatureValueSchema(BaseSchema):
+    value = fields.Method('get_value')
+    settings = fields.Function(lambda o: o.settings.get('ui'))
+
+
+class ProductFeatureSchema(BaseSchema):
+    feature = fields.Method('get_feature')
+    feature_value = fields.Method('get_feature_value')
+    settings = fields.Method('get_settings')
+
+    def get_feature(self, obj):
+        return self.get(obj.feature.name)
+
+    def get_feature_value(self, obj):
+        return self.get(obj.feature_value.value)
+
+    def get_settings(self, obj):
+        return obj.feature_value.settings.get('ui', {})
 
 
 class FeatureStorageSchema(BaseSchema):
@@ -570,20 +587,8 @@ class BasketProductSchema(BaseSchema):
     features = fields.Method("get_feature")
 
     def get_feature(self, obj):
-        res = []
-        for feature in obj.features:
-            feature_storage_id = feature['fsid']
-            fvid_list = feature['fvid']
-            fs = FeatureStorage.objects.get(storage=obj.storage, id=feature_storage_id)
-            f = Feature.objects.get(pk=fs.feature.pk)
-            feature_list = []
-            for fvid in fvid_list:
-                feature_name = next(i['name'][self.lang] for i in f.value if i['id'] == fvid)
-                feature_price = next(i['price'] for i in fs.value if i['fvid'] == fvid)
-                feature_list.append({'id': fs.pk, 'fvid': fvid, 'name': feature_name, 'price': feature_price})
-            res.append({'id': f.pk, 'name': f.name[self.lang], "type": f.get_type_display(), "value": feature_list})
-
-        return res
+        features = obj.storage.features.all()
+        return ProductFeatureSchema().dump(features, many=True)
 
 
 class BasketSchema(BaseSchema):

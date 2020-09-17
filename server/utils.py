@@ -1,4 +1,6 @@
+import json
 import hashlib
+import json
 import math
 import string
 import uuid
@@ -7,6 +9,7 @@ from operator import add, sub
 
 import jdatetime
 import magic
+import requests
 from MyQR import myqr
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.postgres.fields.jsonb import KeyTextTransform
@@ -19,7 +22,8 @@ from django.views import View
 from django_celery_beat.models import IntervalSchedule
 from kavenegar import *
 
-from mehr_takhfif.settings import CSRF_SALT, TOKEN_SALT, DEFAULT_COOKIE_DOMAIN, SMS_KEY
+from mehr_takhfif.settings import CSRF_SALT, TOKEN_SALT, DEFAULT_COOKIE_DOMAIN
+from mehr_takhfif.settings import DEBUG
 from server.models import *
 from server.serialize import InvoiceSchema
 from server.serialize import UserSchema
@@ -217,6 +221,16 @@ def get_invoice_file(request, invoice=None, invoice_id=None, user={}):
     return invoice_dict
 
 
+def safe_get(*args):
+    try:
+        o = args[0]
+        for arg in args[1:]:
+            o = getattr(o, arg)
+        return o
+    except Exception:
+        pass
+
+
 # No Usage
 
 def to_json(obj=None, string=None):
@@ -375,17 +389,26 @@ def get_discount_percent(storage):
         return storage.discount_percent
 
 
-def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=None, return_obj=False, tax=False,
-               require_profit=False):
-    if basket_id:
-        basket = Basket.objects.get(pk=basket_id)
-    if not basket_id and not basket:
-        basket = basket or Basket.objects.filter(user=user).order_by('-id').first()
+def get_basket(request, basket_id=None, basket=None, basket_products=None, return_obj=False, tax=False,
+               require_profit=False, use_session=False):
+    user = request.user
+    lang = request.lang
+    if (not user.is_authenticated or (DEBUG is True and (request.GET.get('use_session') == 'True' or use_session))) and \
+            request.session.get('basket'):
+        basket = request.session.get('basket', [])
+        basket_products = [BasketProduct(**basket_product, id=index) for index, basket_product in enumerate(basket)]
+        # basket = Basket(created_by=user, updated_by=user, basket_products=basket_products)
+        basket = type('Basket', (), {'basket_products': basket_products})()
+    if user.is_authenticated:
+        if basket_id:
+            basket = Basket.objects.get(pk=basket_id)
+        if not basket_id and not basket:
+            basket = basket or Basket.objects.filter(user=user).order_by('-id').first()
     if basket is None:
         return {'basket': {}, 'summary': {}, 'address_required': False}
     basket_products = basket_products or BasketProduct.objects.filter(
         basket=basket).select_related(*BasketProduct.related)
-    summary = {"total_price": 0, "discount_price": 0, "profit": 0, "mt_profit": 0, 'ha_profit': 0,
+    summary = {"total_price": 0, "discount_price": 0, "profit": 0, "mt_profit": 0, 'charity': 0,
                "shipping_cost": 0, "tax": 0, "final_price": 0}
     address_required = False
     summary['max_shipping_time'] = 0
@@ -426,11 +449,14 @@ def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=Non
         # basket_product.tax = 0
         # basket_product.amer = ""
         tax = get_tax(storage.tax_type, storage.discount_price, storage.start_price)
-        # ha_profit = (basket_product.discount_price - basket_product.start_price - tax) * 0.05
-        ha_profit = round(basket_product.discount_price * 0.005)
-        summary['ha_profit'] += ha_profit
-        summary['mt_profit'] += basket_product.discount_price - basket_product.start_price - ha_profit
-    basket.basket_products = basket_products
+        # charity = (basket_product.discount_price - basket_product.start_price - tax) * 0.05
+        charity = round(basket_product.discount_price * 0.005)
+        summary['charity'] += charity
+        summary['mt_profit'] += basket_product.discount_price - basket_product.start_price - charity
+    try:
+        basket.basket_products = basket_products
+    except AttributeError:
+        pass
     if address_required:
         # summary['shipping_cost'] = get_shipping_cost(user, basket)
 
@@ -441,12 +467,23 @@ def get_basket(user, lang=None, basket_id=None, basket=None, basket_products=Non
         return basket
     if require_profit is False:
         summary.pop('mt_profit', None)
-        summary.pop('ha_profit', None)
+        summary.pop('charity', None)
     basket = BasketSchema(language=lang).dump(basket)
     summary['invoice_discount'] = summary['total_price'] - summary['discount_price']
     summary['total_price'] += summary['shipping_cost']
     summary['discount_price'] += summary['shipping_cost']
     return {'basket': basket, 'summary': summary, 'address_required': address_required}
+
+
+def sync_session_basket(request):
+    user = request.user
+    if request.session.get('basket', None):
+        basket = Basket.objects.create(created_by=user, updated_by=user)
+        session_basket = request.session['basket']
+        for product in session_basket:
+            BasketProduct.objects.create(basket=basket, **product)
+        request.session['basket'] = []
+        request.session.save()
 
 
 def sync_default_storage(storages, products):
@@ -607,6 +644,12 @@ def get_custom_signed_cookie(req, key, error=None, salt=TOKEN_SALT):
     if error is not None:
         return req.get_signed_cookie(key, error, salt=salt)
     return req.get_signed_cookie(key, salt=salt)
+
+
+def sort_by_list_of_id(model, id_list):
+    id_list = list(id_list)
+    queryset = model.objects.filter(pk__in=id_list)
+    return sorted(queryset, key=lambda i: id_list.index(i.pk))
 
 
 # def available_products2(products):

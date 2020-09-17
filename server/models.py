@@ -359,20 +359,17 @@ class MyModel(models.Model):
         abstract = True
 
     id = models.BigAutoField(auto_created=True, primary_key=True)
-    # select = []
-    # prefetch = []
-    # related = []
-    # filter = {}
-    # serializer_exclude = ()
-    # required_fields = []
-    # required_multi_lang = []
-    # related_fields = []
-    # m2m = []
-    # remove_fields = []
-    # custom_m2m = {}
-    # ordered_m2m = {}
-    # required_m2m = []
-    # fields = {}
+    serializer_exclude = ()
+    no_box_type = [4, 5, 6, 8]
+    required_fields = []
+    required_multi_lang = []
+    related_fields = []
+    m2m = []
+    remove_fields = []
+    custom_m2m = {}
+    ordered_m2m = {}
+    required_m2m = []
+    fields = {}
 
 
 class Ad(Base):
@@ -590,9 +587,10 @@ class Box(Base):
     name = JSONField(default=multilanguage)
     permalink = models.CharField(max_length=255, db_index=True, unique=True)
     owner = models.OneToOneField(User, on_delete=PROTECT)
-    settings = JSONField(default=dict, blank=True, help_text="{share: 35}")
+    settings = JSONField(default=dict, blank=True)
     disable = models.BooleanField(default=True)
     priority = models.PositiveSmallIntegerField(default=0)
+    share = models.FloatField(default=0.325)
     media = models.ForeignKey("Media", on_delete=CASCADE, null=True, blank=True, related_name="box_image_box_id")
 
     class Meta:
@@ -647,11 +645,11 @@ class Media(Base):
 
 class Category(Base):
     objects = MyQuerySet.as_manager()
-    prefetch = ['feature_set']
+    prefetch = []
     serializer_exclude = ('box',)
     required_fields = []
     related_fields = []
-    m2m = []
+    m2m = ['feature_groups']
     required_m2m = []
     fields = {}
 
@@ -684,6 +682,8 @@ class Category(Base):
 
     parent = models.ForeignKey("self", on_delete=CASCADE, null=True, blank=True)
     box = models.ForeignKey(Box, on_delete=CASCADE)
+    # features = models.ManyToManyField("Feature")
+    feature_groups = models.ManyToManyField("FeatureGroup", related_name='categories')
     name = JSONField(default=multilanguage)
     permalink = models.CharField(max_length=255, db_index=True, unique=True, null=True, blank=True)
     priority = models.PositiveSmallIntegerField(default=0)
@@ -696,16 +696,34 @@ class Category(Base):
         indexes = [GinIndex(fields=['name'])]
 
 
-class Feature(Base):
-    objects = MyQuerySet.as_manager()
-
+class FeatureValue(Base):
     def __str__(self):
         return f"{self.id}"
 
+    feature = models.ForeignKey("Feature", on_delete=CASCADE, related_name="values")
+    value = JSONField(default=dict)
+    settings = JSONField(default=dict)
+    # priority = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        db_table = 'feature_value'
+        ordering = ['-id']
+
+
+class Feature(Base):
+    objects = MyQuerySet.as_manager()
+
+    m2m = ['groups']
+    custom_m2m = {'values': FeatureValue}
+
+    def __str__(self):
+        return get_name(self.name, self)
+
     def validation(self, kwargs):
-        kwargs['type'] = {'bool': 1, 'single': 2, 'multi': 3}[kwargs.get('type', None)]
-        if kwargs['type'] > 3:
-            raise ValidationError(_('invalid type'))
+        if kwargs.get('type', None):
+            kwargs['type'] = {'bool': 1, 'text': 2, 'selectable': 3}[kwargs.get('type', None)]
+        if kwargs.get('layout_type', None):
+            kwargs['layout_type'] = {'default': 1}[kwargs.get('layout_type', 'default')]
         return kwargs
 
     def save(self, *args, **kwargs):
@@ -713,15 +731,39 @@ class Feature(Base):
         super().save(*args, **kwargs)
 
     name = JSONField(default=multilanguage)
-    type = models.PositiveSmallIntegerField(default=1, choices=((1, 'bool'), (2, 'single'), (3, 'multi')))
-    value = JSONField(default=feature_value)
-    # todo move manytomanyfield to category
-    category = models.ManyToManyField(Category)
-    box = models.ForeignKey(Box, on_delete=CASCADE, blank=True, null=True)
-    icon = models.CharField(default='default', max_length=255)
+    # group = models.ForeignKey("FeatureGroup", on_delete=CASCADE, related_name="features", null=True, blank=True)
+    type = models.PositiveSmallIntegerField(default=1, choices=((1, 'bool'), (2, 'text'), (3, 'selectable')))
+    layout_type = models.PositiveSmallIntegerField(default=1, choices=((1, 'default'),))
 
     class Meta:
         db_table = 'feature'
+        ordering = ['-id']
+
+
+class FeatureGroupFeature(MyModel):
+    feature = models.ForeignKey(Feature, on_delete=PROTECT)
+    featuregroup = models.ForeignKey("FeatureGroup", on_delete=PROTECT)
+    priority = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = 'feature_group_feature'
+        ordering = ['-id']
+
+
+class FeatureGroup(Base):
+    def __str__(self):
+        return get_name(self.name, self)
+
+    # m2m = ['features']
+    ordered_m2m = {'features': FeatureGroupFeature}
+    # custom_m2m = {'features': Feature}
+
+    name = JSONField(default=multilanguage)
+    box = models.ForeignKey(Box, on_delete=PROTECT)
+    features = models.ManyToManyField("Feature", through="FeatureGroupFeature", related_name='groups')
+
+    class Meta:
+        db_table = 'feature_group'
         ordering = ['-id']
 
 
@@ -829,6 +871,33 @@ class ProductMedia(MyModel):
         ordering = ['-id']
 
 
+class ProductFeature(Base):
+    def __str__(self):
+        return f"{self.id}"
+
+    product = models.ForeignKey("Product", on_delete=CASCADE)
+    feature = models.ForeignKey(Feature, on_delete=CASCADE)
+    feature_value = models.ForeignKey(FeatureValue, on_delete=CASCADE, null=True)
+    settings = JSONField(default=dict)
+
+    class Meta:
+        db_table = 'product_feature'
+        ordering = ['-id']
+
+
+class ProductFeatureStorage(MyModel):
+    def __str__(self):
+        return f"{self.id}"
+
+    product_feature = models.ForeignKey(ProductFeature, on_delete=CASCADE)
+    storage = models.ForeignKey("Storage", on_delete=CASCADE)
+    extra_data = JSONField(default=dict)
+
+    class Meta:
+        db_table = 'product_feature_storage'
+        ordering = ['-id']
+
+
 class Product(Base):
     objects = MyQuerySet.as_manager()
     select = ['category', 'box', 'thumbnail']
@@ -838,9 +907,9 @@ class Product(Base):
     required_fields = ['thumbnail', 'description']
     related_fields = []
     remove_fields = []
-    custom_m2m = {'tags': ProductTag}
+    custom_m2m = {'tags': ProductTag, 'features': ProductFeature}
     ordered_m2m = {'media': ProductMedia}
-    m2m = ['categories', 'cities', 'tag_groups', 'states']
+    m2m = ['categories', 'cities', 'tag_groups', 'states', 'feature_groups']
     required_m2m = ['categories', 'media']
     fields = {'thumbnail': 'تامبنیل', 'categories': 'دسته بندی', 'tags': 'تگ', 'media': 'مدیا',
               'description': 'توضیحات'}
@@ -920,11 +989,13 @@ class Product(Base):
     thumbnail = models.ForeignKey(Media, on_delete=PROTECT, related_name='product_thumbnail', null=True, blank=True)
     cities = models.ManyToManyField(City)
     states = models.ManyToManyField(State)
-    default_storage = models.OneToOneField(null=True, blank=True, to="Storage", on_delete=PROTECT,
+    default_storage = models.OneToOneField(null=True, blank=True, to="Storage", on_delete=CASCADE,
                                            related_name='product_default_storage')
     tags = models.ManyToManyField(Tag, through="ProductTag", related_name='products')
     tag_groups = models.ManyToManyField(TagGroup, related_name='products')
     media = models.ManyToManyField(Media, through='ProductMedia')
+    features = models.ManyToManyField(Feature, through='ProductFeature', related_name='products')
+    feature_groups = models.ManyToManyField("FeatureGroup", related_name='products')
     income = models.BigIntegerField(default=0)
     profit = models.PositiveIntegerField(default=0)
     rate = models.PositiveSmallIntegerField(default=0)
@@ -955,21 +1026,6 @@ class Product(Base):
     class Meta:
         db_table = 'product'
         ordering = ['-updated_at']
-
-
-class FeatureStorage(MyModel):
-    related = ['storage']
-
-    def __str__(self):
-        return f"{self.id}"
-
-    feature = models.ForeignKey(Feature, on_delete=PROTECT)
-    storage = models.ForeignKey("Storage", on_delete=PROTECT)
-    value = JSONField(default=feature_value_storage)
-
-    class Meta:
-        db_table = 'feature_storage'
-        ordering = ['-id']
 
 
 class Package(Base):
@@ -1016,7 +1072,7 @@ class Storage(Base):
     related_fields = []
     m2m = []
     remove_fields = ['vip_prices', 'items']  # handle in post_process
-    custom_m2m = {'features': FeatureStorage}
+    custom_m2m = {'features': ProductFeatureStorage}
     required_m2m = []
     fields = {'supplier': 'تامین کننده', 'dimensions': 'ابعاد'}
 
@@ -1149,8 +1205,9 @@ class Storage(Base):
         super().save(*args)
         self.post_process(kwargs)
 
-    product = models.ForeignKey(Product, on_delete=CASCADE, related_name='storages')
-    features = models.ManyToManyField(Feature, through='FeatureStorage', related_query_name="features")
+    product = models.ForeignKey(Product, on_delete=PROTECT, related_name='storages')
+    # features = models.ManyToManyField(ProductFeature, through='StorageFeature', related_name="storages")
+    features = models.ManyToManyField(ProductFeature, through='ProductFeatureStorage', related_name="storages")
     items = models.ManyToManyField("self", through='Package', symmetrical=False)
     features_percent = models.PositiveSmallIntegerField(default=0)
     available_count = models.PositiveIntegerField(default=0, verbose_name='Available count')
@@ -1225,7 +1282,7 @@ class BasketProduct(MyModel):
     basket = models.ForeignKey(Basket, on_delete=PROTECT, null=True, blank=True)
     count = models.PositiveIntegerField(default=1)
     box = models.ForeignKey(Box, on_delete=PROTECT)
-    features = JSONField(default=list)
+    features = JSONField(default=dict, help_text="{'name': 'feature name', 'value': 'feature value'}")
     vip_price = models.ForeignKey(to=VipPrice, on_delete=CASCADE, null=True, blank=True)
 
     class Meta:
@@ -1335,7 +1392,7 @@ class Invoice(Base):
     card_holder = models.CharField(max_length=31, null=True, blank=True)
     final_amount = models.PositiveIntegerField(help_text='from bank', null=True, blank=True)
     # mt_profit = models.PositiveIntegerField(null=True, blank=True)
-    # ha_profit = models.PositiveIntegerField(null=True, blank=True)
+    # charity = models.PositiveIntegerField(null=True, blank=True)
     ipg = models.PositiveSmallIntegerField(default=1)
     expire = models.DateTimeField(null=True, blank=True)
     status = models.PositiveSmallIntegerField(default=1, choices=((1, 'pending'), (2, 'payed'), (3, 'canceled'),
@@ -1702,3 +1759,6 @@ class Holiday(MyModel):
 def submission_delete(sender, instance, **kwargs):
     if instance.image:
         instance.image.delete(False)
+
+
+m2m_footprint_required = [FeatureValue, ProductFeature]

@@ -12,6 +12,10 @@ Content-Type: application/json
   "id": 54,
   "parent": null,
   "box_id": 3,
+  "features": [
+    29,
+    43
+  ],
   "name": {
     "fa": "category-test15"
   },
@@ -30,12 +34,15 @@ PUT {{admin_host}}/category
 Content-Type: application/json
 
 {
-  "id": 54,
+  "id": 216,
   "parent": null,
   "box_id": 3,
   "name": {
     "fa": "category-test15"
   },
+  "feature_groups": [
+    1
+  ],
   "permalink": "permalink-test3",
   "media": 1
 }
@@ -64,7 +71,18 @@ Content-Type: application/json
     234,
     216
   ],
-  "features": [],
+  "features": [
+    {
+      "feature_id": 31,
+      "feature_value_id": 87,
+      "settings": {}
+    },
+    {
+      "feature_id": 32,
+      "feature_value_id": 88,
+      "settings": {}
+    }
+  ],
   "check_review": false,
   "description": {
     "data": {
@@ -92,7 +110,7 @@ Content-Type: application/json
     "en": "",
     "ar": ""
   },
-  "permalink": "test100",
+  "permalink": "test1019",
   "review": null,
   "settings": {
     "adminNote": "انبار ندارد↵اصلاح اسم محصول",
@@ -132,7 +150,7 @@ PUT {{admin_host}}/product
 Content-Type: application/json
 
 {
-  "id": 516,
+  "id": 1227,
   "box_id": 3,
   "type": "product",
   "brand_id": 26,
@@ -140,7 +158,23 @@ Content-Type: application/json
     234,
     216
   ],
-  "features": [],
+  "features": [
+    {
+      "feature_id": 33,
+      "feature_value_id": 1,
+      "settings": {}
+    },
+    {
+      "feature_id": 33,
+      "feature_value_id": 2,
+      "settings": {}
+    },
+    {
+      "feature_id": 33,
+      "feature_value_id": 3,
+      "settings": {}
+    }
+  ],
   "check_review": false,
   "description": {
     "data": {
@@ -167,7 +201,7 @@ Content-Type: application/json
     "en": "",
     "ar": ""
   },
-  "permalink": "test101",
+  "permalink": "کفش-آدیداس-تستی",
   "review": null,
   "settings": {
     "adminNote": "انبار ندارد↵اصلاح اسم محصول",
@@ -265,10 +299,18 @@ Content-Type: application/json
     "length": 5,
     "width": 5
   },
-  "discount_price": 15000,
-  "features": [],
-  "final_price": 20000,
-  "id": 180,
+  "discount_price": 305000,
+  "features": [
+    {
+      "product_feature_id": 29,
+      "extra_data": {}
+    },
+    {
+      "product_feature_id": 30,
+      "extra_data": {}
+    }
+  ],
+  "final_price": 338000,
   "invoice_description": {
     "fa": "<p></p>",
     "en": "",
@@ -307,14 +349,27 @@ Content-Type: application/json
   "name": {
     "fa": "ویژگی"
   },
-  "group_id": 2,
+  "groups": [1],
   "type": "text",
+  "layout_type": "default",
   "values": [
     {
       "value": {
-        "fa": "1399"
+        "fa": 3
       },
-      "feature_id": 34
+      "settings": {}
+    },
+    {
+      "value": {
+        "fa": 1
+      },
+      "settings": {}
+    },
+    {
+      "value": {
+        "fa": 2
+      },
+      "settings": {}
     }
   ]
 }
@@ -330,36 +385,103 @@ PUT {{admin_host}}/feature
 Content-Type: application/json
 
 {
-  "id": 31,
+  "id": 90,
   "name": {
-    "fa": "test50"
+    "fa": "تست مرتب سازی"
   },
-  "type": "multi",
-  "value": [
+  "groups": [1],
+  "type": "text",
+  "layout_type": "default",
+  "values": [
     {
-      "id": 1,
-      "name": {
-        "ar": "",
-        "en": "",
-        "fa": "میخواهم"
-      }
+      "value": {
+        "fa": 40
+      },
+      "settings": {}
     },
     {
-      "id": 2,
-      "name": {
-        "ar": "",
-        "en": "",
-        "fa": "نمیخواهم"
-      }
+      "value": {
+        "fa": 35
+      },
+      "settings": {}
+    },
+    {
+      "value": {
+        "fa": 45
+      },
+      "settings": {}
     }
-  ],
-  "box_id": 3
+  ]
 }
 
 ###
-DELETE {{admin_host}}/feature?id=54
+DELETE {{admin_host}}/feature_value?id=54
+
+### FeatureValue CRUD
+POST {{admin_host}}/feature_value
+Content-Type: application/json
+
+{
+  "value": {
+    "fa": "سفید"
+  },
+  "feature_id": 43
+}
 
 ###
+GET {{admin_host}}/feature_value?id=9
+
+###
+GET {{admin_host}}/feature_value
+
+###
+PUT {{admin_host}}/feature_value
+Content-Type: application/json
+
+{
+  "id": 64,
+  "value": {
+    "fa": "یک متن ساختگی پیشفرض برای توضیحات کفش"
+  },
+  "feature_id": 102
+}
+
+###
+DELETE {{admin_host}}/feature_value?id=54
+
+### FeatureGroup CRUD
+POST {{admin_host}}/feature_group
+Content-Type: application/json
+
+{
+  "name": {
+    "fa": "مشخصات فنی"
+  },
+  "box_id": 3,
+  "features": [89, 88, 87, 86, 85, 84]
+}
+
+###
+GET {{admin_host}}/feature_group?id=1
+
+###
+GET {{admin_host}}/feature_group?b=1
+
+###
+PUT {{admin_host}}/feature_group
+Content-Type: application/json
+
+{
+  "id": 2,
+  "name": {
+    "fa": "مشخصات فنی"
+  },
+  "box_id": 3,
+  "features": [87, 88, 84, 86, 85, 89]
+}
+
+###
+DELETE {{admin_host}}/feature_group?id=54
 
 ### Brand CRUD
 POST {{admin_host}}/brand
