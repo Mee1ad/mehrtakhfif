@@ -168,10 +168,13 @@ class ProductView(TableView):
                                                **required_box))
 
     def post(self, request):
+        data = get_data(request, require_box=True)
+        data['features'] = []
         return create_object(request, Product, serializer=ProductESchema, box_key='storage__product')
 
     def put(self, request):
         data = get_data(request, require_box=True)
+        data['features'] = []
         product = Product.objects.get(id=data['id'])
         storages = product.storages.all()
         used_product_features = ProductFeatureStorage.objects.filter(storage__in=storages)
