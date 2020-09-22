@@ -199,7 +199,7 @@ class BaseSchema(Schema):
                 return MinStorageSchema(self.lang, vip=self.vip, user=self.user).dump(obj.storage)
             return {}
         except Exception:
-            pass
+            return {}
 
     def get_comment(self, obj):
         if obj.reply_to is not None:
