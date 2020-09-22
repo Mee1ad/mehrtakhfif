@@ -253,6 +253,11 @@ class HouseView(TableView):
 class StorageView(TableView):
     permission_required = 'server.view_storage'
 
+    def get_old(self, request):
+        with open("test.json", "r", encoding="utf-8") as read_file:
+            icons = json.load(read_file)
+        return JsonResponse(icons)
+
     def get(self, request):
         # todo clean
         Storage.objects.filter(deadline__lt=timezone.now(), disable=False).update(disable=True)

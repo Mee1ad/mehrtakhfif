@@ -1,0 +1,427 @@
+{
+    "product": {
+        "states": [],
+        "short_address": null,
+        "name": {
+            "ar": "",
+            "en": "",
+            "fa": "چای ماسالا"
+        },
+        "default_storage": {},
+        "categories": [
+            {
+                "id": 313,
+                "name": {
+                    "ar": "",
+                    "en": "",
+                    "fa": "چای‌ها"
+                }
+            },
+            {
+                "id": 293,
+                "name": {
+                    "ar": "",
+                    "en": "",
+                    "fa": "نوشیدنی‌ها"
+                }
+            }
+        ],
+        "default_storage_id": null,
+        "available": false,
+        "tags": [
+            {
+                "id": 2155,
+                "name": {
+                    "ar": "",
+                    "en": "",
+                    "fa": "تسکین درد مفاصل"
+                },
+                "show": true,
+                "permalink": "تسکین-درد-مفاصل"
+            },
+            {
+                "id": 2057,
+                "name": {
+                    "ar": "",
+                    "en": "",
+                    "fa": "رفع خستگی"
+                },
+                "show": false,
+                "permalink": "رفع-خستگی"
+            },
+            {
+                "id": 2835,
+                "name": {
+                    "ar": "",
+                    "en": "",
+                    "fa": "برطرف کننده خستگی"
+                },
+                "show": true,
+                "permalink": "برطرف-کننده-خستگی"
+            },
+            {
+                "id": 1661,
+                "name": {
+                    "ar": "",
+                    "en": "",
+                    "fa": "بهبود آنفولانزا"
+                },
+                "show": false,
+                "permalink": "بهبود-آنفولانزا"
+            },
+            {
+                "id": 1691,
+                "name": {
+                    "ar": "",
+                    "en": "",
+                    "fa": "آنفولانزا"
+                },
+                "show": false,
+                "permalink": "آنفولانزا"
+            },
+            {
+                "id": 1316,
+                "name": {
+                    "ar": "",
+                    "en": "",
+                    "fa": "بهبود سرماخوردگی"
+                },
+                "show": false,
+                "permalink": "بهبود-سرماخوردگی"
+            },
+            {
+                "id": 1308,
+                "name": {
+                    "ar": "",
+                    "en": "",
+                    "fa": "درمان سرماخوردگی"
+                },
+                "show": true,
+                "permalink": "درمان-سرماخوردگی"
+            },
+            {
+                "id": 1690,
+                "name": {
+                    "ar": "",
+                    "en": "",
+                    "fa": "سرماخوردگی"
+                },
+                "show": false,
+                "permalink": "سرماخوردگی"
+            },
+            {
+                "id": 2834,
+                "name": {
+                    "ar": "",
+                    "en": "",
+                    "fa": "گرم کردن بدن"
+                },
+                "show": false,
+                "permalink": "گرم-کردن-بدن"
+            },
+            {
+                "id": 2140,
+                "name": {
+                    "ar": "",
+                    "en": "",
+                    "fa": "افزایش انرژی بدن"
+                },
+                "show": true,
+                "permalink": "افزایش-انرژی-بدن"
+            },
+            {
+                "id": 2141,
+                "name": {
+                    "ar": "",
+                    "en": "",
+                    "fa": "انرژی زا"
+                },
+                "show": true,
+                "permalink": "انرژی-زا"
+            },
+            {
+                "id": 1824,
+                "name": {
+                    "ar": "",
+                    "en": "",
+                    "fa": "انرژی بخش"
+                },
+                "show": false,
+                "permalink": "انرژی-بخش"
+            },
+            {
+                "id": 1262,
+                "name": {
+                    "ar": "",
+                    "en": "",
+                    "fa": "تقویت سیستم ایمنی بدن"
+                },
+                "show": true,
+                "permalink": "تقویت-سیستم-ایمنی-بدن"
+            },
+            {
+                "id": 1724,
+                "name": {
+                    "ar": "",
+                    "en": "",
+                    "fa": "تقویت عمومی بدن"
+                },
+                "show": false,
+                "permalink": "تقویت-عمومی-بدن"
+            },
+            {
+                "id": 1203,
+                "name": {
+                    "ar": "",
+                    "en": "",
+                    "fa": "مقوی قلب"
+                },
+                "show": false,
+                "permalink": "مقوی-قلب"
+            },
+            {
+                "id": 1571,
+                "name": {
+                    "ar": "",
+                    "en": "",
+                    "fa": "نوشیدنی مقوی"
+                },
+                "show": false,
+                "permalink": "نوشیدنی-مقوی"
+            },
+            {
+                "id": 428,
+                "name": {
+                    "ar": "",
+                    "en": "",
+                    "fa": "نوشیدنی گرم"
+                },
+                "show": false,
+                "permalink": "نوشیدنی-گرم"
+            },
+            {
+                "id": 2833,
+                "name": {
+                    "ar": "",
+                    "en": "",
+                    "fa": "نوشیدنی ترکیبی"
+                },
+                "show": false,
+                "permalink": "نوشیدنی-ترکیبی"
+            },
+            {
+                "id": 2832,
+                "name": {
+                    "ar": "",
+                    "en": "",
+                    "fa": "چای ترکیبی"
+                },
+                "show": true,
+                "permalink": "چای-ترکیبی"
+            },
+            {
+                "id": 1582,
+                "name": {
+                    "ar": "",
+                    "en": "",
+                    "fa": "دمنوش مناسب پذیرایی"
+                },
+                "show": true,
+                "permalink": "دمنوش-مناسب-پذیرایی"
+            },
+            {
+                "id": 2831,
+                "name": {
+                    "ar": "",
+                    "en": "",
+                    "fa": "چای ماسالا"
+                },
+                "show": true,
+                "permalink": "چای-ماسالا"
+            }
+        ],
+        "media": [
+            {
+                "created_at": 1600610720.648763,
+                "id": 7071,
+                "updated_at": 1600610720.648826,
+                "image": "https://api.mehrtakhfif.com/media/boxes/11/2020-09-20/media/14-05-20-64-has-ph.jpg",
+                "updated_by": {
+                    "id": 7071,
+                    "name": "ندا صالحی"
+                },
+                "title": {
+                    "ar": "",
+                    "en": "",
+                    "fa": "چای ماسالا"
+                },
+                "type": "media",
+                "created_by": {
+                    "id": 7071,
+                    "name": "سهیل رواسانی"
+                }
+            },
+            {
+                "created_at": 1600610771.049948,
+                "id": 7073,
+                "updated_at": 1600610771.050037,
+                "image": "https://api.mehrtakhfif.com/media/boxes/11/2020-09-20/media/14-06-11-05-has-ph.jpg",
+                "updated_by": {
+                    "id": 7073,
+                    "name": "ندا صالحی"
+                },
+                "title": {
+                    "ar": "",
+                    "en": "",
+                    "fa": "چای ماسالا"
+                },
+                "type": "media",
+                "created_by": {
+                    "id": 7073,
+                    "name": "سهیل رواسانی"
+                }
+            },
+            {
+                "created_at": 1600610765.613851,
+                "id": 7072,
+                "updated_at": 1600610765.613906,
+                "image": "https://api.mehrtakhfif.com/media/boxes/11/2020-09-20/media/14-06-05-61-has-ph.jpg",
+                "updated_by": {
+                    "id": 7072,
+                    "name": "ندا صالحی"
+                },
+                "title": {
+                    "ar": "",
+                    "en": "",
+                    "fa": "چای ماسالا"
+                },
+                "type": "media",
+                "created_by": {
+                    "id": 7072,
+                    "name": "سهیل رواسانی"
+                }
+            }
+        ],
+        "updated_at": 1600611372.843302,
+        "type": "product",
+        "tag_groups": [],
+        "house": null,
+        "brand": {
+            "created_at": null,
+            "updated_at": null,
+            "updated_by": null,
+            "created_by": null
+        },
+        "created_at": 1600611372.843187,
+        "features": [],
+        "thumbnail": {
+            "created_at": 1600609601.719127,
+            "id": 7064,
+            "updated_at": 1600609601.719197,
+            "image": "https://api.mehrtakhfif.com/media/boxes/11/2020-09-20/thumbnail/13-46-41-71-has-ph.jpg",
+            "updated_by": {
+                "id": 7064,
+                "name": "ندا صالحی"
+            },
+            "title": {
+                "ar": "",
+                "en": "",
+                "fa": "چای ماسالا"
+            },
+            "type": "thumbnail",
+            "created_by": {
+                "id": 7064,
+                "name": "سهیل رواسانی"
+            }
+        },
+        "storages": [],
+        "details": null,
+        "properties": null,
+        "check_review": false,
+        "disable": true,
+        "short_description": {
+            "ar": "",
+            "en": "",
+            "fa": "<p>چای ماسالا یک نوشیدنی هندی و ترکیبی است که بسیار به گرم کردن بدن کمک می کند</p>\n"
+        },
+        "cities": [],
+        "address": null,
+        "description": {
+            "data": {
+                "ar": {},
+                "en": {},
+                "fa": {
+                    "items": [
+                        {
+                            "key": "description",
+                            "value": "<h4><span style=\"font-size: 18px;\">چای ماسالا</span></h4>\n<p><span style=\"font-size: 16px;\">یک نوع نوشیدنی ترکیبی با طعم تند و ادویه ای خاص که از ترکیب حدودا 10 نوع گیاه دارویی بدست می آید.این نوشیدنی طبع گرمی </span></p>\n<p><span style=\"font-size: 16px;\">دارد و مناسب فصول سرد سال است.</span></p>\n<p></p>\n<p><span style=\"background-color: rgb(255,255,255);font-size: 16px;\"><strong> </strong></span><span style=\"color: rgb(0,0,0);background-color: rgb(255,255,255);font-size: 16px;font-family: Tahoma;\"><strong>کمک به هضم غذا</strong></span></p>\n<p></p>\n<p><span style=\"color: rgb(0,0,0);background-color: rgb(255,255,255);font-size: 16px;font-family: Tahoma;\"><strong> محافظت در مقابل سرماخوردگی و آنفلانزا</strong></span></p>\n<p></p>\n<p><span style=\"color: rgb(0,0,0);background-color: rgb(255,255,255);font-size: 16px;font-family: Tahoma;\"><strong> انرژی بخش</strong></span></p>\n<p></p>\n<p><span style=\"color: rgb(0,0,0);background-color: rgb(255,255,255);font-size: 16px;font-family: Tahoma;\"><strong> برطرف کننده ی خستگی و بیحالی</strong></span></p>\n<p></p>\n<p><span style=\"color: rgb(0,0,0);background-color: rgb(255,255,255);font-size: 16px;font-family: Tahoma;\"><strong> آرام بخش</strong></span></p>\n<p></p>\n<p><span style=\"color: rgb(0,0,0);background-color: rgb(255,255,255);font-size: 16px;font-family: Tahoma;\"><strong>بهبود درد مفاصل</strong></span><span style=\"background-color: rgb(255,255,255);font-size: 16px;\"><strong> </strong></span></p>\n<p></p>\n<p><span style=\"background-color: rgb(255,255,255);font-size: 16px;\"><strong>طریقه مصرف : مقداری چای ماسالا را داخل آب جوش یا شیر داغ ریخته و پس از مخلوط کردن،میل کنید</strong></span></p>\n"
+                        }
+                    ]
+                }
+            }
+        },
+        "settings": {
+            "adminNote": "",
+            "productStatus": 2
+        },
+        "updated_by": {
+            "id": 1400,
+            "name": "ندا صالحی"
+        },
+        "rate": 0,
+        "verify": false,
+        "location": null,
+        "permalink": "چای-ماسالا",
+        "id": 1400,
+        "review": null,
+        "box": {
+            "id": 11,
+            "name": {
+                "ar": "",
+                "en": "",
+                "fa": "عطاری"
+            },
+            "settings": {
+                "color": "#ffa726",
+                "share": 35,
+                "secondaryColor": "#e65100"
+            }
+        },
+        "feature_groups": [],
+        "created_by": {
+            "id": 1400,
+            "name": "ندا صالحی"
+        }
+    },
+    "manage": true,
+    "box": {
+        "name": {
+            "ar": "",
+            "en": "",
+            "fa": "عطاری"
+        },
+        "is_owner": false,
+        "id": 11,
+        "media": {
+            "id": 3650,
+            "image": "https://api.mehrtakhfif.com/media/boxes/11/2020-06-29/category/15-06-48-21.jpg",
+            "title": "عطاری",
+            "box": 11,
+            "type": "category"
+        },
+        "settings": {
+            "color": "#ffa726",
+            "share": 35,
+            "secondaryColor": "#e65100"
+        },
+        "disable": false
+    },
+    "type": "product",
+    "data": {
+        "pagination": {
+            "last_page": 0,
+            "count": 0
+        },
+        "data": []
+    }
+}

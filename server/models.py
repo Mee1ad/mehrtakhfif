@@ -840,6 +840,7 @@ class Brand(Base):
     def validation(self, kwargs):
         self.permalink = self.permalink.lower()
         name = kwargs['name']
+        print(name)
         if Brand.objects.filter((Q(name__en=name['en']) & ~Q(name__en="") & ~Q(id=kwargs['id'])) |
                                 (Q(name__fa=name['fa']) & ~Q(name__fa="") & ~Q(id=kwargs['id'])) |
                                 (Q(name__ar=name['ar']) & ~Q(name__ar="") & ~Q(id=kwargs['id']))).count() > 0:
@@ -856,6 +857,17 @@ class Brand(Base):
     class Meta:
         db_table = 'brand'
         ordering = ['-id']
+
+
+from django.db.models.signals import pre_init
+
+
+@receiver(pre_init, sender=Brand)
+def blog_pre_init_signal(sender, *args, **kwargs):
+    print("sender:", sender)
+    print("kwargs is:", kwargs['kwargs'])
+    kwargs['kwargs']['name'] = {'fa': 'haha', 'en': '', 'ar': ''}
+
 
 
 class ProductTag(MyModel):

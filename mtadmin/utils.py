@@ -122,7 +122,6 @@ def get_params(request, box_key=None, date_key='created_at'):
 
     return {'filter': filterby, 'order': orderby, 'annotate': annotate, 'distinct': distinct}
 
-
 def get_data(request, require_box=True):
     data = json.loads(request.body)
     remove = ['created_at', 'created_by', 'updated_at', 'updated_by', 'deleted_by', 'income', 'profit',
@@ -132,8 +131,8 @@ def get_data(request, require_box=True):
         data['permalink'] = clean_permalink(data['permalink'])
     [data.pop(k, None) for k in remove]
     boxes = request.user.box_permission.all()
-    if require_box and data.get('box_id') not in boxes.values_list('id', flat=True):
-        raise PermissionDenied
+    # if require_box and data.get('box_id') not in boxes.values_list('id', flat=True):
+    #     raise PermissionDenied
     if request.method == "POST":
         data.pop('id', None)
     return data
