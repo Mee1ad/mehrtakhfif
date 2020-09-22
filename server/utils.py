@@ -23,7 +23,7 @@ from django_celery_beat.models import IntervalSchedule
 from kavenegar import *
 
 from mehr_takhfif.settings import CSRF_SALT, TOKEN_SALT, DEFAULT_COOKIE_DOMAIN
-from mehr_takhfif.settings import DEBUG
+from mehr_takhfif.settings import DEBUG, SMS_KEY
 from server.models import *
 from server.serialize import InvoiceSchema
 from server.serialize import UserSchema
