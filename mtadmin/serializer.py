@@ -224,6 +224,11 @@ class BaseAdminSchema(Schema):
         return ProductFeatureASchema(model=model).dump(features_distinct, many=True)
 
 
+class DiscountASchema(BaseAdminSchema):
+    class Meta:
+        additional = ('code', 'invoice_id')
+
+
 class UserASchema(UserSchema):
     class Meta:
         additional = UserSchema.Meta.additional + ('avatar',)
@@ -244,6 +249,9 @@ class SupplierESchema(BaseAdminSchema):
 
 
 class BoxASchema(BoxSchema):
+    class Meta:
+        additional = ('settings',)
+
     name = fields.Dict()
     disable = fields.Boolean()
     is_owner = fields.Method("get_is_owner")
@@ -290,7 +298,7 @@ class InvoiceESchema(InvoiceASchema):
                                              + o.suspended_by.last_name if o.suspended_by else None)
     suspended_at = fields.Function(lambda o: o.suspended_at.timestamp() if o.suspended_at else None)
     invoice_products = fields.Method("get_invoice_products")
-    tax = fields.Method("calculate_invoice_tax")
+    tax = fields.Method("get_tax")
     shipping_cost = fields.Int()
     start_price = fields.Method('get_start_price')
     post_invoice = fields.Nested("InvoiceASchema")
@@ -300,15 +308,19 @@ class InvoiceESchema(InvoiceASchema):
     mt_profit = fields.Method("get_mt_profit")
     charity = fields.Method("get_charity")
     dev = fields.Method("get_dev")
+    admin = fields.Method("get_admin_profit")
+
+    def get_admin_profit(self, obj):
+        return InvoiceStorage.objects.filter(invoice=obj).aggregate(admin=Sum('admin'))['admin'] or 0
 
     def get_mt_profit(self, obj):
-        return InvoiceStorage.objects.filter(invoice=obj).aggregate(mt_profit=Sum('mt_profit')).get('mt_profit', 0)
-
-    def get_charity(self, obj):
-        return InvoiceStorage.objects.filter(invoice=obj).aggregate(charity=Sum('charity')).get('charity', 0)
+        return InvoiceStorage.objects.filter(invoice=obj).aggregate(mt_profit=Sum('mt_profit'))['mt_profit'] or 0
 
     def get_dev(self, obj):
-        return InvoiceStorage.objects.filter(invoice=obj).aggregate(dev=Sum('dev')).get('dev', 0)
+        return InvoiceStorage.objects.filter(invoice=obj).aggregate(dev=Sum('dev'))['dev'] or 0
+
+    def get_charity(self, obj):
+        return InvoiceStorage.objects.filter(invoice=obj).aggregate(charity=Sum('charity'))['charity'] or 0
 
     def get_max_shipping_time(self, obj):
         if obj.status in Invoice.success_status:
@@ -327,11 +339,10 @@ class InvoiceESchema(InvoiceASchema):
 
     def get_invoice_products(self, obj):
         storages = InvoiceStorage.objects.filter(invoice=obj)
-        return InvoiceStorageASchema().dump(storages, many=True)
+        return InvoiceStorageFDSchema().dump(storages, many=True)
 
-    def calculate_invoice_tax(self, obj):
-        taxes = obj.invoice_storages.all().values_list('tax', flat=True)
-        return sum(taxes)
+    def get_tax(self, obj):
+        return InvoiceStorage.objects.filter(invoice=obj).aggregate(tax=Sum('tax'))['tax'] or 0
 
     def get_ipg(self, obj):
         return [ip for ip in ipg['data'] if ip['id'] == obj.ipg][0]
@@ -354,7 +365,8 @@ class InvoiceStorageASchema(InvoiceStorageSchema):
 
 class InvoiceStorageFDSchema(InvoiceStorageASchema):
     class Meta:
-        additional = InvoiceStorageASchema.Meta.additional + ('dev', 'admin', 'mt', 'tax', 'charity')
+        additional = InvoiceStorageASchema.Meta.additional + ('dev', 'admin', 'mt_profit', 'tax', 'charity',
+                                                              'start_price')
 
 
 class ProductASchema(BaseAdminSchema):
@@ -385,6 +397,7 @@ class ProductTagASchema(Schema):
 
 
 class ProductESchema(ProductASchema, ProductSchema):
+    # class ProductESchema(BaseSchema):
     class Meta:
         unknown = EXCLUDE
         additional = ProductSchema.Meta.additional + ProductASchema.Meta.additional + ('verify',)
@@ -404,7 +417,11 @@ class ProductESchema(ProductASchema, ProductSchema):
     feature_groups = fields.Method("get_feature_groups")
 
     def get_feature_groups(self, obj):
-        return FeatureGroupASchema(product=obj).dump(obj.feature_groups.all(), many=True)
+        categories = obj.categories.all()
+        feature_groups = obj.feature_groups.all()
+        for category in categories:
+            feature_groups |= category.feature_groups.all()
+        return FeatureGroupASchema(product=obj).dump(feature_groups, many=True)
 
     def get_features(self, obj):
         features = ProductFeature.objects.filter(product=obj)
@@ -631,12 +648,15 @@ class FeatureGroupASchema(BaseAdminSchema):
 
     name = fields.Dict()
     features = fields.Method("get_features")
-
     box = fields.Nested(BoxASchema)
 
     def get_features(self, obj):
-        feature_ids = FeatureGroupFeature.objects.filter(featuregroup=obj).order_by('priority', 'id') \
-            .distinct('priority', 'id').values_list('feature', flat=True)
+        if obj.__class__.__name__ == 'CategoryGroupFeature':
+            feature_ids = FeatureGroupFeature.objects.filter(featuregroup=obj.featuregroup).order_by('priority', 'id') \
+                .distinct('priority', 'id').values_list('feature', flat=True)
+        else:
+            feature_ids = FeatureGroupFeature.objects.filter(featuregroup=obj).order_by('priority', 'id') \
+                .distinct('priority', 'id').values_list('feature', flat=True)
         features = sort_by_list_of_id(Feature, feature_ids)
         return FeatureASchema(exclude=['groups'], product=self.product).dump(features, many=True)
 

@@ -439,7 +439,7 @@ class ProductFeatureSchema(BaseSchema):
 class FeatureStorageSchema(BaseSchema):
     id = fields.Int()
     feature = fields.Method('get_feature')
-    value = fields.Function(lambda o: o.value)
+    # value = fields.Function(lambda o: o.value)
 
 
 class TagSchema(BaseSchema):

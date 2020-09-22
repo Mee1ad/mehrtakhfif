@@ -59,6 +59,18 @@ Content-Type: application/json
 ###
 DELETE {{admin_host}}/category?id=54
 
+### DiscountCode CR
+GET {{admin_host}}/discount_code?id=5
+###
+POST {{admin_host}}/discount_code
+Content-Type: application/json
+
+{
+  "storage_id": 3,
+  "count": 10,
+  "len": 6,
+  "prefix": "test"
+}
 ### Product CRUD
 POST {{admin_host}}/product
 Content-Type: application/json
@@ -150,7 +162,7 @@ PUT {{admin_host}}/product
 Content-Type: application/json
 
 {
-  "id": 1227,
+  "id": 1223,
   "box_id": 3,
   "type": "product",
   "brand_id": 26,
@@ -161,17 +173,12 @@ Content-Type: application/json
   "features": [
     {
       "feature_id": 33,
-      "feature_value_id": 1,
-      "settings": {}
-    },
-    {
-      "feature_id": 33,
       "feature_value_id": 2,
       "settings": {}
     },
     {
-      "feature_id": 33,
-      "feature_value_id": 3,
+      "feature_id": 34,
+      "feature_value_id": 8,
       "settings": {}
     }
   ],
@@ -201,7 +208,6 @@ Content-Type: application/json
     "en": "",
     "ar": ""
   },
-  "permalink": "کفش-آدیداس-تستی",
   "review": null,
   "settings": {
     "adminNote": "انبار ندارد↵اصلاح اسم محصول",

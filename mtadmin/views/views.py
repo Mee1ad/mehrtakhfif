@@ -5,7 +5,7 @@ import pysnooper
 from django.core.mail import send_mail
 from django.http import HttpResponseBadRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import render_to_response, render
-from django.utils.crypto import get_random_string
+
 from django_telegram_login.authentication import verify_telegram_authentication
 from django_telegram_login.errors import TelegramDataIsOutdatedError, NotTelegramDataError
 from elasticsearch_dsl import Q
@@ -39,24 +39,6 @@ class CheckPrices(AdminView):
         elif dper and vdper:
             dp = int(fp - fp * dper / 100)
             return JsonResponse({'discount_price': dp})
-        return JsonResponse({})
-
-
-class GenerateCode(AdminView):
-    def post(self, request):
-        data = json.loads(request.body)
-        storage_id = data['storage_id']
-        count = data['count']
-        code_len = data.get('len', 5)
-        storage = Storage.objects.get(pk=storage_id)
-        prefix = data.get('prefix', storage.title['fa'][:2])
-        codes = [prefix + '-' + get_random_string(code_len, random_data) for c in range(count)]
-        while len(set(codes)) < count:
-            codes = list(set(codes))
-            codes += [prefix + '-' + get_random_string(code_len, random_data) for c in range(count - len(set(codes)))]
-        user = request.user
-        items = [DiscountCode(code=code, storage=storage, created_by=user, updated_by=user) for code in codes]
-        DiscountCode.objects.bulk_create(items)
         return JsonResponse({})
 
 

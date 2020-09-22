@@ -1,13 +1,9 @@
 from statistics import mean, StatisticsError
-from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
-from django.contrib.postgres.fields.jsonb import KeyTextTransform
-from mtadmin.utils import *
+
+from django.utils.crypto import get_random_string
+
 from mtadmin.serializer import *
-import pysnooper
-from django.db.utils import IntegrityError
-from django.db.models import Sum, F
-import json
-from server.documents import TagDocument
+from mtadmin.utils import *
 from server.models import Media
 
 
@@ -39,8 +35,8 @@ class CategoryView(TableView):
             category.child_count = children['count']
             category.category_child_product_count = Product.objects.filter(categories__in=children['childes']).count()
             category.product_count = Product.objects.filter(categories=category).count()
-
-        return JsonResponse(get_pagination(request, categories, CategoryASchema, request.all))
+        test = {'html': "hello </br> world", 'variant': 'error', 'duration': 15000}
+        return JsonResponse({**get_pagination(request, categories, CategoryASchema, request.all), **test})
 
     def post(self, request):
         return create_object(request, Category, serializer=CategoryASchema, return_item=True)
@@ -123,7 +119,8 @@ class FeatureValueView(TableView):
                                                error_null_box=False))
 
     def post(self, request):
-        return create_object(request, FeatureValue, serializer=FeatureValueASchema, error_null_box=False, return_item=True)
+        return create_object(request, FeatureValue, serializer=FeatureValueASchema, error_null_box=False,
+                             return_item=True)
 
     def put(self, request):
         return update_object(request, FeatureValue, serializer=FeatureValueASchema, require_box=False, return_item=True)
@@ -174,7 +171,25 @@ class ProductView(TableView):
         return create_object(request, Product, serializer=ProductESchema, box_key='storage__product')
 
     def put(self, request):
-        return update_object(request, Product)
+        data = get_data(request, require_box=True)
+        product = Product.objects.get(id=data['id'])
+        storages = product.storages.all()
+        used_product_features = ProductFeatureStorage.objects.filter(storage__in=storages)
+        used_product_feature_ids = list(set(used_product_features.values_list('product_feature__id', flat=True)))
+        used_feature_ids = list(set(used_product_features.values_list('product_feature__feature_id', flat=True)))
+        new_feature_ids = list(set([item['feature_id'] for item in data['features']]))
+        restrict_objects = list(set(used_feature_ids) - set(new_feature_ids))
+        extra_response = {}
+        features = Feature.objects.filter(pk__in=restrict_objects)
+        if restrict_objects:
+            features = features.values_list('name__fa', flat=True)
+            message = f"""محصول آپدیت شد ولی فیچرا همونجوری که بودن میمونن میدونی چرا؟
+            چون که این فیچرا رو از محصولت حذف کردی ولی تو انبار داشت استفاده میشد:
+            {', '.join(features)}"""
+            extra_response = {'message': message, 'variant': 'warning'}
+            # data.pop('features')
+        return update_object(request, Product, data=data, extra_response=extra_response, restrict_objects=features,
+                             restrict_m2m=['features'], used_product_feature_ids=used_product_feature_ids)
 
     def delete(self, request):
         return delete_base(request, Product)
@@ -191,6 +206,28 @@ class ProductFeatureView(TableView):
             return JsonResponse({'data': []})
         return JsonResponse(serialized_objects(request, ProductFeature, ProductFeatureASchema, ProductFeatureASchema,
                                                error_null_box=False, params=params))
+
+
+class DiscountCodeView(AdminView):
+    def get(self, request):
+        return JsonResponse(serialized_objects(request, DiscountCode, DiscountASchema, DiscountASchema,
+                                               required_fields=['storage_id'], box_key='storage__product__box_id'))
+
+    def post(self, request):
+        data = json.loads(request.body)
+        storage_id = data['storage_id']
+        count = data['count']
+        code_len = data.get('len', 5)
+        storage = Storage.objects.get(pk=storage_id)
+        prefix = data.get('prefix', storage.title['fa'][:2])
+        codes = [prefix + '-' + get_random_string(code_len, random_data) for c in range(count)]
+        while len(set(codes)) < count:
+            codes = list(set(codes))
+            codes += [prefix + '-' + get_random_string(code_len, random_data) for c in range(count - len(set(codes)))]
+        user = request.user
+        items = [DiscountCode(code=code, storage=storage, created_by=user, updated_by=user) for code in codes]
+        DiscountCode.objects.bulk_create(items)
+        return JsonResponse({})
 
 
 class HouseView(TableView):
@@ -231,10 +268,14 @@ class StorageView(TableView):
         if request.GET.get('product_id'):
             product_id = int(request.GET.get('product_id'))
             product = Product.objects.get(pk=product_id)
+            manage = product.manage
+            product_type = product.get_type_display()
             box = BoxASchema().dump(product.box)
-            return JsonResponse({"product": {"id": product.id, "name": product.name, "permalink": product.permalink,
-                                             "default_storage": {"id": product.default_storage_id},
-                                             "manage": product.manage, 'box': box, 'type': product.get_type_display()},
+            product = ProductESchema().dump(product)
+            # return JsonResponse({"product": {"id": product.id, "name": product.name, "permalink": product.permalink,
+            #                                  "default_storage": {"id": product.default_storage_id},
+            return JsonResponse({"product": product,
+                                 "manage": manage, 'box': box, 'type': product_type,
                                  "data": data})
         return JsonResponse(data)
 
@@ -320,11 +361,10 @@ class InvoiceProductView(TableView):
 
     def get(self, request):
         params = get_params(request, box_key='box_id')
-        serializer = InvoiceStorageASchema
-        print(get_group(request.user))
-        if get_group(request.user) in ['superuser', 'mt_accountants'] or request.user.is_superuser:
-            serializer = InvoiceStorageFDSchema
         params['filter']['invoice__status__in'] = Invoice.success_status
+        serializer = InvoiceStorageASchema
+        if get_group(request.user) in ['superuser', 'mt_accountants']:
+            serializer = InvoiceStorageFDSchema
         return JsonResponse(serialized_objects(request, InvoiceStorage, serializer, serializer,
                                                error_null_box=False, params=params))
 

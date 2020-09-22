@@ -23,13 +23,14 @@ class AdminView(LoginRequiredMixin, View):
 
 
 def serialized_objects(request, model, serializer=None, single_serializer=None, box_key='box_id', error_null_box=True,
-                       params=None):
+                       params=None, required_fields=[]):
     pk = request.GET.get('id', None)
     box_check = get_box_permission(request.user, box_key) if error_null_box and box_key else {}
     if pk:
         try:
             obj = model.objects.get(pk=pk, **box_check)
-            return {"data": single_serializer(user=request.user).dump(obj)}
+            data = single_serializer(user=request.user).dump(obj)
+            return {"data": data}
         except model.DoesNotExist:
             raise PermissionDenied
         except TypeError:
@@ -37,7 +38,8 @@ def serialized_objects(request, model, serializer=None, single_serializer=None, 
     if not params:
         params = get_params(request, box_key)
     try:
-        if error_null_box and not params['filter'].get(box_key) and not params['filter'].get(box_key[:-3]):
+        if error_null_box and not params['filter'].get(box_key) and not params['filter'].get(box_key[:-3]) and \
+                not set(required_fields).issubset(params['filter']):
             try:
                 if int(params['filter']['type']) not in model.no_box_type:
                     raise PermissionDenied
@@ -192,7 +194,7 @@ def get_m2m_fields(model, data):
 
 
 def create_object(request, model, box_key='box', return_item=False, serializer=None, error_null_box=True, data=None,
-                  return_obj=False):
+                  return_obj=False, restrict_objects=(), restrict_m2m=(), used_product_feature_ids=()):
     if not request.user.has_perm(f'server.add_{model.__name__.lower()}'):
         raise PermissionDenied
     data = data or get_data(request, require_box=error_null_box)
@@ -206,7 +208,7 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
     obj.save(**remove_fields)
     [getattr(obj, field).set(m2m[field]) for field in m2m]
     for field in custom_m2m:
-        add_custom_m2m(obj, field, custom_m2m[field], user)
+        add_custom_m2m(obj, field, custom_m2m[field], user, restrict_objects, restrict_m2m, used_product_feature_ids)
     for field in ordered_m2m:
         add_ordered_m2m(obj, field, ordered_m2m[field], user)
     if return_item:
@@ -220,12 +222,23 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
     return JsonResponse({'id': obj.pk}, status=201)
 
 
-def get_m2m_field(obj, field, m2m):
+def get_m2m_field(obj, field, m2m, used_product_feature_ids=(), clear=True):
     many_to_many_model = getattr(obj, m2m)[field]
-    try:
-        getattr(obj, field).clear()
-    except AttributeError:
-        getattr(obj, field).all().delete()
+    if clear:
+        try:
+            getattr(obj, field).clear()
+        except AttributeError:
+            getattr(obj, field).all().delete()
+    else:
+        m2m_class = obj.__class__.__name__ + field[0].upper() + field[1:-1]
+        print(m2m_class)
+        print("used_product_feature_ids:", used_product_feature_ids)
+        print("getattr(obj, field):", ProductFeature.objects.filter(product=obj))
+        from django.db.models import Q
+        print("exclude:", ProductFeature.objects.filter(Q(product=obj), ~Q(id__in=used_product_feature_ids)))
+        # print("exclude:", getattr(obj, field).exclude(id__in=used_product_feature_ids))
+        ProductFeature.objects.filter(Q(product=obj), ~Q(id__in=used_product_feature_ids)).delete()
+
     return many_to_many_model
 
 
@@ -251,15 +264,39 @@ def add_ordered_m2m(obj, field, item_list, user):
     many_to_many_model.objects.bulk_create(items)
 
 
-def add_custom_m2m(obj, field, item_list, user):
-    many_to_many_model = get_m2m_field(obj, field, 'custom_m2m')
-    user = m2m_footprint(many_to_many_model, user)
-    extra_fields = {obj.__class__.__name__.lower(): obj}
-    items = [many_to_many_model(**item, **extra_fields, **user) for item in item_list]
-    many_to_many_model.objects.bulk_create(items)
+# import pysnooper
+# @pysnooper.snoop()
+def add_custom_m2m(obj, field, item_list, user, restrict_objects, restrict_m2m, used_product_feature_ids):
+    if field in restrict_m2m:
+        print(item_list)
+        restrict_feature_ids = list(restrict_objects.values_list('id', flat=True))
+        print(restrict_feature_ids)
+        many_to_many_model = get_m2m_field(obj, field, 'custom_m2m', clear=False,
+                                           used_product_feature_ids=used_product_feature_ids)
+        user = m2m_footprint(many_to_many_model, user)
+        extra_fields = {obj.__class__.__name__.lower(): obj}
+        items = []
+        for item in item_list:
+            # if item['feature_id'] in restrict_feature_ids:
+            updated = many_to_many_model.objects.filter(feature_id=item['feature_id'],
+                                                        feature_value_id=item['feature_value_id'],
+                                                        product=obj) \
+                .update(settings=item['settings'], updated_by_id=user['updated_by_id'])
+            if updated:
+                continue
+            items.append(many_to_many_model(**item, **extra_fields, **user))
+        print(items)
+        many_to_many_model.objects.bulk_create(items)
+    else:
+        many_to_many_model = get_m2m_field(obj, field, 'custom_m2m')
+        user = m2m_footprint(many_to_many_model, user)
+        extra_fields = {obj.__class__.__name__.lower(): obj}
+        items = [many_to_many_model(**item, **extra_fields, **user) for item in item_list]
+        many_to_many_model.objects.bulk_create(items)
 
 
-def update_object(request, model, box_key='box', return_item=False, serializer=None, data=None, require_box=True):
+def update_object(request, model, box_key='box', return_item=False, serializer=None, data=None, require_box=True,
+                  extra_response={}, restrict_objects=(), restrict_m2m=(), used_product_feature_ids=()):
     user = request.user
     if not user.has_perm(f'server.change_{model.__name__.lower()}'):
         raise PermissionDenied
@@ -281,7 +318,8 @@ def update_object(request, model, box_key='box', return_item=False, serializer=N
             items.update(**data)
     [getattr(items.first(), field).set(m2m[field]) for field in m2m]
     for field in custom_m2m:
-        add_custom_m2m(items.first(), field, custom_m2m[field], user)
+        add_custom_m2m(items.first(), field, custom_m2m[field], user, restrict_objects, restrict_m2m,
+                       used_product_feature_ids)
     for field in ordered_m2m:
         add_ordered_m2m(items.first(), field, ordered_m2m[field], user)
     try:
@@ -294,8 +332,8 @@ def update_object(request, model, box_key='box', return_item=False, serializer=N
         request.GET._mutable = True
         request.GET['id'] = items.first().pk
         items = serialized_objects(request, model, single_serializer=serializer, error_null_box=require_box)
-        return JsonResponse({"data": items}, status=res_code['updated'])
-    return JsonResponse({}, status=res_code['updated'])
+        return JsonResponse({"data": items, **extra_response}, status=res_code['updated'])
+    return JsonResponse({**extra_response}, status=res_code['updated'])
 
 
 def delete_base(request, model, require_box=False):

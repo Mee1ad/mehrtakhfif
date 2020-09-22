@@ -144,13 +144,18 @@ class CommentView(View):
 
 
 class FeatureView(View):
-    @pysnooper.snoop()
     def get(self, request, permalink):
         product = Product.objects.get(permalink=permalink)
         selected = request.GET.getlist('select[]')
         selected = list(map(int, selected))
         # product = Product.objects.get(pk=513)
         product_features = ProductFeature.objects.filter(product=product)
+        if not product_features:
+            try:
+                storage = StorageSchema(**request.schema_params).dump(product.storages.all()[0])
+                return JsonResponse({'features': [], 'storage': storage})
+            except IndexError:
+                return JsonResponse({'features': [], 'storage': {}})
         feature_count = collections.Counter(product_features.values_list('feature_id', flat=True)).items()
         multi_select_features = [item for item, count in feature_count if count > 1]
         product_features = product_features.filter(feature_id__in=multi_select_features)
@@ -186,9 +191,9 @@ class FeatureView(View):
             available_combos.append(
                 list(product_feature_storages.filter(storage_id=pf.storage_id).values_list(
                     'product_feature_id', flat=True)))
-        print(available_combos)
-        print('first selected:', selected)
-        print(selected_feature)
+        # print(available_combos)
+        # print('first selected:', selected)
+        # print(selected_feature)
         for product_f in product_features_distinct:
             values = []
             select = list(product_features.filter(
@@ -206,9 +211,9 @@ class FeatureView(View):
                 # feature_dict['available'] = pf.feature_id in product_features.filter(pk__in=selected).values_list(
                 #     'feature_id', flat=True)
                 try:
-                    print('feature:', pf.id)
-                    print('feature:', pf.feature)
-                    print('selected:', selected)
+                    # print('feature:', pf.id)
+                    # print('feature:', pf.feature)
+                    # print('selected:', selected)
                     feature_combo = list(product_features.exclude(feature=pf.feature).filter(
                         pk__in=selected_feature).values_list('pk', flat=True))[0]
                 except IndexError:

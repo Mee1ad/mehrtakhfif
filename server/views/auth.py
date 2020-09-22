@@ -156,7 +156,6 @@ class Activate(View):
             user.save()
             login(request, user, backend='django.contrib.auth.backends.ModelBackend')
             res = {'user': UserSchema().dump(user)}  # signup without password
-            print(res)
             if user.is_staff:
                 res['user']['is_staff'] = user.is_staff
             basket = Basket.objects.filter(user=user).order_by('-id')

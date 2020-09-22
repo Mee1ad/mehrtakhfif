@@ -200,7 +200,7 @@ class PaymentRequest(View):
             dev = round((storage.discount_price - storage.start_price - tax) * 0.069)
             admin = round((storage.discount_price - storage.start_price - tax - charity - dev) *
                           storage.product.box.share)
-            mt_profit = storage.discount_price - tax - charity - dev - admin
+            mt_profit = storage.discount_price - storage.start_price - tax - charity - dev - admin
             invoice_products.append(
                 InvoiceStorage(storage=storage, invoice_id=invoice_id, count=product.count, tax=tax * product.count,
                                final_price=(storage.final_price - tax) * product.count, box=product.box,

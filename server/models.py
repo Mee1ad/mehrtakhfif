@@ -619,7 +619,6 @@ class Media(Base):
                 try:
                     width, height = im.size
                     if (width, height) != self.media_sizes[self.get_type_display()]:
-                        print(width, height)
                         raise ValidationError(_('سایز عکس نامعتبر است'))
                 except KeyError as e:
                     print(e)
@@ -683,7 +682,7 @@ class Category(Base):
     parent = models.ForeignKey("self", on_delete=CASCADE, null=True, blank=True)
     box = models.ForeignKey(Box, on_delete=CASCADE)
     # features = models.ManyToManyField("Feature")
-    feature_groups = models.ManyToManyField("FeatureGroup", related_name='categories')
+    feature_groups = models.ManyToManyField("FeatureGroup", through="CategoryGroupFeature", related_name='categories')
     name = JSONField(default=multilanguage)
     permalink = models.CharField(max_length=255, db_index=True, unique=True, null=True, blank=True)
     priority = models.PositiveSmallIntegerField(default=0)
@@ -696,6 +695,15 @@ class Category(Base):
         indexes = [GinIndex(fields=['name'])]
 
 
+class CategoryGroupFeature(MyModel):
+    category = models.ForeignKey(Category, on_delete=PROTECT)
+    featuregroup = models.ForeignKey("FeatureGroup", on_delete=PROTECT)
+
+    class Meta:
+        db_table = 'category_group_feature'
+        ordering = ['-id']
+
+
 class FeatureValue(Base):
     def __str__(self):
         return f"{self.id}"
@@ -703,6 +711,7 @@ class FeatureValue(Base):
     feature = models.ForeignKey("Feature", on_delete=CASCADE, related_name="values")
     value = JSONField(default=dict)
     settings = JSONField(default=dict)
+
     # priority = models.PositiveSmallIntegerField(default=0)
 
     class Meta:
@@ -824,6 +833,9 @@ class TagGroup(Base):
 
 class Brand(Base):
     objects = MyQuerySet.as_manager()
+
+    def __str__(self):
+        return f"{self.name['fa']}"
 
     def validation(self, kwargs):
         self.permalink = self.permalink.lower()
@@ -1127,7 +1139,7 @@ class Storage(Base):
         if type(my_dict.get('tax_type')) is str:
             my_dict['tax_type'] = {'has_not': 1, 'from_total_price': 2, 'from_profit': 3}[my_dict['tax_type']]
         if my_dict.get('discount_price'):
-            my_dict['discount_percent'] = int(100 - my_dict['discount_price'] / my_dict['final_price'] * 100)
+            my_dict['discount_percent'] = int(100 - int(my_dict['discount_price']) / int(my_dict['final_price']) * 100)
         if my_dict.get('features', None) and not my_dict.get('features_percent', None):
             # todo debug
             # todo feature: add default_selected_value for feature
