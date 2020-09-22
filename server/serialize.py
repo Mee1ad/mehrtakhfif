@@ -197,7 +197,7 @@ class BaseSchema(Schema):
                 return MinStorageSchema(self.lang, vip=self.vip, user=self.user).dump(obj.default_storage)
             if hasattr(obj, 'storage'):
                 return MinStorageSchema(self.lang, vip=self.vip, user=self.user).dump(obj.storage)
-            return None
+            return {}
         except Exception:
             pass
 
