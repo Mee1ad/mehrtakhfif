@@ -192,7 +192,7 @@ class BaseSchema(Schema):
     def get_min_storage(self, obj):
         try:
             if hasattr(obj, 'house'):
-                return None
+                return {}
             if hasattr(obj, 'default_storage'):
                 return MinStorageSchema(self.lang, vip=self.vip, user=self.user).dump(obj.default_storage)
             if hasattr(obj, 'storage'):
