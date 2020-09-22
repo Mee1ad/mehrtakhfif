@@ -1,0 +1,159 @@
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <link href="https://api.mehrtakhfif.com/static/css/iran-sans.css" rel="stylesheet">
+    <title>فاکتور ارسال</title>
+    <style>
+
+        * {
+            font-family: IRANSans, serif !important;
+        }
+
+        body{
+            padding: 8px;
+            height: 3.6in;
+            width: 5.3in;
+        }
+
+        body>div {
+            border: 1px solid gray;
+        }
+
+        h1, h2, h3, h4, h5, h6, p, span, div {
+            margin: 0;
+            padding: 0;
+        }
+
+        .flex {
+            display: flex
+        }
+
+        .column {
+            flex-direction: column;
+        }
+
+        .rtl {
+            direction: rtl;
+        }
+
+        .container {
+        }
+
+        .pt {
+            padding-top: 8px;
+        }
+
+        .pb {
+            padding-bottom: 8px;
+        }
+
+        .pl {
+            padding-left: 8px;
+        }
+
+        .pr {
+            padding-right: 8px;
+        }
+
+        .py {
+            padding-top: 8px;
+            padding-bottom: 8px;
+        }
+
+        .px {
+            padding-left: 8px;
+            padding-right: 8px;
+        }
+
+        .logo{
+            width:100%;
+            height: auto;
+        }
+
+        .logo-layout{
+            display:block;
+        }
+
+        .logo-print{
+            display:none;
+        }
+
+        @media print{
+            @page {size: landscape}
+
+            .logo-layout{
+                display:none;
+            }
+
+            .logo-print{
+                display:block;
+            }
+        }
+
+    </style>
+</head>
+<body>
+<div class="flex column">
+    <div class="flex px py"
+         style="align-items: center;border-bottom: 1px solid gray">
+        <div style="width: 28%">
+            <img class="logo logo-layout" src="https://api.mehrtakhfif.com/static/mehrtaklhfif-full-icon.png" alt="mehrtakhfif logo"
+                 style="width:100%;height: auto"/>
+            <img class="logo logo-print" src="https://api.mehrtakhfif.com/static/mehrtaklhfif-full-icon-black.png" alt="mehrtakhfif logo print"
+                 style="width:100%;height: auto"/>
+        </div>
+        <div class="flex column rtl" style="width: 80%">
+            <div
+                    style="
+                width: max-content;
+                display: flex;
+                flex-direction: column;
+                align-items: center;">
+                <h2 style="">مهرتخفیف</h2>
+                <h5 dir="ltr" style="margin-top: 5px;    letter-spacing: 0.6px;">013<span style="padding: 0 1px">-</span>91003033</h5>
+            </div>
+        </div>
+    </div>
+    <div class="flex rtl px" style="height:57px;border-bottom:1px solid gray">
+        <h5 class="py " style=" width:50%;">گیرنده: {{ name }}</h5>
+        <div
+                style="display: flex;width: 50%;">
+            <h4 class="py pr"
+                style="
+                border-right: 1px solid gray;
+                width: 100%;
+                align-items: center;
+                display: flex;
+                border-right:1px solid gray;
+              ">
+                <span style="font-size: 12px;padding-left: 5px">شماره تماس:</span>
+                {{ phone }}
+            </h4>
+        </div>
+    </div>
+    <h5 class="rtl py  px" style="height:91px;border-bottom:1px solid gray">
+        <span class=" pl">استان: {{ state.name }}</span>
+        <span class=" px"
+              style=" border: 0 solid gray;border-right-width: 1px ; border-left-width: 1px;">شهر: {{ city.name }}</span>
+        <span class="pr"
+              style="font-size: 14px;
+                    line-height: 1.8;
+                    font-weight: 500;">
+            {{ address}}
+        </span>
+    </h5>
+    <div class="flex rtl px" style="border-bottom:1px solid gray">
+        <h5 class="py " style=" width:50%;">فقره: 1 / 1</h5>
+        <h5 class="py pr" style=" border-right:1px solid gray;width:50%;">کد پستی:
+            <span dir="ltr" style="direction: ltr; padding-right: 5px">
+            {{ postal_code }}
+        </span></h5>
+    </div>
+    <h4 class="flex px py" style="justify-content: center;align-items: flex-end;font-weight: 700">
+        <span style="font-size: 14px;font-weight: 500">www.</span>MehrTakhfif<span
+            style="font-size: 14px;font-weight: 500">.com</span>
+    </h4>
+
+</div>
+</body>
+</html>
