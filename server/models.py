@@ -869,7 +869,6 @@ def blog_pre_init_signal(sender, *args, **kwargs):
     kwargs['kwargs']['name'] = {'fa': 'haha', 'en': '', 'ar': ''}
 
 
-
 class ProductTag(MyModel):
     product = models.ForeignKey("Product", on_delete=PROTECT)
     tag = models.ForeignKey(Tag, on_delete=PROTECT)

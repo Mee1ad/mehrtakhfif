@@ -1,10 +1,9 @@
+import collections
+
 from django.http import JsonResponse
-from server.models import *
+
 from server.serialize import *
 from server.utils import View, get_pagination, load_data
-import pysnooper
-from django.db.models import Q
-import collections
 
 
 class ProductView(View):
@@ -14,6 +13,7 @@ class ProductView(View):
         product_obj = Product.objects.filter(permalink=permalink, **preview).prefetch_related(
             *Product.prefetch).first()
         features = self.get_features(product_obj, request.lang)
+        # features = []
         if product_obj is None:
             return JsonResponse({}, status=404)
         purchased = False
@@ -33,24 +33,25 @@ class ProductView(View):
             product['storages'] = PackageSchema(**request.schema_params).dump(storages, many=True)
         # todo debug
         # product['categories'] = [self.get_category(c) for c in product['categories']]
-        return JsonResponse({'product': product, 'features': features, 'purchased': purchased})
+        return JsonResponse({'product': product, 'purchased': purchased, 'features': features})
 
     def get_features(self, product, lang):
-        product_features = ProductFeature.objects.filter(product=product)
-        unique_features = [item for item, count in collections.Counter(
-            product_features.values_list('feature_id', flat=True)).items() if count < 2]
-        product_features = ProductFeature.objects.filter(product=product, feature_id__in=unique_features)
-        # todo debug
-        # groups_id = list(set(filter(None.__ne__, ProductFeature.objects.all().values_list('feature__group', flat=True))))
-        groups_id = []
-        features_list = []
-        for group_id in groups_id:
-            group = FeatureGroup.objects.get(pk=group_id)
-            features = product_features.filter(feature__group_id=group_id)
-            features = ProductFeatureSchema().dump(features, many=True)
-            features_list.append({'title': group.name[lang], 'features': features})
-
-        return features_list
+        group_features = []
+        features = []
+        category_feature_groups = FeatureGroup.objects.filter(categories__in=product.categories.values_list('id',
+                                                                                                            flat=True))
+        product_feature_groups = product.feature_groups.all()
+        feature_groups = category_feature_groups | product_feature_groups
+        feature_groups_id = list(feature_groups.values_list('id', flat=True))
+        product_features = ProductFeature.objects.filter(product=product).annotate()
+        for feature_group in feature_groups:
+            # group features
+            gf = product_features.filter(feature__groups__in=[feature_group.pk]).exclude(feature__type=3)
+            gf = ProductFeatureSchema().dump(gf, many=True)
+            group_features.append({'id': feature_group.pk, 'title': feature_group.name[lang], 'features': gf})
+        f = product_features.exclude(feature__groups__in=feature_groups_id, feature__type=3)
+        features.append(ProductFeatureSchema().dump(f, many=True))
+        return {'group_features': group_features, 'features': features[0]}
 
     def get_category(self, category):
         try:
@@ -66,7 +67,7 @@ class ProductView(View):
             return category
 
     def purchase_status(self, user, storages):
-        return True if Invoice.objects.filter(user=user, status=2, storages__in=storages).exists() else False
+        return Invoice.objects.filter(user=user, status=2, storages__in=storages).exists()
 
 
 class RelatedProduct(View):
@@ -170,10 +171,10 @@ class FeatureView(View):
                         storage=default_storage).count():
                     default_storage = selected_pfs.filter(storage=pfs.storage).first().storage
         else:
-            # try:
-            default_storage = min(product_feature_storages, key=attrgetter('storage.discount_price')).storage
-            # except ValueError:
-            #     return JsonResponse({})
+            try:
+                default_storage = min(product_feature_storages, key=attrgetter('storage.discount_price')).storage
+            except ValueError:
+                return JsonResponse({})
             selected = list(product_feature_storages.filter(storage=default_storage).values_list('product_feature_id',
                                                                                                  flat=True))
         features_list = self.get_features(product_features, product_feature_storages, default_storage, selected)
@@ -198,6 +199,7 @@ class FeatureView(View):
             values = []
             select = list(product_features.filter(
                 feature=product_f.feature, pk__in=selected_feature).values_list('pk', flat=True))
+            print(select)
             if len(select) < 2:
                 select = select[0]
             for pf in product_features.filter(feature=product_f.feature):

@@ -169,12 +169,10 @@ class ProductView(TableView):
 
     def post(self, request):
         data = get_data(request, require_box=True)
-        data['features'] = []
         return create_object(request, Product, serializer=ProductESchema, box_key='storage__product')
 
     def put(self, request):
         data = get_data(request, require_box=True)
-        data['features'] = []
         product = Product.objects.get(id=data['id'])
         storages = product.storages.all()
         used_product_features = ProductFeatureStorage.objects.filter(storage__in=storages)
@@ -371,7 +369,7 @@ class InvoiceProductView(TableView):
         params = get_params(request, box_key='box_id')
         params['filter']['invoice__status__in'] = Invoice.success_status
         serializer = InvoiceStorageASchema
-        if get_group(request.user) in ['superuser', 'mt_accountants']:
+        if get_group(request.user) in ['superuser', 'accountants']:
             serializer = InvoiceStorageFDSchema
         return JsonResponse(serialized_objects(request, InvoiceStorage, serializer, serializer,
                                                error_null_box=False, params=params))

@@ -85,14 +85,14 @@ class Orders(LoginRequired):
                 invoice = Invoice.objects.get(pk=pk, user=request.user)
             except Invoice.DoesNotExist:
                 return JsonResponse({}, status=404)
-            return JsonResponse({'data': InvoiceSchema().dump(invoice)})
+            return JsonResponse({'data': InvoiceSchema(user=request.user).dump(invoice)})
         orders = user_data_with_pagination(Invoice, InvoiceSchema, request)
         return JsonResponse(orders)
 
 
 class InvoiceView(LoginRequired):
     def get(self, request, invoice_id):
-        permission_group = ['support', 'mt_accountants', 'superuser']
+        permission_group = ['support', 'accountants', 'superuser']
         user = {'user': request.user, 'status__in': Invoice.success_status}  # payed
         if request.user.groups.filter(name__in=permission_group) or request.user.is_superuser:
             user = {}

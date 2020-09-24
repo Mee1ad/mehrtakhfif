@@ -42,7 +42,7 @@ def cancel_reservation(invoice_id, **kwargs):
 @shared_task
 def sale_report(invoice_id, **kwargs):
     invoice_storages = InvoiceStorage.objects.filter(invoice_id=invoice_id)
-    notif_users = User.objects.filter(groups__name__in=['mt_accountants', 'post'])
+    notif_users = User.objects.filter(groups__name__in=['accountants', 'post'])
     notif_devices = GCMDevice.objects.filter(user__in=notif_users)
     for invoice_storage in invoice_storages:
         owner = invoice_storage.storage.product.box.owner

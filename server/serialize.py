@@ -612,8 +612,7 @@ class InvoiceSchema(BaseSchema):
 
     def get_invoice_file(self, obj):
         try:
-            if (self.user.is_staff and not self.user.groups.filter(name='ha_accountants').exists()) or \
-                    obj.get_type_display == 'payed':
+            if self.user.is_staff or obj.get_type_display == 'payed':
                 return HOST + f'/invoice_detail/{obj.id}'
         except AttributeError:
             return None
