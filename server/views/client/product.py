@@ -153,7 +153,8 @@ class FeatureView(View):
         product_features = ProductFeature.objects.filter(product=product)
         if not product_features:
             try:
-                storage = StorageSchema(**request.schema_params).dump(product.storages.all()[0])
+                storage = StorageSchema(**request.schema_params).dump(product.storages.order_by('discount_price')
+                                                                      .first())
                 return JsonResponse({'features': [], 'storage': storage})
             except IndexError:
                 return JsonResponse({'features': [], 'storage': {}})
