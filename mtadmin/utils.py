@@ -6,6 +6,7 @@ from django.contrib.postgres.fields.jsonb import KeyTextTransform
 from django.core.exceptions import FieldError, PermissionDenied
 from django.http import JsonResponse
 from django.views import View
+from django.db.models import Q
 
 from mtadmin.serializer import tables
 from server.models import *
@@ -228,13 +229,12 @@ def get_m2m_field(obj, field, m2m, used_product_feature_ids=(), clear=True):
             getattr(obj, field).clear()
         except AttributeError:
             getattr(obj, field).all().delete()
-    else:
-        m2m_class = obj.__class__.__name__ + field[0].upper() + field[1:-1]
-        print(m2m_class)
-        print("used_product_feature_ids:", used_product_feature_ids)
-        print("getattr(obj, field):", ProductFeature.objects.filter(product=obj))
-        from django.db.models import Q
-        print("exclude:", ProductFeature.objects.filter(Q(product=obj), ~Q(id__in=used_product_feature_ids)))
+    m2m_class = obj.__class__.__name__ + field[0].upper() + field[1:-1]
+    if m2m_class == ProductFeature:
+        # print(m2m_class)
+        # print("used_product_feature_ids:", used_product_feature_ids)
+        # print("getattr(obj, field):", ProductFeature.objects.filter(product=obj))
+        # print("exclude:", ProductFeature.objects.filter(Q(product=obj), ~Q(id__in=used_product_feature_ids)))
         # print("exclude:", getattr(obj, field).exclude(id__in=used_product_feature_ids))
         ProductFeature.objects.filter(Q(product=obj), ~Q(id__in=used_product_feature_ids)).delete()
 
@@ -263,13 +263,9 @@ def add_ordered_m2m(obj, field, item_list, user):
     many_to_many_model.objects.bulk_create(items)
 
 
-# import pysnooper
-# @pysnooper.snoop()
 def add_custom_m2m(obj, field, item_list, user, restrict_objects, restrict_m2m, used_product_feature_ids):
     if field in restrict_m2m:
-        print(item_list)
-        restrict_feature_ids = list(restrict_objects.values_list('id', flat=True))
-        print(restrict_feature_ids)
+        # restrict_feature_ids = list(restrict_objects.values_list('id', flat=True))
         many_to_many_model = get_m2m_field(obj, field, 'custom_m2m', clear=False,
                                            used_product_feature_ids=used_product_feature_ids)
         user = m2m_footprint(many_to_many_model, user)
@@ -284,10 +280,9 @@ def add_custom_m2m(obj, field, item_list, user, restrict_objects, restrict_m2m, 
             if updated:
                 continue
             items.append(many_to_many_model(**item, **extra_fields, **user))
-        print(items)
         many_to_many_model.objects.bulk_create(items)
     else:
-        many_to_many_model = get_m2m_field(obj, field, 'custom_m2m')
+        many_to_many_model = get_m2m_field(obj, field, 'custom_m2m', clear=field not in obj.keep_m2m_data)
         user = m2m_footprint(many_to_many_model, user)
         extra_fields = {obj.__class__.__name__.lower(): obj}
         items = [many_to_many_model(**item, **extra_fields, **user) for item in item_list]

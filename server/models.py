@@ -278,6 +278,7 @@ class Base(SafeDeleteModel):
     ordered_m2m = {}
     required_m2m = []
     fields = {}
+    keep_m2m_data = []
 
     _safedelete_policy = SOFT_DELETE_CASCADE
     id = models.BigAutoField(auto_created=True, primary_key=True)
@@ -370,6 +371,7 @@ class MyModel(models.Model):
     ordered_m2m = {}
     required_m2m = []
     fields = {}
+    keep_m2m_data = []
 
 
 class Ad(Base):
@@ -724,6 +726,7 @@ class Feature(Base):
 
     m2m = ['groups']
     custom_m2m = {'values': FeatureValue}
+    keep_m2m_data = ['values']
     types = ((1, 'bool'), (2, 'text'), (3, 'selectable'))
 
     def __str__(self):

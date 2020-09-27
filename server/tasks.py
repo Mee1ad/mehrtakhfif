@@ -79,7 +79,8 @@ def sale_report_summary(**kwargs):
         send_sms(item['owner'].username, "order-summary", item['count'])
     superusers = [User.objects.get(pk=1)]
     item_count = sum([item['count'] for item in notify_list])
-    [send_sms(user.username, "order-summary", item_count) for user in superusers]
+    if notify_list:
+        [send_sms(user.username, "order-summary", item_count) for user in superusers]
     return {'notified admins': [admin['owner'].first_name + " " + admin['owner'].last_name for admin in notify_list]}
 
 
