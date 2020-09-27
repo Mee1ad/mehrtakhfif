@@ -42,9 +42,13 @@ UserAdmin.filter_horizontal += ('box_permission',)
 class Base(SafeDeleteAdmin):
 
     @staticmethod
-    def fa(obj, table='language'):
+    def link_name_fa(obj, table='language'):
         link = reverse(f"admin:server_{table}_change", args=[obj.name.id])
         return mark_safe(f'<a href="{link}">{escape(obj.name)}</a>')
+
+    @staticmethod
+    def name_fa(obj):
+        return obj.name['fa']
 
     @staticmethod
     def get_user(obj):
@@ -62,9 +66,15 @@ class Base(SafeDeleteAdmin):
         # return mark_safe(f'<a href="{link}">{escape(obj)}</a>')
         return None
 
+    def lookup_allowed(self, key, value):
+        # if key in ('related__pk', 'related__custom_field'):
+        return True
+
+        # return super(StorageAdmin, self).lookup_allowed(key, value)
+
 
 class BoxAdmin(SafeDeleteAdmin):
-    list_display = ('fa', 'permalink', 'owner') + SafeDeleteAdmin.list_display
+    list_display = ('name_fa', 'permalink', 'owner') + SafeDeleteAdmin.list_display
     # list_filter = ('name',) + SafeDeleteAdmin.list_filter
     search_fields = ['name']
     autocomplete_fields = ['owner']
@@ -75,7 +85,7 @@ class BoxAdmin(SafeDeleteAdmin):
 
     # ordering = ('-created_at',)
 
-    def fa(self, obj):
+    def name_fa(self, obj):
         return obj.name['fa']
 
 
@@ -106,16 +116,84 @@ class AdAdmin(admin.ModelAdmin):
     get_mobile_media.short_description = 'mobile media'
 
 
+class AddressAdmin(admin.ModelAdmin):
+    list_display = ('id', 'state', 'city', 'name', 'phone', 'address', 'user')
+    list_filter = ('city', 'state') + SafeDeleteAdmin.list_filter
+    search_fields = ['name', 'address', 'phone', 'user']
+    autocomplete_fields = ['user']
+    list_per_page = 10
+
+    # ordering = ('-created_at',)
+
+    def title_fa(self, obj):
+        return obj.title['fa']
+
+    def get_media(self, obj):
+        link = obj.media.image.url
+        return mark_safe(f'<a href="{link}">{obj.media}</a>')
+
+    def get_mobile_media(self, obj):
+        try:
+            link = obj.mobile_media.image.url
+            return mark_safe(f'<a href="{link}">{obj.mobile_media}</a>')
+        except AttributeError:
+            return None
+
+    get_media.short_description = 'media'
+    get_mobile_media.short_description = 'mobile media'
+
+
 class CategoryAdmin(SafeDeleteAdmin):
-    list_display = ('parent', 'box', 'fa', 'deleted_by') + SafeDeleteAdmin.list_display
+    list_display = ('parent', 'box', 'name_fa', 'deleted_by') + SafeDeleteAdmin.list_display
     list_filter = ('name',) + SafeDeleteAdmin.list_filter
     list_display_links = ('box',)
     search_fields = ['name']
     list_per_page = 10
     ordering = ('-created_at',)
 
-    def fa(self, obj):
+    def name_fa(self, obj):
         return obj.name['fa']
+
+
+class CharityAdmin(Base):
+    list_display = ('name_fa', 'deposit_id') + SafeDeleteAdmin.list_display
+    search_fields = ['name', 'deposit_id']
+    list_per_page = 10
+    ordering = ('-created_at',)
+
+
+class FeatureAdmin(Base):
+    list_display = ('name_fa', 'type', 'layout_type', 'values') + SafeDeleteAdmin.list_display
+    list_filter = ('type', 'layout_type') + SafeDeleteAdmin.list_filter
+    search_fields = ['name']
+    list_per_page = 10
+    ordering = ('-created_at',)
+
+    def values(self, obj):
+        link = f'{HOST}/superuser/server/featurevalue/?feature_id={obj.id}'
+        return mark_safe(f'<a href="{link}">Show</a>')
+
+
+class FeatureValueAdmin(Base):
+    list_display = ('feature', 'value_fa') + SafeDeleteAdmin.list_display
+    search_fields = ['feature', 'value_fa']
+    list_per_page = 10
+    ordering = ('-created_at',)
+
+    def value_fa(self, obj):
+        return obj.value['fa']
+
+
+class FeatureGroupAdmin(Base):
+    list_display = ('name_fa', 'box', 'get_features') + SafeDeleteAdmin.list_display
+    list_filter = ('box',) + SafeDeleteAdmin.list_filter
+    search_fields = ['name']
+    list_per_page = 10
+    ordering = ('-created_at',)
+
+    def get_features(self, obj):
+        link = f'{HOST}/superuser/server/feature/?feature_id={obj.id}'
+        return mark_safe(f'<a href="{link}">Show</a>')
 
 
 class MenuAdmin(SafeDeleteAdmin):
@@ -411,7 +489,7 @@ class HolidayAdmin(SafeDeleteAdmin):
 
     # ordering = ('-created_at',)
 
-    def fa(self, obj):
+    def name_fa(self, obj):
         return obj.name['fa']
 
 
@@ -431,12 +509,13 @@ class VipTypeAdmin(SafeDeleteAdmin):
 
 
 register_list = [(Session, SessionAdmin), (User, UserAdmin), (Box, BoxAdmin), (Category, CategoryAdmin),
-                 (Feature,), (Address,), (Media, MediaAdmin), (Product, ProductAdmin), (House, HouseAdmin),
+                 (Feature, FeatureAdmin), (FeatureValue, FeatureValueAdmin), (Address,), (Media, MediaAdmin),
+                 (Product, ProductAdmin), (House, HouseAdmin), (FeatureGroup, FeatureGroupAdmin),
                  (HousePrice, HousePriceAdmin), (ResidenceType, ResidenceTypeAdmin), (Booking, BookAdmin),
                  (Storage, StorageAdmin), (Basket,), (Comment, CommentAdmin), (Invoice, InvoiceAdmin),
                  (InvoiceStorage, InvoiceStorageAdmin), (InvoiceSuppliers, InvoiceSupplierAdmin), (Menu, MenuAdmin),
                  (Tag,), (TagGroup,), (Rate,), (Slider, SliderAdmin), (SpecialOffer, SpecialOfferAdmin),
-                 (Holiday, HolidayAdmin),
+                 (Holiday, HolidayAdmin), (Charity, CharityAdmin),
                  (SpecialProduct, SpecialProductAdmin), (Blog,), (BlogPost,), (WishList,), (NotifyUser,), (Ad, AdAdmin),
                  (State, StateAdmin), (City, CityAdmin), (Permission,), (VipType, VipTypeAdmin)]
 for item in register_list:

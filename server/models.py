@@ -754,8 +754,8 @@ class Feature(Base):
 
 
 class FeatureGroupFeature(MyModel):
-    feature = models.ForeignKey(Feature, on_delete=PROTECT)
-    featuregroup = models.ForeignKey("FeatureGroup", on_delete=PROTECT)
+    feature = models.ForeignKey(Feature, on_delete=CASCADE)
+    featuregroup = models.ForeignKey("FeatureGroup", on_delete=CASCADE)
     priority = models.PositiveIntegerField(default=0)
 
     class Meta:
