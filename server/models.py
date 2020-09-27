@@ -724,6 +724,7 @@ class Feature(Base):
 
     m2m = ['groups']
     custom_m2m = {'values': FeatureValue}
+    types = ((1, 'bool'), (2, 'text'), (3, 'selectable'))
 
     def __str__(self):
         return get_name(self.name, self)
@@ -741,7 +742,7 @@ class Feature(Base):
 
     name = JSONField(default=multilanguage)
     # group = models.ForeignKey("FeatureGroup", on_delete=CASCADE, related_name="features", null=True, blank=True)
-    type = models.PositiveSmallIntegerField(default=1, choices=((1, 'bool'), (2, 'text'), (3, 'selectable')))
+    type = models.PositiveSmallIntegerField(default=1, choices=types)
     layout_type = models.PositiveSmallIntegerField(default=1, choices=((1, 'default'),))
 
     class Meta:
@@ -859,14 +860,14 @@ class Brand(Base):
         ordering = ['-id']
 
 
-from django.db.models.signals import pre_init
-
-
-@receiver(pre_init, sender=Brand)
-def blog_pre_init_signal(sender, *args, **kwargs):
-    print("sender:", sender)
-    print("kwargs is:", kwargs['kwargs'])
-    kwargs['kwargs']['name'] = {'fa': 'haha', 'en': '', 'ar': ''}
+# from django.db.models.signals import pre_init
+#
+#
+# @receiver(pre_init, sender=Brand)
+# def blog_pre_init_signal(sender, *args, **kwargs):
+#     print("sender:", sender)
+#     print("kwargs is:", kwargs['kwargs'])
+#     kwargs['kwargs']['name'] = {'fa': 'haha', 'en': '', 'ar': ''}
 
 
 class ProductTag(MyModel):

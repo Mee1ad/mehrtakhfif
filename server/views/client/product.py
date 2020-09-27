@@ -4,6 +4,7 @@ from django.http import JsonResponse
 
 from server.serialize import *
 from server.utils import View, get_pagination, load_data
+import pysnooper
 
 
 class ProductView(View):
@@ -43,13 +44,13 @@ class ProductView(View):
         product_feature_groups = product.feature_groups.all()
         feature_groups = category_feature_groups | product_feature_groups
         feature_groups_id = list(feature_groups.values_list('id', flat=True))
-        product_features = ProductFeature.objects.filter(product=product).annotate()
+        product_features = ProductFeature.objects.filter(product=product).exclude(feature__type=3)
         for feature_group in feature_groups:
             # group features
-            gf = product_features.filter(feature__groups__in=[feature_group.pk]).exclude(feature__type=3)
+            gf = product_features.filter(feature__groups__in=[feature_group.pk])
             gf = ProductFeatureSchema().dump(gf, many=True)
             group_features.append({'id': feature_group.pk, 'title': feature_group.name[lang], 'features': gf})
-        f = product_features.exclude(feature__groups__in=feature_groups_id, feature__type=3)
+        f = product_features.exclude(feature__groups__in=feature_groups_id)
         features.append(ProductFeatureSchema().dump(f, many=True))
         return {'group_features': group_features, 'features': features[0]}
 
@@ -145,16 +146,20 @@ class CommentView(View):
 
 
 class FeatureView(View):
+    @pysnooper.snoop()
     def get(self, request, permalink):
         product = Product.objects.get(permalink=permalink)
         selected = request.GET.getlist('select[]')
-        selected = list(map(int, selected))
+        # todo temp solution
+        try:
+            selected = list(map(int, selected))
+        except ValueError:
+            selected = [int(selected[0]), selected[1][1:].split(',')[0]]
         # product = Product.objects.get(pk=513)
-        product_features = ProductFeature.objects.filter(product=product)
+        product_features = ProductFeature.objects.filter(product=product, feature__type=3)  # selectable
         if not product_features:
             try:
-                storage = StorageSchema(**request.schema_params).dump(product.storages.order_by('discount_price')
-                                                                      .first())
+                storage = StorageSchema(**request.schema_params).dump(product.default_storage)
                 return JsonResponse({'features': [], 'storage': storage})
             except IndexError:
                 return JsonResponse({'features': [], 'storage': {}})
@@ -175,7 +180,8 @@ class FeatureView(View):
             try:
                 default_storage = min(product_feature_storages, key=attrgetter('storage.discount_price')).storage
             except ValueError:
-                return JsonResponse({})
+                storage = StorageSchema(**request.schema_params).dump(product.default_storage)
+                return JsonResponse({'features': [], 'storage': storage})
             selected = list(product_feature_storages.filter(storage=default_storage).values_list('product_feature_id',
                                                                                                  flat=True))
         features_list = self.get_features(product_features, product_feature_storages, default_storage, selected)

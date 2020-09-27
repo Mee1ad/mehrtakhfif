@@ -101,6 +101,11 @@ class FeatureView(TableView):
         return JsonResponse(serialized_objects(request, Feature, FeatureASchema, FeatureASchema, error_null_box=False))
 
     def post(self, request):
+        data = get_data(request, require_box=True)
+        feature_type = [v[0] for i, v in enumerate(Feature.types) if v[1] == data['type']][0]
+        feature = Feature.objects.filter(name__fa=data['name']['fa'], type=feature_type)
+        if feature.exists():
+            return JsonResponse({'data': FeatureASchema().dump(feature.first())}, status=200)
         feature = create_object(request, Feature, error_null_box=False, return_obj=True)
         return JsonResponse({'id': feature.pk})
 
@@ -174,21 +179,25 @@ class ProductView(TableView):
     def put(self, request):
         data = get_data(request, require_box=True)
         product = Product.objects.get(id=data['id'])
-        storages = product.storages.all()
-        used_product_features = ProductFeatureStorage.objects.filter(storage__in=storages)
-        used_product_feature_ids = list(set(used_product_features.values_list('product_feature__id', flat=True)))
-        used_feature_ids = list(set(used_product_features.values_list('product_feature__feature_id', flat=True)))
-        new_feature_ids = list(set([item['feature_id'] for item in data['features']]))
-        restrict_objects = list(set(used_feature_ids) - set(new_feature_ids))
         extra_response = {}
-        features = Feature.objects.filter(pk__in=restrict_objects)
-        if restrict_objects:
-            features = features.values_list('name__fa', flat=True)
-            message = f"""محصول آپدیت شد ولی فیچرا همونجوری که بودن میمونن میدونی چرا؟
-            چون که این فیچرا رو از محصولت حذف کردی ولی تو انبار داشت استفاده میشد:
-            {', '.join(features)}"""
-            extra_response = {'message': message, 'variant': 'warning'}
-            # data.pop('features')
+        features = []
+        used_product_feature_ids = []
+        if data.get('features'):
+            storages = product.storages.all()
+            used_product_features = ProductFeatureStorage.objects.filter(storage__in=storages)
+            used_product_feature_ids = list(set(used_product_features.values_list('product_feature__id', flat=True)))
+            used_feature_ids = list(set(used_product_features.values_list('product_feature__feature_id', flat=True)))
+            new_feature_ids = list(set([item['feature_id'] for item in data['features']]))
+            restrict_objects = list(set(used_feature_ids) - set(new_feature_ids))
+            extra_response = {}
+            features = Feature.objects.filter(pk__in=restrict_objects)
+            if restrict_objects:
+                features = features.values_list('name__fa', flat=True)
+                message = f"""محصول آپدیت شد ولی فیچرا همونجوری که بودن میمونن میدونی چرا؟
+                چون که این فیچرا رو از محصولت حذف کردی ولی تو انبار داشت استفاده میشد:
+                {', '.join(features)}"""
+                extra_response = {'message': message, 'variant': 'warning'}
+                # data.pop('features')
         return update_object(request, Product, data=data, extra_response=extra_response, restrict_objects=features,
                              restrict_m2m=['features'], used_product_feature_ids=used_product_feature_ids)
 
