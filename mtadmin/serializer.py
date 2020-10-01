@@ -377,12 +377,20 @@ class ProductASchema(BaseAdminSchema):
 
     permalink = fields.Str()
     settings = fields.Dict()
-    box = fields.Method("get_box")
+    # box = fields.Method("get_box")
     categories = fields.Method("get_category")
-    storages = StorageField()
+    # storages = StorageField()
+    storages_count = fields.Method("get_storages_count")
+    active_storages_count = fields.Method("get_active_storages_count")
     thumbnail = fields.Nested("MediaASchema")
     disable = fields.Boolean()
     type = fields.Function(lambda o: o.get_type_display())
+
+    def get_storages_count(self, obj):
+        return obj.storages.count()
+
+    def get_active_storages_count(self, obj):
+        return obj.storages.filter(disable=False).count()
 
 
 class BrandASchema(BrandSchema, BaseAdminSchema):
@@ -635,8 +643,8 @@ class FeatureValueASchema(BaseAdminSchema):
     selected = fields.Method("get_selected")
 
     def get_selected(self, obj):
-        if self.product:
-            print(self.product.pk, obj.pk)
+        # if self.product:
+        # print(self.product.pk, obj.pk)
         return ProductFeatureStorage.objects.filter(storage__product=self.product,
                                                     product_feature__feature_value=obj).exists()
 
