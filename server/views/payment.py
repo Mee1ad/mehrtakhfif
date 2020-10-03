@@ -76,9 +76,9 @@ class PaymentRequest(View):
         invoice = self.create_invoice(request)
         self.reserve_storage(basket, invoice)
         self.submit_invoice_storages(request, invoice.pk)
-        return JsonResponse({"url": f"{bp['ipg_url']}?RefId={self.behpardakht_api(invoice.pk)}"})
+        return JsonResponse({"url": f"{bp['ipg_url']}?RefId={self.behpardakht_api(request, invoice.pk)}"})
 
-    def behpardakht_api(self, invoice_id, charity_id=1):
+    def behpardakht_api(self, request, invoice_id, charity_id=1):
         invoice = Invoice.objects.get(pk=invoice_id)
         basket = get_basket(request, basket=invoice.basket, return_obj=True, tax=True)
         tax = basket.summary["tax"]
