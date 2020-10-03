@@ -6,13 +6,20 @@ from django.contrib.postgres.fields.jsonb import KeyTextTransform
 from django.core.exceptions import FieldError, PermissionDenied
 from django.http import JsonResponse
 from django.views import View
-from django.db.models import Q
 
 from mtadmin.serializer import tables
 from server.models import *
 from server.utils import get_pagination, get_token_from_cookie, set_token, check_access_token, res_code
 
 rolls = ['superuser', 'backup', 'admin', 'accountants']
+
+
+def success_response(message):
+    return {'message': message, 'variant': 'success'}
+
+
+responses = {'201': success_response('با موفقیت ایجاد شد'), '202': success_response('با موفقیت به روز رسانی شد'),
+             'priority': success_response('مرتب کردمش برات :)')}
 
 
 class TableView(LoginRequiredMixin, PermissionRequiredMixin, View):
@@ -123,6 +130,7 @@ def get_params(request, box_key=None, date_key='created_at'):
 
     return {'filter': filterby, 'order': orderby, 'annotate': annotate, 'distinct': distinct}
 
+
 def get_data(request, require_box=True):
     data = json.loads(request.body)
     remove = ['created_at', 'created_by', 'updated_at', 'updated_by', 'deleted_by', 'income', 'profit',
@@ -208,18 +216,18 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
     obj.save(**remove_fields)
     [getattr(obj, field).set(m2m[field]) for field in m2m]
     for field in custom_m2m:
-        add_custom_m2m(obj, field, custom_m2m[field], user, restrict_objects, restrict_m2m, used_product_feature_ids)
+        add_custom_m2m(obj, field, custom_m2m[field], user, 'custom_m2m', restrict_m2m, used_product_feature_ids)
     for field in ordered_m2m:
-        add_ordered_m2m(obj, field, ordered_m2m[field], user)
+        add_custom_m2m(obj, field, ordered_m2m[field], user, 'ordered_m2m', restrict_m2m, used_product_feature_ids)
     if return_item:
         request.GET._mutable = True
         request.GET['id'] = obj.pk
         items = serialized_objects(request, model, single_serializer=serializer, box_key=box_key,
                                    error_null_box=error_null_box)
-        return JsonResponse(items, status=201)
+        return JsonResponse({**items, **responses['201']}, status=201)
     if return_obj:
         return obj
-    return JsonResponse({'id': obj.pk}, status=201)
+    return JsonResponse({'id': obj.pk, **responses['201']}, status=201)
 
 
 def get_m2m_field(obj, field, m2m, used_product_feature_ids=(), clear=True):
@@ -230,14 +238,13 @@ def get_m2m_field(obj, field, m2m, used_product_feature_ids=(), clear=True):
         except AttributeError:
             getattr(obj, field).all().delete()
     m2m_class = obj.__class__.__name__ + field[0].upper() + field[1:-1]
-    if m2m_class == ProductFeature:
+    if m2m_class == 'ProductFeature':
         # print(m2m_class)
         # print("used_product_feature_ids:", used_product_feature_ids)
         # print("getattr(obj, field):", ProductFeature.objects.filter(product=obj))
         # print("exclude:", ProductFeature.objects.filter(Q(product=obj), ~Q(id__in=used_product_feature_ids)))
         # print("exclude:", getattr(obj, field).exclude(id__in=used_product_feature_ids))
         ProductFeature.objects.filter(Q(product=obj), ~Q(id__in=used_product_feature_ids)).delete()
-
     return many_to_many_model
 
 
@@ -248,8 +255,16 @@ def m2m_footprint(many_to_many_model, user):
     return user
 
 
-def add_ordered_m2m(obj, field, item_list, user):
-    many_to_many_model = get_m2m_field(obj, field, 'ordered_m2m')
+def add_ordered_m2m(obj, field, item_list, user, m2m_type='ordered_m2m'):
+    """
+    :param obj: obj
+    :param field: str
+    :param item_list: list
+    :param user: obj
+    :param m2m_type: str
+    :return: None
+    """
+    many_to_many_model = get_m2m_field(obj, field, m2m_type)
     user = m2m_footprint(many_to_many_model, user)
     extra_fields = {obj.__class__.__name__.lower(): obj}
     items = []
@@ -263,29 +278,50 @@ def add_ordered_m2m(obj, field, item_list, user):
     many_to_many_model.objects.bulk_create(items)
 
 
-def add_custom_m2m(obj, field, item_list, user, restrict_objects, restrict_m2m, used_product_feature_ids):
+def add_custom_m2m(obj, field, item_list, user, m2m_type, restrict_m2m, used_product_feature_ids):
+    priority = {}
+    related = {}
     if field in restrict_m2m:
         # restrict_feature_ids = list(restrict_objects.values_list('id', flat=True))
-        many_to_many_model = get_m2m_field(obj, field, 'custom_m2m', clear=False,
+        many_to_many_model = get_m2m_field(obj, field, m2m_type, clear=False,
                                            used_product_feature_ids=used_product_feature_ids)
         user = m2m_footprint(many_to_many_model, user)
         extra_fields = {obj.__class__.__name__.lower(): obj}
         items = []
         for item in item_list:
-            # if item['feature_id'] in restrict_feature_ids:
+            if m2m_type == 'ordered_m2m':
+                # related = {getattr(obj, field).model.__name__.lower() + '_id': item}
+                priority = {"priority": item_list.index(item)}
             updated = many_to_many_model.objects.filter(feature_id=item['feature_id'],
                                                         feature_value_id=item['feature_value_id'],
                                                         product=obj) \
-                .update(settings=item['settings'], updated_by_id=user['updated_by_id'])
+                .update(settings=item['settings'], updated_by_id=user['updated_by_id'], **priority)
             if updated:
                 continue
-            items.append(many_to_many_model(**item, **extra_fields, **user))
+            items.append(many_to_many_model(**item, **extra_fields, **user, **priority))
         many_to_many_model.objects.bulk_create(items)
     else:
-        many_to_many_model = get_m2m_field(obj, field, 'custom_m2m', clear=field not in obj.keep_m2m_data)
+        many_to_many_model = get_m2m_field(obj, field, m2m_type, clear=field not in obj.keep_m2m_data)
         user = m2m_footprint(many_to_many_model, user)
         extra_fields = {obj.__class__.__name__.lower(): obj}
-        items = [many_to_many_model(**item, **extra_fields, **user) for item in item_list]
+        items = []
+        for item in item_list:
+            if m2m_type == 'ordered_m2m':
+                last_priority = 0
+                if many_to_many_model in append_on_priority:
+                    last_priority = many_to_many_model.objects.filter(**extra_fields).count()
+                priority = {"priority": last_priority + item_list.index(item)}
+            if type(item) != dict:  # because simple ordered m2m is int
+                related = {getattr(obj, field).model.__name__.lower() + '_id': item}
+                item = {}
+            # print(item)
+            # print(extra_fields)
+            # print(user)
+            # print(priority)
+            # print(related)
+            # print(many_to_many_model)
+            # print('------------------')
+            items.append(many_to_many_model(**item, **extra_fields, **user, **priority, **related))
         many_to_many_model.objects.bulk_create(items)
 
 
@@ -312,10 +348,11 @@ def update_object(request, model, box_key='box', return_item=False, serializer=N
             items.update(**data)
     [getattr(items.first(), field).set(m2m[field]) for field in m2m]
     for field in custom_m2m:
-        add_custom_m2m(items.first(), field, custom_m2m[field], user, restrict_objects, restrict_m2m,
+        add_custom_m2m(items.first(), field, custom_m2m[field], user, 'custom_m2m', restrict_m2m,
                        used_product_feature_ids)
     for field in ordered_m2m:
-        add_ordered_m2m(items.first(), field, ordered_m2m[field], user)
+        add_custom_m2m(items.first(), field, ordered_m2m[field], user, 'ordered_m2m', restrict_m2m,
+                       used_product_feature_ids)
     try:
         item = items.first()
         if item.disable is False:
@@ -326,8 +363,8 @@ def update_object(request, model, box_key='box', return_item=False, serializer=N
         request.GET._mutable = True
         request.GET['id'] = items.first().pk
         items = serialized_objects(request, model, single_serializer=serializer, error_null_box=require_box)
-        return JsonResponse({"data": items, **extra_response}, status=res_code['updated'])
-    return JsonResponse({**extra_response}, status=res_code['updated'])
+        return JsonResponse({"data": items, **extra_response, **responses['202']}, status=res_code['updated'])
+    return JsonResponse({**extra_response, **responses['202']}, status=res_code['updated'])
 
 
 def delete_base(request, model, require_box=False):
@@ -420,3 +457,10 @@ def get_table_filter(table, box):
 
 def get_group(user):
     return getattr(User.objects.get(pk=user.pk).groups.first(), 'name', None)
+
+
+def get_obj_type(obj=None, type_id=None, class_name=None):
+    class_name = class_name or obj.__class__
+    types = class_name.types
+    type_id = type_id or obj.type
+    return next((value[1] for index, value in enumerate(types) if value[0] == type_id), '')

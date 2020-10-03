@@ -7,6 +7,9 @@ from mtadmin.utils import *
 from server.models import Media
 
 
+# from server.models import Product
+
+
 class CategoryView(TableView):
     permission_required = 'server.view_category'
 
@@ -106,11 +109,21 @@ class FeatureView(TableView):
         feature = Feature.objects.filter(name__fa=data['name']['fa'], type=feature_type)
         if feature.exists():
             return JsonResponse({'data': FeatureASchema().dump(feature.first())}, status=200)
-        feature = create_object(request, Feature, error_null_box=False, return_obj=True)
-        return JsonResponse({'id': feature.pk})
+        return create_object(request, Feature, error_null_box=False)
 
     def put(self, request):
-        return update_object(request, Feature, serializer=FeatureASchema, require_box=False, return_item=True)
+        return update_object(request, Feature, serializer=FeatureASchema, require_box=False, return_item=True,
+                             restrict_m2m=['features'])
+
+    def patch(self, request):
+        check_user_permission(request.user, 'server.change_feature')
+        data = get_data(request, require_box=False)
+        ids = data['ids']
+        features = FeatureValue.objects.filter(pk__in=ids)
+        for feature in features:
+            feature.priority = ids.index(feature.pk)
+        FeatureValue.objects.bulk_update(features, ['priority'])
+        return JsonResponse({**responses['priority']}, status=202)
 
     def delete(self, request):
         return delete_base(request, Feature)
@@ -173,7 +186,7 @@ class ProductView(TableView):
                                                **required_box))
 
     def post(self, request):
-        data = get_data(request, require_box=True)
+        # data = get_data(request, require_box=True)
         return create_object(request, Product, serializer=ProductESchema, box_key='storage__product')
 
     def put(self, request):
@@ -266,8 +279,9 @@ class StorageView(TableView):
         return JsonResponse(icons)
 
     def get(self, request):
-        # todo clean
         Storage.objects.filter(deadline__lt=timezone.now(), disable=False).update(disable=True)
+        required_fields = ['id', 'name', 'type', 'manage', 'default_storage_id']
+        extra_data = []
         box_key = 'product__box'
         params = get_params(request, box_key)
         if request.GET.get('product_type[]'):
@@ -278,21 +292,25 @@ class StorageView(TableView):
             box_check = get_box_permission(request.user, box_key)
             params['filter'] = {**params['filter'], **box_check}
         params['order'] = ['-priority']
-        data = serialized_objects(request, Storage, StorageESchema, StorageESchema, box_key,
-                                  params=params, error_null_box=False)
-        if request.GET.get('product_id'):
-            product_id = int(request.GET.get('product_id'))
+        data = {}
+        if not params['filter'].get('product_only', None):
+            params['filter'].pop('product_only', None)
+            data = serialized_objects(request, Storage, StorageASchema, StorageESchema, box_key,
+                                      params=params, error_null_box=False)
+        try:
+            try:
+                product_id = int(request.GET.get('product_id', None) or data.get('data').get('product_id'))
+            except AttributeError:
+                extra_data.append('box')
+                product_id = Storage.objects.filter(pk=params['filter']['id']).values_list('product__id', flat=True)[0]
             product = Product.objects.get(pk=product_id)
-            manage = product.manage
-            product_type = product.get_type_display()
-            box = BoxASchema().dump(product.box)
-            product = ProductESchema().dump(product)
-            # return JsonResponse({"product": {"id": product.id, "name": product.name, "permalink": product.permalink,
-            #                                  "default_storage": {"id": product.default_storage_id},
-            return JsonResponse({"product": product,
-                                 "manage": manage, 'box': box, 'type': product_type,
-                                 "data": data})
-        return JsonResponse(data)
+
+            if params['filter'].get('id') or params['filter'].get('product_only'):
+                extra_data.append('features')
+            product = ProductESchema(only=[*required_fields, *extra_data]).dump(product)
+        except TypeError:
+            product = {}
+        return JsonResponse({"product": product, **data})
 
         # if request.GET.get('product__type'):
         #     product_type = request.GET.getlist('product_type[]')
@@ -562,7 +580,6 @@ class AdsView(TableView):
         if params['filter'].get('priority') == 'true':
             params['filter']['priority__isnull'] = False
             params['filter'].pop('priority')
-        print(params)
         return JsonResponse(serialized_objects(request, Ad, AdASchema, AdASchema, error_null_box=False, params=params))
 
     def post(self, request):

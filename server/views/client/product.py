@@ -4,7 +4,6 @@ from django.http import JsonResponse
 
 from server.serialize import *
 from server.utils import View, get_pagination, load_data
-import pysnooper
 
 
 class ProductView(View):
@@ -206,7 +205,9 @@ class FeatureView(View):
             values = []
             select = list(product_features.filter(
                 feature=product_f.feature, pk__in=selected_feature).values_list('pk', flat=True))
-            print(select)
+            if len(select) == 0:
+                continue
+            # print(select)
             if len(select) < 2:
                 select = select[0]
             for pf in product_features.filter(feature=product_f.feature):

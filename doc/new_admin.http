@@ -155,7 +155,7 @@ Content-Type: application/json
 GET {{admin_host}}/product?id=516
 
 ###
-GET {{admin_host}}/product
+GET {{admin_host}}/product?b=11
 
 ###
 PUT {{admin_host}}/product
@@ -296,6 +296,7 @@ PUT {{admin_host}}/storage
 Content-Type: application/json
 
 {
+  "id": 232,
   "available_count": 4,
   "available_count_for_sale": 3,
   "deadline": null,
@@ -353,7 +354,7 @@ Content-Type: application/json
 
 {
   "name": {
-    "fa": "ویژگی"
+    "fa": "2فیچر با اردر"
   },
   "groups": [1],
   "type": "text",
@@ -361,7 +362,7 @@ Content-Type: application/json
   "values": [
     {
       "value": {
-        "fa": 3
+        "fa": 2
       },
       "settings": {}
     },
@@ -373,7 +374,7 @@ Content-Type: application/json
     },
     {
       "value": {
-        "fa": 2
+        "fa": 3
       },
       "settings": {}
     }
@@ -391,23 +392,23 @@ PUT {{admin_host}}/feature
 Content-Type: application/json
 
 {
-  "id": 90,
+  "id": 62,
   "name": {
-    "fa": "تست مرتب سازی"
+    "fa": "تست مرتب سازی 2"
   },
   "groups": [1],
-  "type": "text",
+  "type": "selectable",
   "layout_type": "default",
   "values": [
     {
       "value": {
-        "fa": 40
+        "fa": 35
       },
       "settings": {}
     },
     {
       "value": {
-        "fa": 35
+        "fa": 40
       },
       "settings": {}
     },
@@ -420,6 +421,14 @@ Content-Type: application/json
   ]
 }
 
+###
+PATCH {{admin_host}}/feature
+Content-Type: application/json
+
+{
+  "ids": [124, 123, 118, 117]
+
+}
 ###
 DELETE {{admin_host}}/feature_value?id=54
 

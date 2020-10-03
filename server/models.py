@@ -30,7 +30,6 @@ from mehr_takhfif.settings import HOST, MEDIA_ROOT
 from mtadmin.exception import *
 from server.field_validation import *
 
-product_types = [(1, 'service'), (2, 'product'), (3, 'tourism'), (4, 'package'), (5, 'package_item')]
 deliver_status = [(1, 'pending'), (2, 'packing'), (3, 'sending'), (4, 'delivered'), (5, 'referred')]
 
 
@@ -279,6 +278,8 @@ class Base(SafeDeleteModel):
     required_m2m = []
     fields = {}
     keep_m2m_data = []
+    select = ['created_by', 'updated_by', 'deleted_by']
+    prefetch = []
 
     _safedelete_policy = SOFT_DELETE_CASCADE
     id = models.BigAutoField(auto_created=True, primary_key=True)
@@ -372,10 +373,12 @@ class MyModel(models.Model):
     required_m2m = []
     fields = {}
     keep_m2m_data = []
+    select = []
+    prefetch = []
 
 
 class Ad(Base):
-    select = ['media', 'storage']
+    select = ['media', 'mobile_media', 'storage'] + Base.select
     serializer_exclude = ()
     required_fields = ['media', 'mobile_media', 'type']
     required_multi_lang = ['title']
@@ -402,8 +405,8 @@ class Ad(Base):
 
 
 class User(AbstractUser):
-    select = []
-    prefetch = []
+    select = ['default_address', 'created_by', 'updated_by']
+    prefetch = ['vip_types', 'box_permission']
     serializer_exclude = ()
     required_fields = []
     required_multi_lang = []
@@ -503,6 +506,7 @@ class VipType(Base):
 
 
 class Client(MyModel):
+    select = ['gcm_device'] + MyModel.select
     device_id = models.CharField(max_length=255)
     user_agent = models.CharField(max_length=255, null=True, blank=True)
     last_login_ip = models.CharField(max_length=31, null=True, blank=True)
@@ -534,6 +538,8 @@ class State(MyModel):
 
 
 class City(MyModel):
+    select = ['state'] + MyModel.select
+
     def __str__(self):
         return self.name
 
@@ -550,6 +556,8 @@ class Address(MyModel):
         Stores a single blog entry, related to :model:`auth.User` and
         :model:`server.Address`.
     """
+
+    select = ['state', 'city', 'user'] + MyModel.select
 
     def __str__(self):
         return self.city.name
@@ -712,6 +720,7 @@ class FeatureValue(Base):
 
     feature = models.ForeignKey("Feature", on_delete=CASCADE, related_name="values")
     value = JSONField(default=dict)
+    priority = models.PositiveIntegerField(default=0)
     settings = JSONField(default=dict)
 
     # priority = models.PositiveSmallIntegerField(default=0)
@@ -725,7 +734,7 @@ class Feature(Base):
     objects = MyQuerySet.as_manager()
 
     m2m = ['groups']
-    custom_m2m = {'values': FeatureValue}
+    ordered_m2m = {'values': FeatureValue}
     keep_m2m_data = ['values']
     types = ((1, 'bool'), (2, 'text'), (3, 'selectable'))
 
@@ -733,9 +742,9 @@ class Feature(Base):
         return get_name(self.name, self)
 
     def validation(self, kwargs):
-        if kwargs.get('type', None):
+        if type(kwargs.get('type', None)) is str:
             kwargs['type'] = {'bool': 1, 'text': 2, 'selectable': 3}[kwargs.get('type', None)]
-        if kwargs.get('layout_type', None):
+        if type(kwargs.get('layout_type', None)) is str:
             kwargs['layout_type'] = {'default': 1}[kwargs.get('layout_type', 'default')]
         return kwargs
 
@@ -844,7 +853,6 @@ class Brand(Base):
     def validation(self, kwargs):
         self.permalink = self.permalink.lower()
         name = kwargs['name']
-        print(name)
         if Brand.objects.filter((Q(name__en=name['en']) & ~Q(name__en="") & ~Q(id=kwargs['id'])) |
                                 (Q(name__fa=name['fa']) & ~Q(name__fa="") & ~Q(id=kwargs['id'])) |
                                 (Q(name__ar=name['ar']) & ~Q(name__ar="") & ~Q(id=kwargs['id']))).count() > 0:
@@ -940,6 +948,7 @@ class Product(Base):
     required_m2m = ['categories', 'media']
     fields = {'thumbnail': 'تامبنیل', 'categories': 'دسته بندی', 'tags': 'تگ', 'media': 'مدیا',
               'description': 'توضیحات'}
+    types = [(1, 'service'), (2, 'product'), (3, 'tourism'), (4, 'package'), (5, 'package_item')]
 
     def pre_process(self, my_dict):
         if (self.review is not None) and (my_dict.get('review') != self.review):
@@ -1031,7 +1040,7 @@ class Product(Base):
     manage = models.BooleanField(default=True)
     reservable = models.BooleanField(default=False)
     breakable = models.BooleanField(default=False)
-    type = models.PositiveSmallIntegerField(choices=product_types, validators=[validate_product_type])
+    type = models.PositiveSmallIntegerField(choices=types, validators=[validate_product_type])
     permalink = models.CharField(max_length=255, db_index=True, unique=True)
 
     name = JSONField(default=multilanguage)
@@ -1789,3 +1798,4 @@ def submission_delete(sender, instance, **kwargs):
 
 
 m2m_footprint_required = [FeatureValue, ProductFeature]
+append_on_priority = [FeatureValue]

@@ -85,9 +85,10 @@ class BaseAdminSchema(Schema):
 
     id = fields.Int()
     created_at = fields.Method("get_created_at")
-    created_by = fields.Method("get_created_by")
+    # created_by = fields.Method("get_created_by")
     updated_at = fields.Method("get_updated_at")
-    updated_by = fields.Method("get_updated_by")
+
+    # updated_by = fields.Method("get_updated_by")
 
     # noinspection DuplicatedCode
     def dump(self, *args, **kwargs):
@@ -408,7 +409,7 @@ class ProductESchema(ProductASchema, ProductSchema):
     # class ProductESchema(BaseSchema):
     class Meta:
         unknown = EXCLUDE
-        additional = ProductSchema.Meta.additional + ProductASchema.Meta.additional + ('verify',)
+        additional = ProductSchema.Meta.additional + ProductASchema.Meta.additional + ('verify', 'manage')
 
     media = fields.Method("get_media")
     tags = ProductTagField()
@@ -493,23 +494,17 @@ class HouseESchema(BaseAdminSchema, HouseSchema):
     price = fields.Nested(PriceSchema)
 
 
-class StorageASchema(BaseAdminSchema, StorageSchema):
+class StorageASchema(BaseAdminSchema):
     class Meta:
-        additional = ('sold_count', 'start_price', 'available_count_for_sale', 'tax')
-
-    title = fields.Method("get_title")
-    start_time = fields.Function(lambda o: o.start_time.timestamp())
-    vip_max_count_for_sale = fields.Function(lambda o: None)
-    discount_price = fields.Int()
-    final_price = fields.Int()
-    discount_percent = fields.Int()
+        additional = ('title', 'start_price', 'final_price', 'discount_price', 'discount_percent',
+                      'available_count_for_sale', 'tax', 'product_id')
 
 
 class StorageESchema(StorageASchema):
     class Meta:
         additional = StorageASchema.Meta.additional + StorageSchema.Meta.additional + \
                      ('features_percent', 'available_count', 'invoice_description',
-                      'invoice_title', 'dimensions', 'package_discount_price')
+                      'invoice_title', 'dimensions', 'package_discount_price', 'sold_count')
 
     supplier = fields.Function(lambda o: UserSchema().dump(o.supplier))
     features = fields.Method('get_features')
@@ -518,6 +513,8 @@ class StorageESchema(StorageASchema):
     vip_discount_price = fields.Function(lambda o: None)
     vip_discount_percent = fields.Function(lambda o: None)
     vip_prices = VipPriceField()
+    start_time = fields.Function(lambda o: o.start_time.timestamp())
+    vip_max_count_for_sale = fields.Function(lambda o: None)
 
     def get_features(self, obj):
         # product_feature_storages = ProductFeatureStorage.objects.filter(storage=obj).values_list('product_feature_id',
