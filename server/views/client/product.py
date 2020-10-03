@@ -145,7 +145,7 @@ class CommentView(View):
 
 
 class FeatureView(View):
-    @pysnooper.snoop()
+
     def get(self, request, permalink):
         product = Product.objects.get(permalink=permalink)
         selected = request.GET.getlist('select[]')
