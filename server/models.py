@@ -13,6 +13,7 @@ from django.core.exceptions import FieldDoesNotExist
 from django.core.validators import *
 from django.db import models
 from django.db.models import CASCADE, PROTECT, SET_NULL, Q, F
+from django.db.models import Count
 from django.db.utils import IntegrityError
 from django.dispatch import receiver
 from django.utils import timezone
@@ -278,8 +279,12 @@ class Base(SafeDeleteModel):
     required_m2m = []
     fields = {}
     keep_m2m_data = []
+    table_select = []
     select = ['created_by', 'updated_by', 'deleted_by']
+    table_prefetch = []
     prefetch = []
+    table_annotate = {}
+    annotate = {}
 
     _safedelete_policy = SOFT_DELETE_CASCADE
     id = models.BigAutoField(auto_created=True, primary_key=True)
@@ -373,8 +378,12 @@ class MyModel(models.Model):
     required_m2m = []
     fields = {}
     keep_m2m_data = []
+    table_select = []
     select = []
+    table_prefetch = []
     prefetch = []
+    table_annotate = {}
+    annotate = {}
 
 
 class Ad(Base):
@@ -585,6 +594,8 @@ class Address(MyModel):
 
 
 class Box(Base):
+    select = ['owner', 'media']
+
     def __str__(self):
         return self.name['fa']
 
@@ -616,6 +627,7 @@ class Media(Base):
     media_sizes = {'thumbnail': (600, 372), 'media': (1280, 794), 'category': (800, 500), 'ads': (820, 300),
                    'mobile_ads': (500, 384), 'slider': (1920, 504), 'mobile_slider': (980, 860)}
     has_placeholder = [1, 2, 3, 4, 5]
+    select = ['box'] + Base.select
 
     def __str__(self):
         try:
@@ -654,13 +666,13 @@ class Media(Base):
 
 class Category(Base):
     objects = MyQuerySet.as_manager()
-    prefetch = []
     serializer_exclude = ('box',)
     required_fields = []
     related_fields = []
     m2m = ['feature_groups']
     required_m2m = []
     fields = {}
+    select = ['parent', 'box', 'media'] + Base.select
 
     def clean(self):
         if not self.products.all():
@@ -706,6 +718,7 @@ class Category(Base):
 
 
 class CategoryGroupFeature(MyModel):
+    select = ['category', 'featuregroup'] + Base.select
     category = models.ForeignKey(Category, on_delete=PROTECT)
     featuregroup = models.ForeignKey("FeatureGroup", on_delete=PROTECT)
 
@@ -715,6 +728,8 @@ class CategoryGroupFeature(MyModel):
 
 
 class FeatureValue(Base):
+    select = ['feature'] + Base.select
+
     def __str__(self):
         return f"{self.id}"
 
@@ -763,6 +778,7 @@ class Feature(Base):
 
 
 class FeatureGroupFeature(MyModel):
+    select = ['feature', 'featuregroup'] + MyModel.select
     feature = models.ForeignKey(Feature, on_delete=CASCADE)
     featuregroup = models.ForeignKey("FeatureGroup", on_delete=CASCADE)
     priority = models.PositiveIntegerField(default=0)
@@ -773,6 +789,8 @@ class FeatureGroupFeature(MyModel):
 
 
 class FeatureGroup(Base):
+    select = ['box'] + Base.select
+
     def __str__(self):
         return get_name(self.name, self)
 
@@ -818,6 +836,7 @@ class Tag(Base):
 
 
 class TagGroupTag(MyModel):
+    select = ['taggroup', 'tag'] + MyModel.select
     taggroup = models.ForeignKey("TagGroup", on_delete=PROTECT)
     tag = models.ForeignKey(Tag, on_delete=PROTECT)
     show = models.BooleanField(default=False)
@@ -831,6 +850,7 @@ class TagGroup(Base):
     # objects = MyQuerySet.as_manager()
 
     m2m = {'tags': TagGroupTag}
+    select = ['box'] + Base.select
 
     def __str__(self):
         return f"{self.name['fa']}"
@@ -882,6 +902,7 @@ class Brand(Base):
 
 
 class ProductTag(MyModel):
+    select = ['product', 'tag'] + MyModel.select
     product = models.ForeignKey("Product", on_delete=PROTECT)
     tag = models.ForeignKey(Tag, on_delete=PROTECT)
     show = models.BooleanField(default=False)
@@ -893,6 +914,7 @@ class ProductTag(MyModel):
 
 class ProductMedia(MyModel):
     related = ['storage']
+    select = ['product', 'media'] + MyModel.select
 
     def __str__(self):
         return f"{self.id}"
@@ -907,6 +929,8 @@ class ProductMedia(MyModel):
 
 
 class ProductFeature(Base):
+    select = ['product', 'feature', 'feature_value'] + Base.select
+
     def __str__(self):
         return f"{self.id}"
 
@@ -921,6 +945,8 @@ class ProductFeature(Base):
 
 
 class ProductFeatureStorage(MyModel):
+    select = ['product_feature', 'storage'] + MyModel.select
+
     def __str__(self):
         return f"{self.id}"
 
@@ -935,8 +961,14 @@ class ProductFeatureStorage(MyModel):
 
 class Product(Base):
     objects = MyQuerySet.as_manager()
-    select = ['category', 'box', 'thumbnail']
-    prefetch = ['tags', 'media']
+    table_select = ['thumbnail']
+    select = ['box', 'default_storage'] + Base.select + table_select
+    table_prefetch = ['storages', 'categories']
+    prefetch = ['cities', 'states', 'tag_groups', 'feature_groups'] + Base.prefetch + table_prefetch
+    # Prefetch('storages', queryset=Storage.objects.filter, to_attr='count')] + Base.prefetch
+    table_annotate = {'active_storages_count': Count('storages', filter=Q(storages__disable=False)),
+                      'storages_count': Count('storages')}
+    annotate = {**Base.annotate}
     filter = {"verify": True, "disable": False}
 
     required_fields = ['thumbnail', 'description']
@@ -1065,6 +1097,8 @@ class Product(Base):
 
 
 class Package(Base):
+    select = ['package', 'package_item'] + Base.select
+
     def __str__(self):
         return self.package.title['fa']
 
@@ -1083,6 +1117,7 @@ class Package(Base):
 
 
 class VipPrice(MyModel):
+    select = ['vip_type', 'storage'] + MyModel.select
 
     def __str__(self):
         return f"{self.storage.title['fa']}"
@@ -1101,8 +1136,7 @@ class VipPrice(MyModel):
 
 class Storage(Base):
     objects = MyQuerySet.as_manager()
-    select = ['product', 'product__thumbnail']
-    prefetch = ['product__media', 'feature']
+    select = ['product', 'product__thumbnail', 'supplier'] + Base.select
 
     required_fields = ['supplier', 'dimensions']
     related_fields = []
@@ -1275,6 +1309,7 @@ class Storage(Base):
     dimensions = JSONField(help_text="{'weight': '', 'height: '', 'width': '', 'length': ''}",
                            validators=[validate_vip_price], default=dict)
     max_shipping_time = models.PositiveIntegerField(default=0)
+    settings = JSONField(default=dict)
 
     class Meta:
         db_table = 'storage'
@@ -1282,7 +1317,7 @@ class Storage(Base):
 
 
 class Basket(Base):
-    prefetch = ['products']
+    select = ['user'] + Base.select
 
     def __str__(self):
         return f"{self.user}"
@@ -1303,6 +1338,7 @@ class Basket(Base):
 
 class BasketProduct(MyModel):
     related = ['storage']
+    select = ['storage', 'basket', 'vip_price', 'box'] + MyModel.select
 
     def __str__(self):
         return f"{self.id}"
@@ -1327,6 +1363,8 @@ class BasketProduct(MyModel):
 
 
 class Blog(Base):
+    select = ['box', 'media'] + Base.select
+
     def __str__(self):
         return self.title
 
@@ -1342,6 +1380,7 @@ class Blog(Base):
 
 class BlogPost(Base):
     objects = MyQuerySet.as_manager()
+    select = ['blog', 'media'] + Base.select
 
     def __str__(self):
         return self.permalink
@@ -1357,6 +1396,8 @@ class BlogPost(Base):
 
 
 class Comment(Base):
+    select = ['user', 'reply_to', 'product', 'blog_post'] + Base.select
+
     def __str__(self):
         return f"{self.user}"
 
@@ -1372,7 +1413,6 @@ class Comment(Base):
         super().save(*args, **kwargs)
 
     _safedelete_policy = SOFT_DELETE_CASCADE
-    id = models.BigAutoField(auto_created=True, primary_key=True)
     text = models.TextField(null=True, blank=True)
     rate = models.PositiveSmallIntegerField(null=True, blank=True)
     satisfied = models.BooleanField(null=True, blank=True)
@@ -1391,7 +1431,7 @@ class Comment(Base):
 
 class Invoice(Base):
     objects = MyQuerySet.as_manager()
-    select = ['basket']
+    select = ['basket', 'suspended_by', 'user', 'charity', 'post_invoice'] + Base.select
 
     success_status = [2, 5, 6]
 
@@ -1446,6 +1486,7 @@ class Invoice(Base):
 
 # todo disable value_added type (half)
 class InvoiceSuppliers(MyModel):
+    select = ['invoice', 'supplier'] + MyModel.select
     invoice = models.ForeignKey(Invoice, on_delete=CASCADE)
     supplier = models.ForeignKey(User, on_delete=CASCADE)
     amount = models.PositiveIntegerField()
@@ -1457,6 +1498,7 @@ class InvoiceSuppliers(MyModel):
 
 class InvoiceStorage(Base):
     objects = MyQuerySet.as_manager()
+    select = ['box', 'storage', 'invoice'] + Base.select
 
     def pre_process(self, my_dict):
         if my_dict.get('deliver_status'):
@@ -1508,6 +1550,7 @@ class InvoiceStorage(Base):
 
 
 class DiscountCode(Base):
+    select = ['storage', 'qr_code', 'invoice'] + Base.select
     storage = models.ForeignKey(Storage, on_delete=PROTECT, related_name='discount_code')
     qr_code = models.ForeignKey(Media, on_delete=PROTECT, null=True, blank=True)
     invoice = models.ForeignKey(Invoice, on_delete=PROTECT, null=True, blank=True)
@@ -1519,7 +1562,7 @@ class DiscountCode(Base):
 
 
 class Menu(Base):
-    select = ['media', 'parent']
+    select = ['media', 'parent', 'box'] + Base.select
 
     def __str__(self):
         return f"{self.name['fa']}"
@@ -1538,6 +1581,7 @@ class Menu(Base):
 
 
 class Rate(MyModel):
+    select = ['user', 'storage'] + Base.select
 
     def __str__(self):
         return f"{self.rate}"
@@ -1553,9 +1597,9 @@ class Rate(MyModel):
 
 
 class Slider(Base):
-    select = ['media']
+    select = ['media', 'mobile_media', 'product'] + Base.select
     required_fields = ['title', 'media', 'mobile_media', 'type']
-    equired_multi_lang = ['title']
+    required_multi_lang = ['title']
     fields = {'title': 'عنوان', 'media': 'تصویر', 'mobile_media': 'تصویر موبایل', 'type': 'نوع'}
 
     def save(self, *args, **kwargs):
@@ -1579,7 +1623,8 @@ class Slider(Base):
 
 
 class SpecialOffer(Base):
-    select = ['media']
+    select = ['media', 'category', 'media'] + Base.select
+    prefetch = ['user', 'product', 'not_accepted_products'] + Base.prefetch
 
     def __str__(self):
         return f"{self.name['fa']}"
@@ -1616,7 +1661,7 @@ class SpecialOffer(Base):
 
 
 class SpecialProduct(Base):
-    select = ['storage', 'thumbnail']
+    select = ['storage', 'thumbnail'] + Base.select
     filter = {"disable": False}
 
     required_fields = ['storage', 'box']
@@ -1652,6 +1697,8 @@ class SpecialProduct(Base):
 
 
 class WishList(Base):
+    select = ['user', 'product'] + Base.select
+
     def __str__(self):
         return f"{self.user}"
 
@@ -1666,6 +1713,7 @@ class WishList(Base):
 
 
 class NotifyUser(MyModel):
+    select = ['user', 'category'] + MyModel.select
 
     def __str__(self):
         return f"{self.user}"
@@ -1720,6 +1768,9 @@ class HousePrice(Base):
 
 
 class House(Base):
+    select = ['product', 'price'] + Base.select
+    prefetch = ['residence_type'] + Base.prefetch
+
     def __str__(self):
         return self.product.name['fa']
 
@@ -1749,6 +1800,8 @@ class House(Base):
 
 
 class Booking(Base):
+    select = ['user', 'house', 'product', 'invoice', 'confirmation_by', 'cancel_by', 'reject_by'] + Base.select
+
     def __str__(self):
         return f"{self.house}"
 
