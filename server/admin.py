@@ -12,6 +12,7 @@ from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 from prettyjson import PrettyJSONWidget
 from safedelete.admin import SafeDeleteAdmin
+from django.utils.http import urlencode
 
 from .models import *
 
@@ -175,7 +176,7 @@ class FeatureAdmin(Base):
 
 
 class FeatureValueAdmin(Base):
-    list_display = ('feature', 'value_fa') + SafeDeleteAdmin.list_display
+    list_display = ('id', 'feature', 'value_fa', 'priority') + SafeDeleteAdmin.list_display
     search_fields = ['feature', 'value_fa']
     list_per_page = 10
     ordering = ('-created_at',)
@@ -396,7 +397,7 @@ class StorageAdmin(Base):
 class InvoiceAdmin(SafeDeleteAdmin):
     list_display = ('id', 'amount', 'invoice_discount', 'status', 'get_storages', 'get_suppliers',
                     'get_invoice') + SafeDeleteAdmin.list_display
-    list_filter = SafeDeleteAdmin.list_filter
+    list_filter = ('status', ) + SafeDeleteAdmin.list_filter
     # list_display_links = ('',)
     # search_fields = ['']
     list_per_page = 10
@@ -420,9 +421,10 @@ class InvoiceAdmin(SafeDeleteAdmin):
 
 
 class InvoiceStorageAdmin(admin.ModelAdmin):
-    list_display = ('id', 'storage_name', 'discount_price', 'tax', 'count', 'invoice_id')
+    list_display = ('id', 'storage_name', 'discount_price', 'tax', 'charity', 'start_price', 'dev', 'admin', 'mt_profit',
+                    'count', 'invoice_id')
 
-    # list_filter =
+    # list_filter = ['status', 'supplier']
     # # list_display_links = ('',)
     search_fields = ['invoice__id']
 
