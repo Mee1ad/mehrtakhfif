@@ -33,7 +33,7 @@ class AdminView(LoginRequiredMixin, View):
 def serialized_objects(request, model, serializer=None, single_serializer=None, box_key='box_id', error_null_box=True,
                        params=None, required_fields=[]):
     pk = request.GET.get('id', None)
-    box_check = get_box_permission(request.user, box_key) if error_null_box and box_key else {}
+    box_check = get_box_permission(request, box_key) if error_null_box and box_key else {}
     if pk:
         try:
             obj = model.objects.get(pk=pk, **box_check)
@@ -57,7 +57,9 @@ def serialized_objects(request, model, serializer=None, single_serializer=None, 
         if params['distinct']:
             distinct_by = [item.replace('-', '') for item in params['order'] if item.replace('-', '') not in model.m2m]
         # query = model.objects.filter(**params['filter']).order_by(*params['order'], '-id')
-        query = model.objects.filter(**params['filter']).order_by(*params['order']).distinct(*distinct_by)
+        query = model.objects.select_related(*model.table_select).prefetch_related(*model.table_prefetch) \
+            .annotate(**model.table_annotate).filter(**params['filter']).order_by(*params['order']).distinct(
+            *distinct_by)
         # todo duplicate data when order by manytomany fields, need distinct
         # query = model.objects.filter(**params['filter']).order_by(*params['order'])
         if params.get('aggregate', None):
@@ -74,11 +76,13 @@ def serialized_objects(request, model, serializer=None, single_serializer=None, 
             for index, item in enumerate(common_items):
                 annotate[item[0] + '__' + item[1]] = KeyTextTransform(item[1], item[0])
             try:
-                query = model.objects.annotate(**annotate, **params['annotate']).filter(**params['filter']).distinct(
+                query = model.objects.annotate(**annotate, **params['annotate'], **model.table_annotate).select_related(
+                    *model.table_select).prefetch_related(*model.table_prefetch).filter(**params['filter']).distinct(
                     *distinct_by).order_by(*params['order'])
                 return get_pagination(request, query, serializer, show_all=request.all)
             except Exception:
-                query = model.objects.annotate(**annotate, **params['annotate']).filter(**params['filter'])
+                query = model.objects.annotate(**annotate, **params['annotate'], **model.table_annotate).select_related(
+                    *model.table_select).prefetch_related(*model.table_prefetch).filter(**params['filter'])
                 return {**get_pagination(request, query, serializer, show_all=request.all), 'ignore_order': True}
         return get_pagination(request, query, serializer, show_all=request.all)
     except (FieldError, ValueError):
@@ -105,7 +109,9 @@ def get_params(request, box_key=None, date_key='created_at'):
         if key == 'ed':
             filterby[f'{date_key}__lte'] = value[0]
         if key == 'b':
-            if int(value[0]) in request.user.box_permission.all().values_list('id', flat=True):
+            # if int(value[0]) in request.user.box_permission.all().values_list('id', flat=True):
+            # if User.objects.filter(pk=request.user.id, box_permission=int(value[0])).exists():
+            if int(value[0]) in request.allowed_boxes_id:
                 filterby[f'{box_key}'] = value[0]
                 continue
             raise PermissionDenied
@@ -336,7 +342,7 @@ def update_object(request, model, box_key='box', return_item=False, serializer=N
     except AttributeError:
         m2m, custom_m2m, ordered_m2m, remove_fields = [], [], [], []
     pk = data['id']
-    box_check = get_box_permission(user, box_key) if require_box else {}
+    box_check = get_box_permission(request, box_key) if require_box else {}
     footprint = {'updated_by': user, 'updated_at': timezone.now()}
     items = model.objects.filter(pk=pk, **box_check)
     try:
@@ -376,14 +382,14 @@ def delete_base(request, model, require_box=False):
     return prepare_for_delete(model, pk, request.user, require_box=require_box)
 
 
-def get_box_permission(user, box_key='box', box_id=None):
-    boxes_id = user.box_permission.all().values_list('id', flat=True)
-    if boxes_id:
+def get_box_permission(request, box_key='box', box_id=None):
+    allowed_boxes_id = request.allowed_boxes_id
+    if allowed_boxes_id:
         if box_id:
-            if int(box_id) not in boxes_id:
+            if int(box_id) not in allowed_boxes_id:
                 raise PermissionDenied
             return {f'{box_key}': box_id}
-        return {f'{box_key}__in': boxes_id}
+        return {f'{box_key}__in': allowed_boxes_id}
     raise PermissionDenied
 
 
@@ -395,7 +401,7 @@ def check_user_permission(user, permission):
 def prepare_for_delete(model, pk, user, box_key='box', require_box=True):
     if not user.has_perm(f'server.delete_{model.__name__.lower()}'):
         raise PermissionDenied
-    box_check = get_box_permission(user, box_key)
+    box_check = get_box_permission(request, box_key)
     try:
         item = model.objects.get(pk=pk, **box_check)
     except FieldError:
