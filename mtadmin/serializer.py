@@ -152,6 +152,7 @@ class BaseAdminSchema(Schema):
 
     def get_category(self, obj):
         cats = []
+        # categories = Category.objects
         for cat in obj.categories.all():
             cats.append({'id': cat.pk, 'name': cat.name})
         return cats
@@ -372,7 +373,7 @@ class InvoiceStorageFDSchema(InvoiceStorageASchema):
 
 class ProductASchema(BaseAdminSchema):
     class Meta:
-        additional = ('review', 'check_review', 'name')
+        additional = ('review', 'check_review', 'name', 'storages_count', 'active_storages_count')
 
     list_filter = [Category]
 
@@ -380,18 +381,9 @@ class ProductASchema(BaseAdminSchema):
     settings = fields.Dict()
     # box = fields.Method("get_box")
     categories = fields.Method("get_category")
-    # storages = StorageField()
-    storages_count = fields.Method("get_storages_count")
-    active_storages_count = fields.Method("get_active_storages_count")
     thumbnail = fields.Nested("MediaASchema")
     disable = fields.Boolean()
     type = fields.Function(lambda o: o.get_type_display())
-
-    def get_storages_count(self, obj):
-        return obj.storages.count()
-
-    def get_active_storages_count(self, obj):
-        return obj.storages.filter(disable=False).count()
 
 
 class BrandASchema(BrandSchema, BaseAdminSchema):
@@ -497,7 +489,8 @@ class HouseESchema(BaseAdminSchema, HouseSchema):
 class StorageASchema(BaseAdminSchema):
     class Meta:
         additional = ('title', 'start_price', 'final_price', 'discount_price', 'discount_percent',
-                      'available_count_for_sale', 'tax', 'product_id')
+                      'available_count_for_sale', 'tax', 'product_id', 'settings', 'max_count_for_sale',
+                      'min_count_alert')
 
 
 class StorageESchema(StorageASchema):
@@ -634,7 +627,7 @@ class FeatureValueASchema(BaseAdminSchema):
         self.product = product
 
     class Meta:
-        additional = ('settings',)
+        additional = ('settings', 'priority')
 
     name = fields.Function(lambda o: getattr(o, 'value', None))
     selected = fields.Method("get_selected")
