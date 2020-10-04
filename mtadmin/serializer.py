@@ -494,7 +494,7 @@ class StorageASchema(BaseAdminSchema):
     class Meta:
         additional = ('title', 'start_price', 'final_price', 'discount_price', 'discount_percent',
                       'available_count_for_sale', 'tax', 'product_id', 'settings', 'max_count_for_sale',
-                      'min_count_alert')
+                      'min_count_alert', 'disable')
 
 
 class StorageESchema(StorageASchema):
