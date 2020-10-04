@@ -289,7 +289,7 @@ class StorageView(TableView):
             params['filter']['product__type__in'] = product_type
             del params['filter']['product_type__in']
         if not params['filter'].get(box_key):
-            box_check = get_box_permission(request.user, box_key)
+            box_check = get_box_permission(request, box_key)
             params['filter'] = {**params['filter'], **box_check}
         params['order'] = ['-priority']
         data = {}

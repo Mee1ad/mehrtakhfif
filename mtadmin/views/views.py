@@ -59,7 +59,7 @@ class TableFilter(AdminView):
         user = request.user
         no_box = ['tag', 'invoice', 'invoice_storage', 'comment']
         check_user_permission(user, f'view_{table}')
-        box = get_box_permission(user, 'box_id', box_id)
+        box = get_box_permission(request, 'box_id', box_id)
         # todo filter per month for invoice
         monthes = []
         if table in no_box:
@@ -155,14 +155,14 @@ class BoxSettings(AdminView):
 
     def get(self, request, model):
         pk = request.GET.get('id')
-        box_check = get_box_permission(request.user, self.box_key[model])
+        box_check = get_box_permission(request, self.box_key[model])
         model = self.models[model]
         box_settings = model.objects.filter(pk=pk, **box_check).values('settings').first()
         return JsonResponse({'data': box_settings})
 
     def patch(self, request, model):
         data = json.loads(request.body)
-        box_check = get_box_permission(request.user, self.box_key[model])
+        box_check = get_box_permission(request, self.box_key[model])
         model = self.models[model]
         if model.objects.filter(pk=data['id'], **box_check).update(settings=data['settings']):
             return JsonResponse({})

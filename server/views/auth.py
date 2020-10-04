@@ -196,6 +196,8 @@ class AddDevice(View):
             GCMDevice.objects.filter(client=client.first()).update(registration_id=data['token'],
                                                                    name=request.user_agent.device.family)
             return JsonResponse({})
+        if request.user.is_anonymous:
+            request.user = None
         gcm_device = GCMDevice.objects.create(registration_id=data['token'], cloud_message_type="FCM", active=True,
                                               name=request.user_agent.device.family, user=request.user)
         Client.objects.create(device_id=data['device_id'], user_agent=request.user_agent, gcm_device=gcm_device)
