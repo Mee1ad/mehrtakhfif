@@ -383,7 +383,11 @@ class ProductASchema(BaseAdminSchema):
     categories = fields.Method("get_category")
     thumbnail = fields.Nested("MediaASchema")
     disable = fields.Boolean()
+    has_selectable_feature = fields.Method("get_has_selectable_feature")
     type = fields.Function(lambda o: o.get_type_display())
+
+    def get_has_selectable_feature(self, obj):
+        return obj.features.filter(type=3).exists()
 
 
 class BrandASchema(BrandSchema, BaseAdminSchema):
