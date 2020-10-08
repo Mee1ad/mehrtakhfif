@@ -44,6 +44,7 @@ class BasketView(View):
         storage = BasketProduct.objects.filter(basket=basket, pk=pk).select_related('storage').first().storage
         assert storage.available_count_for_sale >= count and storage.max_count_for_sale >= count
         assert BasketProduct.objects.filter(id=pk, basket=basket).update(count=data['count'])
+        basket.discount_code.update(basket=None)
         return JsonResponse(get_basket(request))
 
     def delete(self, request):
@@ -55,9 +56,10 @@ class BasketView(View):
             res = {}
             if summary:
                 res = get_basket(request)
+            basket.discount_code.update(basket=None)
             return JsonResponse(res)
         except (AssertionError, Basket.DoesNotExist):
-            return JsonResponse(default_response['bad_request'], status=400)
+            return JsonResponse(res_code['bad_request'], status=400)
 
     def add_to_session(self, request, products):
         for product in products:
@@ -102,6 +104,7 @@ class BasketView(View):
 
         basket.count = basket.products.all().count()
         basket.save()
+        basket.discount_code.update(basket=None)
         return basket.count
 
     def check_basket(self, basket):
@@ -113,6 +116,8 @@ class BasketView(View):
                 deleted_items.append(BasketProductSchema().dump(basket_product))
                 basket_product.delete()
         return deleted_items
+
+
 
 
 class GetProducts(View):
@@ -154,4 +159,20 @@ class GetProducts(View):
 class InvoiceView(View):
     def get(self, request):
         # email.attach_file('/images/weather_map.png')
-        return JsonResponse(default_response['ok'])
+        return JsonResponse(res_code['ok'])
+
+
+class DiscountCodeView(View):
+    def post(self, request):
+        data = json.loads(request.body)
+        code = data['code']
+        try:
+            discount_code = DiscountCode.objects.exclude(basket__invoice__expire__gte=timezone.now())\
+                .get(code=code, invoice_storage__isnull=True)
+            discount_code.basket = request.basket
+            discount_code.save()
+            if discount_code.type == 3:  # post
+                return JsonResponse({'message': 'هزینه پست شما رایگان شد', 'variant': 'success'})
+            return JsonResponse({'message': 'کد تخفیف اعمال شد', 'variant': 'success'})
+        except DiscountCode.DoesNotExist:
+            return JsonResponse({'message': 'به نظر نمیاد این کد کاری بکنه!', 'variant': 'warning'})

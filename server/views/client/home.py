@@ -5,10 +5,15 @@ from server.serialize import *
 from server.utils import *
 import pysnooper
 from django.contrib.auth import logout
+from django.contrib import messages
+from django.db import connection
 
 
 class Test(View):
     def get(self, request):
+        # messages.add_message(request, messages.INFO, 'Hello world.')
+        u = User.objects.all()
+        print(connection.queries)
         return JsonResponse({})
         # print('old', request.session.get('basket'))
         # if request.session.get('basket') is None:

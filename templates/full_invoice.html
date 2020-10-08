@@ -169,12 +169,21 @@
             direction: ltr;
             display: block;
         }
+
+        @media print{
+            .noprint{
+                display:none;
+            }
+        }
     </style>
 </head>
 <body>
 <div class="page">
     <h1 style="text-align: center">
         صورتحسـاب فـروش كـالا و خـدمات
+        <button class="noprint"  onclick="print()">
+            چاپ
+        </button>
     </h1>
     <table class="header-table" style="width: 100%">
         <tr>
@@ -572,4 +581,14 @@
         </table>
     </div>
 {% endif %}
+
+    
+<script>
+    function printPage() {
+        try{
+            window.print();
+        }catch{
+        }
+    }
+</script>
 </body>

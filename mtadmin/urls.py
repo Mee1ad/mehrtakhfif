@@ -49,4 +49,8 @@ urlpatterns = [
 
     path('tg_login', error_handler(TelegramLogin.as_view()), name='tg_login'),
     path('tg_register', error_handler(TelegramRegister.as_view()), name='tg_register'),
+
+    path('twp', error_handler(TestWithoutPrefetch.as_view()), name='twp'),
+    path('tp', error_handler(TestPrefetch.as_view()), name='tp'),
+    path('tup', error_handler(TestUltimatePrefetch.as_view()), name='tup'),
 ]

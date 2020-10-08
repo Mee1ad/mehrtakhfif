@@ -73,6 +73,20 @@ class Base(SafeDeleteAdmin):
 
         # return super(StorageAdmin, self).lookup_allowed(key, value)
 
+    def view_students_link(self, obj):
+        count = obj.person_set.count()
+        url = (
+                reverse("admin:core_person_changelist")
+                + "?"
+                + urlencode({"courses__id": f"{obj.id}"})
+        )
+        return mark_safe(f'<a href="{url}">{count} Students</a>')
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name in ["created_by", "updated_by", "deleted_by", "suspended_by"]:
+            kwargs["queryset"] = User.objects.filter(is_staff=True).order_by('id')
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
 
 class BoxAdmin(SafeDeleteAdmin):
     list_display = ('name_fa', 'permalink', 'owner') + SafeDeleteAdmin.list_display
@@ -159,6 +173,14 @@ class CategoryAdmin(SafeDeleteAdmin):
 class CharityAdmin(Base):
     list_display = ('name_fa', 'deposit_id') + SafeDeleteAdmin.list_display
     search_fields = ['name', 'deposit_id']
+    list_per_page = 10
+    ordering = ('-created_at',)
+
+
+class DiscountCodeAdmin(Base):
+    list_display = ('code', 'type', 'invoice_storage_id', 'basket_id') + SafeDeleteAdmin.list_display
+    search_fields = ['code', 'invoice']
+    list_filter = ('type',)
     list_per_page = 10
     ordering = ('-created_at',)
 
@@ -517,7 +539,7 @@ register_list = [(Session, SessionAdmin), (User, UserAdmin), (Box, BoxAdmin), (C
                  (Storage, StorageAdmin), (Basket,), (Comment, CommentAdmin), (Invoice, InvoiceAdmin),
                  (InvoiceStorage, InvoiceStorageAdmin), (InvoiceSuppliers, InvoiceSupplierAdmin), (Menu, MenuAdmin),
                  (Tag,), (TagGroup,), (Rate,), (Slider, SliderAdmin), (SpecialOffer, SpecialOfferAdmin),
-                 (Holiday, HolidayAdmin), (Charity, CharityAdmin),
+                 (Holiday, HolidayAdmin), (Charity, CharityAdmin), (DiscountCode, DiscountCodeAdmin),
                  (SpecialProduct, SpecialProductAdmin), (Blog,), (BlogPost,), (WishList,), (NotifyUser,), (Ad, AdAdmin),
                  (State, StateAdmin), (City, CityAdmin), (Permission,), (VipType, VipTypeAdmin)]
 for item in register_list:

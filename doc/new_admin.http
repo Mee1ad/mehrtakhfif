@@ -59,9 +59,7 @@ Content-Type: application/json
 ###
 DELETE {{admin_host}}/category?id=54
 
-### DiscountCode CR
-GET {{admin_host}}/discount_code?id=5
-###
+### DiscountCode CR, Params: id, storage_id
 POST {{admin_host}}/discount_code
 Content-Type: application/json
 
@@ -71,6 +69,9 @@ Content-Type: application/json
   "len": 6,
   "prefix": "test"
 }
+###
+GET {{admin_host}}/discount_code?id=5
+###
 ### Product CRUD
 POST {{admin_host}}/product
 Content-Type: application/json

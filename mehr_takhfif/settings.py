@@ -42,12 +42,13 @@ INSTALLED_APPS = \
         'django_user_agents',
         'django_seed',
         # 'cloudinary',
-        # 'django.contrib.admindocs',
+        'django.contrib.admindocs',
         # 'django.contrib.postgres',
         'prettyjson',
     ] + MY_INSTALLED_APPS
 
 MIDDLEWARE = [
+    'silk.middleware.SilkyMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.middleware.common.CommonMiddleware',
     # 'iprestrict.middleware.IPRestrictMiddleware',
@@ -55,7 +56,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     # 'django.middleware.csrf.CsrfViewMiddleware',
-    # 'django.contrib.admindocs.middleware.XViewMiddleware', # docadmin
+    'django.contrib.admindocs.middleware.XViewMiddleware', # docadmin
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'server.middleware.AuthMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',

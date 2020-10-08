@@ -28,12 +28,13 @@ urlpatterns = [
     path('', include('server.urls')),
     # path('iprestrict/', include('iprestrict.urls', namespace='iprestrict')),
     path('admin/dashboard/', include('mtadmin.dashboard_urls')),
-    # path('admin/doc/', include('django.contrib.admindocs.urls')),
+    path('admin/doc/', include('django.contrib.admindocs.urls')),
 ]
 
 handler404 = 'server.views.error.not_found'
 
 if settings.DEBUG:
+    urlpatterns += [path(r'silk/', include('silk.urls', namespace='silk'))]
     urlpatterns += [re_path(r'^static/(?P<path>.*)$', views.serve), ]
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

@@ -257,6 +257,7 @@ class CallBack(View):
             task_name = f'{invoice.id}: cancel reservation'
             description = f'{timezone.now()}: canceled by system'
             invoice.basket.status = 3  # done
+            invoice.basket.discount_code.update(invoice=invoice)
             invoice.basket.save()
             Basket.objects.create(user=invoice.user, created_by=invoice.user, updated_by=invoice.user)
             PeriodicTask.objects.filter(name=task_name).update(enabled=False, description=description)

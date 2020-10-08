@@ -6,6 +6,7 @@ from jdatetime import date, timedelta
 from marshmallow import Schema, fields
 
 from server.models import *
+from mehr_takhfif.settings import SHORTLINK
 
 
 def get_tax(tax_type, discount_price, start_price=None):
@@ -468,9 +469,7 @@ class MinProductSchema(BaseSchema):
     available = fields.Method('is_available')
 
     def is_available(self, obj):
-        if obj.storages.filter(available_count_for_sale__gt=0).exists():
-            return True
-        return False
+        return obj.storages.filter(available_count_for_sale__gt=0).exists()
 
 
 class ProductSchema(MinProductSchema):
@@ -641,6 +640,15 @@ class InvoiceStorageSchema(BaseSchema):
     product = fields.Method("get_storage_product")
     features = fields.Dict()
     amer = fields.Method("get_amer")
+    discount_code = fields.Method('get_discount_code')
+    discount_file = fields.Method('get_discount_file')
+
+    def get_discount_file(self, obj):
+        if obj.key:
+            return SHORTLINK + f"/{obj.key}"
+
+    def get_discount_code(self, obj):
+        return list(obj.discount_code.values_list('code', flat=True))
 
     def get_amer(self, obj):
         return self.get_name(obj.storage.product.box)

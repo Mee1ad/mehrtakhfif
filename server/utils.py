@@ -218,6 +218,7 @@ def get_invoice_file(request, invoice=None, invoice_id=None, user={}):
     except ValueError:
         invoice_dict['date'] = '1399/99/99'
     invoice_dict['barcode'] = get_barcode(invoice.id)
+    print(invoice_dict)
     return invoice_dict
 
 
@@ -401,7 +402,7 @@ def get_basket(request, basket_id=None, basket=None, basket_products=None, retur
         basket = type('Basket', (), {'basket_products': basket_products})()
     if user.is_authenticated:
         if basket_id:
-            basket = Basket.objects.get(pk=basket_id)
+            basket = Basket.objects.filter(pk=basket_id).select_related('discount_code').first()
         if not basket_id and not basket:
             basket = basket or Basket.objects.filter(user=user).order_by('-id').first()
     if basket is None:
@@ -459,7 +460,6 @@ def get_basket(request, basket_id=None, basket=None, basket_products=None, retur
         pass
     if address_required:
         # summary['shipping_cost'] = get_shipping_cost(user, basket)
-
         summary['shipping_cost'] = get_shipping_cost_temp(user, basket)
     if return_obj:
         basket.summary = summary

@@ -30,6 +30,9 @@ from safedelete.signals import post_softdelete
 from mehr_takhfif.settings import HOST, MEDIA_ROOT
 from mtadmin.exception import *
 from server.field_validation import *
+import pysnooper
+
+
 
 deliver_status = [(1, 'pending'), (2, 'packing'), (3, 'sending'), (4, 'delivered'), (5, 'referred')]
 
@@ -1138,7 +1141,7 @@ class Storage(Base):
     objects = MyQuerySet.as_manager()
     select = ['product', 'product__thumbnail', 'supplier'] + Base.select
 
-    required_fields = ['supplier', 'dimensions']
+    required_fields = ['supplier']
     related_fields = []
     m2m = []
     remove_fields = ['vip_prices', 'items']  # handle in post_process
@@ -1171,8 +1174,8 @@ class Storage(Base):
                 if self.deadline < timezone.now() and self.deadline is not None and self.disable is False:
                     self.make_item_disable(self)
                     raise ActivationError(get_activation_warning_msg('ددلاین'))
-            if not self.dimensions.get('width') or not self.dimensions.get('height') or not self.dimensions.get(
-                    'length') or not self.dimensions.get('weight'):
+            if (not self.dimensions.get('width') or not self.dimensions.get('height') or not self.dimensions.get(
+                    'length') or not self.dimensions.get('weight')) and self.product.type in [2, 5]:  #product, package_item
                 self.make_item_disable(self, warning=False)
                 raise ActivationError(get_activation_warning_msg('ابعاد'))
         else:
@@ -1181,7 +1184,7 @@ class Storage(Base):
             if items.exists():
                 self.make_item_disable(self)
                 raise ActivationError(get_activation_warning_msg(f'انبار: {items[0]}'))
-        super().clean()
+            super().clean()
 
     def __str__(self):
         return f"{self.product}"
@@ -1307,9 +1310,9 @@ class Storage(Base):
     invoice_title = JSONField(default=multilanguage)
     vip_prices = models.ManyToManyField(VipType, through='VipPrice', related_name="storages")
     dimensions = JSONField(help_text="{'weight': '', 'height: '', 'width': '', 'length': ''}",
-                           validators=[validate_vip_price], default=dict)
+                           validators=[validate_vip_price], default=dict, blank=True)
     max_shipping_time = models.PositiveIntegerField(default=0)
-    settings = JSONField(default=dict)
+    settings = JSONField(default=dict, blank=True)
 
     class Meta:
         db_table = 'storage'
@@ -1453,7 +1456,7 @@ class Invoice(Base):
     sync_task = models.ForeignKey(PeriodicTask, on_delete=CASCADE, null=True, blank=True,
                                   related_name='invoice_sync_task')
     email_task = models.ForeignKey(PeriodicTask, on_delete=CASCADE, null=True, blank=True)
-    basket = models.ForeignKey(to=Basket, on_delete=PROTECT, related_name='invoice_basket', null=True)
+    basket = models.ForeignKey(to=Basket, on_delete=PROTECT, related_name='invoice', null=True)
     storages = models.ManyToManyField(Storage, through='InvoiceStorage')
     payed_at = models.DateTimeField(blank=True, null=True, verbose_name='Payed at')
     special_offer_id = models.BigIntegerField(blank=True, null=True, verbose_name='Special offer id')
@@ -1485,6 +1488,7 @@ class Invoice(Base):
 
 
 # todo disable value_added type (half)
+# todo remove
 class InvoiceSuppliers(MyModel):
     select = ['invoice', 'supplier'] + MyModel.select
     invoice = models.ForeignKey(Invoice, on_delete=CASCADE)
@@ -1550,11 +1554,17 @@ class InvoiceStorage(Base):
 
 
 class DiscountCode(Base):
+    types = [(1, 'product'), (2, 'basket'), (3, 'post')]
+
     select = ['storage', 'qr_code', 'invoice'] + Base.select
-    storage = models.ForeignKey(Storage, on_delete=PROTECT, related_name='discount_code')
+    storage = models.ForeignKey(Storage, on_delete=PROTECT, related_name='discount_code', null=True, blank=True)
+    basket = models.ForeignKey(Basket, on_delete=CASCADE, related_name='discount_code', null=True, blank=True)
     qr_code = models.ForeignKey(Media, on_delete=PROTECT, null=True, blank=True)
-    invoice = models.ForeignKey(Invoice, on_delete=PROTECT, null=True, blank=True)
-    code = models.CharField(max_length=32, default="")
+    invoice = models.ForeignKey(Invoice, on_delete=PROTECT, related_name='discount_codes', null=True, blank=True)
+    invoice_storage = models.ForeignKey(InvoiceStorage, on_delete=PROTECT, related_name='discount_code', null=True,
+                                        blank=True)
+    code = models.CharField(max_length=32)
+    type = models.PositiveSmallIntegerField(choices=types, default=1)
 
     class Meta:
         db_table = 'discount_code'

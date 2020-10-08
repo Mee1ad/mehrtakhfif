@@ -89,6 +89,22 @@ def serialized_objects(request, model, serializer=None, single_serializer=None, 
         raise FieldError
 
 
+# used n discount code
+def translate_params(params, params_new_name, date_key='created_at'):
+    params_new_name = {**params_new_name, 'sd': f'{date_key}__gte', 'ed': f'{date_key}__lte'}
+    new_params = {}
+    for k in params.keys():
+        if params[k] in ['false', 'true']:
+            params[k] = json.loads(params[k].lower())
+        if k in ['ed', 'sd']:
+            params[k] = datetime.datetime.utcfromtimestamp(int(params[k])).replace(tzinfo=pytz.utc)
+        try:
+            new_params[params_new_name[k]] = params[k]
+        except KeyError:
+            new_params[k] = params[k]
+    return new_params
+
+
 def get_params(request, box_key=None, date_key='created_at'):
     remove_param = ['s', 'p', 'delay', 'error', 'all']
     filterby = {}
@@ -331,6 +347,10 @@ def add_custom_m2m(obj, field, item_list, user, m2m_type, restrict_m2m, used_pro
         many_to_many_model.objects.bulk_create(items)
 
 
+import pysnooper
+
+
+@pysnooper.snoop()
 def update_object(request, model, box_key='box', return_item=False, serializer=None, data=None, require_box=True,
                   extra_response={}, restrict_objects=(), restrict_m2m=(), used_product_feature_ids=()):
     user = request.user

@@ -5,6 +5,7 @@ from django.utils.crypto import get_random_string
 from mtadmin.serializer import *
 from mtadmin.utils import *
 from server.models import Media
+from django.shortcuts import render_to_response
 
 
 # from server.models import Product
@@ -233,8 +234,20 @@ class ProductFeatureView(TableView):
 
 class DiscountCodeView(AdminView):
     def get(self, request):
+        params = get_params(request, box_key='storage__product__box_id')
+        new_params = {'not_used': 'invoice__isnull'}
+        params['filter'] = translate_params(params['filter'], new_params)
+        if params['filter'].pop('html', None):
+            if params['filter'].pop('redirect', None):
+                s = request.step
+                discount_codes = list(DiscountCode.objects.filter(**params['filter'])[:s].values_list('code', flat=True))
+                ipp = 84  # item per page
+                discount_codes = [discount_codes[n * ipp: (n+1) * ipp] for n in range(int(len(discount_codes) / ipp) + 1)]
+                return render_to_response('discount_code.html', {'discount_codes': discount_codes})
+            return JsonResponse({'url': HOST + request.get_full_path() + '&redirect=true'})
         return JsonResponse(serialized_objects(request, DiscountCode, DiscountASchema, DiscountASchema,
-                                               required_fields=['storage_id'], box_key='storage__product__box_id'))
+                                               required_fields=['storage_id'], box_key='storage__product__box_id',
+                                               params=params))
 
     def post(self, request):
         data = json.loads(request.body)
@@ -249,8 +262,10 @@ class DiscountCodeView(AdminView):
             codes += [prefix + '-' + get_random_string(code_len, random_data) for c in range(count - len(set(codes)))]
         user = request.user
         items = [DiscountCode(code=code, storage=storage, created_by=user, updated_by=user) for code in codes]
-        DiscountCode.objects.bulk_create(items)
-        return JsonResponse({})
+        discount_codes = DiscountCode.objects.bulk_create(items)
+        storage.available_count_for_sale = DiscountCode.objects.filter(storage=storage, invoice__isnull=True).count()
+        storage.save()
+        return JsonResponse({'data': DiscountASchema().dump(discount_codes, many=True)})
 
 
 class HouseView(TableView):

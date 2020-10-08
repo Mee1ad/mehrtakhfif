@@ -73,7 +73,7 @@ class AuthMiddleware:
                     # new_basket_count = int(user_basket_count)
                     if not db_basket_count == int(user_basket_count):
                         new_basket_count = db_basket_count
-                    request.basket = basket
+                    request.basket = basket.first()
                 else:
                     new_basket_count = 0
 

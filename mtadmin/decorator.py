@@ -20,16 +20,22 @@ def error_handler(func):
             traceback.print_exc()
             return JsonResponse({'message': 'مشکلی پیش آمده', 'variant': 'error'}, status=res_code['bad_request'])
         except ActivationError as e:
+            traceback.print_exc()
             return JsonResponse({'message': str(e), 'variant': 'warning'}, status=res_code['activation_warning'])
         except WarningMessage as e:
+            traceback.print_exc()
             return JsonResponse({'message': str(e), 'variant': 'warning'}, status=res_code['updated'])
         except ObjectDoesNotExist:
+            traceback.print_exc()
             return JsonResponse({'message': 'اینی که گفتی رو پیداش نکردم که 🤨', 'variant': 'error'},
                                 status=res_code['object_does_not_exist'])
         except ValidationError as e:
             try:
-                return JsonResponse({'message': e.message, 'variant': 'error'}, status=res_code['bad_request'])
+                traceback.print_exc()
+                # return JsonResponse({'message': e.message, 'variant': 'error'}, status=res_code['bad_request'])
+                return JsonResponse({'message': str(e), 'variant': 'error'}, status=res_code['bad_request'])
             except Exception:
+                traceback.print_exc()
                 return HttpResponseBadRequest()
         except PermissionDenied:
             traceback.print_exc()
@@ -38,7 +44,6 @@ def error_handler(func):
             traceback.print_exc()
             return JsonResponse({}, status=res_code['token_issue'])
         except IntegrityError as e:
-            traceback.print_exc()
             pattern = r'(\((\w+)\))='
             try:
                 field = re.search(pattern, str(e))[2]
