@@ -51,7 +51,8 @@ class PaymentRequest(View):
         # if not request.user.is_staff:
         #     raise ValidationError(_('متاسفانه در حال حاضر امکان خرید وجود ندارد'))
         # if request.user.is_staff:
-        if DEBUG is True:
+        basket = Basket.objects.filter(user=request.user, id=basket_id).first()
+        if DEBUG is True or request.user.is_superuser:
             invoice = self.create_invoice(request)
             self.submit_invoice_storages(request, invoice.pk)
             invoice.basket.sync = 3
@@ -62,7 +63,7 @@ class PaymentRequest(View):
             invoice.final_amount = invoice.amount
             invoice.save()
             Basket.objects.create(user=invoice.user, created_by=invoice.user, updated_by=invoice.user)
-            CallBack.notification_admin(invoice)
+            # CallBack.notification_admin(invoice)
             return JsonResponse({'invoice_id': invoice.id})
             # return HttpResponseRedirect(f"http://mt.com:3002/invoice/{invoice.id}")
 
@@ -72,7 +73,6 @@ class PaymentRequest(View):
         # check for disabling in 15 minutes
         if user.first_name is None or user.last_name is None or user.meli_code is None or user.username is None:
             raise ValidationError(_('لطفا قبل از خرید پروفایل خود را تکمیل نمایید'))
-        basket = Basket.objects.filter(user=request.user, id=basket_id).first()
         invoice = self.create_invoice(request)
         self.reserve_storage(basket, invoice)
         self.submit_invoice_storages(request, invoice.pk)
