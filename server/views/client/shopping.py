@@ -1,7 +1,6 @@
 from django.http import JsonResponse
 from django.utils.translation import gettext_lazy as _
 
-from mehr_takhfif.settings import DEBUG
 from server.serialize import BasketProductSchema, ProductFeatureSchema
 from server.utils import *
 from server.views.post import *
@@ -118,8 +117,6 @@ class BasketView(View):
         return deleted_items
 
 
-
-
 class GetProducts(View):
     def post(self, request):
         data = load_data(request)
@@ -167,7 +164,7 @@ class DiscountCodeView(View):
         data = json.loads(request.body)
         code = data['code']
         try:
-            discount_code = DiscountCode.objects.exclude(basket__invoice__expire__gte=timezone.now())\
+            discount_code = DiscountCode.objects.exclude(basket__invoice__expire__gte=timezone.now()) \
                 .get(code=code, invoice_storage__isnull=True)
             discount_code.basket = request.basket
             discount_code.save()

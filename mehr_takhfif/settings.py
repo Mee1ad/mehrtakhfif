@@ -48,7 +48,7 @@ INSTALLED_APPS = \
     ] + MY_INSTALLED_APPS
 
 MIDDLEWARE = [
-    'silk.middleware.SilkyMiddleware',
+    *EARLY_MY_MIDDLEWARE,
     'django.middleware.security.SecurityMiddleware',
     'django.middleware.common.CommonMiddleware',
     # 'iprestrict.middleware.IPRestrictMiddleware',
@@ -63,6 +63,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django_user_agents.middleware.UserAgentMiddleware',
+    *MY_MIDDLEWARE
 ]
 
 DEBUG_TOOLBAR_PANELS = [
