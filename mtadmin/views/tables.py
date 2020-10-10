@@ -264,6 +264,7 @@ class DiscountCodeView(AdminView):
         items = [DiscountCode(code=code, storage=storage, created_by=user, updated_by=user) for code in codes]
         discount_codes = DiscountCode.objects.bulk_create(items)
         storage.available_count_for_sale = DiscountCode.objects.filter(storage=storage, invoice__isnull=True).count()
+        storage.available_count = storage.available_count_for_sale
         storage.save()
         return JsonResponse({'data': DiscountASchema().dump(discount_codes, many=True)})
 
