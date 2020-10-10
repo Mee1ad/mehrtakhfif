@@ -1,0 +1,55 @@
+<html>
+<head>
+    <title>چاپ کد تخفیف</title>
+    <style>
+
+        body {
+            max-width: 29.7cm;
+            -webkit-print-color-adjust: exact;
+        }
+
+        body > div {
+            display: flex;
+            flex-wrap: wrap;
+            margin: 0 auto;
+        }
+
+        .code {
+            display: flex;
+            align-items: center;
+            font-size: 17px;
+            font-weight: 500;
+            justify-content: center;
+            border: 1px solid black;
+            width: 24%;
+            height: 11mm;
+            margin: 1px;
+        }
+
+        @page {
+            size: A4;
+            margin: 0;
+        }
+
+        @media print {
+            body > div {
+                height: 296mm;
+                margin-bottom: 7px;
+            }
+
+            .noprint {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+{% for list in discount_codes %}
+    <div>
+        {% for discount_code in list %}
+            <div class="code">{{ discount_code }}</div>
+        {% endfor %}
+    </div>
+{% endfor %}
+</body>
+</html>
