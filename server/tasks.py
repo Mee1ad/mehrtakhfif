@@ -132,7 +132,7 @@ def send_invoice(invoice_id, lang, **kwargs):
             data['code'] = discount_code.code
             rendered += render_to_string('invoice.html', data)
         pdf = INVOICE_ROOT + f'/{filename}.pdf'
-        css = STATIC_ROOT + 'css/pdf_style.css'
+        css = 'css/pdf_style.css'
         pdfkit.from_string(rendered, pdf, css=css)
         pdf_list.append(pdf)
         all_renders += rendered
