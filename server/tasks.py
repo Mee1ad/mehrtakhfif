@@ -139,8 +139,8 @@ def send_invoice(invoice_id, lang, **kwargs):
         # sms_content += f'\n{storage.invoice_title[lang]}\n{SHORTLINK}/{product.key}'
     #  todo uncomment
     # send_sms(user.username, "user-order", f"Mt-{invoice_id}")
-    email_content = "سفارش شما با شماره" + f"{invoice_id}" + "با موفقیت ثبت شد برای مشاهده صورتحساب و جزئیات خرید " \
-                                                             "به پنل کاربری خود مراجعه کنید" + \
+    email_content = "سفارش شما با شماره" + f" MT-{invoice_id} " + "با موفقیت ثبت شد. برای مشاهده صورتحساب " \
+                                                                  "و جزئیات خرید به پنل کاربری خود مراجعه کنید" + \
                     f"\nhttps://mhrt.ir/invoice/{invoice_id}"
 
     send_email("صورتحساب خرید", user.email, message=email_content)
