@@ -136,7 +136,7 @@ def send_invoice(invoice_id, lang, **kwargs):
         pdfkit.from_string(rendered, pdf, css=css)
         pdf_list.append(pdf)
         all_renders += rendered
-        sms_content += f'\n{storage.invoice_title[lang]}\n{SHORTLINK}/{key}'
+        sms_content += f'\n{storage.invoice_title[lang]}\n{SHORTLINK}/{product.key}'
     send_sms(user.username, "user-order", f"Mt-{invoice_id}")
     email_content = """سفارش شما با شماره %token با موفقیت ثبت شد برای مشاهده صورتحساب و جزئیات خرید به پنل کاربری خود مراجعه کنید
                     mhrt.ir/invoice/%token"""
