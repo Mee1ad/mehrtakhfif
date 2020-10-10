@@ -16,7 +16,6 @@ from mtadmin.utils import *
 from server.documents import *
 from server.utils import *
 from django.db.models import Prefetch
-from silk.profiling.profiler import silk_profile
 
 
 class Token(AdminView):
@@ -263,36 +262,3 @@ class TelegramRegister(View):
         except NotTelegramDataError:
             return HttpResponse('The data is not related to Telegram!')
         return HttpResponseRedirect('https://admin.mehrtakhfif.com')
-
-
-class TestWithoutPrefetch(View):
-    @silk_profile(name='test without prefetch')
-    def get(self, request):
-        products = Product.objects.all()[:10]
-        # products = Media.objects.all()[:10]
-        products = ProductESchema().dump(products, many=True)
-        return JsonResponse({'data': products})
-
-
-class TestPrefetch(View):
-    @silk_profile(name='test prefetch')
-    def get(self, request):
-        products = Product.objects.all()[:1]\
-            .prefetch_related('categories', 'cities', 'states', 'tags', 'tag_groups', 'media', 'features',
-                              'feature_groups').select_related('box', 'brand', 'thumbnail', 'created_by',
-                                                               'updated_by')
-        # products = Media.objects.all()[:10].select_related('box', 'created_by', 'updated_by')
-        products = ProductESchema().dump(products, many=True)
-        return JsonResponse({'data': products})
-
-from django.db.models import Count
-
-
-class TestUltimatePrefetch(View):
-    def get(self, request):
-        products = Product.objects.annotate().all()[:5]
-        for product in products:
-            # print(len(product.storages.all()))
-            print(product.count)
-
-        return JsonResponse({'data': 'ok'})
