@@ -105,7 +105,7 @@ def send_invoice(invoice_id, lang, **kwargs):
     user = Invoice.objects.get(pk=invoice_id).user
     pdf_list = []
     all_renders = ""
-    sms_content = ""
+    # sms_content = ""
     for product in digital_products:
         storage = product.storage
         filename = f'{storage.product.permalink}-{product.pk}'
@@ -136,13 +136,13 @@ def send_invoice(invoice_id, lang, **kwargs):
         pdfkit.from_string(rendered, pdf, css=css)
         pdf_list.append(pdf)
         all_renders += rendered
-        sms_content += f'\n{storage.invoice_title[lang]}\n{SHORTLINK}/{product.key}'
+        # sms_content += f'\n{storage.invoice_title[lang]}\n{SHORTLINK}/{product.key}'
     send_sms(user.username, "user-order", f"Mt-{invoice_id}")
     email_content = """سفارش شما با شماره %token با موفقیت ثبت شد برای مشاهده صورتحساب و جزئیات خرید به پنل کاربری خود مراجعه کنید
                     mhrt.ir/invoice/%token"""
     send_email("صورتحساب خرید", user.email, message=email_content)
-    if sms_content:
-        send_sms(user.username, "digital-order-details", sms_content)
+    # if sms_content:
+    #     send_sms(user.username, "digital-order-details", sms_content)
     res = 'sms sent'
     if user.email and all_renders:
         send_email("صورتحساب خرید", user.email, html_content=all_renders, attach=pdf_list)
