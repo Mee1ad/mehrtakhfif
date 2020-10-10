@@ -117,7 +117,7 @@ def send_invoice(invoice_id, lang, **kwargs):
                 product.save()
             except Exception:
                 product.refresh_from_db()
-        data = {'title': storage.invoice_title[lang], 'user': user.first_name + user.last_name,
+        data = {'title': storage.invoice_title[lang], 'user': f'{user.first_name} {user.last_name}',
                 'price': storage.discount_price}
         if storage.product.invoice_description[lang]:
             data['product_description'] = storage.product.invoice_description[lang]
@@ -138,8 +138,8 @@ def send_invoice(invoice_id, lang, **kwargs):
         all_renders += rendered
         # sms_content += f'\n{storage.invoice_title[lang]}\n{SHORTLINK}/{product.key}'
     send_sms(user.username, "user-order", f"Mt-{invoice_id}")
-    email_content = f"""سفارش شما با شماره {invoice_id} با موفقیت ثبت شد برای مشاهده صورتحساب و جزئیات خرید به پنل کاربری خود مراجعه کنید
-                    mhrt.ir/invoice/%token"""
+    email_content = f"""سفارش شما با شماره {invoice_id} با موفقیت ثبت شد برای
+مشاهده صورتحساب و جزئیات خرید به پنل کاربری خود مراجعه کنیدmhrt.ir/invoice/{invoice_id}"""
     send_email("صورتحساب خرید", user.email, message=email_content)
     # if sms_content:
     #     send_sms(user.username, "digital-order-details", sms_content)
