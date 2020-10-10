@@ -165,7 +165,7 @@ class DiscountCodeView(View):
         code = data['code']
         try:
             discount_code = DiscountCode.objects.exclude(basket__invoice__expire__gte=timezone.now()) \
-                .get(code=code, invoice_storage__isnull=True)
+                .get(code=code, invoice_storage__isnull=True, basket__isnull=True)
             discount_code.basket = request.basket
             discount_code.save()
             if discount_code.type == 3:  # post
