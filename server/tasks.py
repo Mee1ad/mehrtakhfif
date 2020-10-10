@@ -137,9 +137,12 @@ def send_invoice(invoice_id, lang, **kwargs):
         pdf_list.append(pdf)
         all_renders += rendered
         # sms_content += f'\n{storage.invoice_title[lang]}\n{SHORTLINK}/{product.key}'
-    send_sms(user.username, "user-order", f"Mt-{invoice_id}")
-    email_content = f"""سفارش شما با شماره {invoice_id} با موفقیت ثبت شد برای
-مشاهده صورتحساب و جزئیات خرید به پنل کاربری خود مراجعه کنیدmhrt.ir/invoice/{invoice_id}"""
+    #  todo uncomment
+    # send_sms(user.username, "user-order", f"Mt-{invoice_id}")
+    email_content = "سفارش شما با شماره" + f"{invoice_id}" + "با موفقیت ثبت شد برای مشاهده صورتحساب و جزئیات خرید " \
+                                                             "به پنل کاربری خود مراجعه کنید" + \
+                    f"\nhttps://mhrt.ir/invoice/{invoice_id}"
+
     send_email("صورتحساب خرید", user.email, message=email_content)
     # if sms_content:
     #     send_sms(user.username, "digital-order-details", sms_content)
