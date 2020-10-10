@@ -15,7 +15,7 @@ from django_celery_results.models import TaskResult
 from push_notifications.models import GCMDevice
 
 from mehr_takhfif.settings import ARVAN_API_KEY
-from mehr_takhfif.settings import INVOICE_ROOT, STATIC_ROOT, SHORTLINK
+from mehr_takhfif.settings import INVOICE_ROOT, SHORTLINK, BASE_DIR
 from server.models import Invoice, InvoiceStorage, User
 from server.utils import sync_storage, send_sms, send_email, random_data, add_days
 from urllib.error import URLError
@@ -132,7 +132,7 @@ def send_invoice(invoice_id, lang, **kwargs):
             data['code'] = discount_code.code
             rendered += render_to_string('invoice.html', data)
         pdf = INVOICE_ROOT + f'/{filename}.pdf'
-        css = 'css/pdf_style.css'
+        css = BASE_DIR + 'templates/css/pdf_style.css'
         pdfkit.from_string(rendered, pdf, css=css)
         pdf_list.append(pdf)
         all_renders += rendered
