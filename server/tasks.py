@@ -3,6 +3,7 @@ from __future__ import absolute_import, unicode_literals
 import random
 from operator import add
 from time import sleep
+from urllib.error import URLError
 
 import pdfkit
 import requests
@@ -15,10 +16,9 @@ from django_celery_results.models import TaskResult
 from push_notifications.models import GCMDevice
 
 from mehr_takhfif.settings import ARVAN_API_KEY
-from mehr_takhfif.settings import INVOICE_ROOT, SHORTLINK, BASE_DIR
+from mehr_takhfif.settings import INVOICE_ROOT, BASE_DIR
 from server.models import Invoice, InvoiceStorage, User
 from server.utils import sync_storage, send_sms, send_email, random_data, add_days
-from urllib.error import URLError
 
 
 @shared_task
@@ -138,7 +138,7 @@ def send_invoice(invoice_id, lang, **kwargs):
         all_renders += rendered
         # sms_content += f'\n{storage.invoice_title[lang]}\n{SHORTLINK}/{product.key}'
     send_sms(user.username, "user-order", f"Mt-{invoice_id}")
-    email_content = """سفارش شما با شماره %token با موفقیت ثبت شد برای مشاهده صورتحساب و جزئیات خرید به پنل کاربری خود مراجعه کنید
+    email_content = f"""سفارش شما با شماره {invoice_id} با موفقیت ثبت شد برای مشاهده صورتحساب و جزئیات خرید به پنل کاربری خود مراجعه کنید
                     mhrt.ir/invoice/%token"""
     send_email("صورتحساب خرید", user.email, message=email_content)
     # if sms_content:
