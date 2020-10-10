@@ -64,8 +64,8 @@ class PaymentRequest(View):
             invoice.save()
             Basket.objects.create(user=invoice.user, created_by=invoice.user, updated_by=invoice.user)
             # CallBack.notification_admin(invoice)
-            return JsonResponse({'invoice_id': invoice.id})
-            # return HttpResponseRedirect(f"http://mt.com:3002/invoice/{invoice.id}")
+            # return JsonResponse({'invoice_id': invoice.id})
+            return HttpResponseRedirect(f"http://mt.com:3002/invoice/{invoice.id}")
 
         user = request.user
         if not Basket.objects.filter(pk=basket_id, user=user).exists():
