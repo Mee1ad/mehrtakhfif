@@ -63,6 +63,10 @@ class PaymentRequest(View):
             invoice.final_amount = invoice.amount
             invoice.save()
             Basket.objects.create(user=invoice.user, created_by=invoice.user, updated_by=invoice.user)
+            task_name = f'{invoice.id}: send invoice'
+            kwargs = {"invoice_id": invoice.pk, "lang": request.lang, 'name': task_name}
+            invoice.email_task = add_one_off_job(name=task_name, kwargs=kwargs, interval=0,
+                                                 task='server.tasks.send_invoice')
             # CallBack.notification_admin(invoice)
             # return JsonResponse({'invoice_id': invoice.id})
             return HttpResponseRedirect(f"http://mt.com:3002/invoice/{invoice.id}")
