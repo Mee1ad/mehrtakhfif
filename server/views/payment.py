@@ -5,7 +5,7 @@ from django.http import JsonResponse, HttpResponseRedirect
 from django.utils.translation import gettext_lazy as _
 from django.views import View
 
-from mehr_takhfif.settings import DEBUG
+from mehr_takhfif.settings import DEBUG, CLIENT_HOST
 from server.serialize import *
 from server.tasks import cancel_reservation
 from server.utils import get_basket, add_one_off_job, sync_storage, add_minutes
@@ -69,7 +69,8 @@ class PaymentRequest(View):
                                                  task='server.tasks.send_invoice')
             # CallBack.notification_admin(invoice)
             # return JsonResponse({'invoice_id': invoice.id})
-            return HttpResponseRedirect(f"http://mt.com:3002/invoice/{invoice.id}")
+            # return HttpResponseRedirect(f"http://mt.com:3002/invoice/{invoice.id}")
+            return JsonResponse({'url': f"{CLIENT_HOST}/invoice/{invoice.id}"})
 
         user = request.user
         if not Basket.objects.filter(pk=basket_id, user=user).exists():
