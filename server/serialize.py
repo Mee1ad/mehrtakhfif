@@ -640,15 +640,11 @@ class InvoiceStorageSchema(BaseSchema):
     product = fields.Method("get_storage_product")
     features = fields.Dict()
     amer = fields.Method("get_amer")
-    discount_code = fields.Method('get_discount_code')
     discount_file = fields.Method('get_discount_file')
 
     def get_discount_file(self, obj):
         if obj.key:
             return SHORTLINK + f"/{obj.key}"
-
-    def get_discount_code(self, obj):
-        return list(obj.discount_code.values_list('code', flat=True))
 
     def get_amer(self, obj):
         return self.get_name(obj.storage.product.box)
