@@ -3,13 +3,13 @@ import collections
 from django.http import JsonResponse
 
 from server.serialize import *
-from server.utils import View, get_pagination, load_data
+from server.utils import View, get_pagination, load_data, get_preview_permission
 
 
 class ProductView(View):
     def get(self, request, permalink):
         user = request.user
-        preview = {'disable': False} if user.is_staff is False else {}
+        preview = get_preview_permission(user)
         product_obj = Product.objects.filter(permalink=permalink, **preview).prefetch_related(
             *Product.prefetch).first()
         features = self.get_features(product_obj, request.lang)

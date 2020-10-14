@@ -1,6 +1,4 @@
-import json
 import hashlib
-import json
 import math
 import string
 import uuid
@@ -9,7 +7,6 @@ from operator import add, sub
 
 import jdatetime
 import magic
-import requests
 from MyQR import myqr
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.postgres.fields.jsonb import KeyTextTransform
@@ -559,6 +556,17 @@ def get_product_filter_params(is_staff):
     if is_staff:
         return {}
     return {'categories__disable': False, 'box__disable': False, 'disable': False, 'storages__disable': False}
+
+
+def get_preview_permission(user, category_check=True, box_check=True):
+    if user.is_staff is False:
+        preview = {'disable': False}
+        if category_check:
+            preview['categories__disable'] = False
+        if box_check:
+            preview['box__disable'] = False
+        return preview
+    return {}
 
 
 # Security
