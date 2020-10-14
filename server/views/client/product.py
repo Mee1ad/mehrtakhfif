@@ -15,7 +15,7 @@ class ProductView(View):
         features = self.get_features(product_obj, request.lang)
         # features = []
         if product_obj is None:
-            return JsonResponse({}, status=404)
+            return JsonResponse({'message': 'محصول موقتا غیرفعال میباشد', 'variant': 'error'}, status=404)
         purchased = False
         product = ProductSchema(**request.schema_params).dump(product_obj)
         if product_obj.type < 3:
