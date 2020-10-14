@@ -36,6 +36,8 @@ class ProductView(View):
         return JsonResponse({'product': product, 'purchased': purchased, 'features': features})
 
     def get_features(self, product, lang):
+        if not product:
+            return {'group_features': [], 'features': []}
         group_features = []
         features = []
         category_feature_groups = FeatureGroup.objects.filter(categories__in=product.categories.values_list('id',
