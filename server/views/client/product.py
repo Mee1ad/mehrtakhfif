@@ -9,8 +9,9 @@ from server.utils import View, get_pagination, load_data, get_preview_permission
 class ProductView(View):
     def get(self, request, permalink):
         user = request.user
-        preview = get_preview_permission(user)
-        product_obj = Product.objects.filter(permalink=permalink, **preview).prefetch_related(
+        product_preview = get_preview_permission(user)
+        storage_preview = get_preview_permission(user, box_check=False, category_check=False)
+        product_obj = Product.objects.filter(permalink=permalink, **product_preview).prefetch_related(
             *Product.prefetch).first()
         features = self.get_features(product_obj, request.lang)
         # features = []
@@ -19,7 +20,7 @@ class ProductView(View):
         purchased = False
         product = ProductSchema(**request.schema_params).dump(product_obj)
         if product_obj.type < 3:
-            storages = product_obj.storages.filter(Q(start_time__lte=timezone.now()) & Q(**preview),
+            storages = product_obj.storages.filter(Q(start_time__lte=timezone.now()) & Q(**storage_preview),
                                                    (Q(deadline__gte=timezone.now()) | Q(deadline__isnull=True)))
             product['storages'] = StorageSchema(**request.schema_params).dump(storages, many=True)
             if user.is_authenticated:
@@ -28,7 +29,7 @@ class ProductView(View):
             product['house'] = HouseSchema(**request.schema_params).dump(product_obj.house)
             # todo get purchased status
         elif product_obj.type == 4:
-            storages = product_obj.storages.filter(Q(start_time__lte=timezone.now()) & Q(**preview),
+            storages = product_obj.storages.filter(Q(start_time__lte=timezone.now()) & Q(**storage_preview),
                                                    (Q(deadline__gte=timezone.now()) | Q(deadline__isnull=True)))
             product['storages'] = PackageSchema(**request.schema_params).dump(storages, many=True)
         # todo debug
