@@ -183,6 +183,9 @@ class ProductView(TableView):
             params['filter']['type__in'] = types2
         if 'review__isnull' in params['filter']:
             required_box = {'error_null_box': False}
+        if params['filter'].get('only_id', False):
+            params['filter'].pop('only_id')
+            return JsonResponse({'data': list(Product.objects.filter(**params['filter']).values_list('id', flat=True))})
         return JsonResponse(serialized_objects(request, Product, ProductASchema, ProductESchema, params=params,
                                                **required_box))
 
@@ -296,7 +299,8 @@ class StorageView(TableView):
 
     def get(self, request):
         Storage.objects.filter(deadline__lt=timezone.now(), disable=False).update(disable=True)
-        required_fields = ['id', 'name', 'type', 'manage', 'default_storage_id', 'has_selectable_feature']
+        required_fields = ['id', 'name', 'type', 'manage', 'default_storage_id', 'has_selectable_feature',
+                           'booking_type']
         extra_data = []
         box_key = 'product__box'
         params = get_params(request, box_key)
@@ -403,6 +407,17 @@ class InvoiceView(TableView):
     def put(self, request):
         # todo limit fields for update
         return update_object(request, Invoice, require_box=False)
+
+
+class BookingView(TableView):
+    permission_required = 'server.view_booking'
+
+    def get(self, request):
+        return JsonResponse(serialized_objects(request, Booking, BookingASchema, BookingESchema))
+
+    def put(self, request):
+        # todo limit fields for update
+        return update_object(request, Booking)
 
 
 class InvoiceProductView(TableView):
