@@ -74,6 +74,14 @@ class ProductTagGroupField(fields.Field):
 
 
 # Serializer
+class AdminSchema(Schema):
+    id = fields.Int()
+    name = fields.Method("get_name")
+
+    def get_name(self, obj):
+        return obj.first_name + ' ' + obj.last_name
+
+
 class BaseAdminSchema(Schema):
     """
     E = Edit
@@ -85,10 +93,10 @@ class BaseAdminSchema(Schema):
 
     id = fields.Int()
     created_at = fields.Method("get_created_at")
-    # created_by = fields.Method("get_created_by")
+    # created_by = fields.Nested("AdminSchema")
     updated_at = fields.Method("get_updated_at")
 
-    # updated_by = fields.Method("get_updated_by")
+    # updated_by = fields.Nested("AdminSchema")
 
     # noinspection DuplicatedCode
     def dump(self, *args, **kwargs):
@@ -105,31 +113,17 @@ class BaseAdminSchema(Schema):
             pass
         return data
 
-    def get_created_at(self, obj):
+    def get_date(self, obj, field):
         try:
-            return obj.created_at.timestamp()
+            return getattr(obj, field).timestamp()
         except AttributeError:
-            return None
+            pass
 
-    def get_created_by(self, obj):
-        try:
-            user = obj.created_by
-            return {'id': obj.pk, 'name': f"{user.first_name} {user.last_name}"}
-        except AttributeError:
-            return None
+    def get_created_at(self, obj):
+        return self.get_date(obj, 'created_at')
 
     def get_updated_at(self, obj):
-        try:
-            return obj.updated_at.timestamp()
-        except AttributeError:
-            return None
-
-    def get_updated_by(self, obj):
-        try:
-            user = obj.updated_by
-            return {'id': obj.pk, 'name': f"{user.first_name} {user.last_name}"}
-        except AttributeError:
-            return None
+        return self.get_date(obj, 'updated_at')
 
     def get_name(self, obj):
         return obj.name
@@ -224,6 +218,46 @@ class BaseAdminSchema(Schema):
                     product_feature.values = []
                     product_feature.values.append(pf.feature_value)
         return ProductFeatureASchema(model=model).dump(features_distinct, many=True)
+
+
+class BookingASchema(BaseAdminSchema):
+    start_date = fields.Function(lambda o: o.start_time.timestamp())
+    end_date = fields.Function(lambda o: o.end_time.timestamp())
+    product = fields.Nested("ProductASchema")
+    user = fields.Nested("MinUserSchema")
+    status = fields.Method("get_status")
+
+    def get_status(self, obj):
+        try:
+            return obj.invoice.get_status_display()
+        except AttributeError:
+            return 'pending'
+
+
+class BookingESchema(BookingASchema):
+    class Meta:
+        additional = ('invoice_id', 'least_reserve_time')
+
+    storage = fields.Nested("StorageASchema")
+    address = fields.Nested("AddressSchema")
+    location = fields.Dict()
+    cart_postal_text = fields.Dict()
+    type = fields.Function(lambda o: o.get_type_display())
+    confirmed_at = fields.Method("get_confirmed_at")
+    cancel_at = fields.Method("get_cancel_at")
+    reject_at = fields.Method("get_reject_at")
+    confirmed_by = fields.Nested("AdminSchema")
+    cancel_by = fields.Nested("AdminSchema")
+    reject_by = fields.Nested("AdminSchema")
+
+    def get_confirmed_at(self, obj):
+        return self.get_date(obj, 'confirmed_at')
+
+    def get_cancel_at(self, obj):
+        return self.get_date(obj, 'cancel_at')
+
+    def get_reject_at(self, obj):
+        return self.get_date(obj, 'reject_at')
 
 
 class DiscountASchema(BaseAdminSchema):
@@ -385,6 +419,7 @@ class ProductASchema(BaseAdminSchema):
     disable = fields.Boolean()
     has_selectable_feature = fields.Method("get_has_selectable_feature")
     type = fields.Function(lambda o: o.get_type_display())
+    booking_type = fields.Function(lambda o: o.get_booking_type_display())
 
     def get_has_selectable_feature(self, obj):
         return obj.features.filter(type=3).exists()
@@ -405,7 +440,7 @@ class ProductESchema(ProductASchema, ProductSchema):
     # class ProductESchema(BaseSchema):
     class Meta:
         unknown = EXCLUDE
-        additional = ProductSchema.Meta.additional + ProductASchema.Meta.additional + ('verify', 'manage')
+        additional = ('verify', 'manage') + ProductSchema.Meta.additional + ProductASchema.Meta.additional
 
     media = fields.Method("get_media")
     tags = ProductTagField()
@@ -420,6 +455,7 @@ class ProductESchema(ProductASchema, ProductSchema):
     default_storage_id = fields.Int()
     features = fields.Method("get_features")
     feature_groups = fields.Method("get_feature_groups")
+    booking_type = fields.Function(lambda o: o.get_booking_type_display())
 
     def get_feature_groups(self, obj):
         categories = obj.categories.all()
@@ -494,14 +530,15 @@ class StorageASchema(BaseAdminSchema):
     class Meta:
         additional = ('title', 'start_price', 'final_price', 'discount_price', 'discount_percent',
                       'available_count_for_sale', 'tax', 'product_id', 'settings', 'max_count_for_sale',
-                      'min_count_alert', 'disable')
+                      'min_count_alert', 'disable', 'unavailable')
 
 
 class StorageESchema(StorageASchema):
     class Meta:
         additional = StorageASchema.Meta.additional + StorageSchema.Meta.additional + \
                      ('features_percent', 'available_count', 'invoice_description',
-                      'invoice_title', 'dimensions', 'package_discount_price', 'sold_count')
+                      'invoice_title', 'dimensions', 'package_discount_price', 'sold_count',
+                      'booking_cost', 'least_booking_time')
 
     supplier = fields.Function(lambda o: UserSchema().dump(o.supplier))
     features = fields.Method('get_features')
