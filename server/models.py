@@ -991,16 +991,15 @@ class Product(Base):
     def pre_process(self, my_dict):
         if (self.review is not None) and (my_dict.get('review') != self.review):
             my_dict['check_review'] = False
-        if my_dict.get('type'):
-            try:
-                my_dict['type'] = {'service': 1, 'product': 2, 'tourism': 3, 'package': 4, 'package_item': 5}[
-                    my_dict['type']]
-            except KeyError:
-                pass
-            try:
-                my_dict['booking_type'] = {'unbookable': 1, 'datetime': 2, 'range': 3}[my_dict['booking_type']]
-            except KeyError:
-                pass
+        try:
+            my_dict['type'] = {'service': 1, 'product': 2, 'tourism': 3, 'package': 4, 'package_item': 5}[
+                my_dict['type']]
+        except KeyError:
+            pass
+        try:
+            my_dict['booking_type'] = {'unbookable': 1, 'datetime': 2, 'range': 3}[my_dict['booking_type']]
+        except KeyError:
+            pass
         return my_dict
 
     def clean(self):
@@ -1080,7 +1079,7 @@ class Product(Base):
     disable = models.BooleanField(default=True)
     verify = models.BooleanField(default=False)
     manage = models.BooleanField(default=True)
-    booking_type = models.PositiveSmallIntegerField(choices=booking_types)
+    booking_type = models.PositiveSmallIntegerField(choices=booking_types, default=1)
     breakable = models.BooleanField(default=False)
     type = models.PositiveSmallIntegerField(choices=types, validators=[validate_product_type])
     permalink = models.CharField(max_length=255, db_index=True, unique=True)
