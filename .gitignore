@@ -108,6 +108,7 @@ static/*
 .idea/*
 .vscode/*
 media/*
+invoice/*
 htmlcov/*
 settings.json
 settings_var.py
