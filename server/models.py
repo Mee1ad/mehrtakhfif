@@ -30,9 +30,6 @@ from safedelete.signals import post_softdelete
 from mehr_takhfif.settings import HOST, MEDIA_ROOT
 from mtadmin.exception import *
 from server.field_validation import *
-import pysnooper
-
-
 
 deliver_status = [(1, 'pending'), (2, 'packing'), (3, 'sending'), (4, 'delivered'), (5, 'referred')]
 
@@ -163,6 +160,10 @@ def get_name(name, self):
         return name['fa']
     except Exception:
         return self.id
+
+
+def timestamp_to_datetime(timestamp):
+    return datetime.datetime.utcfromtimestamp(timestamp).replace(tzinfo=pytz.utc)
 
 
 class MyQuerySet(SafeDeleteQueryset):
@@ -590,6 +591,7 @@ class Address(MyModel):
     address = models.TextField()
     location = JSONField(null=True, blank=True)
     user = models.ForeignKey(User, blank=True, null=True, on_delete=models.CASCADE)
+    reservable = models.BooleanField(default=False)
 
     class Meta:
         db_table = 'address'
@@ -625,7 +627,7 @@ class Box(Base):
 
 class Media(Base):
     media_types = [(1, 'image'), (2, 'thumbnail'), (3, 'media'), (4, 'slider'), (5, 'ads'), (6, 'mobile_ads'),
-                   (7, 'category'), (8, 'mobile_slider'), (100, 'video'), (200, 'audio')]
+                   (7, 'category'), (8, 'mobile_slider'), (9, 'description'), (100, 'video'), (200, 'audio')]
     no_box_type = [4, 5, 6, 8]
     media_sizes = {'thumbnail': (600, 372), 'media': (1280, 794), 'category': (800, 500), 'ads': (820, 300),
                    'mobile_ads': (500, 384), 'slider': (1920, 504), 'mobile_slider': (980, 860)}
@@ -906,8 +908,8 @@ class Brand(Base):
 
 class ProductTag(MyModel):
     select = ['product', 'tag'] + MyModel.select
-    product = models.ForeignKey("Product", on_delete=PROTECT)
-    tag = models.ForeignKey(Tag, on_delete=PROTECT)
+    product = models.ForeignKey("Product", on_delete=CASCADE)
+    tag = models.ForeignKey(Tag, on_delete=CASCADE)
     show = models.BooleanField(default=False)
 
     class Meta:
@@ -922,8 +924,8 @@ class ProductMedia(MyModel):
     def __str__(self):
         return f"{self.id}"
 
-    product = models.ForeignKey("Product", on_delete=PROTECT)
-    media = models.ForeignKey(Media, on_delete=PROTECT)
+    product = models.ForeignKey("Product", on_delete=CASCADE)
+    media = models.ForeignKey(Media, on_delete=CASCADE)
     priority = models.PositiveSmallIntegerField(null=True)
 
     class Meta:
@@ -984,6 +986,7 @@ class Product(Base):
     fields = {'thumbnail': 'تامبنیل', 'categories': 'دسته بندی', 'tags': 'تگ', 'media': 'مدیا',
               'description': 'توضیحات'}
     types = [(1, 'service'), (2, 'product'), (3, 'tourism'), (4, 'package'), (5, 'package_item')]
+    booking_types = [(1, 'unbookable'), (2, 'datetime'), (3, 'range')]
 
     def pre_process(self, my_dict):
         if (self.review is not None) and (my_dict.get('review') != self.review):
@@ -992,6 +995,10 @@ class Product(Base):
             try:
                 my_dict['type'] = {'service': 1, 'product': 2, 'tourism': 3, 'package': 4, 'package_item': 5}[
                     my_dict['type']]
+            except KeyError:
+                pass
+            try:
+                my_dict['booking_type'] = {'unbookable': 1, 'datetime': 2, 'range': 3}[my_dict['booking_type']]
             except KeyError:
                 pass
         return my_dict
@@ -1056,11 +1063,11 @@ class Product(Base):
 
     categories = models.ManyToManyField(Category, related_name="products")
     box = models.ForeignKey(Box, on_delete=PROTECT)
-    brand = models.ForeignKey(Brand, on_delete=PROTECT, null=True, blank=True)
+    brand = models.ForeignKey(Brand, on_delete=SET_NULL, null=True, blank=True)
     thumbnail = models.ForeignKey(Media, on_delete=PROTECT, related_name='product_thumbnail', null=True, blank=True)
     cities = models.ManyToManyField(City)
     states = models.ManyToManyField(State)
-    default_storage = models.OneToOneField(null=True, blank=True, to="Storage", on_delete=CASCADE,
+    default_storage = models.OneToOneField(null=True, blank=True, to="Storage", on_delete=SET_NULL,
                                            related_name='product_default_storage')
     tags = models.ManyToManyField(Tag, through="ProductTag", related_name='products')
     tag_groups = models.ManyToManyField(TagGroup, related_name='products')
@@ -1073,7 +1080,7 @@ class Product(Base):
     disable = models.BooleanField(default=True)
     verify = models.BooleanField(default=False)
     manage = models.BooleanField(default=True)
-    reservable = models.BooleanField(default=False)
+    booking_type = models.PositiveSmallIntegerField(choices=booking_types)
     breakable = models.BooleanField(default=False)
     type = models.PositiveSmallIntegerField(choices=types, validators=[validate_product_type])
     permalink = models.CharField(max_length=255, db_index=True, unique=True)
@@ -1175,7 +1182,8 @@ class Storage(Base):
                     self.make_item_disable(self)
                     raise ActivationError(get_activation_warning_msg('ددلاین'))
             if (not self.dimensions.get('width') or not self.dimensions.get('height') or not self.dimensions.get(
-                    'length') or not self.dimensions.get('weight')) and self.product.type in [2, 5]:  #product, package_item
+                    'length') or not self.dimensions.get('weight')) and self.product.type in [2,
+                                                                                              5]:  # product, package_item
                 self.make_item_disable(self, warning=False)
                 raise ActivationError(get_activation_warning_msg('ابعاد'))
         else:
@@ -1192,9 +1200,9 @@ class Storage(Base):
     def pre_process(self, my_dict):
         [my_dict.pop(field, None) for field in self.remove_fields]
         if type(my_dict.get('start_time')) is int or type(my_dict.get('start_time')) is float:
-            my_dict['start_time'] = datetime.datetime.utcfromtimestamp(my_dict['start_time']).replace(tzinfo=pytz.utc)
+            my_dict['start_time'] = timestamp_to_datetime(my_dict['start_time'])
         if type(my_dict.get('deadline', None)) is int or type(my_dict.get('deadline')) is float:
-            my_dict['deadline'] = datetime.datetime.utcfromtimestamp(my_dict['deadline']).replace(tzinfo=pytz.utc)
+            my_dict['deadline'] = timestamp_to_datetime(my_dict['deadline'])
         if not my_dict.get('deadline', None):
             my_dict['deadline'] = None
         if type(my_dict.get('tax_type')) is str:
@@ -1278,7 +1286,7 @@ class Storage(Base):
         super().save(*args)
         self.post_process(kwargs)
 
-    product = models.ForeignKey(Product, on_delete=PROTECT, related_name='storages')
+    product = models.ForeignKey(Product, on_delete=CASCADE, related_name='storages')
     # features = models.ManyToManyField(ProductFeature, through='StorageFeature', related_name="storages")
     features = models.ManyToManyField(ProductFeature, through='ProductFeatureStorage', related_name="storages")
     items = models.ManyToManyField("self", through='Package', symmetrical=False)
@@ -1291,6 +1299,8 @@ class Storage(Base):
     final_price = models.PositiveIntegerField(default=0, verbose_name='Final price')
     discount_price = models.PositiveIntegerField(default=0, verbose_name='Discount price')
     shipping_cost = models.PositiveIntegerField(null=True, blank=True)
+    booking_cost = models.PositiveIntegerField(default=0, blank=True)
+    least_booking_time = models.PositiveIntegerField(default=48, blank=True)
     available_count_for_sale = models.PositiveIntegerField(default=0, verbose_name='Available count for sale')
     max_count_for_sale = models.PositiveSmallIntegerField(default=1)
     min_count_alert = models.PositiveSmallIntegerField(default=5)
@@ -1302,6 +1312,7 @@ class Storage(Base):
     package_discount_price = models.PositiveSmallIntegerField(default=0)
     gender = models.BooleanField(blank=True, null=True)
     disable = models.BooleanField(default=True)
+    unavailable = models.BooleanField(default=False)
     deadline = models.DateTimeField(null=True, blank=True)
     start_time = models.DateTimeField(auto_now_add=True)
     title = JSONField(default=multilanguage)
@@ -1353,8 +1364,8 @@ class BasketProduct(MyModel):
         self.validation()
         super().save(*args, **kwargs)
 
-    storage = models.ForeignKey(Storage, on_delete=PROTECT)
-    basket = models.ForeignKey(Basket, on_delete=PROTECT, null=True, blank=True)
+    storage = models.ForeignKey(Storage, on_delete=CASCADE)
+    basket = models.ForeignKey(Basket, on_delete=CASCADE, null=True, blank=True)
     count = models.PositiveIntegerField(default=1)
     box = models.ForeignKey(Box, on_delete=PROTECT)
     features = JSONField(default=dict, help_text="{'name': 'feature name', 'value': 'feature value'}")
@@ -1456,7 +1467,7 @@ class Invoice(Base):
     sync_task = models.ForeignKey(PeriodicTask, on_delete=CASCADE, null=True, blank=True,
                                   related_name='invoice_sync_task')
     email_task = models.ForeignKey(PeriodicTask, on_delete=CASCADE, null=True, blank=True)
-    basket = models.ForeignKey(to=Basket, on_delete=PROTECT, related_name='invoice', null=True)
+    basket = models.ForeignKey(to=Basket, on_delete=CASCADE, related_name='invoice', null=True)
     storages = models.ManyToManyField(Storage, through='InvoiceStorage')
     payed_at = models.DateTimeField(blank=True, null=True, verbose_name='Payed at')
     special_offer_id = models.BigIntegerField(blank=True, null=True, verbose_name='Special offer id')
@@ -1526,13 +1537,14 @@ class InvoiceStorage(Base):
     id = models.BigAutoField(auto_created=True, primary_key=True)
     key = models.CharField(max_length=31, unique=True, null=True, db_index=True)
     filename = models.CharField(max_length=255, null=True, blank=True)
-    box = models.ForeignKey(Box, on_delete=CASCADE)
+    box = models.ForeignKey(Box, on_delete=PROTECT)
     tax = models.PositiveIntegerField(default=0)
     dev = models.PositiveIntegerField()
     admin = models.PositiveIntegerField()
     mt_profit = models.PositiveIntegerField()
     charity = models.PositiveIntegerField()
-    storage = models.ForeignKey(Storage, on_delete=PROTECT)
+    # todo protect
+    storage = models.ForeignKey(Storage, on_delete=CASCADE)
     invoice = models.ForeignKey(Invoice, on_delete=CASCADE, related_name='invoice_storages')
     count = models.PositiveIntegerField(default=1)
     final_price = models.PositiveIntegerField()
@@ -1557,11 +1569,11 @@ class DiscountCode(Base):
     types = [(1, 'product'), (2, 'basket'), (3, 'post')]
 
     select = ['storage', 'qr_code', 'invoice'] + Base.select
-    storage = models.ForeignKey(Storage, on_delete=PROTECT, related_name='discount_code', null=True, blank=True)
+    storage = models.ForeignKey(Storage, on_delete=CASCADE, related_name='discount_code', null=True, blank=True)
     basket = models.ForeignKey(Basket, on_delete=CASCADE, related_name='discount_code', null=True, blank=True)
     qr_code = models.ForeignKey(Media, on_delete=PROTECT, null=True, blank=True)
-    invoice = models.ForeignKey(Invoice, on_delete=PROTECT, related_name='discount_codes', null=True, blank=True)
-    invoice_storage = models.ForeignKey(InvoiceStorage, on_delete=PROTECT, related_name='discount_code', null=True,
+    invoice = models.ForeignKey(Invoice, on_delete=CASCADE, related_name='discount_codes', null=True, blank=True)
+    invoice_storage = models.ForeignKey(InvoiceStorage, on_delete=CASCADE, related_name='discount_code', null=True,
                                         blank=True)
     code = models.CharField(max_length=32)
     type = models.PositiveSmallIntegerField(choices=types, default=1)
@@ -1811,22 +1823,25 @@ class House(Base):
 
 class Booking(Base):
     select = ['user', 'house', 'product', 'invoice', 'confirmation_by', 'cancel_by', 'reject_by'] + Base.select
+    types = [(1, 'hourly'), (2, 'timestamp')]
 
     def __str__(self):
         return f"{self.house}"
 
     user = models.ForeignKey(User, on_delete=PROTECT, related_name='booking_user')
     house = models.ForeignKey(House, on_delete=PROTECT, null=True)
-    product = models.ForeignKey(Product, on_delete=PROTECT, null=True)
-    address = models.TextField(null=True)
+    storage = models.ForeignKey(Storage, on_delete=PROTECT, null=True)
+    type = models.PositiveSmallIntegerField(choices=types)
+    address = models.ForeignKey(Address, on_delete=PROTECT)
     location = JSONField(null=True)
+    least_reserve_time = models.PositiveSmallIntegerField(default=5)
+    cart_postal_text = JSONField(default=dict)
     status = models.PositiveSmallIntegerField(choices=[(1, 'pending'), (2, 'sent'), (3, 'deliver'), (4, 'reject')],
                                               default=1)
     invoice = models.ForeignKey(Invoice, on_delete=PROTECT, null=True, blank=True)
-    confirmation_date = models.DateTimeField(null=True, blank=True)
-    confirmation_by = models.ForeignKey(User, on_delete=PROTECT, null=True, blank=True,
-                                        related_name='booking_confirmation')
-    confirm = models.BooleanField(default=False)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    confirmed_by = models.ForeignKey(User, on_delete=PROTECT, null=True, blank=True,
+                                     related_name='booking_confirmation')
     people_count = models.PositiveSmallIntegerField(default=0)
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
