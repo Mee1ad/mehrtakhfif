@@ -131,9 +131,9 @@ class Search(AdminView):
             r = s.query('match', box_id=box_id).query(must=[Q('match', name_fa=q), Q('match', disable='false')]).query(type_query).query('match_all')[:10]
             # r = s.query('match', box_id=box_id).query('match_all')[:10]
         [products_id.append(product.id) for product in r]
-        products = Product.objects.in_bulk(products_id)
+        products = Product.objects.select_related('thumbnail').in_bulk(products_id)
         products = [products[x] for x in products_id]
-        return {'products': ProductESchema().dump(products, many=True)}
+        return {'products': ProductASchema(only=['name', 'thumbnail']).dump(products, many=True)}
 
     def supplier(self, q, username, **kwargs):
         items = []
