@@ -124,17 +124,22 @@ class Search(AdminView):
     def product(self, q, box_id, types, **kwargs):
         products_id = []
         s = ProductDocument.search()
-        type_query = Q('bool', should=[Q("match", type=product_type) for product_type in types])
-        r = s.query('match', box_id=box_id).query(must=[Q('match', name_fa=q), Q('match', disable=False)])
+        # type_query = Q('bool', should=[Q("match", type=product_type) for product_type in types])
+        # r = s.query('match', box_id=box_id).query(must=[Q('match', name_fa=q), Q('match', disable=False)])
+        r = s.query('match', box_id=box_id).query('match', name_fa=q).query('match', disable=False)
+
         # r = s.query('match', box_id=box_id).query(type_query).query('match', name_fa=q)
+
         if r.count() == 0 and not q:
-            r = s.query('match', box_id=box_id).query(must=[Q('match', name_fa=q), Q('match', disable='false')]).query(type_query).query('match_all')[:10]
+            r = s.query('match', box_id=box_id).query('match', disable=False)
+
             # r = s.query('match', box_id=box_id).query('match_all')[:10]
         [products_id.append(product.id) for product in r]
         products = Product.objects.select_related('thumbnail').prefetch_related('storages').in_bulk(products_id)
         products = [products[x] for x in products_id]
-        return {'products': ProductESchema(only=['id', 'name', 'storages', 'thumbnail.id', 'thumbnail.title', 'thumbnail.image'],
-                                           include_storage=True).dump(products, many=True)}
+        return {'products': ProductESchema(
+            only=['id', 'name', 'storages', 'thumbnail.id', 'thumbnail.title', 'thumbnail.image'],
+            include_storage=True).dump(products, many=True)}
 
     def supplier(self, q, username, **kwargs):
         items = []
