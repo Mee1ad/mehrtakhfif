@@ -407,7 +407,7 @@ class InvoiceStorageFDSchema(InvoiceStorageASchema):
 
 class ProductASchema(BaseAdminSchema):
     class Meta:
-        additional = ('review', 'check_review', 'name', 'storages_count', 'active_storages_count')
+        additional = ('review', 'check_review', 'name', 'storages_count', 'active_storages_count', 'unavailable')
 
     list_filter = [Category]
 
@@ -438,6 +438,10 @@ class ProductTagASchema(Schema):
 
 class ProductESchema(ProductASchema, ProductSchema):
     # class ProductESchema(BaseSchema):
+    def __init__(self, include_storage, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.include_storage = include_storage
+
     class Meta:
         unknown = EXCLUDE
         additional = ('verify', 'manage') + ProductSchema.Meta.additional + ProductASchema.Meta.additional
@@ -456,6 +460,12 @@ class ProductESchema(ProductASchema, ProductSchema):
     features = fields.Method("get_features")
     feature_groups = fields.Method("get_feature_groups")
     booking_type = fields.Function(lambda o: o.get_booking_type_display())
+    storages = fields.Method("get_storages", load_only=True, dump_only=False)
+
+    def get_storages(self, obj):
+        if self.include_storage:
+            return StorageASchema().dump(obj.storages.all(), many=True)
+        return []
 
     def get_feature_groups(self, obj):
         categories = obj.categories.all()
@@ -532,13 +542,25 @@ class StorageASchema(BaseAdminSchema):
                       'available_count_for_sale', 'tax', 'product_id', 'settings', 'max_count_for_sale',
                       'min_count_alert', 'disable', 'unavailable')
 
+    least_booking_time = fields.Method("get_least_booking_time")
+    booking_cost = fields.Method("get_booking_cost")
+
+    def get_least_booking_time(self, obj):
+        if obj.product.booking_type == 1:  # unbookable
+            return -1
+        return obj.least_booking_time
+
+    def get_booking_cost(self, obj):
+        if obj.product.booking_type == 1:  # unbookable
+            return -1
+        return obj.booking_cost
+
 
 class StorageESchema(StorageASchema):
     class Meta:
         additional = StorageASchema.Meta.additional + StorageSchema.Meta.additional + \
                      ('features_percent', 'available_count', 'invoice_description',
-                      'invoice_title', 'dimensions', 'package_discount_price', 'sold_count',
-                      'booking_cost', 'least_booking_time')
+                      'invoice_title', 'dimensions', 'package_discount_price', 'sold_count')
 
     supplier = fields.Function(lambda o: UserSchema().dump(o.supplier))
     features = fields.Method('get_features')
