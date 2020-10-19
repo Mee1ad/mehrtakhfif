@@ -133,7 +133,8 @@ class Search(AdminView):
         [products_id.append(product.id) for product in r]
         products = Product.objects.select_related('thumbnail').in_bulk(products_id)
         products = [products[x] for x in products_id]
-        return {'products': ProductASchema(only=['name', 'thumbnail']).dump(products, many=True)}
+        return {'products': ProductASchema(only=['name', 'thumbnail.id', 'thumbnail.title', 'thumbnail.image']).dump(
+            products, many=True)}
 
     def supplier(self, q, username, **kwargs):
         items = []
