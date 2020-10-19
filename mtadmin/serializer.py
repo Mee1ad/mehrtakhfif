@@ -464,7 +464,8 @@ class ProductESchema(ProductASchema, ProductSchema):
 
     def get_storages(self, obj):
         if self.include_storage:
-            return StorageASchema().dump(obj.storages.all(), many=True)
+            return StorageASchema(only=('id', 'title', 'start_price', 'discount_price', 'available_count_for_sale'))\
+                .dump(obj.storages.all(), many=True)
         return []
 
     def get_feature_groups(self, obj):
