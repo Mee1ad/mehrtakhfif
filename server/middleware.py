@@ -79,7 +79,10 @@ class AuthMiddleware:
 
         elif app_name == 'mtadmin':
             request.token = request.headers.get('access-token', None)
-            request.allowed_boxes_id = list(request.user.box_permission.all().values_list('id', flat=True))
+            try:
+                request.allowed_boxes_id = list(request.user.box_permission.all().values_list('id', flat=True))
+            except AttributeError:
+                request.allowed_boxes_id = []
             if not request.user.is_staff:
                 # todo debug
                 pass

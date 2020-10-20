@@ -438,7 +438,7 @@ class ProductTagASchema(Schema):
 
 class ProductESchema(ProductASchema, ProductSchema):
     # class ProductESchema(BaseSchema):
-    def __init__(self, include_storage, *args, **kwargs):
+    def __init__(self, include_storage=False, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.include_storage = include_storage
 
