@@ -39,7 +39,8 @@ class CategoryView(TableView):
             category.child_count = children['count']
             category.category_child_product_count = Product.objects.filter(categories__in=children['childes']).count()
             category.product_count = Product.objects.filter(categories=category).count()
-        test = {'html': "hello </br> world", 'variant': 'error', 'duration': 15000}
+        test = {}
+        # test = {'html': "hello </br> world", 'variant': 'error', 'duration': 15000}
         return JsonResponse({**get_pagination(request, categories, CategoryASchema, request.all), **test})
 
     def post(self, request):
@@ -183,9 +184,10 @@ class ProductView(TableView):
             params['filter']['type__in'] = types2
         if 'review__isnull' in params['filter']:
             required_box = {'error_null_box': False}
-        if params['filter'].get('only_id', False):
+        if params['filter'].get('only_id', False) and params['filter'].get('box_id', False):
             params['filter'].pop('only_id')
-            return JsonResponse({'data': list(Product.objects.filter(**params['filter']).values_list('id', flat=True))})
+            return JsonResponse({'data': list(Product.objects.filter(**params['filter']).order_by('id').distinct('id')
+                                              .values_list('id', flat=True))})
         return JsonResponse(serialized_objects(request, Product, ProductASchema, ProductESchema, params=params,
                                                **required_box))
 
@@ -300,7 +302,7 @@ class StorageView(TableView):
     def get(self, request):
         Storage.objects.filter(deadline__lt=timezone.now(), disable=False).update(disable=True)
         required_fields = ['id', 'name', 'type', 'manage', 'default_storage_id', 'has_selectable_feature',
-                           'booking_type']
+                           'booking_type', 'thumbnail']
         extra_data = []
         box_key = 'product__box'
         params = get_params(request, box_key)
@@ -339,7 +341,13 @@ class StorageView(TableView):
         #     # product = Product.objects.get(pk=product_id)
 
     def post(self, request):
-        return create_object(request, Storage, box_key='product__box', error_null_box=False)
+        data = get_data(request, require_box=True)
+        if data.get('reference_id'):
+            storage = Storage.objects.get(pk=data['reference_id'])
+            storage.pk = None
+            storage.save()
+            return JsonResponse({"message": "انبارو برای تو کپی کردم :)", "variant": "success"})
+        return create_object(request, Storage, box_key='product__box', error_null_box=False, data=data)
 
     def put(self, request):
         return update_object(request, Storage, require_box=False, box_key='product__box')
