@@ -560,7 +560,7 @@ class StorageASchema(BaseAdminSchema):
 class StorageESchema(StorageASchema):
     class Meta:
         additional = StorageASchema.Meta.additional + StorageSchema.Meta.additional + \
-                     ('features_percent', 'available_count', 'invoice_description',
+                     ('features_percent', 'available_count', 'invoice_description', 'max_shipping_time',
                       'invoice_title', 'dimensions', 'package_discount_price', 'sold_count')
 
     supplier = fields.Function(lambda o: UserSchema().dump(o.supplier))
