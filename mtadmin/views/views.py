@@ -1,11 +1,9 @@
 from os import listdir
 from time import sleep
 
-import pysnooper
 from django.core.mail import send_mail
 from django.http import HttpResponseBadRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import render_to_response, render
-
 from django_telegram_login.authentication import verify_telegram_authentication
 from django_telegram_login.errors import TelegramDataIsOutdatedError, NotTelegramDataError
 from elasticsearch_dsl import Q
@@ -15,7 +13,6 @@ from mtadmin.serializer import *
 from mtadmin.utils import *
 from server.documents import *
 from server.utils import *
-from django.db.models import Prefetch
 
 
 class Token(AdminView):
@@ -69,8 +66,8 @@ class TableFilter(AdminView):
             box = {'product__box_id': box_id}
             return JsonResponse({'disable': [{'id': 0, 'name': False}, {'id': 1, 'name': True}]})
         if table == 'media':
-            media_types = Media.objects.order_by('type').distinct('type')
-            return JsonResponse({'types': [{'id': item.type, 'name': item.get_type_display()} for item in media_types]})
+            types = Media.objects.order_by('type').distinct('type')
+            return JsonResponse({'types': [{'id': item.type, 'name': item.get_type_display()} for item in types]})
         elif table == 'invoice':
             invoice_status = Invoice.objects.order_by('status').distinct('status')
             return JsonResponse(
@@ -97,6 +94,7 @@ class CheckLoginToken(AdminView):
 
 
 class Search(AdminView):
+
     def get(self, request):
         model = request.GET.get('type', None)
         switch = {'supplier': self.supplier, 'tag': self.tag, 'product': self.product, 'cat': self.category}

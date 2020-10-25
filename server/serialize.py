@@ -469,7 +469,7 @@ class MinProductSchema(BaseSchema):
     available = fields.Method('is_available')
 
     def is_available(self, obj):
-        return obj.storages.filter(available_count_for_sale__gt=0).exists()
+        return obj.storages.filter(available_count_for_sale__gt=0, disable=False, unavailable=False).exists()
 
 
 class ProductSchema(MinProductSchema):
@@ -558,6 +558,18 @@ class StorageSchema(MinStorageSchema):
 
     default = fields.Function(lambda o: o == o.product.default_storage)
     features = FeatureField()
+    least_booking_time = fields.Method("get_least_booking_time")
+    booking_cost = fields.Method("get_booking_cost")
+
+    def get_least_booking_time(self, obj):
+        if obj.product.booking_type == 1:  # unbookable
+            return -1
+        return obj.least_booking_time
+
+    def get_booking_cost(self, obj):
+        if obj.product.booking_type == 1:  # unbookable
+            return -1
+        return obj.booking_cost
 
 
 class PackageSchema(StorageSchema):

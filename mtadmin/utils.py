@@ -84,6 +84,7 @@ def serialized_objects(request, model, serializer=None, single_serializer=None, 
                 query = model.objects.annotate(**annotate, **params['annotate'], **model.table_annotate).select_related(
                     *model.table_select).prefetch_related(*model.table_prefetch).filter(**params['filter'])
                 return {**get_pagination(request, query, serializer, show_all=request.all), 'ignore_order': True}
+        # print(query.explain())
         return get_pagination(request, query, serializer, show_all=request.all)
     except (FieldError, ValueError):
         raise FieldError
@@ -347,10 +348,6 @@ def add_custom_m2m(obj, field, item_list, user, m2m_type, restrict_m2m, used_pro
         many_to_many_model.objects.bulk_create(items)
 
 
-import pysnooper
-
-
-@pysnooper.snoop()
 def update_object(request, model, box_key='box', return_item=False, serializer=None, data=None, require_box=True,
                   extra_response={}, restrict_objects=(), restrict_m2m=(), used_product_feature_ids=()):
     user = request.user

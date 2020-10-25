@@ -346,6 +346,7 @@ class StorageView(TableView):
             storage = Storage.objects.get(pk=data['reference_id'])
             storage.pk = None
             storage.save()
+
             return JsonResponse({"message": "انبارو برای تو کپی کردم :)", "variant": "success"})
         return create_object(request, Storage, box_key='product__box', error_null_box=False, data=data)
 

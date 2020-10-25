@@ -173,3 +173,15 @@ class DiscountCodeView(View):
             return JsonResponse({'message': 'کد تخفیف اعمال شد', 'variant': 'success'})
         except DiscountCode.DoesNotExist:
             return JsonResponse({'message': 'به نظر نمیاد این کد کاری بکنه!', 'variant': 'warning'})
+
+
+class BookingView(View):
+    def post(self, request):
+        data = load_data(request)
+        user = request.user
+        start_time = timestamp_to_datetime(data['start_time'])
+        end_time = timestamp_to_datetime(data['end_time'])
+        Booking.objects.create(storage_id=data['storage_id'], user=user, type=data['type'],
+                               address_id=data['address_id'], start_time=start_time, end_time=end_time,
+                               card_postal=data['card_postal'])
+        return JsonResponse({'message': 'با موفقیت رزرو شد', 'variant': 'success'})

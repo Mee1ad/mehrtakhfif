@@ -56,7 +56,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     # 'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.admindocs.middleware.XViewMiddleware', # docadmin
+    'django.contrib.admindocs.middleware.XViewMiddleware',  # docadmin
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'server.middleware.AuthMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',

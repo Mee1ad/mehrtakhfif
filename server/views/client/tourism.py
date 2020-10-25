@@ -13,7 +13,7 @@ class HouseView(View):
         # houses = House.objects.filter(people__gte=)
 
 
-class BookingView(View):
+class BookingViewOld(View):
     def post(self, request):
         user = request.user
         data = load_data(request)

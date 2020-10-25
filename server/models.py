@@ -166,6 +166,22 @@ def timestamp_to_datetime(timestamp):
     return datetime.datetime.utcfromtimestamp(timestamp).replace(tzinfo=pytz.utc)
 
 
+def translate_types(dictionary, model):
+    """
+    :types list of tuple: [(1, 'image'), (2, 'thumbnail'), (3, 'media')]
+    :param dictionary:
+    :param model:
+    :return: dictionary
+    """
+    for item in model.choices:
+        types = getattr(model, f'{item}s')
+        try:
+            dictionary[item] = next((v[0] for i, v in enumerate(types) if v[1] == dictionary[item]), dictionary[item])
+        except KeyError:
+            pass
+    return dictionary
+
+
 class MyQuerySet(SafeDeleteQueryset):
     _safedelete_visibility = DELETED_INVISIBLE
     _safedelete_visibility_field = 'pk'
@@ -289,6 +305,7 @@ class Base(SafeDeleteModel):
     prefetch = []
     table_annotate = {}
     annotate = {}
+    choices = ()
 
     _safedelete_policy = SOFT_DELETE_CASCADE
     id = models.BigAutoField(auto_created=True, primary_key=True)
@@ -388,6 +405,7 @@ class MyModel(models.Model):
     prefetch = []
     table_annotate = {}
     annotate = {}
+    choices = ()
 
 
 class Ad(Base):
@@ -626,8 +644,8 @@ class Box(Base):
 
 
 class Media(Base):
-    media_types = [(1, 'image'), (2, 'thumbnail'), (3, 'media'), (4, 'slider'), (5, 'ads'), (6, 'mobile_ads'),
-                   (7, 'category'), (8, 'mobile_slider'), (9, 'description'), (100, 'video'), (200, 'audio')]
+    types = [(1, 'image'), (2, 'thumbnail'), (3, 'media'), (4, 'slider'), (5, 'ads'), (6, 'mobile_ads'),
+             (7, 'category'), (8, 'mobile_slider'), (9, 'description'), (100, 'video'), (200, 'audio')]
     no_box_type = [4, 5, 6, 8]
     media_sizes = {'thumbnail': (600, 372), 'media': (1280, 794), 'category': (800, 500), 'ads': (820, 300),
                    'mobile_ads': (500, 384), 'slider': (1920, 504), 'mobile_slider': (980, 860)}
@@ -661,7 +679,7 @@ class Media(Base):
     video = models.URLField(null=True, blank=True)
     audio = models.URLField(null=True, blank=True)
     title = JSONField(default=multilanguage)
-    type = models.PositiveSmallIntegerField(choices=media_types)
+    type = models.PositiveSmallIntegerField(choices=types)
     box = models.ForeignKey(Box, on_delete=models.CASCADE, null=True, blank=True, related_name="medias")
 
     class Meta:
@@ -757,6 +775,8 @@ class Feature(Base):
     ordered_m2m = {'values': FeatureValue}
     keep_m2m_data = ['values']
     types = ((1, 'bool'), (2, 'text'), (3, 'selectable'))
+    layout_types = ((1, 'default'),)
+    choices = ('type', 'layout_type')
 
     def __str__(self):
         return get_name(self.name, self)
@@ -775,7 +795,7 @@ class Feature(Base):
     name = JSONField(default=multilanguage)
     # group = models.ForeignKey("FeatureGroup", on_delete=CASCADE, related_name="features", null=True, blank=True)
     type = models.PositiveSmallIntegerField(default=1, choices=types)
-    layout_type = models.PositiveSmallIntegerField(default=1, choices=((1, 'default'),))
+    layout_type = models.PositiveSmallIntegerField(default=1, choices=layout_types)
 
     class Meta:
         db_table = 'feature'
@@ -987,6 +1007,7 @@ class Product(Base):
               'description': 'توضیحات'}
     types = [(1, 'service'), (2, 'product'), (3, 'tourism'), (4, 'package'), (5, 'package_item')]
     booking_types = [(1, 'unbookable'), (2, 'datetime'), (3, 'range')]
+    choices = ('type', 'booking_type')
 
     def pre_process(self, my_dict):
         if (self.review is not None) and (my_dict.get('review') != self.review):
@@ -1154,6 +1175,8 @@ class Storage(Base):
     custom_m2m = {'features': ProductFeatureStorage}
     required_m2m = []
     fields = {'supplier': 'تامین کننده', 'dimensions': 'ابعاد'}
+    tax_types = [(1, 'has_not'), (2, 'from_total_price'), (3, 'from_profit')]
+    choices = ('tax_type', )
 
     def full_clean(self, exclude=None, validate_unique=True):
         if Package.objects.filter(package=self):
@@ -1304,8 +1327,7 @@ class Storage(Base):
     max_count_for_sale = models.PositiveSmallIntegerField(default=1)
     min_count_alert = models.PositiveSmallIntegerField(default=5)
     priority = models.PositiveSmallIntegerField(default=0)
-    tax_type = models.PositiveSmallIntegerField(default=0,  # turn to int in pre process
-                                                choices=[(1, 'has_not'), (2, 'from_total_price'), (3, 'from_profit')])
+    tax_type = models.PositiveSmallIntegerField(default=0, choices=tax_types)
     tax = models.PositiveIntegerField(default=0)
     discount_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Discount price percent')
     package_discount_price = models.PositiveSmallIntegerField(default=0)
@@ -1331,6 +1353,7 @@ class Storage(Base):
 
 class Basket(Base):
     select = ['user'] + Base.select
+    sync_levels = [(0, 'ready'), (1, 'reserved'), (2, 'canceled'), (3, 'done')]
 
     def __str__(self):
         return f"{self.user}"
@@ -1341,8 +1364,7 @@ class Basket(Base):
     products = models.ManyToManyField(Storage, through='BasketProduct')
     description = models.TextField(blank=True, null=True)
     # active = models.BooleanField(default=True)
-    sync = models.CharField(max_length=255, choices=[(0, 'ready'), (1, 'reserved'),
-                                                     (2, 'canceled'), (3, 'done')], default=0)
+    sync = models.CharField(max_length=255, choices=sync_levels, default=0)
 
     class Meta:
         db_table = 'basket'
@@ -1410,6 +1432,8 @@ class BlogPost(Base):
 
 class Comment(Base):
     select = ['user', 'reply_to', 'product', 'blog_post'] + Base.select
+    types = [(1, 'q-a'), (2, 'rate')]
+    choices = ('type', )
 
     def __str__(self):
         return f"{self.user}"
@@ -1433,7 +1457,7 @@ class Comment(Base):
     user = models.ForeignKey(User, on_delete=CASCADE)
     reply_to = models.ForeignKey('self', on_delete=CASCADE, blank=True, null=True, related_name="replys")
     suspend = models.BooleanField(default=False)
-    type = models.PositiveSmallIntegerField(choices=[(1, 'q-a'), (2, 'rate')])
+    type = models.PositiveSmallIntegerField(choices=types)
     product = models.ForeignKey(Product, on_delete=CASCADE, null=True, blank=True)
     blog_post = models.ForeignKey(BlogPost, on_delete=CASCADE, null=True, blank=True)
 
@@ -1445,6 +1469,8 @@ class Comment(Base):
 class Invoice(Base):
     objects = MyQuerySet.as_manager()
     select = ['basket', 'suspended_by', 'user', 'charity', 'post_invoice'] + Base.select
+    statuss = ((1, 'pending'), (2, 'payed'), (3, 'canceled'), (4, 'rejected'), (5, 'sent'), (6, 'ready'))
+    choices = ('status', )
 
     success_status = [2, 5, 6]
 
@@ -1484,8 +1510,7 @@ class Invoice(Base):
     # charity = models.PositiveIntegerField(null=True, blank=True)
     ipg = models.PositiveSmallIntegerField(default=1)
     expire = models.DateTimeField(null=True, blank=True)
-    status = models.PositiveSmallIntegerField(default=1, choices=((1, 'pending'), (2, 'payed'), (3, 'canceled'),
-                                                                  (4, 'rejected'), (5, 'sent'), (6, 'ready')))
+    status = models.PositiveSmallIntegerField(default=1, choices=statuss)
     max_shipping_time = models.IntegerField(default=0)
     suppliers = models.ManyToManyField(User, through="InvoiceSuppliers", related_name='invoice_supplier')
     post_tracking_code = models.CharField(max_length=255, null=True, blank=True)
@@ -1566,6 +1591,7 @@ class InvoiceStorage(Base):
 
 class DiscountCode(Base):
     types = [(1, 'product'), (2, 'basket'), (3, 'post')]
+    choices = ('type', )
 
     select = ['storage', 'qr_code', 'invoice'] + Base.select
     storage = models.ForeignKey(Storage, on_delete=CASCADE, related_name='discount_code', null=True, blank=True)
@@ -1584,11 +1610,13 @@ class DiscountCode(Base):
 
 class Menu(Base):
     select = ['media', 'parent', 'box'] + Base.select
+    types = ((1, 'home'),)
+    choices = ('type', )
 
     def __str__(self):
         return f"{self.name['fa']}"
 
-    type = models.PositiveSmallIntegerField(choices=((1, 'home'),))
+    type = models.PositiveSmallIntegerField(choices=types)
     name = JSONField(default=multilanguage)
     media = models.ForeignKey(Media, on_delete=PROTECT, blank=True, null=True)
     url = models.CharField(max_length=25, null=True, blank=True)
@@ -1823,6 +1851,8 @@ class House(Base):
 class Booking(Base):
     select = ['user', 'house', 'product', 'invoice', 'confirmation_by', 'cancel_by', 'reject_by'] + Base.select
     types = [(1, 'hourly'), (2, 'timestamp')]
+    statuss = [(1, 'pending'), (2, 'sent'), (3, 'deliver'), (4, 'reject')]
+    choices = ('statuss', 'types')
 
     def __str__(self):
         return f"{self.house}"
@@ -1835,8 +1865,7 @@ class Booking(Base):
     location = JSONField(null=True)
     least_reserve_time = models.PositiveSmallIntegerField(default=5)
     cart_postal_text = JSONField(default=dict)
-    status = models.PositiveSmallIntegerField(choices=[(1, 'pending'), (2, 'sent'), (3, 'deliver'), (4, 'reject')],
-                                              default=1)
+    status = models.PositiveSmallIntegerField(choices=statuss, default=1)
     invoice = models.ForeignKey(Invoice, on_delete=PROTECT, null=True, blank=True)
     confirmed_at = models.DateTimeField(null=True, blank=True)
     confirmed_by = models.ForeignKey(User, on_delete=PROTECT, null=True, blank=True,
