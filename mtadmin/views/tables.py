@@ -302,7 +302,7 @@ class StorageView(TableView):
     def get(self, request):
         Storage.objects.filter(deadline__lt=timezone.now(), disable=False).update(disable=True)
         required_fields = ['id', 'name', 'type', 'manage', 'default_storage_id', 'has_selectable_feature',
-                           'booking_type', 'thumbnail']
+                           'booking_type', 'thumbnail', 'storages']
         extra_data = []
         box_key = 'product__box'
         params = get_params(request, box_key)
@@ -329,7 +329,7 @@ class StorageView(TableView):
 
             if params['filter'].get('id') or params['filter'].get('product_only'):
                 extra_data.append('features')
-            product = ProductESchema(only=[*required_fields, *extra_data]).dump(product)
+            product = ProductESchema(only=[*required_fields, *extra_data], include_storage=True).dump(product)
         except TypeError:
             product = {}
         return JsonResponse({"product": product, **data})
