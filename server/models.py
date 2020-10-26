@@ -1244,7 +1244,7 @@ class Storage(Base):
     def post_process(self, my_dict):
         if my_dict is None:
             return True
-        if self.product.manage or self.product.default_storage.available_count_for_sale < 1:
+        if self.product.manage or getattr(self.product.default_storage, 'available_count_for_sale', 0) < 1:
             self.product.assign_default_value()
         if my_dict.get('vip_prices', None):
             self.vip_prices.clear()
