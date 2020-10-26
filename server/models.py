@@ -448,6 +448,11 @@ class User(AbstractUser):
     ordered_m2m = {}
     required_m2m = []
     fields = {}
+    table_select = []
+    table_prefetch = []
+    table_annotate = {}
+    annotate = {}
+    choices = ()
 
     def __str__(self):
         try:
