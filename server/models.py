@@ -518,6 +518,11 @@ class User(AbstractUser):
         ordering = ['-id']
 
 
+class Supplier(User):
+    class Meta:
+        proxy = True
+
+
 class VipType(Base):
     serializer_exclude = ()
     required_fields = []
@@ -1181,7 +1186,7 @@ class Storage(Base):
     required_m2m = []
     fields = {'supplier': 'تامین کننده', 'dimensions': 'ابعاد'}
     tax_types = [(1, 'has_not'), (2, 'from_total_price'), (3, 'from_profit')]
-    choices = ('tax_type', )
+    choices = ('tax_type',)
 
     def full_clean(self, exclude=None, validate_unique=True):
         if Package.objects.filter(package=self):
@@ -1438,7 +1443,7 @@ class BlogPost(Base):
 class Comment(Base):
     select = ['user', 'reply_to', 'product', 'blog_post'] + Base.select
     types = [(1, 'q-a'), (2, 'rate')]
-    choices = ('type', )
+    choices = ('type',)
 
     def __str__(self):
         return f"{self.user}"
@@ -1475,7 +1480,7 @@ class Invoice(Base):
     objects = MyQuerySet.as_manager()
     select = ['basket', 'suspended_by', 'user', 'charity', 'post_invoice'] + Base.select
     statuss = ((1, 'pending'), (2, 'payed'), (3, 'canceled'), (4, 'rejected'), (5, 'sent'), (6, 'ready'))
-    choices = ('status', )
+    choices = ('status',)
 
     success_status = [2, 5, 6]
 
@@ -1596,7 +1601,7 @@ class InvoiceStorage(Base):
 
 class DiscountCode(Base):
     types = [(1, 'product'), (2, 'basket'), (3, 'post')]
-    choices = ('type', )
+    choices = ('type',)
 
     select = ['storage', 'qr_code', 'invoice'] + Base.select
     storage = models.ForeignKey(Storage, on_delete=CASCADE, related_name='discount_code', null=True, blank=True)
@@ -1616,7 +1621,7 @@ class DiscountCode(Base):
 class Menu(Base):
     select = ['media', 'parent', 'box'] + Base.select
     types = ((1, 'home'),)
-    choices = ('type', )
+    choices = ('type',)
 
     def __str__(self):
         return f"{self.name['fa']}"

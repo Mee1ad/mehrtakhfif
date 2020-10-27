@@ -8,11 +8,11 @@ from django.contrib.postgres.fields.jsonb import KeyTextTransform
 from django.core.exceptions import FieldError
 from django.urls import reverse
 from django.utils.html import escape
+from django.utils.http import urlencode
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 from prettyjson import PrettyJSONWidget
 from safedelete.admin import SafeDeleteAdmin
-from django.utils.http import urlencode
 
 from .models import *
 
@@ -419,7 +419,7 @@ class StorageAdmin(Base):
 class InvoiceAdmin(SafeDeleteAdmin):
     list_display = ('id', 'amount', 'invoice_discount', 'status', 'get_storages', 'get_suppliers',
                     'get_invoice') + SafeDeleteAdmin.list_display
-    list_filter = ('status', ) + SafeDeleteAdmin.list_filter
+    list_filter = ('status',) + SafeDeleteAdmin.list_filter
     # list_display_links = ('',)
     # search_fields = ['']
     list_per_page = 10
@@ -443,8 +443,9 @@ class InvoiceAdmin(SafeDeleteAdmin):
 
 
 class InvoiceStorageAdmin(admin.ModelAdmin):
-    list_display = ('id', 'storage_name', 'discount_price', 'tax', 'charity', 'start_price', 'dev', 'admin', 'mt_profit',
-                    'count', 'invoice_id')
+    list_display = (
+        'id', 'storage_name', 'discount_price', 'tax', 'charity', 'start_price', 'dev', 'admin', 'mt_profit',
+        'count', 'invoice_id')
 
     # list_filter = ['status', 'supplier']
     # # list_display_links = ('',)
@@ -532,6 +533,23 @@ class VipTypeAdmin(SafeDeleteAdmin):
         return mark_safe(f'<a href="{HOST}{obj.media.url}">{obj.media.name}</a>')
 
 
+class SupplierAdmin(admin.ModelAdmin):
+    list_display = ('id', 'deposit_id', 'first_name', 'last_name', 'shaba', 'is_verify', 'created_by')
+    list_filter = ('is_verify',)
+    search_fields = ['deposit_id', 'first_name', 'last_name', 'phone']
+    list_per_page = 10
+    ordering = ('-deposit_id',)
+    fieldsets = (
+        ('Payment info',
+         {'fields': ('deposit_id', 'first_name', 'last_name', 'shaba', 'is_verify', 'created_by')}),)
+
+    list_editable = ('deposit_id', 'is_verify')
+
+    def get_paginator(self, request, queryset, per_page, orphans=0, allow_empty_first_page=True):
+        queryset = queryset.filter(is_supplier=True)
+        return self.paginator(queryset, per_page, orphans, allow_empty_first_page)
+
+
 register_list = [(Session, SessionAdmin), (User, UserAdmin), (Box, BoxAdmin), (Category, CategoryAdmin),
                  (Feature, FeatureAdmin), (FeatureValue, FeatureValueAdmin), (Address,), (Media, MediaAdmin),
                  (Product, ProductAdmin), (House, HouseAdmin), (FeatureGroup, FeatureGroupAdmin),
@@ -541,7 +559,8 @@ register_list = [(Session, SessionAdmin), (User, UserAdmin), (Box, BoxAdmin), (C
                  (Tag,), (TagGroup,), (Rate,), (Slider, SliderAdmin), (SpecialOffer, SpecialOfferAdmin),
                  (Holiday, HolidayAdmin), (Charity, CharityAdmin), (DiscountCode, DiscountCodeAdmin),
                  (SpecialProduct, SpecialProductAdmin), (Blog,), (BlogPost,), (WishList,), (NotifyUser,), (Ad, AdAdmin),
-                 (State, StateAdmin), (City, CityAdmin), (Permission,), (VipType, VipTypeAdmin)]
+                 (State, StateAdmin), (City, CityAdmin), (Permission,), (VipType, VipTypeAdmin),
+                 (Supplier, SupplierAdmin)]
 for item in register_list:
     admin.site.register(*item)
 admin.site.site_header = "Mehr Takhfif"
