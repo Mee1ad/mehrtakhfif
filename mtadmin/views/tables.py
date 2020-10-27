@@ -679,14 +679,9 @@ class SupplierView(TableView):
         data = get_data(request, require_box=False)
         data['is_supplier'] = True
         [data.pop(k, None) for k in self.rm_list]
+        send_email('MT new supplier', 'soheilravasani@gmail.com', data)
         return create_object(request, User, serializer=SupplierESchema, error_null_box=False,
                              data=data, return_item=True)
-
-    def put(self, request):
-        data = get_data(request, require_box=False)
-        data['is_supplier'] = True
-        [data.pop(k, None) for k in self.rm_list]
-        return update_object(request, User, serializer=SupplierESchema, data=data, return_item=True, require_box=False)
 
 
 class Tax(AdminView):
