@@ -1,12 +1,12 @@
+import json
 from statistics import mean, StatisticsError
 
+from django.shortcuts import render_to_response
 from django.utils.crypto import get_random_string
 
 from mtadmin.serializer import *
 from mtadmin.utils import *
 from server.models import Media
-from django.shortcuts import render_to_response
-import json
 
 
 # from server.models import Product
@@ -246,9 +246,11 @@ class DiscountCodeView(AdminView):
         if params['filter'].pop('html', None):
             if params['filter'].pop('redirect', None):
                 s = request.step
-                discount_codes = list(DiscountCode.objects.filter(**params['filter'])[:s].values_list('code', flat=True))
+                discount_codes = list(
+                    DiscountCode.objects.filter(**params['filter'])[:s].values_list('code', flat=True))
                 ipp = 84  # item per page
-                discount_codes = [discount_codes[n * ipp: (n+1) * ipp] for n in range(int(len(discount_codes) / ipp) + 1)]
+                discount_codes = [discount_codes[n * ipp: (n + 1) * ipp] for n in
+                                  range(int(len(discount_codes) / ipp) + 1)]
                 return render_to_response('discount_code.html', {'discount_codes': discount_codes})
             return JsonResponse({'url': HOST + request.get_full_path() + '&redirect=true'})
         return JsonResponse(serialized_objects(request, DiscountCode, DiscountASchema, DiscountASchema,
@@ -680,7 +682,11 @@ class SupplierView(TableView):
         data = get_data(request, require_box=False)
         data['is_supplier'] = True
         [data.pop(k, None) for k in self.rm_list]
-        send_email('MT new supplier', 'soheilravasani@gmail.com', message=f"{data}")
+        message = f"""{data['first_name']} {data['last_name']}
+                        {data['shaba']}
+                        {data['settings']}
+        """
+        send_email('MT new supplier', 'soheilravasani@gmail.com', message=message)
         return create_object(request, User, serializer=SupplierESchema, error_null_box=False,
                              data=data, return_item=True)
 
