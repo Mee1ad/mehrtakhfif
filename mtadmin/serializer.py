@@ -267,7 +267,7 @@ class DiscountASchema(BaseAdminSchema):
 
 class UserASchema(UserSchema):
     class Meta:
-        additional = UserSchema.Meta.additional + ('avatar',)
+        additional = UserSchema.Meta.additional + ('avatar', 'settings')
 
     telegram_username = fields.Method('get_telegram_username')
 
