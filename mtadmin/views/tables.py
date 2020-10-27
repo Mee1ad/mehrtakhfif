@@ -6,6 +6,7 @@ from mtadmin.serializer import *
 from mtadmin.utils import *
 from server.models import Media
 from django.shortcuts import render_to_response
+import json
 
 
 # from server.models import Product
@@ -679,7 +680,7 @@ class SupplierView(TableView):
         data = get_data(request, require_box=False)
         data['is_supplier'] = True
         [data.pop(k, None) for k in self.rm_list]
-        send_email('MT new supplier', 'soheilravasani@gmail.com', data)
+        send_email('MT new supplier', 'soheilravasani@gmail.com', message=json.dumps(data))
         return create_object(request, User, serializer=SupplierESchema, error_null_box=False,
                              data=data, return_item=True)
 
