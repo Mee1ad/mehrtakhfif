@@ -879,7 +879,7 @@ class TagGroupTag(MyModel):
 class TagGroup(Base):
     # objects = MyQuerySet.as_manager()
 
-    m2m = {'tags': TagGroupTag}
+    custom_m2m = {'tags': TagGroupTag}
     select = ['box'] + Base.select
 
     def __str__(self):

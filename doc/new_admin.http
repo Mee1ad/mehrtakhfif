@@ -618,7 +618,7 @@ PUT {{admin_host}}/tag_group
 Content-Type: application/json
 
 {
-  "id": 1,
+  "id": 63,
   "name": {
     "fa": "'گروه تگ تست'",
     "en": "",
@@ -626,8 +626,8 @@ Content-Type: application/json
   },
   "box_id": 1,
   "tags": [
-    1,
-    2
+    {"tag_id": 1, "show": false},
+    {"tag_id": 2, "show": true}
   ]
 }
 
