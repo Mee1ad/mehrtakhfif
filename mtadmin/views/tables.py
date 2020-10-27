@@ -682,10 +682,7 @@ class SupplierView(TableView):
         data = get_data(request, require_box=False)
         data['is_supplier'] = True
         [data.pop(k, None) for k in self.rm_list]
-        message = f"""{data['first_name']} {data['last_name']}
-                        {data['shaba']}
-                        {data['settings']}
-        """
+        message = f"{data['first_name']} {data['last_name']}\n{data['shaba']}\n{data['settings']}"
         send_email('MT new supplier', 'soheilravasani@gmail.com', message=message)
         return create_object(request, User, serializer=SupplierESchema, error_null_box=False,
                              data=data, return_item=True)
