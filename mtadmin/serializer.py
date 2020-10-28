@@ -476,7 +476,10 @@ class ProductESchema(ProductASchema, ProductSchema):
         return FeatureGroupASchema(product=obj).dump(feature_groups, many=True)
 
     def get_features(self, obj):
-        features = ProductFeature.objects.filter(product=obj, feature__type=3)
+        type_filter = {}
+        if self.include_storage:
+            type_filter = {'feature_type': 3}
+        features = ProductFeature.objects.filter(product=obj, **type_filter)
         return self.get_product_features(features, model='product')
 
 
