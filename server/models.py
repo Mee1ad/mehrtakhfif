@@ -1860,7 +1860,7 @@ class House(Base):
 
 class Booking(Base):
     select = ['user', 'house', 'product', 'invoice', 'confirmation_by', 'cancel_by', 'reject_by'] + Base.select
-    types = [(1, 'hourly'), (2, 'timestamp')]
+    types = Product.booking_types
     statuss = [(1, 'pending'), (2, 'sent'), (3, 'deliver'), (4, 'reject')]
     choices = ('statuss', 'types')
 

@@ -104,6 +104,10 @@ class BoxAdmin(SafeDeleteAdmin):
         return obj.name['fa']
 
 
+class BookingAdmin(Base):
+    list_display = ('user', 'storage', 'type', 'status', 'start_date') + SafeDeleteAdmin.list_display
+
+
 class AdAdmin(admin.ModelAdmin):
     list_display = ('id', 'title_fa', 'url', 'storage', 'get_media', 'get_mobile_media')
     # list_filter = ('name',) + SafeDeleteAdmin.list_filter
@@ -553,7 +557,7 @@ class SupplierAdmin(admin.ModelAdmin):
 register_list = [(Session, SessionAdmin), (User, UserAdmin), (Box, BoxAdmin), (Category, CategoryAdmin),
                  (Feature, FeatureAdmin), (FeatureValue, FeatureValueAdmin), (Address,), (Media, MediaAdmin),
                  (Product, ProductAdmin), (House, HouseAdmin), (FeatureGroup, FeatureGroupAdmin),
-                 (HousePrice, HousePriceAdmin), (ResidenceType, ResidenceTypeAdmin), (Booking, BookAdmin),
+                 (HousePrice, HousePriceAdmin), (ResidenceType, ResidenceTypeAdmin), (Booking, BookingAdmin),
                  (Storage, StorageAdmin), (Basket,), (Comment, CommentAdmin), (Invoice, InvoiceAdmin),
                  (InvoiceStorage, InvoiceStorageAdmin), (InvoiceSuppliers, InvoiceSupplierAdmin), (Menu, MenuAdmin),
                  (Tag,), (TagGroup,), (Rate,), (Slider, SliderAdmin), (SpecialOffer, SpecialOfferAdmin),

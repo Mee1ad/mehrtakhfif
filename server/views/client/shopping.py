@@ -176,12 +176,19 @@ class DiscountCodeView(View):
 
 
 class BookingView(View):
+
     def post(self, request):
         data = load_data(request)
         user = request.user
-        start_time = timestamp_to_datetime(data['start_time'])
-        end_time = timestamp_to_datetime(data['end_time'])
-        Booking.objects.create(storage_id=data['storage_id'], user=user, type=data['type'],
-                               address_id=data['address_id'], start_time=start_time, end_time=end_time,
-                               card_postal=data['card_postal'])
-        return JsonResponse({'message': 'با موفقیت رزرو شد', 'variant': 'success'})
+        start_date = timestamp_to_datetime(data['start_date'])
+        end_date = timestamp_to_datetime(data['end_date'])
+        preview = get_preview_permission(user, is_get=False)
+        try:
+            storage = Storage.objects.filter(pk=data['storage_id'], **preview).exclude(product__booking_type=1).\
+                select_related('product').only('product__type').first()
+            Booking.objects.create(storage_id=data['storage_id'], user=user, created_by=user, updated_by=user,
+                                   address_id=user.default_address_id, start_date=start_date, end_date=end_date,
+                                   cart_postal_text=data['cart_postal_text'], type=storage.product.booking_type)
+            return JsonResponse({'message': 'با موفقیت رزرو شد', 'variant': 'success'})
+        except AttributeError:
+            return JsonResponse({'message': 'امکان رزرو برای این محصول وجود ندارد', 'variant': 'error'})

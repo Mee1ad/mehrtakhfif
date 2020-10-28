@@ -558,15 +558,22 @@ def get_product_filter_params(is_staff):
     return {'categories__disable': False, 'box__disable': False, 'disable': False, 'storages__disable': False}
 
 
-def get_preview_permission(user, category_check=True, box_check=True, box_key='box'):
-    if user.is_staff is False:
-        preview = {'disable': False}
-        if category_check:
-            preview['categories__disable'] = False
-        if box_check:
-            preview[f'{box_key}__disable'] = False
-        return preview
-    return {}
+def get_preview_permission(user, category_check=True, box_check=True, box_key='box', product_check=True, is_get=True):
+    permitted_users = []  # user_id, can order for disabled product
+    if is_get:
+        permitted_users = [user.pk]
+    if user.is_staff and user.pk in permitted_users:
+        return {}
+    preview = {'disable': False}
+    product = ""
+    if product_check:
+        product = "product__"
+        preview[f'product__disable'] = False
+    if category_check:
+        preview[f'{product}categories__disable'] = False
+    if box_check:
+        preview[f'{product}{box_key}__disable'] = False
+    return preview
 
 
 # Security

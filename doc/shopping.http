@@ -128,3 +128,19 @@ Content-Type: application/json
 GET http://api.mt.com/test
 
 ###
+POST {{host}}/booking
+Content-Type: application/json
+
+{
+  "start_date": 1603872025,
+  "end_date": 1603871025,
+  "storage_id": 798,
+  "type": "datetime",
+  "address_id": 5,
+  "cart_postal_text": {
+    "from": "ali",
+    "text": "with love"
+  }
+}
+
+###

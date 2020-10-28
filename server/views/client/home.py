@@ -1,19 +1,16 @@
+import pysnooper
+from django.db import connection
 from django.http import JsonResponse, HttpResponseNotFound
 
 from server.documents import *
 from server.serialize import *
 from server.utils import *
-import pysnooper
-from django.contrib.auth import logout
-from django.contrib import messages
-from django.db import connection
 
 
 class Test(View):
     def get(self, request):
         # messages.add_message(request, messages.INFO, 'Hello world.')
-        u = User.objects.all()
-        print(connection.queries)
+
         return JsonResponse({})
         # print('old', request.session.get('basket'))
         # if request.session.get('basket') is None:
@@ -129,6 +126,7 @@ class BoxWithCategory(View):
         is_admin = False
         if request.headers.get('admin', None):
             is_admin = True
+        disable = {}
         try:
             disable = {'disable': False} if not request.user.is_staff else {}
             box = Box.objects.get(**box_filter, **disable)
