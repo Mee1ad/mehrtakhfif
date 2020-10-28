@@ -478,7 +478,7 @@ class ProductESchema(ProductASchema, ProductSchema):
     def get_features(self, obj):
         type_filter = {}
         if self.include_storage:
-            type_filter = {'feature_type': 3}
+            type_filter = {'feature__type': 3}
         features = ProductFeature.objects.filter(product=obj, **type_filter)
         return self.get_product_features(features, model='product')
 
