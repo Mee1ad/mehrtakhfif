@@ -476,7 +476,7 @@ class ProductESchema(ProductASchema, ProductSchema):
         return FeatureGroupASchema(product=obj).dump(feature_groups, many=True)
 
     def get_features(self, obj):
-        features = ProductFeature.objects.filter(product=obj)
+        features = ProductFeature.objects.filter(product=obj, feature__type=3)
         return self.get_product_features(features, model='product')
 
 
