@@ -29,7 +29,7 @@ from server.serialize import get_tax, BoxCategoriesSchema, BasketSchema, MinProd
 # from barcode.base import Barcode
 from server.views.post import get_shipping_cost_temp
 
-random_data = string.ascii_lowercase + string.digits
+random_data = string.ascii_lowercase + string.ascii_uppercase + string.digits
 default_step = 10
 default_page = 1
 
@@ -558,7 +558,7 @@ def get_product_filter_params(is_staff):
     return {'categories__disable': False, 'box__disable': False, 'disable': False, 'storages__disable': False}
 
 
-def get_preview_permission(user, category_check=True, box_check=True, box_key='box', product_check=True, is_get=True):
+def get_preview_permission(user, category_check=True, box_check=True, box_key='box', product_check=False, is_get=True):
     permitted_users = []  # user_id, can order for disabled product
     if is_get:
         permitted_users = [user.pk]

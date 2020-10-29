@@ -52,7 +52,9 @@ class PaymentRequest(View):
         #     raise ValidationError(_('متاسفانه در حال حاضر امکان خرید وجود ندارد'))
         # if request.user.is_staff:
         basket = Basket.objects.filter(user=request.user, id=basket_id).first()
-        if DEBUG is True or request.user.is_superuser:
+        permitted_user = []
+        # if DEBUG is True or request.user.pk in permitted_user:
+        if DEBUG is True:
             invoice = self.create_invoice(request)
             self.submit_invoice_storages(request, invoice.pk)
             invoice.basket.sync = 3

@@ -181,8 +181,8 @@ class BookingView(View):
         data = load_data(request)
         user = request.user
         start_date = timestamp_to_datetime(data['start_date'])
-        end_date = timestamp_to_datetime(data['end_date'])
-        preview = get_preview_permission(user, is_get=False)
+        end_date = timestamp_to_datetime(data.get('end_date', data['start_date']))
+        preview = get_preview_permission(user, is_get=False, product_check=True)
         try:
             storage = Storage.objects.filter(pk=data['storage_id'], **preview).exclude(product__booking_type=1).\
                 select_related('product').only('product__type').first()
