@@ -5,8 +5,8 @@ from math import ceil
 from jdatetime import date, timedelta
 from marshmallow import Schema, fields
 
-from server.models import *
 from mehr_takhfif.settings import SHORTLINK
+from server.models import *
 
 
 def get_tax(tax_type, discount_price, start_price=None):
@@ -24,7 +24,7 @@ def get_tax(tax_type, discount_price, start_price=None):
 
 class MediaField(fields.Field):
     def _serialize(self, value, attr, obj, **kwargs):
-        media = ProductMedia.objects.filter(product=obj).order_by('priority')
+        media = ProductMedia.objects.filter(product=obj).select_related('media').order_by('priority')
         medias = ProductMediaSchema().dump(media, many=True)
         return [m['media'] for m in medias]
 
@@ -43,6 +43,7 @@ class PackageItemsField(fields.Field):
 
 class TagField(fields.Field):
     def _serialize(self, value, attr, obj, **kwargs):
+        # tags = list(ProductTag.objects.filter(product=obj).select_related('tag'))
         tags = list(ProductTag.objects.filter(product=obj))
         for tag_group in obj.tag_groups.all():
             tags += TagGroupTag.objects.filter(taggroup=tag_group)
@@ -423,6 +424,9 @@ class FeatureValueSchema(BaseSchema):
 
 
 class ProductFeatureSchema(BaseSchema):
+    class Meta:
+        additional = ('priority',)
+
     feature = fields.Method('get_feature')
     feature_value = fields.Method('get_feature_value')
     settings = fields.Method('get_settings')
@@ -611,7 +615,7 @@ class BasketSchema(BaseSchema):
 
 class InvoiceSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'final_price', 'invoice_discount')
+        additional = ('id', 'final_price', 'invoice_discount', 'details')
 
     payed_at = fields.Method('get_payed_at')
     status = fields.Function(lambda o: o.get_status_display())
@@ -619,7 +623,30 @@ class InvoiceSchema(BaseSchema):
     storages = InvoiceStorageField()
     amount = fields.Method('get_amount')  # without tax
     created_at = fields.Function(lambda o: o.created_at.timestamp())
+    start_date = fields.Method("get_start_date")
+    end_date = fields.Method("get_end_date")
     invoice = fields.Method("get_invoice_file")
+    booking_type = fields.Method("get_booking_type")
+
+    def get_booking_type(self, obj):
+        if not obj.start_date:
+            return 'unbookable'
+        if obj.start_date == obj.end_date:
+            return 'datetime'
+        return 'range'
+
+    def get_start_date(self, obj):
+        try:
+            return obj.start_date.timestamp()
+        except Exception as e:
+            print(e)
+            return None
+
+    def get_end_date(self, obj):
+        try:
+            return obj.end_date.timestamp()
+        except Exception:
+            return None
 
     def get_invoice_file(self, obj):
         try:

@@ -136,11 +136,17 @@ Content-Type: application/json
   "end_date": 1603871025,
   "storage_id": 798,
   "type": "datetime",
-  "address_id": 5,
   "cart_postal_text": {
-    "from": "ali",
+    "sender": "ali",
     "text": "with love"
   }
 }
 
 ###
+PUT {{host}}/set_order/ProductFeature
+Content-Type: application/json
+
+{
+  "product_id": 93,
+  "ids": [1, 2, 3]
+}

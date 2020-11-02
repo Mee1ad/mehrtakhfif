@@ -9,7 +9,6 @@ from mehr_takhfif.settings import DEBUG, CLIENT_HOST
 from server.serialize import *
 from server.tasks import cancel_reservation
 from server.utils import get_basket, add_one_off_job, sync_storage, add_minutes
-from math import ceil, floor
 
 ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'disable': False},
                 {'id': 2, 'key': 'melli', 'name': 'ملی', 'hide': True, 'disable': True},
@@ -87,9 +86,11 @@ class PaymentRequest(View):
         invoice = self.create_invoice(request)
         self.reserve_storage(basket, invoice)
         self.submit_invoice_storages(request, invoice.pk)
-        return JsonResponse({"url": f"{bp['ipg_url']}?RefId={self.behpardakht_api(request, invoice.pk)}"})
+        url = self.behpardakht_api(request, invoice.pk)
+        return JsonResponse({"url": url})
 
-    def behpardakht_api(self, request, invoice_id, charity_id=1):
+    @staticmethod
+    def behpardakht_api(request, invoice_id, charity_id=1):
         invoice = Invoice.objects.get(pk=invoice_id)
         basket = get_basket(request, basket=invoice.basket, return_obj=True, tax=True)
         tax = basket.summary["tax"]
@@ -144,7 +145,7 @@ class PaymentRequest(View):
             ref_id = r[2:]
             invoice.reference_id = ref_id
             invoice.save()
-            return ref_id
+            return f"{bp['ipg_url']}?RefId={ref_id}"
         else:
             print(additional_data)
             raise ValueError(_(f"can not get ipg page: {r}"))

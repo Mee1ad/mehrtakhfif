@@ -1,8 +1,13 @@
-from django.http import JsonResponse
+import operator
+import traceback
+
+from django.http import JsonResponse, HttpResponseRedirect
 from django.utils.translation import gettext_lazy as _
 
-from server.serialize import BasketProductSchema, ProductFeatureSchema
+from mehr_takhfif.settings import CLIENT_HOST
+from server.serialize import BasketProductSchema, ProductFeatureSchema, AddressSchema, MediaSchema
 from server.utils import *
+from server.views.payment import PaymentRequest, CallBack
 from server.views.post import *
 
 
@@ -177,6 +182,24 @@ class DiscountCodeView(View):
 
 class BookingView(View):
 
+    def get(self, request, invoice_id):
+        if DEBUG is True:
+            invoice = Invoice.objects.get(pk=invoice_id)
+            invoice.status = 2
+            invoice.payed_at = timezone.now()
+            invoice.card_holder = '012345******6789'
+            invoice.final_amount = invoice.amount
+            invoice.save()
+            # task_name = f'{invoice.id}: send invoice'
+            # kwargs = {"invoice_id": invoice.pk, "lang": request.lang, 'name': task_name}
+            Basket.objects.create(user=invoice.user, created_by=invoice.user, updated_by=invoice.user)
+            CallBack.notification_admin(invoice)
+            # return JsonResponse({'invoice_id': invoice.id})
+            # return HttpResponseRedirect(f"http://mt.com:3002/invoice/{invoice.id}")
+            return HttpResponseRedirect(f"{CLIENT_HOST}/invoice/{invoice.id}")
+        url = PaymentRequest.behpardakht_api(request, invoice_id)
+        return HttpResponseRedirect(url)
+
     def post(self, request):
         data = load_data(request)
         user = request.user
@@ -184,11 +207,59 @@ class BookingView(View):
         end_date = timestamp_to_datetime(data.get('end_date', data['start_date']))
         preview = get_preview_permission(user, is_get=False, product_check=True)
         try:
-            storage = Storage.objects.filter(pk=data['storage_id'], **preview).exclude(product__booking_type=1).\
-                select_related('product').only('product__type').first()
-            Booking.objects.create(storage_id=data['storage_id'], user=user, created_by=user, updated_by=user,
-                                   address_id=user.default_address_id, start_date=start_date, end_date=end_date,
-                                   cart_postal_text=data['cart_postal_text'], type=storage.product.booking_type)
-            return JsonResponse({'message': 'با موفقیت رزرو شد', 'variant': 'success'})
+            storage = Storage.objects.filter(pk=data['storage_id'], **preview).exclude(product__booking_type=1). \
+                select_related('product').prefetch_related(
+                'product__features').only('product__type', 'product__thumbnail', 'product__box').first()
+            invoice_id = self.create_invoice(request, storage, data.get('count', 1), start_date, end_date,
+                                             data['cart_postal_text'])
+            invoice = HOST + f"/booking/{invoice_id}"
+            address = Address.objects.filter(pk=user.default_address_id).select_related('city', 'state').first()
+            res = {"address": AddressSchema().dump(address),
+                   'start_date': data['start_date'], "thumbnail": MediaSchema().dump(storage.product.thumbnail),
+                   'cart_postal': data['cart_postal_text'], 'invoice': invoice}
+            return JsonResponse({'data': res, 'message': 'رزرو شما پس از پرداخت فعال میشود', 'variant': 'success'})
         except AttributeError:
-            return JsonResponse({'message': 'امکان رزرو برای این محصول وجود ندارد', 'variant': 'error'})
+            traceback.print_exc()
+            return JsonResponse({'message': 'امکان رزرو برای این محصول وجود ندارد', 'variant': 'error'}, status=400)
+
+    def create_invoice(self, request, storage, count, start_date, end_date, cart_postal_text, charity_id=1):
+        user = request.user
+        if user.default_address.state_id != 25:
+            raise ValidationError('در حال حاضر محصولات فقط در استان گیلان قابل ارسال میباشد')
+        shipping_cost = get_shipping_cost_temp(user) + storage.shipping_cost + storage.booking_cost
+        tax = get_tax(storage.tax_type, storage.discount_price, storage.start_price)
+        address = AddressSchema().dump(user.default_address)
+        post_invoice = Invoice.objects.create(created_by=user, updated_by=user, user=user, address=address,
+                                              expire=add_minutes(15), amount=shipping_cost)
+
+        invoice = Invoice.objects.create(created_by=user, updated_by=user, user=user, charity_id=charity_id,
+                                         expire=add_minutes(15), final_price=storage.final_price,
+                                         amount=storage.discount_price + tax, start_date=start_date,
+                                         end_date=end_date, details={'cart_postal': cart_postal_text},
+                                         invoice_discount=storage.final_price - storage.discount_price, address=address,
+                                         max_shipping_time=storage.max_shipping_time, post_invoice=post_invoice)
+        self.submit_invoice_storages(invoice.pk, storage, user.pk, count)
+        return invoice.pk
+
+    def reserve_storage(self, basket, invoice):
+        sync_storage(basket, operator.sub)
+        task_name = f'{invoice.id}: cancel reservation'
+        kwargs = {"invoice_id": invoice.id, "task_name": task_name}
+        invoice.sync_task = add_one_off_job(name=task_name, kwargs=kwargs, interval=15,
+                                            task='server.tasks.cancel_reservation')
+        invoice.save()
+
+    def submit_invoice_storages(self, invoice_id, storage, user_id, count=1):
+        share = get_share(storage)
+        product = storage.product
+        InvoiceStorage.objects.create(storage=storage, invoice_id=invoice_id, count=count,
+                                      tax=share['tax'] * count,
+                                      final_price=(storage.final_price - share['tax']) * count, box=product.box,
+                                      discount_price=storage.discount_price * count,
+                                      charity=share['charity'] * count,
+                                      start_price=storage.start_price * count, admin=share['admin'] * count, mt_profit=share['mt_profit'],
+                                      total_price=(storage.final_price - share['tax']) * count,
+                                      dev=share['dev'] * count,
+                                      discount_price_without_tax=(storage.discount_price - share['tax']) * count,
+                                      discount=(storage.final_price - storage.discount_price) * count,
+                                      created_by_id=user_id, updated_by_id=user_id)

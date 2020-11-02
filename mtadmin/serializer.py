@@ -298,15 +298,28 @@ class BoxASchema(BoxSchema):
         return False
 
 
-class InvoiceASchema(BaseAdminSchema, InvoiceSchema):
+class InvoiceASchema(BaseAdminSchema):
     list_filter = [Category]
 
     class Meta:
-        additional = ('basket_id',)
+        additional = ('start_date', 'end_date', 'details', 'amount')
 
     user = fields.Nested(MinUserSchema)
     deliver_status = fields.Method("get_deliver_status")
     products_count = fields.Method("get_products_count")
+    start_date = fields.Method("get_end_date")
+    end_date = fields.Method("get_start_date")
+    payed_at = fields.Method("get_payed_at")
+    status = fields.Function(lambda o: o.get_status_display())
+
+    def get_payed_at(self, obj):
+        return self.get_date(obj, 'payed_at')
+
+    def get_end_date(self, obj):
+        return self.get_date(obj, 'end_date')
+
+    def get_start_date(self, obj):
+        return self.get_date(obj, 'start_date')
 
     def get_products_count(self, obj):
         return sum(obj.invoice_storages.all().values_list('count', flat=True))
@@ -330,9 +343,6 @@ class InvoiceESchema(InvoiceASchema):
             'card_holder', 'post_tracking_code')
 
     ipg = fields.Method('get_ipg')
-    suspended_by = fields.Function(lambda o: o.suspended_by.first_name + " "
-                                             + o.suspended_by.last_name if o.suspended_by else None)
-    suspended_at = fields.Function(lambda o: o.suspended_at.timestamp() if o.suspended_at else None)
     invoice_products = fields.Method("get_invoice_products")
     tax = fields.Method("get_tax")
     shipping_cost = fields.Int()
@@ -345,6 +355,26 @@ class InvoiceESchema(InvoiceASchema):
     charity = fields.Method("get_charity")
     dev = fields.Method("get_dev")
     admin = fields.Method("get_admin_profit")
+    suspended_by = fields.Nested(AdminSchema)
+    cancel_by = fields.Nested(AdminSchema)
+    reject_by = fields.Nested(AdminSchema)
+    confirmed_by = fields.Nested(AdminSchema)
+    suspended_at = fields.Method("get_suspended_at")
+    cancel_at = fields.Method("get_cancel_at")
+    reject_at = fields.Method("get_reject_at")
+    confirmed_at = fields.Method("get_confirmed_at")
+
+    def get_suspended_at(self, obj):
+        return self.get_date(obj, 'suspended_at')
+
+    def get_cancel_at(self, obj):
+        return self.get_date(obj, 'cancel_at')
+
+    def get_reject_at(self, obj):
+        return self.get_date(obj, 'reject_at')
+
+    def get_confirmed_at(self, obj):
+        return self.get_date(obj, 'confirmed_at')
 
     def get_admin_profit(self, obj):
         return InvoiceStorage.objects.filter(invoice=obj).aggregate(admin=Sum('admin'))['admin'] or 0
@@ -384,19 +414,30 @@ class InvoiceESchema(InvoiceASchema):
         return [ip for ip in ipg['data'] if ip['id'] == obj.ipg][0]
 
 
-class InvoiceStorageASchema(InvoiceStorageSchema):
+class InvoiceStorageASchema(BaseAdminSchema):
     class Meta:
-        additional = InvoiceStorageSchema.Meta.additional + ('id', 'count', 'invoice_id', 'discount_price')
+        additional = ('id', 'count', 'invoice_id', 'discount_price')
 
     storage = fields.Method("get_storage")
+    product = fields.Method("get_product")
     deliver_status = fields.Function(lambda o: o.get_deliver_status_display())
     user = fields.Method("get_user")
+    purchase_date = fields.Method('get_purchase_date')
+
+    def get_purchase_date(self, obj):
+        try:
+            return obj.invoice.payed_at.timestamp()
+        except AttributeError:
+            return None
 
     def get_user(self, obj):
-        return MinUserSchema().dump(obj.invoice.user)
+        return MinUserSchema(only=('id', 'first_name', 'last_name', 'username')).dump(obj.invoice.user)
 
     def get_storage(self, obj):
-        return StorageESchema().dump(obj.storage)
+        return StorageESchema(only=('id', 'title', 'supplier')).dump(obj.storage)
+
+    def get_product(self, obj):
+        return ProductASchema(only=('id', 'thumbnail', )).dump(obj.storage.product)
 
 
 class InvoiceStorageFDSchema(InvoiceStorageASchema):
@@ -566,7 +607,7 @@ class StorageESchema(StorageASchema):
                      ('features_percent', 'available_count', 'invoice_description', 'max_shipping_time',
                       'invoice_title', 'dimensions', 'package_discount_price', 'sold_count')
 
-    supplier = fields.Function(lambda o: UserSchema().dump(o.supplier))
+    supplier = fields.Nested(MinUserSchema)
     features = fields.Method('get_features')
     items = PackageItemsField()
     tax = fields.Function(lambda o: o.get_tax_type_display())

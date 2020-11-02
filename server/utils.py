@@ -229,6 +229,15 @@ def safe_get(*args):
         pass
 
 
+def get_share(storage):
+    tax = get_tax(storage.tax_type, storage.discount_price, storage.start_price)
+    charity = round(storage.discount_price * 0.005)
+    dev = round((storage.discount_price - storage.start_price - tax) * 0.069)
+    admin = round((storage.discount_price - storage.start_price - tax - charity - dev) *
+                  storage.product.box.share)
+    mt_profit = storage.discount_price - storage.start_price - tax - charity - dev - admin
+    return {'tax': tax, 'charity': charity, 'dev': dev, 'admin': admin, 'mt_profit': mt_profit}
+
 # No Usage
 
 def to_json(obj=None, string=None):

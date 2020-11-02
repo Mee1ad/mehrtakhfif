@@ -70,7 +70,18 @@ Content-Type: application/json
   "prefix": "test"
 }
 ###
+### Post Discount Code
+POST {{admin_host}}/discount_code
+Content-Type: application/json
+
+{
+  "type": 3,
+  "username": "09015518439"
+}
+
+###
 GET {{admin_host}}/discount_code?id=5
+
 ###
 ### Product CRUD
 POST {{admin_host}}/product
@@ -163,7 +174,7 @@ PUT {{admin_host}}/product
 Content-Type: application/json
 
 {
-  "id": 1223,
+  "id": 1237,
   "box_id": 3,
   "type": "product",
   "brand_id": 26,
@@ -357,7 +368,9 @@ Content-Type: application/json
   "name": {
     "fa": "2فیچر با اردر"
   },
-  "groups": [1],
+  "groups": [
+    1
+  ],
   "type": "text",
   "layout_type": "default",
   "values": [
@@ -397,7 +410,9 @@ Content-Type: application/json
   "name": {
     "fa": "تست مرتب سازی 2"
   },
-  "groups": [1],
+  "groups": [
+    1
+  ],
   "type": "selectable",
   "layout_type": "default",
   "values": [
@@ -427,9 +442,14 @@ PATCH {{admin_host}}/feature
 Content-Type: application/json
 
 {
-  "ids": [124, 123, 118, 117]
-
+  "ids": [
+    124,
+    123,
+    118,
+    117
+  ]
 }
+
 ###
 DELETE {{admin_host}}/feature_value?id=54
 
@@ -474,7 +494,15 @@ Content-Type: application/json
     "fa": "مشخصات فنی"
   },
   "box_id": 3,
-  "features": [89, 88, 87, 86, 85, 84]
+  "show_title": true,
+  "features": [
+    89,
+    88,
+    87,
+    86,
+    85,
+    84
+  ]
 }
 
 ###
@@ -493,7 +521,15 @@ Content-Type: application/json
     "fa": "مشخصات فنی"
   },
   "box_id": 3,
-  "features": [87, 88, 84, 86, 85, 89]
+  "show_title": true,
+  "features": [
+    87,
+    88,
+    84,
+    86,
+    85,
+    89
+  ]
 }
 
 ###
@@ -626,8 +662,14 @@ Content-Type: application/json
   },
   "box_id": 1,
   "tags": [
-    {"tag_id": 1, "show": false},
-    {"tag_id": 2, "show": true}
+    {
+      "tag_id": 1,
+      "show": false
+    },
+    {
+      "tag_id": 2,
+      "show": true
+    }
   ]
 }
 

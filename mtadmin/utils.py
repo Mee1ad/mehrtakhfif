@@ -347,9 +347,7 @@ def add_custom_m2m(obj, field, item_list, user, m2m_type, restrict_m2m, used_pro
             items.append(many_to_many_model(**item, **extra_fields, **user, **priority, **related))
         many_to_many_model.objects.bulk_create(items)
 
-import pysnooper
 
-@pysnooper.snoop()
 def update_object(request, model, box_key='box', return_item=False, serializer=None, data=None, require_box=True,
                   extra_response={}, restrict_objects=(), restrict_m2m=(), used_product_feature_ids=()):
     user = request.user
@@ -489,3 +487,12 @@ def get_obj_type(obj=None, type_id=None, class_name=None):
     types = class_name.types
     type_id = type_id or obj.type
     return next((value[1] for index, value in enumerate(types) if value[0] == type_id), '')
+
+
+def generate_post_discount_code(username):
+    from mtadmin.views.tables import random_data
+    from django.utils.crypto import get_random_string
+    code = get_random_string(10, random_data)
+    user = User.objects.get(username=username)
+    DiscountCode.objects.create(code=code, type=3, created_by=user, updated_by=user)
+    print(code)

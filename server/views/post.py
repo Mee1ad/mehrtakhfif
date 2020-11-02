@@ -64,11 +64,12 @@ def get_state_position_temp(destination):
     return 'out'
 
 
-def get_shipping_cost_temp(user, basket):
+def get_shipping_cost_temp(user, basket=None):
     try:
         # check if has post discount
-        if user.vip_types.filter(name__fa="MehrTakhfif").exists() or basket.discount_code.filter(type=3).exists():
-            return 0
+        if basket:
+            if user.vip_types.filter(name__fa="MehrTakhfif").exists() or basket.discount_code.filter(type=3).exists():
+                return 0
     except AttributeError:
         pass
     if not user.is_authenticated or not user.default_address:

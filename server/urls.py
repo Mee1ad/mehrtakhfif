@@ -55,7 +55,8 @@ product = [
 ]
 
 tourism = [
-    path('booking', try_except(BookingView.as_view()), name='booking')
+    path('booking', try_except(BookingView.as_view()), name='booking'),
+    path('booking/<int:invoice_id>', try_except(BookingView.as_view()), name='booking')
 ]
 
 shopping = [

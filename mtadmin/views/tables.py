@@ -2,11 +2,11 @@ import json
 from statistics import mean, StatisticsError
 
 from django.shortcuts import render_to_response
-from django.utils.crypto import get_random_string
 
 from mtadmin.serializer import *
 from mtadmin.utils import *
 from server.models import Media
+from django.utils.crypto import get_random_string
 
 
 # from server.models import Product
@@ -259,6 +259,12 @@ class DiscountCodeView(AdminView):
 
     def post(self, request):
         data = json.loads(request.body)
+        if data.get('type', None) == 3 and request.user.is_superuser:
+            code = get_random_string(10, random_data)
+            user = User.objects.get(username=data['username'])
+            DiscountCode.objects.create(code=code, type=3, created_by=user, updated_by=user)
+            return JsonResponse({'code': code})
+        user = request.user
         storage_id = data['storage_id']
         count = data['count']
         code_len = data.get('len', 5)
@@ -268,7 +274,7 @@ class DiscountCodeView(AdminView):
         while len(set(codes)) < count:
             codes = list(set(codes))
             codes += [prefix + '-' + get_random_string(code_len, random_data) for c in range(count - len(set(codes)))]
-        user = request.user
+
         items = [DiscountCode(code=code, storage=storage, created_by=user, updated_by=user) for code in codes]
         discount_codes = DiscountCode.objects.bulk_create(items)
         storage.available_count_for_sale = DiscountCode.objects.filter(storage=storage, invoice__isnull=True).count()
@@ -408,11 +414,14 @@ class InvoiceView(TableView):
 
     def get(self, request):
         params = get_params(request, box_key='box_id')
+        if params['filter'].pop('only_booking', None):
+            params['filter']['start_date__isnull'] = False
+        params['filter']['final_price__isnull'] = False
         status = params['filter'].get('status', None)
         if status:
             params['filter']['status'] = {'pending': 1, 'payed': 2, 'canceled': 3, 'rejected': 4,
                                           'sent': 5, 'ready': 6}[status]
-        params['filter']['final_price__isnull'] = False
+
         return JsonResponse(serialized_objects(request, Invoice, InvoiceASchema, InvoiceESchema, error_null_box=False,
                                                params=params))
 
@@ -438,8 +447,10 @@ class InvoiceProductView(TableView):
     def get(self, request):
         params = get_params(request, box_key='box_id')
         params['filter']['invoice__status__in'] = Invoice.success_status
+        if params['filter'].pop('only_booking', None):
+            params['filter']['invoice__start_date__isnull'] = False
         serializer = InvoiceStorageASchema
-        if get_group(request.user) in ['superuser', 'accountants']:
+        if request.user.is_superuser or get_group(request.user) in ['superuser', 'accountants']:
             serializer = InvoiceStorageFDSchema
         return JsonResponse(serialized_objects(request, InvoiceStorage, serializer, serializer,
                                                error_null_box=False, params=params))
