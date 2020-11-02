@@ -335,7 +335,11 @@ class InvoiceASchema(BaseAdminSchema):
         return f'{ready_product_counts} / {product_counts}'
 
 
-class InvoiceESchema(InvoiceASchema):
+class InvoiceESchema(InvoiceASchema, InvoiceSchema):
+    def __init__(self, user=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+
     class Meta:
         additional = InvoiceASchema.Meta.additional + (
             'id', 'basket_id', 'amount', 'status', 'final_price', 'special_offer_id',
@@ -364,6 +368,13 @@ class InvoiceESchema(InvoiceASchema):
     cancel_at = fields.Method("get_cancel_at")
     reject_at = fields.Method("get_reject_at")
     confirmed_at = fields.Method("get_confirmed_at")
+
+    def get_invoice_file(self, obj):
+        try:
+            if self.user.is_staff or obj.get_type_display == 'payed':
+                return HOST + f'/invoice_detail/{obj.id}'
+        except AttributeError:
+            return None
 
     def get_suspended_at(self, obj):
         return self.get_date(obj, 'suspended_at')
