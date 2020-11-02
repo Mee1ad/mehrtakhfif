@@ -345,6 +345,7 @@ class InvoiceESchema(InvoiceASchema):
     ipg = fields.Method('get_ipg')
     invoice_products = fields.Method("get_invoice_products")
     tax = fields.Method("get_tax")
+    invoice = fields.Method("get_invoice_file")
     shipping_cost = fields.Int()
     start_price = fields.Method('get_start_price')
     post_invoice = fields.Nested("InvoiceASchema")
