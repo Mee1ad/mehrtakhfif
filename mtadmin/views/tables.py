@@ -357,14 +357,14 @@ class StorageView(TableView):
             storage.save()
             return JsonResponse({"message": "انبارو برای تو کپی کردم :)", "variant": "success"})
         #  todo Aryan
-        if not data['shipping_cost']:
+        if not data.get('shipping_cost', 1):
             data['shipping_cost'] = 0
         return create_object(request, Storage, box_key='product__box', error_null_box=False, data=data)
 
     def put(self, request):
         data = get_data(request, require_box=True)
         #  todo Aryan
-        if not data['shipping_cost']:
+        if not data.get('shipping_cost', 1):
             data['shipping_cost'] = 0
         return update_object(request, Storage, require_box=False, box_key='product__box',
                              data=data)
