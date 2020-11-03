@@ -119,7 +119,7 @@ class FeatureView(TableView):
                              restrict_m2m=['features'])
 
     def patch(self, request):
-        check_user_permission(request.user, 'server.change_feature')
+        check_user_permission(request.user, 'change_feature')
         data = get_data(request, require_box=False)
         ids = data['ids']
         features = FeatureValue.objects.filter(pk__in=ids)
@@ -355,7 +355,6 @@ class StorageView(TableView):
             storage = Storage.objects.get(pk=data['reference_id'])
             storage.pk = None
             storage.save()
-
             return JsonResponse({"message": "انبارو برای تو کپی کردم :)", "variant": "success"})
         #  todo Aryan
         if not data['shipping_cost']:
@@ -363,7 +362,12 @@ class StorageView(TableView):
         return create_object(request, Storage, box_key='product__box', error_null_box=False, data=data)
 
     def put(self, request):
-        return update_object(request, Storage, require_box=False, box_key='product__box')
+        data = get_data(request, require_box=True)
+        #  todo Aryan
+        if not data['shipping_cost']:
+            data['shipping_cost'] = 0
+        return update_object(request, Storage, require_box=False, box_key='product__box',
+                             data=data)
 
     def delete(self, request):
         return delete_base(request, Storage)
