@@ -197,7 +197,7 @@ class BookingView(View):
             # return JsonResponse({'invoice_id': invoice.id})
             # return HttpResponseRedirect(f"http://mt.com:3002/invoice/{invoice.id}")
             return HttpResponseRedirect(f"{CLIENT_HOST}/invoice/{invoice.id}")
-        url = PaymentRequest.behpardakht_api(request, invoice_id)
+        url = PaymentRequest.behpardakht_api(request, invoice_id, booking=True)
         return HttpResponseRedirect(url)
 
     def post(self, request):
@@ -250,6 +250,8 @@ class BookingView(View):
         invoice.save()
 
     def submit_invoice_storages(self, invoice_id, storage, user_id, count=1):
+        storage.count = count
+        storage.storage = storage
         share = get_share(storage)
         product = storage.product
         InvoiceStorage.objects.create(storage=storage, invoice_id=invoice_id, count=count,

@@ -8,7 +8,8 @@ from django.views import View
 from mehr_takhfif.settings import DEBUG, CLIENT_HOST
 from server.serialize import *
 from server.tasks import cancel_reservation
-from server.utils import get_basket, add_one_off_job, sync_storage, add_minutes
+import pysnooper
+from server.utils import LoginRequired, get_basket, add_one_off_job, sync_storage, add_minutes, get_share
 
 ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'disable': False},
                 {'id': 2, 'key': 'melli', 'name': 'ملی', 'hide': True, 'disable': True},
@@ -22,6 +23,8 @@ ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'dis
 bp = {'terminal_id': 5290645, 'username': "takh252", 'password': "71564848",
       'ipg_url': "https://bpm.shaparak.ir/pgwchannel/startpay.mellat",
       'callback': 'https://api.mehrtakhfif.com/payment/callback'}  # mellat
+
+deposit = {'charity': 111, 'dev': 19}
 
 if not DEBUG:
     client = zeep.Client(wsdl="https://bpm.shaparak.ir/pgwchannel/services/pgw?wsdl")
@@ -42,7 +45,7 @@ class IPG(View):
         return JsonResponse({'ipg': ipg})
 
 
-class PaymentRequest(View):
+class PaymentRequest(LoginRequired):
     def get(self, request, basket_id):
         # ip = request.META.get('REMOTE_ADDR') or request.META.get('HTTP_X_FORWARDED_FOR')
 
@@ -52,8 +55,8 @@ class PaymentRequest(View):
         # if request.user.is_staff:
         basket = Basket.objects.filter(user=request.user, id=basket_id).first()
         permitted_user = []
-        # if DEBUG is True or request.user.pk in permitted_user:
-        if DEBUG is True:
+        if DEBUG is True and request.user.pk in permitted_user:
+        # if DEBUG:
             invoice = self.create_invoice(request)
             self.submit_invoice_storages(request, invoice.pk)
             invoice.basket.sync = 3
@@ -90,15 +93,23 @@ class PaymentRequest(View):
         return JsonResponse({"url": url})
 
     @staticmethod
-    def behpardakht_api(request, invoice_id, charity_id=1):
-        invoice = Invoice.objects.get(pk=invoice_id)
-        basket = get_basket(request, basket=invoice.basket, return_obj=True, tax=True)
-        tax = basket.summary["tax"]
-        charity = basket.summary["charity"]
-        charity_deposit = Charity.objects.get(pk=charity_id).deposit_id
-        additional_data = [[1, int(basket.summary["mt_profit"] + basket.summary["charity"] + tax +
-                                   basket.summary['shipping_cost'] - charity) * 10, 0],
-                           [charity_deposit, charity * 10, 0]]
+    def behpardakht_api(request, invoice_id, charity_id=1, booking=False):
+        # charity_deposit = Charity.objects.get(pk=charity_id).deposit_id
+        invoice = Invoice.objects.filter(pk=invoice_id).prefetch_related('storages').select_related(
+            'post_invoice').first()
+        share = get_share(invoice=invoice)
+        shipping_cost = getattr(getattr(invoice, 'post_invoice', None), 'amount', 0)
+        additional_data = [[1, (share['mt_profit'] + share['tax'] + shipping_cost + share['admin']) * 10, 0],
+                           [deposit['charity'], share['charity'] * 10, 0],
+                           [deposit['dev'], share['dev'] * 10, 0]]
+        # invoice = Invoice.objects.get(pk=invoice_id)
+        # if not booking:
+        # basket = get_basket(request, basket=invoice.basket, return_obj=True, tax=True)
+        # tax = basket.summary["tax"]
+        # charity = basket.summary["charity"]
+        # additional_data = [[1, int(basket.summary["mt_profit"] + basket.summary["charity"] + tax +
+        #                            basket.summary['shipping_cost'] - charity) * 10, 0],
+        #                    [deposit['charity'], charity * 10, 0]]
         # bug '1,49000,0;1,16000,0'
         # todo add feature price
         suppliers_invoice = InvoiceSuppliers.objects.filter(invoice_id=invoice_id)
@@ -124,7 +135,7 @@ class PaymentRequest(View):
         #             break
         #     else:
         #         additional_data.append([supplier.deposit_id, basket_product.start_price * 10, 0])
-
+        print(additional_data)
         additional_data = ';'.join(','.join(str(x) for x in b) for b in additional_data)
 
         local_date = timezone.now().strftime("%Y%m%d")
@@ -137,8 +148,7 @@ class PaymentRequest(View):
             r = client.service.bpCumulativeDynamicPayRequest(terminalId=bp['terminal_id'], userName=bp['username'],
                                                              userPassword=bp['password'], localTime=local_time,
                                                              localDate=local_date, orderId=invoice.id,
-                                                             amount=(invoice.amount + basket.summary[
-                                                                 'shipping_cost']) * 10,
+                                                             amount=(invoice.amount + shipping_cost) * 10,
                                                              additionalData=additional_data,
                                                              callBackUrl=bp['callback'])
         if r[0:2] == "0,":
@@ -207,20 +217,23 @@ class PaymentRequest(View):
             if not InvoiceSuppliers.objects.filter(invoice=invoice, supplier=supplier).update(
                     amount=F('amount') + amount):
                 InvoiceSuppliers.objects.create(invoice=invoice, supplier=supplier, amount=amount)
-            tax = get_tax(storage.tax_type, storage.discount_price, storage.start_price)
-            charity = round(storage.discount_price * 0.005)
-            dev = round((storage.discount_price - storage.start_price - tax) * 0.069)
-            admin = round((storage.discount_price - storage.start_price - tax - charity - dev) *
-                          storage.product.box.share)
-            mt_profit = storage.discount_price - storage.start_price - tax - charity - dev - admin
+            # tax = get_tax(storage.tax_type, storage.discount_price, storage.start_price)
+            # charity = round(storage.discount_price * 0.005)
+            # dev = round((storage.discount_price - storage.start_price - tax) * 0.069)
+            # admin = round((storage.discount_price - storage.start_price - tax - charity - dev) *
+            #               storage.product.box.share)
+            # mt_profit = storage.discount_price - storage.start_price - tax - charity - dev - admin
+            storage.count = product.count
+            storage.storage = storage
+            share = get_share(storage)
             invoice_products.append(
-                InvoiceStorage(storage=storage, invoice_id=invoice_id, count=product.count, tax=tax * product.count,
-                               final_price=(storage.final_price - tax) * product.count, box=product.box,
-                               discount_price=storage.discount_price * product.count, charity=charity * product.count,
-                               start_price=storage.start_price * product.count, admin=admin * product.count,
-                               features=product.features, mt_profit=mt_profit,
-                               total_price=(storage.final_price - tax) * product.count, dev=dev * product.count,
-                               discount_price_without_tax=(storage.discount_price - tax) * product.count,
+                InvoiceStorage(storage=storage, invoice_id=invoice_id, count=product.count, tax=share['tax'],
+                               final_price=(storage.final_price - share['tax']) * product.count, box=product.box,
+                               discount_price=storage.discount_price * product.count, charity=share['charity'],
+                               start_price=storage.start_price * product.count, admin=share['admin'],
+                               features=product.features, mt_profit=share['mt_profit'],
+                               total_price=(storage.final_price - share['tax']) * product.count, dev=share['dev'],
+                               discount_price_without_tax=(storage.discount_price - share['tax']) * product.count,
                                discount=(storage.final_price - storage.discount_price) * product.count,
                                created_by=invoice.user, updated_by=invoice.user))
         InvoiceStorage.objects.bulk_create(invoice_products)

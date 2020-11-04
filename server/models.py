@@ -769,7 +769,7 @@ class FeatureValue(Base):
     feature = models.ForeignKey("Feature", on_delete=CASCADE, related_name="values")
     value = JSONField(default=dict)
     priority = models.PositiveIntegerField(default=0)
-    settings = JSONField(default=dict)
+    settings = JSONField(default=dict, blank=True)
 
     # priority = models.PositiveSmallIntegerField(default=0)
 

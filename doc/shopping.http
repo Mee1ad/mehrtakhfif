@@ -11,13 +11,10 @@ Content-Type: Application/json
 {
   "products": [
     {
-      "id": 266,
-      "count": 2,
-      "features": []
+      "storage_id": 755,
+      "count": 2
     }
-  ],
-  "override": true,
-  "add": true
+  ]
 }
 
 ### DiscountCode
@@ -55,7 +52,7 @@ Content-Type: Application/json
 }
 
 ### get payment: basket_id, ipg_id: default = 1
-GET {{host}}/payment/2
+GET {{host}}/payment/110
 
 ### for ipg
 POST {{host}}/callback
