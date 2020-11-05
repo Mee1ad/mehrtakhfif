@@ -236,6 +236,7 @@ def get_share(storage=None, invoice=None):
     :param invoice:
     :return:
     """
+    no_profit_box = [14]
     share = {'tax': 0, 'charity': 0, 'dev': 0, 'admin': 0, 'mt_profit': 0}
     invoice_storages = [storage]
     if invoice:
@@ -246,15 +247,17 @@ def get_share(storage=None, invoice=None):
     for invoice_storage in invoice_storages:
         count = invoice_storage.count
         storage = invoice_storage.storage
-        tax = get_tax(storage.tax_type, storage.discount_price, storage.start_price)
-        charity = ceil(storage.discount_price * 0.005)
-        dev = ceil((storage.discount_price - storage.start_price - tax) * 0.069)
-        admin = ceil((storage.discount_price - storage.start_price - tax - charity - dev) *
-                     storage.product.box.share)
-        mt_profit = storage.discount_price - storage.start_price - tax - charity - dev - admin
-        share = {'tax': share['tax'] + tax, 'charity': share['charity'] + charity, 'dev': share['dev'] + dev,
-                 'admin': share['admin'] + admin, 'mt_profit': share['mt_profit'] + mt_profit}
-        share = {k: v * count for k, v in share.items()}
+        box = storage.product.box
+        share = {'tax': 0, 'charity': 0, 'dev': 0, 'admin': 0, 'mt_profit': 0}
+        if box.pk not in no_profit_box:
+            tax = get_tax(storage.tax_type, storage.discount_price, storage.start_price)
+            charity = ceil(storage.discount_price * 0.005)
+            dev = ceil((storage.discount_price - storage.start_price - tax) * 0.069)
+            admin = ceil((storage.discount_price - storage.start_price - tax - charity - dev) * box.share)
+            mt_profit = storage.discount_price - storage.start_price - tax - charity - dev - admin
+            share = {'tax': share['tax'] + tax, 'charity': share['charity'] + charity, 'dev': share['dev'] + dev,
+                     'admin': share['admin'] + admin, 'mt_profit': share['mt_profit'] + mt_profit}
+            share = {k: v * count for k, v in share.items()}
     return share
 
 
