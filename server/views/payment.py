@@ -243,7 +243,7 @@ class PaymentRequest(LoginRequired):
 class CallBack(View):
     # todo dor debug
     def get(self, request):
-        return HttpResponseRedirect("https://mehrtakhfif.com")
+        return HttpResponseRedirect(f"{CLIENT_HOST}/profile/all-order")
 
     def post(self, request):
         # todo redirect to site anyway
