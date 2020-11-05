@@ -239,6 +239,7 @@ class BookingView(View):
                                          invoice_discount=storage.final_price - storage.discount_price, address=address,
                                          max_shipping_time=storage.max_shipping_time, post_invoice=post_invoice)
         self.submit_invoice_storages(invoice.pk, storage, user.pk, count)
+        InvoiceSuppliers.objects.create(invoice=invoice, supplier=storage.supplier, amount=storage.start_price)
         return invoice.pk
 
     def reserve_storage(self, basket, invoice):
