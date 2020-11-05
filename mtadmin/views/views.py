@@ -37,13 +37,13 @@ class ReviewPrice(AdminView):
         # elif dper and vdper:
         #     dp = int(fp - fp * dper / 100)
 
-        admin_share = Box.objects.only('share').get(pk=data['b']).share
+        box = Box.objects.only('share', 'pk').get(pk=data['b'])
         data = translate_types(data, Storage)
         storage = {'count': 1, 'storage': '', 'tax_type': data['tax_type'], 'discount_price': data['discount_price'],
                    'start_price': data['start_price'], 'final_price': data['final_price']}
         storage = type('Storage', (), {**storage})()
         storage.product = type('Product', (), {})()
-        storage.product.box = type('Box', (), {'share': admin_share})()
+        storage.product.box = type('Box', (), {'share': box.share, 'pk': box.pk})()
         storage.storage = storage
         share = get_share(storage)
         profit = share['charity'] + share['dev'] + share['admin'] + share['mt_profit']
