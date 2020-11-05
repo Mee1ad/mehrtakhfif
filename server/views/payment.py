@@ -98,7 +98,9 @@ class PaymentRequest(LoginRequired):
         invoice = Invoice.objects.filter(pk=invoice_id).prefetch_related('storages').select_related(
             'post_invoice').first()
         share = get_share(invoice=invoice)
+        print(share)
         shipping_cost = getattr(getattr(invoice, 'post_invoice', None), 'amount', 0)
+        print(shipping_cost)
         additional_data = [[1, (share['mt_profit'] + share['tax'] + shipping_cost + share['admin']) * 10, 0],
                            [deposit['charity'], share['charity'] * 10, 0],
                            [deposit['dev'], share['dev'] * 10, 0]]
