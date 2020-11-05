@@ -68,7 +68,7 @@ Content-Type: application/json
   "tax_type": "from_total_price",
   "discount_price": 20000,
   "start_price": 10000,
-  "final_price": 30000,
+  "final_price": 0,
   "shipping_cost": 1000
 }
 

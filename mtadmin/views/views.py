@@ -50,9 +50,13 @@ class ReviewPrice(AdminView):
         if not request.user.is_superuser or get_group(request.user) in ['superuser', 'accountants']:
             remove_fields = ['dev', 'admin', 'charity', 'mt_profit']
             [share.pop(field, None) for field in remove_fields]
-        dper = ceil(100 - data['discount_price'] / data['final_price'] * 100)
+        try:
+            dper = {'discount_percent': ceil(100 - data['discount_price'] / data['final_price'] * 100)}
+        except ZeroDivisionError:
+            dper = {'message': 'هومممم، قیمت بدون تخفیف 0؟ درصد تخفیف هم شونصدهزار پس!', 'variant': 'warning',
+                    'discount_percent': 600000}
         share = {**share, 'discount_price': data['discount_price'], 'shipping_cost': data['shipping_cost'],
-                 'discount_percent': dper, 'profit': profit}
+                 'profit': profit, **dper}
         return JsonResponse({'data': share})
 
 

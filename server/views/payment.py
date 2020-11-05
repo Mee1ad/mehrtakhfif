@@ -257,7 +257,7 @@ class CallBack(View):
         invoice = Invoice.objects.get(pk=invoice_id, reference_id=data_dict['RefId'])
         if not ref_id or not self.verify(invoice_id, ref_id):
             self.finish_invoice_jobs(invoice, cancel=True)
-            return HttpResponseRedirect("https://mehrtakhfif.com")
+            return HttpResponseRedirect(CLIENT_HOST)
         # todo https://memoryleaks.ir/unlimited-charge-of-mytehran-account/
         invoice.status = 2
         try:
@@ -276,7 +276,7 @@ class CallBack(View):
         invoice.save()
         self.finish_invoice_jobs(invoice, finish=True)
         self.notification_admin(invoice)
-        return HttpResponseRedirect(f"https://mehrtakhfif.com/invoice/{invoice_id}")
+        return HttpResponseRedirect(f"{CLIENT_HOST}/invoice/{invoice_id}")
 
     def finish_invoice_jobs(self, invoice, cancel=None, finish=None):
         if finish:  # successfull payment, cancel task
