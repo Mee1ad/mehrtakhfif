@@ -11,11 +11,11 @@ from server.models import *
 
 def get_tax(tax_type, discount_price, start_price=None):
     try:
-        return int({
-                       1: 0,
-                       2: ceil(discount_price - discount_price / 1.09),
-                       3: ceil((discount_price - start_price) - (discount_price - start_price) / 0.09)
-                   }[tax_type])
+        return {
+            1: 0,
+            2: ceil(discount_price - discount_price / 1.09),
+            3: ceil((discount_price - start_price) - (discount_price - start_price) / 0.09)
+        }[tax_type]
     except KeyError:
         return 0
 

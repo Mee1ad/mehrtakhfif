@@ -28,6 +28,7 @@ from server.serialize import get_tax, BoxCategoriesSchema, BasketSchema, MinProd
 # from barcode import generate
 # from barcode.base import Barcode
 from server.views.post import get_shipping_cost_temp
+from django.db.models import Sum
 
 random_data = string.ascii_lowercase + string.ascii_uppercase + string.digits
 default_step = 10
@@ -238,7 +239,10 @@ def get_share(storage=None, invoice=None):
     share = {'tax': 0, 'charity': 0, 'dev': 0, 'admin': 0, 'mt_profit': 0}
     invoice_storages = [storage]
     if invoice:
-        invoice_storages = InvoiceStorage.objects.filter(invoice=invoice)
+        share = InvoiceStorage.objects.filter(invoice_id=402).aggregate(tax=Sum('tax'), charity=Sum('charity'),
+                                                                        dev=Sum('dev'), admin=Sum('admin'),
+                                                                        mt_profit=Sum('mt_profit'))
+        return share
     for invoice_storage in invoice_storages:
         count = invoice_storage.count
         storage = invoice_storage.storage

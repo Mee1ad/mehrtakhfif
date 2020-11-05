@@ -164,7 +164,6 @@ class PaymentRequest(LoginRequired):
         user = request.user
         address = None
         basket = basket or get_basket(request, require_profit=True)
-        shipping_price = 0
         if basket['address_required']:
             if user.default_address.state_id != 25:
                 raise ValidationError('در حال حاضر محصولات فقط در گیلان قابل ارسال میباشد')
@@ -178,10 +177,10 @@ class PaymentRequest(LoginRequired):
             if max_shipping_time < product['product']['default_storage']['max_shipping_time']:
                 max_shipping_time = product['product']['default_storage']['max_shipping_time']
         post_invoice = None
-        if basket['summary']['shipping_cost']:
+        shipping_cost = basket['summary']['shipping_cost']
+        if shipping_cost:
             post_invoice = Invoice.objects.create(created_by=user, updated_by=user, user=user, address=address,
-                                                  expire=add_minutes(15),
-                                                  amount=basket['summary']['shipping_cost'],
+                                                  expire=add_minutes(15), amount=shipping_cost,
                                                   basket_id=basket['basket']['id'])
         invoice = Invoice.objects.create(created_by=user, updated_by=user, user=user, charity_id=charity_id,
                                          # mt_profit=basket['summary']['mt_profit'],

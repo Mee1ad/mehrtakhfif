@@ -59,6 +59,19 @@ Content-Type: application/json
 ###
 DELETE {{admin_host}}/category?id=54
 
+### check prices
+POST {{admin_host}}/review_price
+Content-Type: application/json
+
+{
+  "b": 10,
+  "tax_type": "from_total_price",
+  "discount_price": 20000,
+  "start_price": 10000,
+  "final_price": 30000,
+  "shipping_cost": 1000
+}
+
 ### DiscountCode CR, Params: id, storage_id
 POST {{admin_host}}/discount_code
 Content-Type: application/json

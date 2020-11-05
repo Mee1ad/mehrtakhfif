@@ -311,7 +311,7 @@ class StorageView(TableView):
     def get(self, request):
         Storage.objects.filter(deadline__lt=timezone.now(), disable=False).update(disable=True)
         required_fields = ['id', 'name', 'type', 'manage', 'default_storage_id', 'has_selectable_feature',
-                           'booking_type', 'thumbnail', 'storages']
+                           'booking_type', 'thumbnail', 'storages', 'box']
         extra_data = []
         box_key = 'product__box'
         params = get_params(request, box_key)

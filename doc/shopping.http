@@ -11,7 +11,7 @@ Content-Type: Application/json
 {
   "products": [
     {
-      "storage_id": 755,
+      "storage_id": 41,
       "count": 2
     }
   ]
@@ -52,7 +52,7 @@ Content-Type: Application/json
 }
 
 ### get payment: basket_id, ipg_id: default = 1
-GET {{host}}/payment/110
+GET {{host}}/payment/111
 
 ### for ipg
 POST {{host}}/callback

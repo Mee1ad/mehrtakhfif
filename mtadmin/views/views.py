@@ -6,7 +6,6 @@ from django.http import HttpResponseBadRequest, HttpResponse, HttpResponseRedire
 from django.shortcuts import render_to_response, render
 from django_telegram_login.authentication import verify_telegram_authentication
 from django_telegram_login.errors import TelegramDataIsOutdatedError, NotTelegramDataError
-from elasticsearch_dsl import Q
 
 from mehr_takhfif.settings import ARVAN_API_KEY, TELEGRAM_BOT_TOKEN
 from mtadmin.serializer import *
@@ -22,22 +21,39 @@ class Token(AdminView):
         return res
 
 
-class CheckPrices(AdminView):
+class ReviewPrice(AdminView):
     def post(self, request):
-        data = json.loads(request.body)
-        fp = data['final_price']
-        dp = data.get('discount_price', None)
-        vdp = data.get('vip_discount_price', None)
-        dper = data.get('discount_percent', None)
-        vdper = data.get('vip_discount_percent', None)
+        data = get_data(request, require_box=False)
 
-        if dp and vdp:
-            dper = int(100 - dp / fp * 100)
-            return JsonResponse({'discount_percent': dper})
-        elif dper and vdper:
-            dp = int(fp - fp * dper / 100)
-            return JsonResponse({'discount_price': dp})
-        return JsonResponse({})
+        # fp = data['final_price']
+        # dp = data.get('discount_price', None)
+        # vdp = data.get('vip_discount_price', None)
+        # dper = data.get('discount_percent', None)
+        # vdper = data.get('vip_discount_percent', None)
+        #
+        # if dp and vdp:
+        #     dper = int(100 - dp / fp * 100)
+        #     return JsonResponse({'discount_percent': dper})
+        # elif dper and vdper:
+        #     dp = int(fp - fp * dper / 100)
+
+        admin_share = Box.objects.only('share').get(pk=data['b']).share
+        data = translate_types(data, Storage)
+        storage = {'count': 1, 'storage': '', 'tax_type': data['tax_type'], 'discount_price': data['discount_price'],
+                   'start_price': data['start_price'], 'final_price': data['final_price']}
+        storage = type('Storage', (), {**storage})()
+        storage.product = type('Product', (), {})()
+        storage.product.box = type('Box', (), {'share': admin_share})()
+        storage.storage = storage
+        share = get_share(storage)
+        profit = share['charity'] + share['dev'] + share['admin'] + share['mt_profit']
+        if not request.user.is_superuser or get_group(request.user) in ['superuser', 'accountants']:
+            remove_fields = ['dev', 'admin', 'charity', 'mt_profit']
+            [share.pop(field, None) for field in remove_fields]
+        dper = ceil(100 - data['discount_price'] / data['final_price'] * 100)
+        share = {**share, 'discount_price': data['discount_price'], 'shipping_cost': data['shipping_cost'],
+                 'discount_percent': dper, 'profit': profit}
+        return JsonResponse({'data': share})
 
 
 class MailView(AdminView):
@@ -266,3 +282,15 @@ class TelegramRegister(View):
         except NotTelegramDataError:
             return HttpResponse('The data is not related to Telegram!')
         return HttpResponseRedirect('https://admin.mehrtakhfif.com')
+
+
+class SetOrder(View):
+    def put(self, request, model):
+        check_user_permission(request.user, 'change_feature')
+        data = get_data(request, require_box=False)
+        ids = data['ids']
+        features = FeatureValue.objects.filter(pk__in=ids)
+        for feature in features:
+            feature.priority = ids.index(feature.pk)
+        FeatureValue.objects.bulk_update(features, ['priority'])
+        return JsonResponse({**responses['priority']}, status=202)
