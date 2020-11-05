@@ -14,6 +14,7 @@ from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
 from django.core import serializers
 from django.core.exceptions import PermissionDenied
 from django.core.mail import EmailMultiAlternatives
+from django.db.models import Sum
 from django.utils.translation import gettext_lazy as _
 from django.views import View
 from django_celery_beat.models import IntervalSchedule
@@ -28,7 +29,6 @@ from server.serialize import get_tax, BoxCategoriesSchema, BasketSchema, MinProd
 # from barcode import generate
 # from barcode.base import Barcode
 from server.views.post import get_shipping_cost_temp
-from django.db.models import Sum
 
 random_data = string.ascii_lowercase + string.ascii_uppercase + string.digits
 default_step = 10
@@ -239,9 +239,9 @@ def get_share(storage=None, invoice=None):
     share = {'tax': 0, 'charity': 0, 'dev': 0, 'admin': 0, 'mt_profit': 0}
     invoice_storages = [storage]
     if invoice:
-        share = InvoiceStorage.objects.filter(invoice_id=402).aggregate(tax=Sum('tax'), charity=Sum('charity'),
-                                                                        dev=Sum('dev'), admin=Sum('admin'),
-                                                                        mt_profit=Sum('mt_profit'))
+        share = InvoiceStorage.objects.filter(invoice=invoice).aggregate(tax=Sum('tax'), charity=Sum('charity'),
+                                                                         dev=Sum('dev'), admin=Sum('admin'),
+                                                                         mt_profit=Sum('mt_profit'))
         return share
     for invoice_storage in invoice_storages:
         count = invoice_storage.count
