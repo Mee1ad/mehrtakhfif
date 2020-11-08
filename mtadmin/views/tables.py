@@ -178,6 +178,8 @@ class ProductView(TableView):
         types = request.GET.getlist('type[]')
         types2 = []
         params = get_params(request, 'box_id')
+        new_params = {'available': 'storages__available_count_for_sale__gt'}
+        params['filter'] = translate_params(params['filter'], new_params)
         required_box = {'error_null_box': True}
         for t in types:
             types2.append({'service': 1, 'product': 2, 'tourism': 3, 'package': 4, 'package_item': 5}[t])
@@ -311,7 +313,7 @@ class StorageView(TableView):
     def get(self, request):
         Storage.objects.filter(deadline__lt=timezone.now(), disable=False).update(disable=True)
         required_fields = ['id', 'name', 'type', 'manage', 'default_storage_id', 'has_selectable_feature',
-                           'booking_type', 'thumbnail', 'storages', 'box']
+                           'booking_type', 'thumbnail', 'storages', 'box', 'media']
         extra_data = []
         box_key = 'product__box'
         params = get_params(request, box_key)
