@@ -834,7 +834,7 @@ class FeatureGroup(Base):
     # custom_m2m = {'features': Feature}
 
     name = JSONField(default=multilanguage)
-    show_title = models.BooleanField(default=True)
+    settings = JSONField(default=dict, help_text="{show_title: false}")
     box = models.ForeignKey(Box, on_delete=PROTECT)
     features = models.ManyToManyField("Feature", through="FeatureGroupFeature", related_name='groups')
 
