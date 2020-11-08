@@ -1357,6 +1357,7 @@ class Storage(Base):
                            validators=[validate_vip_price], default=dict, blank=True)
     max_shipping_time = models.PositiveIntegerField(default=0)
     settings = JSONField(default=dict, blank=True)
+    media = models.ForeignKey(Media, on_delete=SET_NULL, null=True, blank=True)
 
     class Meta:
         db_table = 'storage'

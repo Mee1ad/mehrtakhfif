@@ -290,12 +290,15 @@ class TelegramRegister(View):
 
 
 class SetOrder(View):
-    def put(self, request, model):
-        check_user_permission(request.user, 'change_feature')
+    def put(self, request):
+        # check_user_permission(request.user, 'change_feature')
         data = get_data(request, require_box=False)
+        print(data)
+        model = {'product_feature': ProductFeature, 'feature_value': FeatureValue,
+                 'feature_group_feature': FeatureGroupFeature}[data['model']]
         ids = data['ids']
-        features = FeatureValue.objects.filter(pk__in=ids)
-        for feature in features:
-            feature.priority = ids.index(feature.pk)
-        FeatureValue.objects.bulk_update(features, ['priority'])
+        objects = model.objects.filter(pk__in=ids)
+        for obj in objects:
+            obj.priority = ids.index(obj.pk)
+        model.objects.bulk_update(objects, ['priority'])
         return JsonResponse({**responses['priority']}, status=202)

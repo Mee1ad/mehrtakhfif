@@ -44,11 +44,12 @@ def error_handler(func):
             traceback.print_exc()
             return JsonResponse({}, status=res_code['token_issue'])
         except IntegrityError as e:
+            traceback.print_exc()
             pattern = r'(\((\w+)\))='
             try:
                 field = re.search(pattern, str(e))[2]
                 return JsonResponse(
-                    {"type": "یا پرمالینکو تکراری زدی یا پرمالینکی که درخواست کردی وجود نداره حالا تشخیصش با خودته!", "field": field},
+                    {"message": f"مشکل داره {field}", "variant": "error"},
                     status=res_code['integrity'])
             except (TypeError, IntegrityError):
                 e = str(e).split('DETAIL', 1)[0][:-1]

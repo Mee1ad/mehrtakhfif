@@ -29,6 +29,20 @@ def related_objects(objects):
     return res
 
 
+def dump(raw_data):
+    if type(raw_data) is not list:
+        return raw_data
+    data = []
+    for d in raw_data:
+        if d not in data:
+            data.append(d)
+    try:
+        data = sorted(data, key=lambda i: i['priority'])
+    except (KeyError, TypeError):
+        pass
+    return data
+
+
 # ManyToMany Relations
 
 class ProductFeatureField(fields.Field):
@@ -101,17 +115,7 @@ class BaseAdminSchema(Schema):
     # noinspection DuplicatedCode
     def dump(self, *args, **kwargs):
         raw_data = super().dump(*args, **kwargs)
-        if type(raw_data) is not list:
-            return raw_data
-        data = []
-        for d in raw_data:
-            if d not in data:
-                data.append(d)
-        try:
-            data = sorted(data, key=lambda i: i['priority'])
-        except (KeyError, TypeError):
-            pass
-        return data
+        return dump(raw_data)
 
     def get_date(self, obj, field):
         try:
@@ -449,7 +453,7 @@ class InvoiceStorageASchema(BaseAdminSchema):
         return StorageESchema(only=('id', 'title', 'supplier')).dump(obj.storage)
 
     def get_product(self, obj):
-        return ProductASchema(only=('id', 'thumbnail', )).dump(obj.storage.product)
+        return ProductASchema(only=('id', 'thumbnail',)).dump(obj.storage.product)
 
 
 class InvoiceStorageFDSchema(InvoiceStorageASchema):
@@ -517,7 +521,7 @@ class ProductESchema(ProductASchema, ProductSchema):
 
     def get_storages(self, obj):
         if self.include_storage:
-            return StorageASchema(only=('id', 'title', 'start_price', 'discount_price', 'available_count_for_sale'))\
+            return StorageASchema(only=('id', 'title', 'start_price', 'discount_price', 'available_count_for_sale')) \
                 .dump(obj.storages.all(), many=True)
         return []
 
@@ -541,8 +545,14 @@ class ProductFeatureASchema(Schema):
         super().__init__(*args, **kwargs)
         self.model = model
 
+    def dump(self, *args, **kwargs):
+        raw_data = super().dump(*args, **kwargs)
+        return dump(raw_data)
+
+    id = fields.Int()
     feature = fields.Nested("FeatureASchema")
     values = fields.Method('get_values')
+    priority = fields.Int()
 
     def get_feature(self, obj):
         return {'id': obj.feature_id, 'name': obj.feature.name}
@@ -601,6 +611,7 @@ class StorageASchema(BaseAdminSchema):
 
     least_booking_time = fields.Method("get_least_booking_time")
     booking_cost = fields.Method("get_booking_cost")
+    media = fields.Nested("MediaASchema")
 
     def get_least_booking_time(self, obj):
         if obj.product.booking_type == 1:  # unbookable
@@ -765,6 +776,7 @@ class FeatureGroupASchema(BaseAdminSchema):
         self.product = product
 
     name = fields.Dict()
+    settings = fields.Dict()
     features = fields.Method("get_features")
     box = fields.Nested(BoxASchema)
 

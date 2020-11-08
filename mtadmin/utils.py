@@ -229,6 +229,7 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
     if not request.user.has_perm(f'server.add_{model.__name__.lower()}'):
         raise PermissionDenied
     data = data or get_data(request, require_box=error_null_box)
+    data = translate_types(data, model)
     user = request.user
     boxes = user.box_permission.all()
     if box_key == 'product__box':
@@ -354,6 +355,7 @@ def update_object(request, model, box_key='box', return_item=False, serializer=N
     if not user.has_perm(f'server.change_{model.__name__.lower()}'):
         raise PermissionDenied
     data = data or get_data(request, require_box=False)
+    data = translate_types(data, model)
     try:
         data, m2m, custom_m2m, ordered_m2m, remove_fields = get_m2m_fields(model, data)
     except AttributeError:
@@ -462,7 +464,7 @@ def get_model_filter(model, box):
     filter_list = model.objects.filter(**box).extra(select={'name': "name->>'fa'"}).values('id', 'name')
     name = model.__name__.lower()
     try:
-        name = {'category': 'categories', 'featuregroup': 'group_id'}[name]
+        name = {'category': 'categories', 'featuregroup': 'groups'}[name]
     except KeyError:
         name = name
     return {'name': name, 'filters': list(filter_list)}
