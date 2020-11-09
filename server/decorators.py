@@ -28,7 +28,7 @@ def try_except(func):
             traceback.print_exc()
             # non_field_errors = e.message_dict[NON_FIELD_ERRORS][0]
             try:
-                return JsonResponse({'message': e.messages, 'varaiant': 'error'}, status=res_code['bad_request'])
+                return JsonResponse({'message': e.messages[0], 'varaiant': 'error'}, status=res_code['bad_request'])
             except Exception:
                 return HttpResponseBadRequest()
         except (AssertionError, ObjectDoesNotExist, StopIteration, AttributeError, KeyError, ValueError):

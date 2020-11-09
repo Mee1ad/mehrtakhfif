@@ -1453,8 +1453,8 @@ class Comment(Base):
 
     def validation(self):
         try:
-            if self.rate > 10 or self.type > 1:
-                raise ValidationError(_('invalid value for rate or type'))
+            if self.rate > 10 or self.type < 2:
+                raise ValidationError(_('امتیاز باید بین 1 تا 10 باشد'))
         except TypeError:
             pass
 
