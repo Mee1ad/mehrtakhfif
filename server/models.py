@@ -1692,7 +1692,7 @@ class Slider(Base):
     mobile_media = models.ForeignKey(Media, on_delete=CASCADE, related_name='slider_mobile')
     type = models.CharField(default='home', max_length=255)
     url = models.URLField(null=True, blank=True)
-    priority = models.PositiveSmallIntegerField(default=0)
+    priority = models.PositiveSmallIntegerField(default=0, null=True, blank=True, help_text="need null value")
 
     class Meta:
         db_table = 'slider'
