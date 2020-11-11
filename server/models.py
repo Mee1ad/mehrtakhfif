@@ -640,7 +640,7 @@ class Box(Base):
 
     name = JSONField(default=multilanguage)
     permalink = models.CharField(max_length=255, db_index=True, unique=True)
-    owner = models.OneToOneField(User, on_delete=PROTECT)
+    owner = models.ForeignKey(User, on_delete=PROTECT)
     settings = JSONField(default=dict, blank=True)
     disable = models.BooleanField(default=True)
     priority = models.PositiveSmallIntegerField(default=0)
