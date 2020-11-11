@@ -181,7 +181,8 @@ class FeatureView(View):
                     default_storage = selected_pfs.filter(storage=pfs.storage).first().storage
         else:
             try:
-                default_storage = min(product_feature_storages, key=attrgetter('storage.discount_price')).storage
+                # default_storage = min(product_feature_storages, key=attrgetter('storage.discount_price')).storage
+                default_storage = product.default_storage
             except ValueError:
                 storage = StorageSchema(**request.schema_params).dump(product.default_storage)
                 # return JsonResponse({'features': [], 'storage': storage})
