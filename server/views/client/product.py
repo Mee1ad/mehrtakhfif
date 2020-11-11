@@ -169,7 +169,8 @@ class FeatureView(View):
         multi_select_features = [item for item, count in feature_count if count > 1]
         product_features = product_features.filter(feature_id__in=multi_select_features)
         product_feature_storages = ProductFeatureStorage.objects.filter(product_feature__in=product_features,
-                                                                        storage__available_count_for_sale__gt=0) \
+                                                                        storage__available_count_for_sale__gt=0,
+                                                                        storage__unavailable=False, storage__disable=False) \
             .order_by('product_feature_id')
         if selected:
             selected_pfs = product_feature_storages.filter(product_feature_id__in=selected)
@@ -183,7 +184,8 @@ class FeatureView(View):
                 default_storage = min(product_feature_storages, key=attrgetter('storage.discount_price')).storage
             except ValueError:
                 storage = StorageSchema(**request.schema_params).dump(product.default_storage)
-                return JsonResponse({'features': [], 'storage': storage})
+                # return JsonResponse({'features': [], 'storage': storage})
+                return JsonResponse({'features': [], 'storage': {}})
             selected = list(product_feature_storages.filter(storage=default_storage).values_list('product_feature_id',
                                                                                                  flat=True))
         features_list = self.get_features(product_features, product_feature_storages, default_storage, selected)
