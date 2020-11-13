@@ -257,7 +257,7 @@ class CallBack(View):
         invoice = Invoice.objects.get(pk=invoice_id, reference_id=data_dict['RefId'])
         if not ref_id or not self.verify(invoice_id, ref_id):
             self.finish_invoice_jobs(invoice, cancel=True)
-            return HttpResponseRedirect(CLIENT_HOST)
+            return HttpResponseRedirect(f'{CLIENT_HOST}/basket')
         # todo https://memoryleaks.ir/unlimited-charge-of-mytehran-account/
         invoice.status = 2
         try:

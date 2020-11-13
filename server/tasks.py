@@ -1,5 +1,6 @@
 from __future__ import absolute_import, unicode_literals
 
+import logging
 import random
 from operator import add
 from time import sleep
@@ -19,6 +20,8 @@ from mehr_takhfif.settings import ARVAN_API_KEY
 from mehr_takhfif.settings import INVOICE_ROOT, BASE_DIR
 from server.models import Invoice, InvoiceStorage, User
 from server.utils import sync_storage, send_sms, send_email, random_data, add_days
+
+logger = logging.getLogger(__name__)
 
 
 @shared_task
@@ -44,7 +47,7 @@ def cancel_reservation(invoice_id, **kwargs):
 
 @shared_task
 def sale_report(invoice_id, **kwargs):
-    invoice_storages = InvoiceStorage.objects.filter(invoice_id=invoice_id).\
+    invoice_storages = InvoiceStorage.objects.filter(invoice_id=invoice_id). \
         select_related('storage', 'storage__product__box__owner')
     notif_users = User.objects.filter(groups__name__in=['accountants', 'post'])
     notif_devices = GCMDevice.objects.filter(user__in=notif_users)
@@ -192,6 +195,11 @@ def server_backup():
     return 'backup synced'
 
 
-@shared_task
-def test(**kwargs):
-    return "test"
+@shared_task(bind=True, max_retries=3)
+def test_retry_task(self, **kwargs):
+    try:
+        print(name)
+        return "test retry task success"
+    except Exception as e:
+        logger.exception(e)
+        self.retry(countdown=3 ** self.request.retries)

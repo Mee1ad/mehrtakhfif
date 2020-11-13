@@ -22,7 +22,7 @@ Content-Type: Application/json
 {
 	"text": "راضی  بودی؟7",
 	"type": 2,
-	"product_permalink": "p_30",
+	"product_permalink": "تسسست",
     "rate": 10,
     "satisfied": false
 }
@@ -32,8 +32,8 @@ Content-Type: Application/json
 
 {
 	"text": "راضی  بودی؟",
-	"type": 2,
-	"product_permalink": "p_30",
+	"type": 1,
+	"product_permalink": "تسسست",
     "first_name": "reza",
     "last_name": "babaei"
 }
@@ -44,8 +44,8 @@ Content-Type: Application/json
 {
 	"text": "راضی  بودی؟",
 	"type": 1,
-    "reply_to_id": 49,
-	"product_permalink": "p_30"
+    "reply_to_id": 10,
+	"product_permalink": "تسسست"
 }
 ###
 

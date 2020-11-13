@@ -14,7 +14,7 @@ def get_tax(tax_type, discount_price, start_price=None):
         return {
             1: 0,
             2: ceil(discount_price - discount_price / 1.09),
-            3: ceil((discount_price - start_price) - (discount_price - start_price) / 0.09)
+            3: ceil((discount_price - start_price) - (discount_price - start_price) / 1.09)
         }[tax_type]
     except KeyError:
         return 0
@@ -196,8 +196,10 @@ class BaseSchema(Schema):
             if hasattr(obj, 'house'):
                 return {}
             if hasattr(obj, 'default_storage'):
+                print('inja')
                 return MinStorageSchema(self.lang, vip=self.vip, user=self.user).dump(obj.default_storage)
             if hasattr(obj, 'storage'):
+                print('na inja')
                 return MinStorageSchema(self.lang, vip=self.vip, user=self.user).dump(obj.storage)
             return {}
         except Exception:
