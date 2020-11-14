@@ -253,8 +253,8 @@ def slow_task(self, *args, **kwargs):
         if acquired:
             try:
                 print('start')
-                n = random.randint(1, 2)
-                if n == 1:
+                n = random.randint(1, 4)
+                if n != 1:
                     print('go to error')
                     print(shit)
                 # sleep(30)
