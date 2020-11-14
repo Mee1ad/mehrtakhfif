@@ -1,6 +1,7 @@
 from __future__ import absolute_import, unicode_literals
 
 import logging
+import random
 import time
 from contextlib import contextmanager
 from hashlib import md5
@@ -73,7 +74,7 @@ def cancel_reservation(self, invoice_id, **kwargs):
             except Exception as e:
                 logger.exception(e)
                 self.retry(countdown=3 ** self.request.retries)
-    return "Done in another task"
+    return "This task is duplicate"
 
 
 @shared_task(bind=True, max_retries=3)
@@ -105,35 +106,41 @@ def sale_report(self, invoice_id, **kwargs):
             except Exception as e:
                 logger.exception(e)
                 self.retry(countdown=3 ** self.request.retries)
-    return "Done in another task"
+    return "This task is duplicate"
 
 
 @shared_task(bind=True, max_retries=3)
 def sale_report_summary(self, **kwargs):
-    try:
-        yesterday = add_days(-1)
-        invoices = Invoice.objects.filter(payed_at__gt=yesterday)
-        notify_list = []
-        for invoice in invoices:
-            invoice_storages = InvoiceStorage.objects.filter(invoice=invoice)
-            for invoice_storage in invoice_storages:
-                owner = invoice_storage.storage.product.box.owner
-                duplicate_data = [item for item in notify_list if item['owner'] == owner]
-                if not duplicate_data:
-                    notify_list.append({'owner': owner, 'count': invoice_storage.count})
-                    continue
-                duplicate_data[0]['count'] += invoice_storage.count
-        for item in notify_list:
-            send_sms(item['owner'].username, "order-summary", item['count'])
-        superusers = [User.objects.get(pk=1)]
-        item_count = sum([item['count'] for item in notify_list])
-        if notify_list:
-            [send_sms(user.username, "order-summary", item_count) for user in superusers]
-        return {
-            'notified admins': [admin['owner'].first_name + " " + admin['owner'].last_name for admin in notify_list]}
-    except Exception as e:
-        logger.exception(e)
-        self.retry(countdown=3 ** self.request.retries)
+    hashcode = md5('test'.encode()).hexdigest()
+    lock_id = '{0}-lock-{1}'.format(self.name, hashcode)
+    with task_lock(lock_id, self.app.oid) as acquired:
+        if acquired:
+            try:
+                yesterday = add_days(-1)
+                invoices = Invoice.objects.filter(payed_at__gt=yesterday)
+                notify_list = []
+                for invoice in invoices:
+                    invoice_storages = InvoiceStorage.objects.filter(invoice=invoice)
+                    for invoice_storage in invoice_storages:
+                        owner = invoice_storage.storage.product.box.owner
+                        duplicate_data = [item for item in notify_list if item['owner'] == owner]
+                        if not duplicate_data:
+                            notify_list.append({'owner': owner, 'count': invoice_storage.count})
+                            continue
+                        duplicate_data[0]['count'] += invoice_storage.count
+                for item in notify_list:
+                    send_sms(item['owner'].username, "order-summary", item['count'])
+                superusers = [User.objects.get(pk=1)]
+                item_count = sum([item['count'] for item in notify_list])
+                if notify_list:
+                    [send_sms(user.username, "order-summary", item_count) for user in superusers]
+                return {
+                    'notified admins': [admin['owner'].first_name + " " + admin['owner'].last_name for admin in
+                                        notify_list]}
+            except Exception as e:
+                logger.exception(e)
+                self.retry(countdown=3 ** self.request.retries)
+    return "This task is duplicate"
 
 
 @task_postrun.connect
@@ -152,59 +159,64 @@ def task_postrun_handler(task_id=None, **kwargs):
 
 @shared_task(bind=True, max_retries=3)
 def send_invoice(self, invoice_id, lang, **kwargs):
-    try:
-        products = InvoiceStorage.objects.filter(invoice_id=invoice_id)
-        digital_products = products.filter(storage__product__type=1)
-        user = Invoice.objects.get(pk=invoice_id).user
-        pdf_list = []
-        all_renders = ""
-        # sms_content = ""
-        for product in digital_products:
-            storage = product.storage
-            filename = f'{storage.product.permalink}-{product.pk}'
-            product.filename = filename
-            while product.key is None:
-                key = ''.join(random.sample(random_data, 6))
-                product.key = key
-                try:
-                    product.save()
-                except Exception:
-                    product.refresh_from_db()
-            data = {'title': storage.invoice_title[lang], 'user': f'{user.first_name} {user.last_name}',
-                    'price': storage.discount_price}
-            if storage.product.invoice_description[lang]:
-                data['product_description'] = storage.product.invoice_description[lang]
-            if storage.invoice_description[lang]:
-                data['storage_description'] = storage.invoice_description[lang]
-            rendered = ""
-            for c in range(product.count):
-                discount_code = storage.discount_code.filter(invoice=None).first()
-                discount_code.invoice_id = invoice_id
-                discount_code.invoice_storage = product
-                discount_code.save()
-                data['code'] = discount_code.code
-                rendered += render_to_string('invoice.html', data)
-            pdf = INVOICE_ROOT + f'/{filename}.pdf'
-            css = BASE_DIR + '/templates/css/pdf_style.css'
-            pdfkit.from_string(rendered, pdf, css=css)
-            pdf_list.append(pdf)
-            all_renders += rendered
-            # sms_content += f'\n{storage.invoice_title[lang]}\n{SHORTLINK}/{product.key}'
-        send_sms(user.username, "user-order", f"Mt-{invoice_id}")
+    hashcode = md5('test'.encode()).hexdigest()
+    lock_id = '{0}-lock-{1}'.format(self.name, hashcode)
+    with task_lock(lock_id, self.app.oid) as acquired:
+        if acquired:
+            try:
+                products = InvoiceStorage.objects.filter(invoice_id=invoice_id)
+                digital_products = products.filter(storage__product__type=1)
+                user = Invoice.objects.get(pk=invoice_id).user
+                pdf_list = []
+                all_renders = ""
+                # sms_content = ""
+                for product in digital_products:
+                    storage = product.storage
+                    filename = f'{storage.product.permalink}-{product.pk}'
+                    product.filename = filename
+                    while product.key is None:
+                        key = ''.join(random.sample(random_data, 6))
+                        product.key = key
+                        try:
+                            product.save()
+                        except Exception:
+                            product.refresh_from_db()
+                    data = {'title': storage.invoice_title[lang], 'user': f'{user.first_name} {user.last_name}',
+                            'price': storage.discount_price}
+                    if storage.product.invoice_description[lang]:
+                        data['product_description'] = storage.product.invoice_description[lang]
+                    if storage.invoice_description[lang]:
+                        data['storage_description'] = storage.invoice_description[lang]
+                    rendered = ""
+                    for c in range(product.count):
+                        discount_code = storage.discount_code.filter(invoice=None).first()
+                        discount_code.invoice_id = invoice_id
+                        discount_code.invoice_storage = product
+                        discount_code.save()
+                        data['code'] = discount_code.code
+                        rendered += render_to_string('invoice.html', data)
+                    pdf = INVOICE_ROOT + f'/{filename}.pdf'
+                    css = BASE_DIR + '/templates/css/pdf_style.css'
+                    pdfkit.from_string(rendered, pdf, css=css)
+                    pdf_list.append(pdf)
+                    all_renders += rendered
+                    # sms_content += f'\n{storage.invoice_title[lang]}\n{SHORTLINK}/{product.key}'
+                send_sms(user.username, "user-order", f"Mt-{invoice_id}")
 
-        email_content = f"سفارش شما با شماره {invoice_id} با موفقیت ثبت شد. برای مشاهده صورتحساب و جزئیات خرید به پنل کاربری خود مراجعه کنید \nhttps://mhrt.ir/invoice/{invoice_id}"
+                email_content = f"سفارش شما با شماره {invoice_id} با موفقیت ثبت شد. برای مشاهده صورتحساب و جزئیات خرید به پنل کاربری خود مراجعه کنید \nhttps://mhrt.ir/invoice/{invoice_id}"
 
-        send_email("صورتحساب خرید", user.email, message=email_content)
-        # if sms_content:
-        #     send_sms(user.username, "digital-order-details", sms_content)
-        res = 'sms sent'
-        if user.email and all_renders:
-            send_email("صورتحساب خرید", user.email, html_content=all_renders, attach=pdf_list)
-            res += ', email sent'
-        return res
-    except Exception as e:
-        logger.exception(e)
-        self.retry(countdown=3 ** self.request.retries)
+                send_email("صورتحساب خرید", user.email, message=email_content)
+                # if sms_content:
+                #     send_sms(user.username, "digital-order-details", sms_content)
+                res = 'sms sent'
+                if user.email and all_renders:
+                    send_email("صورتحساب خرید", user.email, html_content=all_renders, attach=pdf_list)
+                    res += ', email sent'
+                return res
+            except Exception as e:
+                logger.exception(e)
+                self.retry(countdown=3 ** self.request.retries)
+    return "This task is duplicate"
 
 
 def get_snapshots(self, name=None):
@@ -242,9 +254,6 @@ def server_backup():
     return 'backup synced'
 
 
-import random
-
-
 @shared_task(bind=True)
 def slow_task(self, *args, **kwargs):
     hashcode = md5('test'.encode()).hexdigest()
@@ -261,6 +270,6 @@ def slow_task(self, *args, **kwargs):
                 print('no error')
                 return "done"
             except Exception as e:
-                print('error happened')
+                logger.exception(e)
                 self.retry(countdown=3 ** self.request.retries)
-    return "Done in another task"
+    return "This task is duplicate"

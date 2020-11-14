@@ -1,4 +1,3 @@
-from django.db.models import Sum
 from marshmallow import EXCLUDE
 
 from server.serialize import *

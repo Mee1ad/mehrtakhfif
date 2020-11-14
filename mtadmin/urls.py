@@ -1,8 +1,8 @@
-from django.urls import path, include
+from django.urls import path
+
+from mtadmin.decorator import error_handler
 from mtadmin.views.tables import *
 from mtadmin.views.views import *
-from mtadmin.views.dashboard import *
-from mtadmin.decorator import error_handler
 
 app_name = 'mtadmin'
 

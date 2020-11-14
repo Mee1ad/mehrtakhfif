@@ -196,10 +196,8 @@ class BaseSchema(Schema):
             if hasattr(obj, 'house'):
                 return {}
             if hasattr(obj, 'default_storage'):
-                print('inja')
                 return MinStorageSchema(self.lang, vip=self.vip, user=self.user).dump(obj.default_storage)
             if hasattr(obj, 'storage'):
-                print('na inja')
                 return MinStorageSchema(self.lang, vip=self.vip, user=self.user).dump(obj.storage)
             return {}
         except Exception:
