@@ -1,7 +1,9 @@
 from __future__ import absolute_import, unicode_literals
 
 import logging
-import random
+import time
+from contextlib import contextmanager
+from hashlib import md5
 from operator import add
 from time import sleep
 from urllib.error import URLError
@@ -10,7 +12,7 @@ import pdfkit
 import requests
 from celery import shared_task
 from celery.signals import task_postrun
-from celery_once import QueueOnce
+from django.core.cache import cache
 from django.template.loader import render_to_string
 from django.utils import timezone
 from django_celery_beat.models import PeriodicTask
@@ -23,58 +25,87 @@ from server.models import Invoice, InvoiceStorage, User
 from server.utils import sync_storage, send_sms, send_email, random_data, add_days
 
 logger = logging.getLogger(__name__)
+LOCK_EXPIRE = 60 * 10  # Lock expires in 10 minutes
+
+
+@contextmanager
+def task_lock(lock_id, oid):
+    timeout_at = time.monotonic() + LOCK_EXPIRE - 3
+    # cache.add fails if the key already exists
+    status = cache.add(lock_id, oid, LOCK_EXPIRE)
+    try:
+        yield status
+    finally:
+        # memcache delete is very slow, but we have to use it to take
+        # advantage of using add() for atomic locking
+        if time.monotonic() < timeout_at and status:
+            # don't release the lock if we exceeded the timeout
+            # to lessen the chance of releasing an expired lock
+            # owned by someone else
+            # also don't release the lock if we didn't acquire it
+            cache.delete(lock_id)
 
 
 @shared_task(bind=True, max_retries=3)
 def cancel_reservation(self, invoice_id, **kwargs):
-    try:
-        invoice = Invoice.objects.get(pk=invoice_id)
-        successful_status = [2, 5]  # payed, posted
-        if invoice.status not in successful_status:
-            invoice.status = 3  # canceled
+    hashcode = md5(f"cancel_reservation{invoice_id}".encode()).hexdigest()
+    lock_id = '{0}-lock-{1}'.format(self.name, hashcode)
+    with task_lock(lock_id, self.app.oid) as acquired:
+        if acquired:
             try:
-                invoice.post_invoice.status = 3
-                invoice.post_invoice.save()
-            except Exception:
-                pass
-            invoice.suspended_at = timezone.now()
-            invoice.save()
-            sync_storage(invoice.basket_id, add)
-            try:
-                invoice.basket.sync = 2  # canceled
-            except AttributeError:
-                pass
-            return 'invoice canceled, storage synced successfully'
-    except Exception as e:
-        logger.exception(e)
-        self.retry(countdown=3 ** self.request.retries)
+                invoice = Invoice.objects.get(pk=invoice_id)
+                successful_status = [2, 5]  # payed, posted
+                if invoice.status not in successful_status:
+                    invoice.status = 3  # canceled
+                    try:
+                        invoice.post_invoice.status = 3
+                        invoice.post_invoice.save()
+                    except Exception:
+                        pass
+                    invoice.suspended_at = timezone.now()
+                    invoice.save()
+                    sync_storage(invoice.basket_id, add)
+                    try:
+                        invoice.basket.sync = 2  # canceled
+                    except AttributeError:
+                        pass
+                    return 'invoice canceled, storage synced successfully'
+            except Exception as e:
+                logger.exception(e)
+                self.retry(countdown=3 ** self.request.retries)
+    return "Done in another task"
 
 
 @shared_task(bind=True, max_retries=3)
 def sale_report(self, invoice_id, **kwargs):
-    try:
-        invoice_storages = InvoiceStorage.objects.filter(invoice_id=invoice_id). \
-            select_related('storage', 'storage__product__box__owner')
-        notif_users = User.objects.filter(groups__name__in=['accountants', 'post'])
-        notif_devices = GCMDevice.objects.filter(user__in=notif_users)
-        for invoice_storage in invoice_storages:
-            owner = invoice_storage.storage.product.box.owner
-            message = f"""عنوان محصول:
-                          {invoice_storage.storage.title['fa']}
-                          تعداد:{invoice_storage.count}
-                         قیمت: {invoice_storage.storage.discount_price}"""
-            notif_users |= User.objects.filter(pk=owner.pk)
-            devices = GCMDevice.objects.filter(user=owner)
-            for device in devices | notif_devices:
-                try:
-                    device.send_message(message, extra={'title': "گزارش فروش"})
-                except URLError:
-                    continue
-            [send_email('گزارش فروش', user.email, message=message) for user in notif_users]
-        return f"{invoice_id}-successfully reported"
-    except Exception as e:
-        logger.exception(e)
-        self.retry(countdown=3 ** self.request.retries)
+    hashcode = md5(f"sale_report{invoice_id}".encode()).hexdigest()
+    lock_id = '{0}-lock-{1}'.format(self.name, hashcode)
+    with task_lock(lock_id, self.app.oid) as acquired:
+        if acquired:
+            try:
+                invoice_storages = InvoiceStorage.objects.filter(invoice_id=invoice_id). \
+                    select_related('storage', 'storage__product__box__owner')
+                notif_users = User.objects.filter(groups__name__in=['accountants', 'post'])
+                notif_devices = GCMDevice.objects.filter(user__in=notif_users)
+                for invoice_storage in invoice_storages:
+                    owner = invoice_storage.storage.product.box.owner
+                    message = f"""عنوان محصول:
+                                  {invoice_storage.storage.title['fa']}
+                                  تعداد:{invoice_storage.count}
+                                 قیمت: {invoice_storage.storage.discount_price}"""
+                    notif_users |= User.objects.filter(pk=owner.pk)
+                    devices = GCMDevice.objects.filter(user=owner)
+                    for device in devices | notif_devices:
+                        try:
+                            device.send_message(message, extra={'title': "گزارش فروش"})
+                        except URLError:
+                            continue
+                    [send_email('گزارش فروش', user.email, message=message) for user in notif_users]
+                return f"{invoice_id}-successfully reported"
+            except Exception as e:
+                logger.exception(e)
+                self.retry(countdown=3 ** self.request.retries)
+    return "Done in another task"
 
 
 @shared_task(bind=True, max_retries=3)
@@ -211,7 +242,25 @@ def server_backup():
     return 'backup synced'
 
 
-@shared_task(base=QueueOnce, once={'graceful': True})
-def slow_task():
-    sleep(30)
-    return "Done!"
+import random
+
+
+@shared_task(bind=True)
+def slow_task(self, arg):
+    hashcode = md5(f'{arg}'.encode()).hexdigest()
+    lock_id = '{0}-lock-{1}'.format(self.name, hashcode)
+    with task_lock(lock_id, self.app.oid) as acquired:
+        if acquired:
+            try:
+                print('start')
+                n = random.randint(1, 2)
+                if n == 1:
+                    print('go to error')
+                    print(shit)
+                # sleep(30)
+                print('no error')
+                return "done"
+            except Exception as e:
+                print('error happened')
+                self.retry(countdown=3 ** self.request.retries)
+    return "Done in another task"
