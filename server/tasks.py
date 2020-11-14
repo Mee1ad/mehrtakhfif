@@ -246,8 +246,8 @@ import random
 
 
 @shared_task(bind=True)
-def slow_task(self, arg):
-    hashcode = md5(f'{arg}'.encode()).hexdigest()
+def slow_task(self, *args, **kwargs):
+    hashcode = md5('test'.encode()).hexdigest()
     lock_id = '{0}-lock-{1}'.format(self.name, hashcode)
     with task_lock(lock_id, self.app.oid) as acquired:
         if acquired:
