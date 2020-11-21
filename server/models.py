@@ -1050,7 +1050,7 @@ class Product(Base):
         if not self.storages.filter(disable=False):
             self.make_item_disable(self)
             raise ActivationError(get_activation_warning_msg('انبار فعال'))
-        if self.review['state'] == 'has_review':
+        if self.review['state'] == 'reviewed':
             self.make_item_disable(self)
             raise ActivationError('بنظر نمیاد محصولت آماده فعال شدن باشه، یه نگاه به چت محصول بنداز!')
         # todo for now
@@ -1136,7 +1136,7 @@ class Product(Base):
     details = JSONField(null=True, blank=True)
     settings = JSONField(default=dict, blank=True)
     # review = models.TextField(null=True, blank=True)
-    review = JSONField(default=default_review, help_text="{chats: [], state: has_review/request_review/ready}")
+    review = JSONField(default=default_review, help_text="{chats: [], state: reviewed/request_review/ready}")
     # check_review = models.BooleanField(default=False)
 
     # home_buissiness =
