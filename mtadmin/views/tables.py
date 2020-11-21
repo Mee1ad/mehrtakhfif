@@ -716,3 +716,10 @@ class Tax(AdminView):
         params = get_params(request, date_key='invoice__payed_at')
         # params['aggregate'] = {'tax': Sum('tax')}
         return JsonResponse(serialized_objects(request, InvoiceStorage, InvoiceStorageASchema))
+
+
+class UserView(TableView):
+    permission_required = 'server.view_user'
+
+    def get(self, request):
+        return JsonResponse(serialized_objects(request, User, UserASchema, UserASchema, error_null_box=False))
