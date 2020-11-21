@@ -500,7 +500,7 @@ class ProductESchema(ProductASchema, ProductSchema):
 
     class Meta:
         unknown = EXCLUDE
-        additional = ('verify', 'manage') + ProductSchema.Meta.additional + ProductASchema.Meta.additional
+        additional = ('verify', 'manage', 'review') + ProductSchema.Meta.additional + ProductASchema.Meta.additional
 
     media = fields.Method("get_media")
     tags = ProductTagField()

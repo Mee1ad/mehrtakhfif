@@ -158,6 +158,17 @@ class AddressAdmin(admin.ModelAdmin):
     get_mobile_media.short_description = 'mobile media'
 
 
+class BasketAdmin(Base):
+    list_display = ('id', 'get_user', 'count', 'sync') + SafeDeleteAdmin.list_display
+    list_filter = ('sync',) + SafeDeleteAdmin.list_filter
+    # list_display_links = ('product_name',)
+    search_fields = ['user']
+    list_per_page = 10
+    ordering = ('-updated_at',)
+
+    # get_user.short_description = 'user'
+
+
 class CategoryAdmin(SafeDeleteAdmin):
     list_display = ('parent', 'box', 'name_fa', 'deleted_by') + SafeDeleteAdmin.list_display
     list_filter = ('name',) + SafeDeleteAdmin.list_filter
@@ -554,7 +565,7 @@ register_list = [(Session, SessionAdmin), (User, UserAdmin), (Box, BoxAdmin), (C
                  (Feature, FeatureAdmin), (FeatureValue, FeatureValueAdmin), (Address,), (Media, MediaAdmin),
                  (Product, ProductAdmin), (House, HouseAdmin), (FeatureGroup, FeatureGroupAdmin),
                  (HousePrice, HousePriceAdmin), (ResidenceType, ResidenceTypeAdmin),
-                 (Storage, StorageAdmin), (Basket,), (Comment, CommentAdmin), (Invoice, InvoiceAdmin),
+                 (Storage, StorageAdmin), (Basket, BasketAdmin), (Comment, CommentAdmin), (Invoice, InvoiceAdmin),
                  (InvoiceStorage, InvoiceStorageAdmin), (InvoiceSuppliers, InvoiceSupplierAdmin), (Menu, MenuAdmin),
                  (Tag,), (TagGroup,), (Rate,), (Slider, SliderAdmin), (SpecialOffer, SpecialOfferAdmin),
                  (Holiday, HolidayAdmin), (Charity, CharityAdmin), (DiscountCode, DiscountCodeAdmin),

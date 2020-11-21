@@ -43,6 +43,6 @@ def try_except(func):
             # devices = FCMDevice.objects.filter(device_id='469f8ce1bfe86a95')
             # devices.send_message(title="oops, an error occurred", body=error_type + f', {exc_obj}', sound="cave")
             # return HttpResponse(f'{error_type}: {exc_obj} {fname}')
-            return HttpResponseServerError
+            return HttpResponseServerError()
 
     return wrapper

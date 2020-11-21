@@ -182,6 +182,10 @@ def translate_types(dictionary, model):
     return dictionary
 
 
+def default_review():
+    return {"chats": [], "state": "ready"}
+
+
 class MyQuerySet(SafeDeleteQueryset):
     _safedelete_visibility = DELETED_INVISIBLE
     _safedelete_visibility_field = 'pk'
@@ -792,10 +796,13 @@ class Feature(Base):
         return get_name(self.name, self)
 
     def validation(self, kwargs):
-        if type(kwargs.get('type', None)) is str:
-            kwargs['type'] = {'bool': 1, 'text': 2, 'selectable': 3}[kwargs.get('type', None)]
-        if type(kwargs.get('layout_type', None)) is str:
-            kwargs['layout_type'] = {'default': 1}[kwargs.get('layout_type', 'default')]
+        # [kwargs.pop(item, None) for item in kwargs.get('remove_fields', [])]
+        # if kwargs['type'] in [1, 3]:
+        #     if len(kwargs['values']) < 2:
+        #         raise ValidationError(_('حداقل دوتا آیتم باید وارد کنی'))
+        # if kwargs['type'] == 2:
+        #     if len(kwargs['values']) < 1:
+        #         raise ValidationError(_('مقدار پیشفرض رو باید وارد کنی'))
         return kwargs
 
     def save(self, *args, **kwargs):
@@ -987,7 +994,7 @@ class ProductFeatureStorage(MyModel):
     def __str__(self):
         return f"{self.id}"
 
-    product_feature = models.ForeignKey(ProductFeature, on_delete=CASCADE)
+    product_feature = models.ForeignKey(ProductFeature, on_delete=CASCADE, related_name="product_feature_storages")
     storage = models.ForeignKey("Storage", on_delete=CASCADE)
     extra_data = JSONField(default=dict)
 
@@ -1022,8 +1029,8 @@ class Product(Base):
     choices = ('type', 'booking_type')
 
     def pre_process(self, my_dict):
-        if (self.review is not None) and (my_dict.get('review') != self.review):
-            my_dict['check_review'] = False
+        # if (self.review['chat'] != []) and (my_dict.get('review') != self.review):
+        #     my_dict['check_review'] = False
         try:
             my_dict['type'] = {'service': 1, 'product': 2, 'tourism': 3, 'package': 4, 'package_item': 5}[
                 my_dict['type']]
@@ -1043,14 +1050,14 @@ class Product(Base):
         if not self.storages.filter(disable=False):
             self.make_item_disable(self)
             raise ActivationError(get_activation_warning_msg('انبار فعال'))
-        if self.review is not None:
+        if self.review['state'] == 'has_review':
             self.make_item_disable(self)
-            raise ActivationError('بنظر بهزاد، محصول اطلاعات صحیحی نداره!')
+            raise ActivationError('بنظر نمیاد محصولت آماده فعال شدن باشه، یه نگاه به چت محصول بنداز!')
         # todo for now
         Product.objects.filter(pk=self.pk).update(verify=True)
 
     def assign_default_value(self):
-        storages = self.storages.filter(available_count_for_sale__gt=0)
+        storages = self.storages.filter(available_count_for_sale__gt=0, unavailable=False)
         if not storages:
             storages = self.storages.all()
         try:
@@ -1128,8 +1135,9 @@ class Product(Base):
     properties = JSONField(null=True, blank=True)
     details = JSONField(null=True, blank=True)
     settings = JSONField(default=dict, blank=True)
-    review = models.TextField(null=True, blank=True)
-    check_review = models.BooleanField(default=False)
+    # review = models.TextField(null=True, blank=True)
+    review = JSONField(default=default_review, help_text="{chats: [], state: has_review/request_review/ready}")
+    # check_review = models.BooleanField(default=False)
 
     # home_buissiness =
     # support_description =
@@ -1377,7 +1385,7 @@ class Basket(Base):
     products = models.ManyToManyField(Storage, through='BasketProduct')
     description = models.TextField(blank=True, null=True)
     # active = models.BooleanField(default=True)
-    sync = models.CharField(max_length=255, choices=sync_levels, default=0)
+    sync = models.PositiveSmallIntegerField(choices=sync_levels, default=0)
 
     class Meta:
         db_table = 'basket'
@@ -1782,6 +1790,7 @@ class WishList(Base):
     user = models.ForeignKey(User, on_delete=CASCADE)
     # type = models.CharField(max_length=255, )
     notify = models.BooleanField(default=False)
+    wish = models.BooleanField(default=True)
     product = models.ForeignKey(Product, on_delete=CASCADE)
 
     class Meta:
@@ -1885,12 +1894,10 @@ class Booking(Base):
     def __str__(self):
         return f"{self.house}"
 
-
     type = models.PositiveSmallIntegerField(choices=types)
     location = JSONField(null=True)
     least_reserve_time = models.PositiveSmallIntegerField(default=5)
     people_count = models.PositiveSmallIntegerField(default=0)
-
 
     class Meta:
         db_table = 'book'

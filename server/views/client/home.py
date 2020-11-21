@@ -57,7 +57,6 @@ class NotifTest(View):
 
 
 class Init(View):
-    @pysnooper.snoop()
     def get(self, request):
         res = JsonResponse({})
         if request.user.is_authenticated:

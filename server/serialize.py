@@ -623,6 +623,7 @@ class InvoiceSchema(BaseSchema):
     storages = InvoiceStorageField()
     amount = fields.Method('get_amount')  # without tax
     created_at = fields.Function(lambda o: o.created_at.timestamp())
+    expire = fields.Function(lambda o: o.expire.timestamp())
     start_date = fields.Method("get_start_date")
     end_date = fields.Method("get_end_date")
     invoice = fields.Method("get_invoice_file")

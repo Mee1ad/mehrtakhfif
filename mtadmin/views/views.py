@@ -54,11 +54,11 @@ class ReviewPrice(AdminView):
         try:
             dper = ceil(100 - data['discount_price'] / data['final_price'] * 100)
         except ZeroDivisionError:
-            message = {'message': 'هومممم، قیمت بدون تخفیف 0؟ درصد تخفیف هم شونصدهزار پس!', 'variant': 'warning'}
-            dper = 600000
+            pass
+            dper = 0
         share = {**share, 'discount_price': data['discount_price'], 'shipping_cost': data['shipping_cost'],
                  'profit': profit, 'discount_percent': dper}
-        return JsonResponse({'data': share, **message})
+        return JsonResponse({'data': share})
 
 
 class MailView(AdminView):

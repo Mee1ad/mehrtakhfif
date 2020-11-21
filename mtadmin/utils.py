@@ -58,7 +58,8 @@ def serialized_objects(request, model, serializer=None, single_serializer=None, 
             distinct_by = [item.replace('-', '') for item in params['order'] if item.replace('-', '') not in model.m2m]
         # query = model.objects.filter(**params['filter']).order_by(*params['order'], '-id')
         query = model.objects.select_related(*model.table_select).prefetch_related(*model.table_prefetch) \
-            .annotate(**model.table_annotate).filter(**params['filter']).order_by(*params['order']).distinct(
+            .annotate(**model.table_annotate).filter(**params['filter']).exclude(**params['exclude']). \
+            order_by(*params['order']).distinct(
             *distinct_by)
         # todo duplicate data when order by manytomany fields, need distinct
         # query = model.objects.filter(**params['filter']).order_by(*params['order'])
@@ -77,12 +78,13 @@ def serialized_objects(request, model, serializer=None, single_serializer=None, 
                 annotate[item[0] + '__' + item[1]] = KeyTextTransform(item[1], item[0])
             try:
                 query = model.objects.annotate(**annotate, **params['annotate'], **model.table_annotate).select_related(
-                    *model.table_select).prefetch_related(*model.table_prefetch).filter(**params['filter']).distinct(
-                    *distinct_by).order_by(*params['order'])
+                    *model.table_select).prefetch_related(*model.table_prefetch).filter(**params['filter']). \
+                    exclude(**params['exclude']).distinct(*distinct_by).order_by(*params['order'])
                 return get_pagination(request, query, serializer, show_all=request.all)
             except Exception:
                 query = model.objects.annotate(**annotate, **params['annotate'], **model.table_annotate).select_related(
-                    *model.table_select).prefetch_related(*model.table_prefetch).filter(**params['filter'])
+                    *model.table_select).prefetch_related(*model.table_prefetch).filter(**params['filter']). \
+                    exclude(**params['exclude'])
                 return {**get_pagination(request, query, serializer, show_all=request.all), 'ignore_order': True}
         # print(query.explain())
         return get_pagination(request, query, serializer, show_all=request.all)
@@ -109,6 +111,7 @@ def translate_params(params, params_new_name, date_key='created_at'):
 def get_params(request, box_key=None, date_key='created_at'):
     remove_param = ['s', 'p', 'delay', 'error', 'all']
     filterby = {}
+    excludeby = {}
     orderby = []
     annotate = {}
     distinct = False
@@ -118,7 +121,7 @@ def get_params(request, box_key=None, date_key='created_at'):
         [new_params.pop(key, None) for key in remove_param]
         keys = new_params.keys()
     except AttributeError:
-        return {'filter': filterby, 'order': orderby, 'annotate': annotate, 'distinct': False}
+        return {'filter': filterby, 'exclude': excludeby, 'order': orderby, 'annotate': annotate, 'distinct': False}
     for key in keys:
         value = params.getlist(key)
         if key == 'sd':
@@ -135,9 +138,6 @@ def get_params(request, box_key=None, date_key='created_at'):
         if key == 'o':
             orderby = value
             continue
-        if key == 'has_review':
-            filterby['review__isnull'] = False
-            continue
         if key == 'distinct':
             distinct = True
             continue
@@ -151,7 +151,7 @@ def get_params(request, box_key=None, date_key='created_at'):
             continue
         filterby[key] = value[0]
 
-    return {'filter': filterby, 'order': orderby, 'annotate': annotate, 'distinct': distinct}
+    return {'filter': filterby, 'exclude': excludeby, 'order': orderby, 'annotate': annotate, 'distinct': distinct}
 
 
 def get_data(request, require_box=True):
