@@ -178,7 +178,7 @@ class ProductView(TableView):
         types = request.GET.getlist('type[]')
         types2 = []
         params = get_params(request, 'box_id')
-        new_params = {'available': 'storages__available_count_for_sale__gt'}
+        new_params = {'available': 'storages__available_count_for_sale__gt', 'state': 'review__state'}
         params['filter'] = translate_params(params['filter'], new_params)
         required_box = {'error_null_box': True}
         for t in types:
