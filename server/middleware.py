@@ -67,6 +67,8 @@ class AuthMiddleware:
                 request.basket = basket.first()
             except TypeError:
                 db_basket_count = len(request.session.get('basket', []))
+            except AttributeError:
+                db_basket_count = 0
             user_basket_count = get_custom_signed_cookie(request, 'basket_count', -1)
             # new_basket_count = int(user_basket_count)
             if not db_basket_count == int(user_basket_count):
