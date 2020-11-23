@@ -70,6 +70,7 @@ class Login(View):
             res = JsonResponse(res)
             set_custom_signed_cookie(res, 'basket_count', basket_count)
             set_custom_signed_cookie(res, 'is_login', True)
+            sync_session_basket(request)
             return res
         except User.DoesNotExist:  # Signup
             try:
@@ -171,6 +172,7 @@ class Activate(View):
                 set_custom_signed_cookie(response, 'basket_count', res['basket_count'])
                 set_custom_signed_cookie(response, 'is_login', True)
                 response.delete_cookie('token')
+                sync_session_basket(request)
             return response
         except Exception:
             return JsonResponse({'message': 'code not found'}, status=res_code['unauthorized'])

@@ -1,16 +1,12 @@
-from mehr_takhfif.settings import TOKEN_SALT, ADMIN, DEFAULT_COOKIE_DOMAIN, POST, MT_ACCOUNTANTS
-from server.utils import default_step, default_page, res_code, set_csrf_cookie, check_csrf_token, \
-    get_custom_signed_cookie, set_custom_signed_cookie
-from server.models import User, Basket
-from django.core.exceptions import PermissionDenied
-from django.http import JsonResponse, HttpResponseNotFound
-import json
-from django.urls import resolve
 import time
-import pysnooper
-from django.contrib.auth import login
+
+from django.http import JsonResponse, HttpResponseNotFound
+from django.urls import resolve
 from sentry_sdk import configure_scope
-from server.decorators import try_except
+
+from mehr_takhfif.settings import ADMIN, POST, MT_ACCOUNTANTS
+from server.models import User, Basket
+from server.utils import default_step, default_page, get_custom_signed_cookie, set_custom_signed_cookie
 
 
 class AuthMiddleware:
@@ -65,17 +61,19 @@ class AuthMiddleware:
             request.params = {}
             # sync user basket count
             new_basket_count = None
-            if request.user.is_authenticated:
+            try:
                 basket = Basket.objects.filter(user=request.user).order_by('-id')
-                if basket.exists():
-                    db_basket_count = basket.first().products.all().count()
-                    user_basket_count = get_custom_signed_cookie(request, 'basket_count', -1)
-                    # new_basket_count = int(user_basket_count)
-                    if not db_basket_count == int(user_basket_count):
-                        new_basket_count = db_basket_count
-                    request.basket = basket.first()
-                else:
-                    new_basket_count = 0
+                db_basket_count = basket.first().products.all().count()
+                request.basket = basket.first()
+            except TypeError:
+                db_basket_count = len(request.session.get('basket', []))
+            user_basket_count = get_custom_signed_cookie(request, 'basket_count', -1)
+            # new_basket_count = int(user_basket_count)
+            if not db_basket_count == int(user_basket_count):
+                new_basket_count = db_basket_count
+
+        # else:
+        #     new_basket_count = 0
 
         elif app_name == 'mtadmin':
             request.token = request.headers.get('access-token', None)

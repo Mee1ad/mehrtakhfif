@@ -1,19 +1,10 @@
-from django.http import JsonResponse, HttpResponse, FileResponse, HttpResponseRedirect
+from django.http import JsonResponse, FileResponse
+from django.shortcuts import render_to_response
 
+from mehr_takhfif.settings import INVOICE_ROOT
 from server.serialize import *
 from server.utils import *
 from server.utils import LoginRequired
-from mehr_takhfif.settings import INVOICE_ROOT
-import pysnooper
-from django.db.utils import IntegrityError
-from django.contrib.auth import login
-import pytz
-from django.shortcuts import render_to_response
-import time
-from datetime import datetime
-import jdatetime
-from random import randint, choice
-from django.utils.translation import gettext_lazy as _
 
 
 # from selenium import webdriver
@@ -209,15 +200,17 @@ class WishlistView(LoginRequired):
 
     def post(self, request):
         data = load_data(request)
-        WishList.objects.update_or_create(type=data['type'], notify=data['notify'], product_id=data['product_id'],
-                                          user=request.user,
-                                          created_by=request.user, updated_by=request.user)
-        return JsonResponse({}, status=201)
+        wishlist = WishList.objects.filter(product_id=data['product_id'], user=request.user)
+        if wishlist.exists():
+            wishlist.update(notify=data.get('notify', F('notify')), wish=data.get('wish', F('wish')),
+                            updated_by=request.user)
+            return JsonResponse({}, status=200)
 
-    def delete(self, request):
-        wishlist_id = request.GET.get('id', None)
-        WishList.objects.filter(pk=wishlist_id, user_id=request.user).delete()
-        return JsonResponse({})
+        WishList.objects.create(notify=data.get('notify', False), wish=data.get('wish', True),
+                                product_id=data['product_id'], user=request.user,
+                                created_by=request.user, updated_by=request.user)
+
+        return JsonResponse({}, status=201)
 
 
 class NotifyView(LoginRequired):

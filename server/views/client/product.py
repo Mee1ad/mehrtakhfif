@@ -34,19 +34,28 @@ class ProductView(View):
             product['storages'] = PackageSchema(**request.schema_params).dump(storages, many=True)
         # todo debug
         # product['categories'] = [self.get_category(c) for c in product['categories']]
-        return JsonResponse({'product': product, 'purchased': purchased, 'features': features})
+        wish = WishList.objects.filter(product=product_obj, wish=True).exists()
+        notify = WishList.objects.filter(product=product_obj, notify=True).exists()
+        return JsonResponse({'product': product, 'purchased': purchased, 'features': features, 'wish': wish,
+                             'notify': notify})
 
     def get_features(self, product, lang):
         if not product:
             return {'group_features': [], 'features': []}
         group_features = []
         features = []
-        category_feature_groups = FeatureGroup.objects.filter(categories__in=product.categories.values_list('id',
-                                                                                                            flat=True))
+        category_feature_groups = FeatureGroup.objects.filter(
+            categories__in=product.categories.values_list('id', flat=True))
         product_feature_groups = product.feature_groups.all()
         feature_groups = category_feature_groups | product_feature_groups
         feature_groups_id = list(feature_groups.values_list('id', flat=True))
-        product_features = ProductFeature.objects.filter(product=product).exclude(feature__type=3)
+        # product_features = ProductFeature.objects.annotate(pfs=Count('product_feature_storages')).filter(Q(
+        #     product=product), Q(feature__type__in=[1, 2]) | Q(pfs=1, feature__type=3)) \
+        #     .select_related('feature', 'feature_value')
+        product_features = ProductFeature.objects.filter(Q(product=product), Q(feature__type__in=[1, 2]) |
+                                                         Q(product_feature_storages=None, feature__type=3)) \
+            .select_related('feature', 'feature_value')
+
         for feature_group in feature_groups:
             # group features
             gf = product_features.filter(feature__groups__in=[feature_group.pk])
@@ -170,7 +179,8 @@ class FeatureView(View):
         product_features = product_features.filter(feature_id__in=multi_select_features)
         product_feature_storages = ProductFeatureStorage.objects.filter(product_feature__in=product_features,
                                                                         storage__available_count_for_sale__gt=0,
-                                                                        storage__unavailable=False, storage__disable=False) \
+                                                                        storage__unavailable=False,
+                                                                        storage__disable=False) \
             .order_by('product_feature_id')
         if selected:
             selected_pfs = product_feature_storages.filter(product_feature_id__in=selected)

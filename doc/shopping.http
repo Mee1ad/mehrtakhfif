@@ -17,6 +17,15 @@ Content-Type: Application/json
   ]
 }
 
+### update count
+PATCH {{host}}/basket
+Content-Type: Application/json
+
+{
+  "basket_product_id": 0,
+  "count": 3
+}
+
 ### DiscountCode
 POST {{host}}/discount_code
 Content-Type: application/json
@@ -145,5 +154,9 @@ Content-Type: application/json
 
 {
   "product_id": 93,
-  "ids": [1, 2, 3]
+  "ids": [
+    1,
+    2,
+    3
+  ]
 }

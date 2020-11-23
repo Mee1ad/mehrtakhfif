@@ -17,9 +17,14 @@ class BasketView(View):
             basket = Basket.objects.filter(user=request.user).order_by('-id').first()
         except TypeError:
             basket = None
+        try:
+            invoices = Invoice.objects.filter(user=request.user, status=1)
+            invoices = InvoiceSchema(only=['id', 'amount', 'expire']).dump(invoices, many=True)
+        except TypeError:  # AnonymousUser
+            invoices = []
         deleted_items = self.check_basket(basket)
         return JsonResponse({**get_basket(request, basket=basket, tax=True),
-                             'deleted_items': deleted_items})
+                             'deleted_items': deleted_items, 'active_invoice': list(invoices)})
 
     def post(self, request):
         data = load_data(request)
@@ -44,23 +49,41 @@ class BasketView(View):
         data = load_data(request)
         pk = data['basket_product_id']
         count = data['count']
-        basket = Basket.objects.filter(user=request.user).order_by('-id').first()
-        storage = BasketProduct.objects.filter(basket=basket, pk=pk).select_related('storage').first().storage
-        assert storage.available_count_for_sale >= count and storage.max_count_for_sale >= count
-        assert BasketProduct.objects.filter(id=pk, basket=basket).update(count=data['count'])
+        user = request.user
+        if not user.is_authenticated:
+            product = request.session.get('basket', [])[pk]
+            storage = Storage.objects.filter(pk=product['storage_id']).first()
+            if storage.is_available(count) is False:
+                return JsonResponse({'message': 'تعداد درخواست شده موجود نمیباشد', 'variant': 'error'})
+            product['count'] = count
+            request.session.save()
+            return JsonResponse(get_basket(request))
+        basket = Basket.objects.filter(user=user).order_by('-id').first()
+        basket_product = BasketProduct.objects.filter(basket=basket, pk=pk).select_related('storage')
+        storage = basket_product.first().storage
+        if storage.is_available(count) is False:
+            return JsonResponse({'message': 'تعداد درخواست شده موجود نمیباشد', 'variant': 'error'})
+        basket_product.update(count=data['count'])
         basket.discount_code.update(basket=None)
         return JsonResponse(get_basket(request))
 
     def delete(self, request):
+        # storage_id = request.GET.get('storage_id', None)
         basket_product_id = request.GET.get('basket_product_id', None)
         summary = request.GET.get('summary', None)
         try:
-            basket = Basket.objects.filter(user=request.user).order_by('-id').first()
-            BasketProduct.objects.filter(basket=basket, id=basket_product_id).delete()
+            try:
+                basket = Basket.objects.filter(user=request.user).order_by('-id').first()
+                BasketProduct.objects.filter(basket=basket, id=basket_product_id).delete()
+                basket.discount_code.update(basket=None)
+            except TypeError:
+                session = request.session
+                products = session.get('basket', [])
+                products.pop(int(basket_product_id))
+                session.save()
             res = {}
             if summary:
                 res = get_basket(request)
-            basket.discount_code.update(basket=None)
             return JsonResponse(res)
         except (AssertionError, Basket.DoesNotExist):
             return JsonResponse(res_code['bad_request'], status=400)
@@ -205,12 +228,17 @@ class BookingView(View):
         user = request.user
         start_date = timestamp_to_datetime(data['start_date'])
         end_date = timestamp_to_datetime(data.get('end_date', data['start_date']))
+        count = data.get('count', 1)
         preview = get_preview_permission(user, is_get=False, product_check=True)
+        # statuss = ((1, 'pending'), (2, 'payed'), (3, 'canceled'), (4, 'rejected'), (5, 'sent'), (6, 'ready'))
+        invoice = Invoice.objects.filter(user=user, status__in=[1])
         try:
             storage = Storage.objects.filter(pk=data['storage_id'], **preview).exclude(product__booking_type=1). \
                 select_related('product').prefetch_related(
                 'product__features').only('product__type', 'product__thumbnail', 'product__box').first()
-            invoice_id = self.create_invoice(request, storage, data.get('count', 1), start_date, end_date,
+            if storage.is_available(count) is False:
+                raise ValidationError(_('تعداد درخواست شده موجود نمیباشد'))
+            invoice_id = self.create_invoice(request, storage, count, start_date, end_date,
                                              data['cart_postal_text'])
             invoice = HOST + f"/booking/{invoice_id}"
             address = Address.objects.filter(pk=user.default_address_id).select_related('city', 'state').first()
@@ -230,10 +258,10 @@ class BookingView(View):
         tax = get_tax(storage.tax_type, storage.discount_price, storage.start_price)
         address = AddressSchema().dump(user.default_address)
         post_invoice = Invoice.objects.create(created_by=user, updated_by=user, user=user, address=address,
-                                              expire=add_minutes(15), amount=shipping_cost)
+                                              expire=add_minutes(30), amount=shipping_cost)
 
         invoice = Invoice.objects.create(created_by=user, updated_by=user, user=user, charity_id=charity_id,
-                                         expire=add_minutes(15), final_price=storage.final_price,
+                                         expire=add_minutes(30), final_price=storage.final_price,
                                          amount=storage.discount_price + tax, start_date=start_date,
                                          end_date=end_date, details={'cart_postal': cart_postal_text},
                                          invoice_discount=storage.final_price - storage.discount_price, address=address,
@@ -246,7 +274,7 @@ class BookingView(View):
         sync_storage(basket, operator.sub)
         task_name = f'{invoice.id}: cancel reservation'
         kwargs = {"invoice_id": invoice.id, "task_name": task_name}
-        invoice.sync_task = add_one_off_job(name=task_name, kwargs=kwargs, interval=15,
+        invoice.sync_task = add_one_off_job(name=task_name, kwargs=kwargs, interval=30,
                                             task='server.tasks.cancel_reservation')
         invoice.save()
 
@@ -260,7 +288,8 @@ class BookingView(View):
                                       final_price=(storage.final_price - share['tax']) * count, box=product.box,
                                       discount_price=storage.discount_price * count,
                                       charity=share['charity'] * count,
-                                      start_price=storage.start_price * count, admin=share['admin'] * count, mt_profit=share['mt_profit'],
+                                      start_price=storage.start_price * count, admin=share['admin'] * count,
+                                      mt_profit=share['mt_profit'],
                                       total_price=(storage.final_price - share['tax']) * count,
                                       dev=share['dev'] * count,
                                       discount_price_without_tax=(storage.discount_price - share['tax']) * count,

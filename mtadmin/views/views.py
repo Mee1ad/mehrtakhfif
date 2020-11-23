@@ -50,7 +50,6 @@ class ReviewPrice(AdminView):
         if not request.user.is_superuser or get_group(request.user) in ['superuser', 'accountants']:
             remove_fields = ['dev', 'admin', 'charity', 'mt_profit']
             [share.pop(field, None) for field in remove_fields]
-        message = {}
         try:
             dper = ceil(100 - data['discount_price'] / data['final_price'] * 100)
         except ZeroDivisionError:

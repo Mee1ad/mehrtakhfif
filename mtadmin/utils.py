@@ -250,6 +250,7 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
                                    error_null_box=error_null_box)
         return JsonResponse({**items, **responses['201']}, status=201)
     if return_obj:
+        obj.refresh_from_db()
         return obj
     return JsonResponse({'id': obj.pk, **responses['201']}, status=201)
 

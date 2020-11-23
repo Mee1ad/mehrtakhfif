@@ -1,12 +1,11 @@
-import json
 from statistics import mean, StatisticsError
 
 from django.shortcuts import render_to_response
+from django.utils.crypto import get_random_string
 
 from mtadmin.serializer import *
 from mtadmin.utils import *
 from server.models import Media
-from django.utils.crypto import get_random_string
 
 
 # from server.models import Product
@@ -343,6 +342,8 @@ class StorageView(TableView):
             product = ProductESchema(only=[*required_fields, *extra_data], include_storage=True).dump(product)
         except TypeError:
             product = {}
+
+        # data features is in use
         return JsonResponse({"product": product, **data})
 
         # if request.GET.get('product__type'):
@@ -368,8 +369,7 @@ class StorageView(TableView):
         #  todo Aryan
         if not data.get('shipping_cost', 1):
             data['shipping_cost'] = 0
-        return update_object(request, Storage, require_box=False, box_key='product__box',
-                             data=data)
+        return update_object(request, Storage, require_box=False, box_key='product__box', data=data)
 
     def delete(self, request):
         return delete_base(request, Storage)

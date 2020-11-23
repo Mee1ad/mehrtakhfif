@@ -1,15 +1,17 @@
+import json
 import operator
 
 import zeep
 from django.http import JsonResponse, HttpResponseRedirect
 from django.utils.translation import gettext_lazy as _
 from django.views import View
+from django_celery_beat.models import IntervalSchedule
 
 from mehr_takhfif.settings import DEBUG, CLIENT_HOST
 from server.serialize import *
 from server.tasks import cancel_reservation
-import pysnooper
 from server.utils import LoginRequired, get_basket, add_one_off_job, sync_storage, add_minutes, get_share
+import pysnooper
 
 ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'disable': False},
                 {'id': 2, 'key': 'melli', 'name': 'ملی', 'hide': True, 'disable': True},
@@ -55,8 +57,10 @@ class PaymentRequest(LoginRequired):
         # if request.user.is_staff:
         basket = Basket.objects.filter(user=request.user, id=basket_id).first()
         permitted_user = []
+        # if basket.sync in [2, 3]:  # [(0, 'ready'), (1, 'reserved'), (2, 'canceled'), (3, 'done')]
+        #     raise ValidationError(_('سبد خرید باید فعال باشد'))
         if DEBUG is True and request.user.pk in permitted_user:
-        # if DEBUG:
+            # if DEBUG:
             invoice = self.create_invoice(request)
             self.submit_invoice_storages(request, invoice.pk)
             invoice.basket.sync = 3
@@ -90,6 +94,7 @@ class PaymentRequest(LoginRequired):
         self.reserve_storage(basket, invoice)
         self.submit_invoice_storages(request, invoice.pk)
         url = self.behpardakht_api(request, invoice.pk)
+        basket.products.clear()
         return JsonResponse({"url": url})
 
     @staticmethod
@@ -98,9 +103,7 @@ class PaymentRequest(LoginRequired):
         invoice = Invoice.objects.filter(pk=invoice_id).prefetch_related('storages').select_related(
             'post_invoice').first()
         share = get_share(invoice=invoice)
-        print(share)
         shipping_cost = getattr(getattr(invoice, 'post_invoice', None), 'amount', 0)
-        print(shipping_cost)
         additional_data = [[1, (share['mt_profit'] + share['tax'] + shipping_cost + share['admin']) * 10, 0],
                            [deposit['charity'], share['charity'] * 10, 0],
                            [deposit['dev'], share['dev'] * 10, 0]]
@@ -162,6 +165,16 @@ class PaymentRequest(LoginRequired):
             print(additional_data)
             raise ValueError(_(f"can not get ipg page: {r}"))
 
+    def postpone_invoice(self, invoice):
+        invoice.expire = add_minutes(30)
+        task_name = f'{invoice.id}: cancel reservation'
+        # args = []
+        kwargs = {"invoice_id": invoice.id, "task_name": task_name}
+        schedule, created = IntervalSchedule.objects.get_or_create(every=30, period=IntervalSchedule.MINUTES)
+        task, created = PeriodicTask.objects.get_or_create(interval=schedule, name=task_name, kwargs=json.dumps(kwargs),
+                                                           task='server.tasks.cancel_reservation', one_off=True)
+        task.save()
+
     def create_invoice(self, request, basket=None, charity_id=1):
         user = request.user
         address = None
@@ -182,11 +195,11 @@ class PaymentRequest(LoginRequired):
         shipping_cost = basket['summary']['shipping_cost']
         if shipping_cost:
             post_invoice = Invoice.objects.create(created_by=user, updated_by=user, user=user, address=address,
-                                                  expire=add_minutes(15), amount=shipping_cost,
+                                                  expire=add_minutes(30), amount=shipping_cost,
                                                   basket_id=basket['basket']['id'])
         invoice = Invoice.objects.create(created_by=user, updated_by=user, user=user, charity_id=charity_id,
                                          # mt_profit=basket['summary']['mt_profit'],
-                                         expire=add_minutes(15), basket_id=basket['basket']['id'],
+                                         expire=add_minutes(30), basket_id=basket['basket']['id'],
                                          invoice_discount=basket['summary']['invoice_discount'], address=address,
                                          # charity=basket['summary']['charity'],
                                          amount=basket['summary']['discount_price'] + basket['summary']['tax'],
@@ -195,12 +208,12 @@ class PaymentRequest(LoginRequired):
         return invoice
 
     def reserve_storage(self, basket, invoice):
-        if basket.sync != 1:  # reserved
+        if basket.sync != 1:  # [(0, 'ready'), (1, 'reserved'), (2, 'canceled'), (3, 'done')]
             sync_storage(basket, operator.sub)
             task_name = f'{invoice.id}: cancel reservation'
             # args = []
             kwargs = {"invoice_id": invoice.id, "task_name": task_name}
-            invoice.sync_task = add_one_off_job(name=task_name, kwargs=kwargs, interval=15,
+            invoice.sync_task = add_one_off_job(name=task_name, kwargs=kwargs, interval=30,
                                                 task='server.tasks.cancel_reservation')
             # basket.active = False
             basket.sync = 1  # reserved

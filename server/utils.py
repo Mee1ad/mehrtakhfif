@@ -487,9 +487,13 @@ def get_basket(request, basket_id=None, basket=None, basket_products=None, retur
         basket.basket_products = basket_products
     except AttributeError:
         pass
+    shipping_cost = 0
     if address_required:
         # summary['shipping_cost'] = get_shipping_cost(user, basket)
         summary['shipping_cost'] = get_shipping_cost_temp(user, basket)
+        if summary['shipping_cost'] != -1:
+            shipping_cost = summary['shipping_cost']
+
     if return_obj:
         basket.summary = summary
         basket.address_required = address_required
@@ -499,17 +503,22 @@ def get_basket(request, basket_id=None, basket=None, basket_products=None, retur
         summary.pop('charity', None)
     basket = BasketSchema(language=lang).dump(basket)
     summary['invoice_discount'] = summary['total_price'] - summary['discount_price']
-    summary['total_price'] += summary['shipping_cost']
-    summary['discount_price'] += summary['shipping_cost']
+    summary['total_price'] += shipping_cost
+    summary['discount_price'] += shipping_cost
     return {'basket': basket, 'summary': summary, 'address_required': address_required}
 
 
 def sync_session_basket(request):
     user = request.user
     if request.session.get('basket', None):
-        basket = Basket.objects.create(created_by=user, updated_by=user)
+        try:
+            basket = Basket.objects.filter(user=user).order_by('-id').first()
+            if basket is None:
+                basket = Basket.objects.create(user=user, created_by=user, updated_by=user)
+        except TypeError:
+            basket = Basket.objects.create(user=user, created_by=user, updated_by=user)
         session_basket = request.session['basket']
-        for product in session_basket:
+        for product in session_basket[::-1]:
             BasketProduct.objects.create(basket=basket, **product)
         request.session['basket'] = []
         request.session.save()

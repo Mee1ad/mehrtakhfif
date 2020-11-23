@@ -55,6 +55,7 @@ def cancel_reservation(self, invoice_id, **kwargs):
         if acquired:
             try:
                 invoice = Invoice.objects.get(pk=invoice_id)
+                #  ((1, 'pending'), (2, 'payed'), (3, 'canceled'), (4, 'rejected'), (5, 'sent'), (6, 'ready'))
                 successful_status = [2, 5]  # payed, posted
                 if invoice.status not in successful_status:
                     invoice.status = 3  # canceled
@@ -63,7 +64,7 @@ def cancel_reservation(self, invoice_id, **kwargs):
                         invoice.post_invoice.save()
                     except Exception:
                         pass
-                    invoice.suspended_at = timezone.now()
+                    invoice.cancel_at = timezone.now()
                     invoice.save()
                     sync_storage(invoice.basket_id, add)
                     try:
@@ -255,21 +256,5 @@ def server_backup():
 
 
 @shared_task(bind=True)
-def slow_task(self, *args, **kwargs):
-    hashcode = md5('test'.encode()).hexdigest()
-    lock_id = '{0}-lock-{1}'.format(self.name, hashcode)
-    with task_lock(lock_id, self.app.oid) as acquired:
-        if acquired:
-            try:
-                print('start')
-                n = random.randint(1, 4)
-                if n != 1:
-                    print('go to error')
-                    print(shit)
-                # sleep(30)
-                print('no error')
-                return "done"
-            except Exception as e:
-                logger.exception(e)
-                self.retry(countdown=3 ** self.request.retries)
-    return "This task is duplicate"
+def test_task(self, *args, **kwargs):
+    return "test task was successful"
