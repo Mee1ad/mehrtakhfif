@@ -335,7 +335,7 @@ class StorageView(TableView):
             except AttributeError:
                 extra_data.append('box')
                 product_id = Storage.objects.filter(pk=params['filter']['id']).values_list('product__id', flat=True)[0]
-            product = Product.objects.get(pk=product_id)
+            product = Product.objects.filter(pk=product_id).select_related('thumbnail', 'box').first()
 
             if params['filter'].get('id') or params['filter'].get('product_only'):
                 extra_data.append('features')

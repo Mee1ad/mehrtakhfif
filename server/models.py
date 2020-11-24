@@ -977,9 +977,9 @@ class ProductFeature(Base):
     def __str__(self):
         return f"{self.id}"
 
-    product = models.ForeignKey("Product", on_delete=CASCADE)
+    product = models.ForeignKey("Product", on_delete=CASCADE, related_name="product_features")
     feature = models.ForeignKey(Feature, on_delete=CASCADE)
-    feature_value = models.ForeignKey(FeatureValue, on_delete=CASCADE, null=True)
+    feature_value = models.ForeignKey(FeatureValue, on_delete=CASCADE, null=True, related_name='product_features')
     settings = JSONField(default=dict)
     priority = models.PositiveSmallIntegerField(default=0)
 
@@ -1006,9 +1006,9 @@ class ProductFeatureStorage(MyModel):
 class Product(Base):
     objects = MyQuerySet.as_manager()
     table_select = ['thumbnail']
-    select = ['box', 'default_storage'] + Base.select + table_select
+    select = ['box', 'default_storage', 'brand'] + Base.select + table_select
     table_prefetch = ['storages', 'categories']
-    prefetch = ['cities', 'states', 'tag_groups', 'feature_groups', 'tags'] + Base.prefetch + table_prefetch
+    prefetch = ['cities', 'states', 'feature_groups', 'tags', 'product_features'] + Base.prefetch + table_prefetch
     # Prefetch('storages', queryset=Storage.objects.filter, to_attr='count')] + Base.prefetch
     table_annotate = {'active_storages_count': Count('storages', filter=Q(storages__disable=False)),
                       'storages_count': Count('storages')}
@@ -1186,7 +1186,8 @@ class VipPrice(MyModel):
 
 class Storage(Base):
     objects = MyQuerySet.as_manager()
-    select = ['product', 'product__thumbnail', 'supplier'] + Base.select
+    select = ['product__thumbnail', 'supplier'] + Base.select
+    prefetch = []
 
     required_fields = ['supplier']
     related_fields = []
@@ -1328,6 +1329,9 @@ class Storage(Base):
         super().save(*args)
         self.post_process(kwargs)
 
+    def is_available(self, count=1):
+        return self.available_count_for_sale >= count and self.max_count_for_sale >= count
+
     product = models.ForeignKey(Product, on_delete=CASCADE, related_name='storages')
     # features = models.ManyToManyField(ProductFeature, through='StorageFeature', related_name="storages")
     features = models.ManyToManyField(ProductFeature, through='ProductFeatureStorage', related_name="storages")
@@ -1379,7 +1383,7 @@ class Basket(Base):
     def __str__(self):
         return f"{self.user}"
 
-    user = models.ForeignKey(User, on_delete=CASCADE, null=True, blank=True)
+    user = models.ForeignKey(User, on_delete=CASCADE, null=True, blank=True, related_name="baskets")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
     count = models.PositiveIntegerField(default=0)
     products = models.ManyToManyField(Storage, through='BasketProduct')
