@@ -34,7 +34,7 @@ urlpatterns = [
 
 handler404 = 'server.views.error.not_found'
 
-if settings.DEBUG and IP == 'localhost':
+if settings.DEBUG and SAFE_IP == 'localhost':
     urlpatterns += [path(r'silk/', include('silk.urls', namespace='silk'))]
     urlpatterns += [re_path(r'^static/(?P<path>.*)$', views.serve), ]
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
