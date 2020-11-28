@@ -4,7 +4,7 @@ from django.http import JsonResponse, HttpResponseNotFound
 from django.urls import resolve
 from sentry_sdk import configure_scope
 
-from mehr_takhfif.settings import ADMIN, POST, MT_ACCOUNTANTS
+from mehr_takhfif.settings import ROLL_NAME, HOST
 from server.models import User, Basket
 from server.utils import default_step, default_page, get_custom_signed_cookie, set_custom_signed_cookie
 
@@ -14,6 +14,10 @@ class AuthMiddleware:
         super().__init__()
         self.get_response = get_response
         # One-time configuration and initialization.
+
+    def get_user(self, roll_name):
+        pk = {'admin': 1, 'post': 10, 'accountants': 4}
+        return User.objects.get(pk=pk[roll_name])
 
     def __call__(self, request):
         # print(request.META.get('REMOTE_ADDR') or request.META.get('HTTP_X_FORWARDED_FOR'))
@@ -25,21 +29,15 @@ class AuthMiddleware:
         if request.method in token_requests and route not in allow_without_token and app_name != 'admin':
             # check_csrf_token(request)
             pass
-        # Debug
-        if ADMIN:
-            request.user = User.objects.order_by('id').first()
-            # request.user = User.objects.get(pk=133)
-        if POST:
-            request.user = User.objects.get(pk=10)
-        if MT_ACCOUNTANTS:
-            request.user = User.objects.get(pk=4)
-        delay = request.GET.get('delay', None)
-        if delay:
-            time.sleep(float(delay))
-        error = request.GET.get('error', None)
-        if error:
-            status_code = request.GET.get('status_code', 501)
-            return JsonResponse({}, status=status_code)
+        if HOST == 'http://api.mt.com':
+            request.user = self.get_user(ROLL_NAME)
+            delay = request.GET.get('delay', None)
+            if delay:
+                time.sleep(float(delay))
+            error = request.GET.get('error', None)
+            if error:
+                status_code = request.GET.get('status_code', 501)
+                return JsonResponse({}, status=status_code)
         # print(request.headers)
         # print(json.loads(request.body))
 

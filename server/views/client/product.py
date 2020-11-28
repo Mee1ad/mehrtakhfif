@@ -60,10 +60,21 @@ class ProductView(View):
             # group features
             gf = product_features.filter(feature__groups__in=[feature_group.pk])
             gf = ProductFeatureSchema().dump(gf, many=True)
-            group_features.append({'id': feature_group.pk, 'title': feature_group.name[lang], 'features': gf})
-        f = product_features.exclude(feature__groups__in=feature_groups_id)
-        features.append(ProductFeatureSchema().dump(f, many=True))
-        return {'group_features': group_features, 'features': features[0]}
+            group_features.append({'id': feature_group.pk, 'title': feature_group.name[lang],
+                                   'settings': feature_group.settings.get('ui', {}), 'features': gf})
+        non_group_features = product_features.exclude(feature__groups__in=feature_groups_id)
+        features = ProductFeatureSchema().dump(non_group_features, many=True)
+        unique_features = unique(features, key=lambda o: o['feature'])
+        # features.append(ProductFeatureSchema().dump(non_group_features, many=True))
+        feature_list = []
+        for feature in unique_features:
+            duplicate_features = []
+            for f in features:
+                if f['feature'] == feature['feature']:
+                    duplicate_features.append({'id': f['id'], 'settings': f['settings'], 'name': f['feature_value'],
+                                               'priority': f['priority']})
+            feature_list.append({'feature': feature['feature'], 'feature_value': duplicate_features})
+        return {'group_features': group_features, 'features': feature_list}
 
     def get_category(self, category):
         try:
