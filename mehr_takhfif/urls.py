@@ -17,7 +17,7 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.staticfiles import views
 from django.urls import path, include, re_path
-from mehr_takhfif.settings_var import IP
+from mehr_takhfif.settings_var import SAFE_IP
 
 from mehr_takhfif import settings
 
