@@ -699,7 +699,7 @@ def delete_custom_signed_cookie(res, key, domain=DEFAULT_COOKIE_DOMAIN):
 def get_custom_signed_cookie(req, key, error=None, salt=TOKEN_SALT):
     if error is not None:
         return req.get_signed_cookie(key, error, salt=salt)
-    return req.get_signed_cookie(key, salt=salt)
+    return req.get_signed_cookie(key, default=None, salt=salt)
 
 
 def sort_by_list_of_id(model, id_list):

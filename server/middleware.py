@@ -95,6 +95,9 @@ class AuthMiddleware:
                 scope.user = {"email": user.email, 'first_name': user.first_name, 'last_name': user.last_name}
 
         response = self.get_response(request)
+        is_login = get_custom_signed_cookie(request, 'is_login', error=None)
+        if is_login is None:
+            response = set_custom_signed_cookie(response, 'is_login', request.user.is_authenticated)
         if app_name == 'server' and new_basket_count is not None and 200 <= response.status_code <= 299 and request.method == 'GET':
             response = set_custom_signed_cookie(response, 'basket_count', new_basket_count)
         if request.method in token_requests and app_name != 'admin':
