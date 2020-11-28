@@ -4,6 +4,7 @@ from django.http import JsonResponse
 
 from server.serialize import *
 from server.utils import View, get_pagination, load_data, get_preview_permission
+from toolz import unique
 
 
 class ProductView(View):
