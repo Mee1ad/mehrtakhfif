@@ -82,27 +82,23 @@ def cancel_reservation(self, invoice_id, **kwargs):
 def sale_report(self, invoice_id, **kwargs):
     hashcode = md5(f"sale_report{invoice_id}".encode()).hexdigest()
     lock_id = '{0}-lock-{1}'.format(self.name, hashcode)
+    email_list = ['accounting@mehrtakhfif.com', 'post@mehrtakhfif.com', 'support@mehrtakhfif.com']
     with task_lock(lock_id, self.app.oid) as acquired:
         if acquired:
             try:
                 invoice_storages = InvoiceStorage.objects.filter(invoice_id=invoice_id). \
-                    select_related('storage', 'storage__product__box__owner')
-                notif_users = User.objects.filter(groups__name__in=['accountants', 'post'])
-                notif_devices = GCMDevice.objects.filter(user__in=notif_users)
+                    select_related('storage__product__box__owner').\
+                    prefetch_related('storage__product__box__owner__gcmdevice_set')
+
                 for invoice_storage in invoice_storages:
                     owner = invoice_storage.storage.product.box.owner
                     message = f"""عنوان محصول:
                                   {invoice_storage.storage.title['fa']}
                                   تعداد:{invoice_storage.count}
                                  قیمت: {invoice_storage.storage.discount_price}"""
-                    notif_users |= User.objects.filter(pk=owner.pk)
-                    devices = GCMDevice.objects.filter(user=owner)
-                    for device in devices | notif_devices:
-                        try:
-                            device.send_message(message, extra={'title': "گزارش فروش"})
-                        except URLError:
-                            continue
-                    [send_email('گزارش فروش', user.email, message=message) for user in notif_users]
+                    email_list.append(owner.email)
+                    owner.gcmdevice_set.all().send_message(message, extra={'title': "گزارش فروش"})
+                    [send_email('گزارش فروش', email, message=message) for email in email_list]
                 return f"{invoice_id}-successfully reported"
             except Exception as e:
                 logger.exception(e)
