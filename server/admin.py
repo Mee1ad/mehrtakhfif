@@ -83,25 +83,22 @@ class Base(SafeDeleteAdmin):
         return mark_safe(f'<a href="{url}">{count} Students</a>')
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        if db_field.name in ["created_by", "updated_by", "deleted_by", "suspended_by"]:
+        if db_field.name in ["created_by", "updated_by", "deleted_by", "suspended_by", "owner"]:
             kwargs["queryset"] = User.objects.filter(is_staff=True).order_by('id')
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
-
-class BoxAdmin(SafeDeleteAdmin):
-    list_display = ('name_fa', 'permalink', 'owner') + SafeDeleteAdmin.list_display
-    # list_filter = ('name',) + SafeDeleteAdmin.list_filter
-    search_fields = ['name']
-    autocomplete_fields = ['owner']
-    list_per_page = 10
     formfield_overrides = {
         JSONField: {'widget': PrettyJSONWidget(attrs={'initial': 'parsed'})}
     }
 
-    # ordering = ('-created_at',)
 
-    def name_fa(self, obj):
-        return obj.name['fa']
+class BoxAdmin(Base):
+    list_display = ('name_fa', 'permalink', 'owner') + SafeDeleteAdmin.list_display
+    # list_filter = ('name',) + SafeDeleteAdmin.list_filter
+    search_fields = ['name']
+    # autocomplete_fields = ['owner']
+    list_per_page = 10
+    # ordering = ('-created_at',)
 
 
 class AdAdmin(admin.ModelAdmin):
@@ -169,16 +166,13 @@ class BasketAdmin(Base):
     # get_user.short_description = 'user'
 
 
-class CategoryAdmin(SafeDeleteAdmin):
+class CategoryAdmin(Base):
     list_display = ('parent', 'box', 'name_fa', 'deleted_by') + SafeDeleteAdmin.list_display
     list_filter = ('name',) + SafeDeleteAdmin.list_filter
     list_display_links = ('box',)
     search_fields = ['name']
     list_per_page = 10
     ordering = ('-created_at',)
-
-    def name_fa(self, obj):
-        return obj.name['fa']
 
 
 class CharityAdmin(Base):
@@ -230,7 +224,7 @@ class FeatureGroupAdmin(Base):
         return mark_safe(f'<a href="{link}">Show</a>')
 
 
-class MenuAdmin(SafeDeleteAdmin):
+class MenuAdmin(Base):
     list_display = ('menu_name', 'media', 'url', 'type', 'parent', 'priority') + SafeDeleteAdmin.list_display
     list_filter = ('name', 'type', 'parent') + SafeDeleteAdmin.list_filter
     # list_display_links = ('name',)
@@ -244,7 +238,7 @@ class MenuAdmin(SafeDeleteAdmin):
     menu_name.short_description = 'name'
 
 
-class CommentAdmin(SafeDeleteAdmin):
+class CommentAdmin(Base):
     list_display = ('get_user', 'get_product', 'get_post', 'approved') + SafeDeleteAdmin.list_display
     list_filter = ('user', 'product', 'blog_post', 'approved') + SafeDeleteAdmin.list_filter
     # list_display_links = ('name',)
@@ -264,7 +258,7 @@ class CommentAdmin(SafeDeleteAdmin):
     get_user.short_description = 'user'
 
 
-class SliderAdmin(SafeDeleteAdmin):
+class SliderAdmin(Base):
     list_display = ('slider_title', 'type', 'url', 'product') + SafeDeleteAdmin.list_display
     list_filter = ('title', 'type') + SafeDeleteAdmin.list_filter
     # list_display_links = ('name',)
@@ -283,7 +277,7 @@ class SliderAdmin(SafeDeleteAdmin):
     url.short_description = 'url'
 
 
-class SpecialOfferAdmin(SafeDeleteAdmin):
+class SpecialOfferAdmin(Base):
     list_display = ('menu_name', 'code', 'category', 'start_date', 'end_date') + SafeDeleteAdmin.list_display
     list_filter = ('name', 'code', 'box', 'product', 'category') + SafeDeleteAdmin.list_filter
     # list_display_links = ('name',)
@@ -297,7 +291,7 @@ class SpecialOfferAdmin(SafeDeleteAdmin):
     menu_name.short_description = 'name'
 
 
-class SpecialProductAdmin(SafeDeleteAdmin):
+class SpecialProductAdmin(Base):
     list_display = ('url', 'storage', 'box') + SafeDeleteAdmin.list_display
     list_filter = ('name', 'storage', 'box') + SafeDeleteAdmin.list_filter
     # list_display_links = ('name',)
@@ -325,7 +319,7 @@ class DecadeBornListFilter(admin.SimpleListFilter):
                                    birthday__lte=date(1999, 12, 31))
 
 
-class ProductAdmin(SafeDeleteAdmin):
+class ProductAdmin(Base):
     list_display = ('product_name', 'disable', 'type', 'permalink') + SafeDeleteAdmin.list_display
     # list_filter = ('type', 'DecadeBornListFilter') + SafeDeleteAdmin.list_filter
     list_display_links = ('product_name',)
@@ -353,7 +347,7 @@ class ProductAdmin(SafeDeleteAdmin):
     product_name.short_description = 'name'
 
 
-class HouseAdmin(SafeDeleteAdmin):
+class HouseAdmin(Base):
     list_display = ('id', 'owner', 'state', 'city', 'price') + SafeDeleteAdmin.list_display
     # list_display_links = ('name',)
     search_fields = ['city']
@@ -361,7 +355,7 @@ class HouseAdmin(SafeDeleteAdmin):
     ordering = ('-created_at',)
 
 
-class HouseOwnerAdmin(SafeDeleteAdmin):
+class HouseOwnerAdmin(Base):
     list_display = ('id', 'user', 'bank_name') + SafeDeleteAdmin.list_display
     list_filter = ('bank_name',) + SafeDeleteAdmin.list_filter
     # list_display_links = ('name',)
@@ -369,21 +363,21 @@ class HouseOwnerAdmin(SafeDeleteAdmin):
     ordering = ('-created_at',)
 
 
-class HousePriceAdmin(SafeDeleteAdmin):
+class HousePriceAdmin(Base):
     list_display = ('id',) + SafeDeleteAdmin.list_display
     # list_display_links = ('name',)
     list_per_page = 10
     ordering = ('-created_at',)
 
 
-class BookAdmin(SafeDeleteAdmin):
+class BookAdmin(Base):
     list_display = ('id', 'start_date', 'end_date') + SafeDeleteAdmin.list_display
     # list_display_links = ('name',)
     list_per_page = 10
     ordering = ('-created_at',)
 
 
-class ResidenceTypeAdmin(SafeDeleteAdmin):
+class ResidenceTypeAdmin(Base):
     list_display = ('id', 'name') + SafeDeleteAdmin.list_display
     list_display_links = ('name',)
     list_per_page = 10
@@ -427,7 +421,7 @@ class StorageAdmin(Base):
     get_supplier.short_description = 'supplier'
 
 
-class InvoiceAdmin(SafeDeleteAdmin):
+class InvoiceAdmin(Base):
     list_display = ('id', 'amount', 'invoice_discount', 'status', 'get_storages', 'get_suppliers',
                     'get_invoice') + SafeDeleteAdmin.list_display
     list_filter = ('status',) + SafeDeleteAdmin.list_filter
@@ -517,7 +511,7 @@ class CityAdmin(admin.ModelAdmin):
         return mark_safe(f'<a href="{link}">{escape(obj.state.__str__())}</a>')
 
 
-class HolidayAdmin(SafeDeleteAdmin):
+class HolidayAdmin(Base):
     list_display = ('occasion', 'day_off')
     list_filter = ('day_off',)
     search_fields = ['occasion', ]
@@ -529,7 +523,7 @@ class HolidayAdmin(SafeDeleteAdmin):
         return obj.name['fa']
 
 
-class VipTypeAdmin(SafeDeleteAdmin):
+class VipTypeAdmin(Base):
     list_display = ('name_fa', 'media')
     # list_filter = ('day_off',)
     search_fields = ['name', ]
