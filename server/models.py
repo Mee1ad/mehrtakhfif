@@ -204,10 +204,12 @@ class MyQuerySet(SafeDeleteQueryset):
         validations.update(dict.fromkeys(['feature', 'brand', 'tag'], self.default_validation))
         # noinspection PyArgumentList
         kwargs = validations[model](**kwargs)
+        remove_fields = kwargs.get('remove_fields', None)
         [kwargs.pop(item, None) for item in remove_list]
         is_updated = super().update(**kwargs)
         if model == 'storage' and self:
             storage = self.first()
+            storage.post_process(remove_fields)
             storage.update_price()
             if kwargs.get('disable') is True:
                 if storage.product.storages.count() <= 1:
@@ -217,7 +219,7 @@ class MyQuerySet(SafeDeleteQueryset):
 
         elif model == 'product':
             product = self.first()
-            storages = product.storages.all()
+            # storages = product.storages.all()
             # todo fix in add product
             # storages.first().cascade_disabling(storages)
         return is_updated
@@ -240,7 +242,6 @@ class MyQuerySet(SafeDeleteQueryset):
         # for storage and invoice_storage
         storage = self.first()
         kwargs = storage.pre_process(kwargs)
-        storage.post_process(kwargs.get('remove_fields', None))
         return kwargs
 
     def invoice_validation(self, **kwargs):
@@ -1057,7 +1058,7 @@ class Product(Base):
         Product.objects.filter(pk=self.pk).update(verify=True)
 
     def assign_default_value(self):
-        storages = self.storages.filter(available_count_for_sale__gt=0, unavailable=False)
+        storages = self.storages.filter(available_count_for_sale__gt=0, unavailable=False, disable=False)
         if not storages:
             storages = self.storages.all()
         try:
@@ -1265,8 +1266,9 @@ class Storage(Base):
     def post_process(self, my_dict):
         if my_dict is None:
             return True
-        if self.product.manage or getattr(self.product.default_storage, 'available_count_for_sale', 0) < 1\
-                or my_dict.get('disable', None) is bool or my_dict.get('unavailable', None) is bool:
+        ds = getattr(self.product, 'default_storage', None)
+        if self.product.manage or getattr(ds, 'available_count_for_sale', 0) < 1\
+                or getattr(ds, 'disable', None) is True or getattr(ds, 'unavailable', None) is True:
             self.product.assign_default_value()
         if my_dict.get('vip_prices', None):
             self.vip_prices.clear()
