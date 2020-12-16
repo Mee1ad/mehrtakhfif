@@ -94,6 +94,9 @@ class BasketView(View):
             storage = Storage.objects.get(pk=product['storage_id'])
             if storage.available_count_for_sale < count or storage.max_count_for_sale < count or storage.disable \
                     or storage.product.disable:
+                print('count:', count, 'available_count_for_sale:', storage.available_count_for_sale,
+                      'max_count_for_sale:', storage.max_count_for_sale, 'storage.disable:', storage.disable,
+                      'storage.product.disable:', storage.product.disable)
                 raise ValidationError(_('متاسفانه این محصول ناموجود میباشد'))
             basket = request.session.get('basket', [])
             duplicate_basket_product_index = [basket.index(basket_product) for basket_product in basket if
@@ -117,6 +120,9 @@ class BasketView(View):
             storage = Storage.objects.get(pk=product['storage_id'])
             if storage.available_count_for_sale < count or storage.max_count_for_sale < count or storage.disable \
                     or storage.product.disable:
+                print('count:', count, 'available_count_for_sale:', storage.available_count_for_sale,
+                      'max_count_for_sale:', storage.max_count_for_sale, 'storage.disable:', storage.disable,
+                      'storage.product.disable:', storage.product.disable)
                 raise ValidationError(_('متاسفانه این محصول ناموجود میباشد'))
             try:
                 basket_product = BasketProduct.objects.filter(basket=basket, storage=storage)
