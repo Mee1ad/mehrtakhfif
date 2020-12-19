@@ -77,7 +77,7 @@ class Orders(LoginRequired):
             except Invoice.DoesNotExist:
                 return JsonResponse({}, status=404)
             return JsonResponse({'data': InvoiceSchema(user=request.user).dump(invoice)})
-        orders = user_data_with_pagination(Invoice, InvoiceSchema, request)
+        orders = user_data_with_pagination(Invoice, InvoiceSchema, request, extra={"final_price__isnull": False})
         return JsonResponse(orders)
 
 

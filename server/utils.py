@@ -397,8 +397,8 @@ def get_pagination(request, query, serializer, show_all=False):
             'data': items}
 
 
-def user_data_with_pagination(model, serializer, request, show_all=False):
-    query = model.objects.filter(user=request.user)
+def user_data_with_pagination(model, serializer, request, show_all=False, extra={}):
+    query = model.objects.filter(user=request.user, **extra)
     return get_pagination(request, query, serializer, show_all=show_all)
 
 
