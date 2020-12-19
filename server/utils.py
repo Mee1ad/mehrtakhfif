@@ -205,10 +205,10 @@ def load_location(location):
 def get_invoice_file(request, invoice=None, invoice_id=None, user={}):
     if invoice is None:
         invoice = Invoice.objects.get(pk=invoice_id, **user)
-    shipping_invoice = Invoice.objects.filter(basket=invoice.basket, final_price__isnull=True, **user).order_by('-id')
+    # shipping_invoice = Invoice.objects.filter(basket=invoice.basket, final_price__isnull=True, **user).order_by('-id')
     invoice_dict = InvoiceSchema(**request.schema_params).dump(invoice)
-    if shipping_invoice:
-        invoice_dict['shipping_invoice'] = InvoiceSchema().dump(shipping_invoice.first())
+    if invoice.post_invoice:
+        invoice_dict['shipping_invoice'] = InvoiceSchema().dump(invoice.post_invoice)
         invoice_dict['shipping_invoice']['tax'] = get_tax(2, invoice_dict['shipping_invoice']['amount'], 0)
     invoice_dict['user'] = UserSchema().dump(invoice.user)
     try:
@@ -216,7 +216,6 @@ def get_invoice_file(request, invoice=None, invoice_id=None, user={}):
     except ValueError:
         invoice_dict['date'] = '1399/99/99'
     invoice_dict['barcode'] = get_barcode(invoice.id)
-    print(invoice_dict)
     return invoice_dict
 
 
