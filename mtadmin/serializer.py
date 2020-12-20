@@ -1,3 +1,4 @@
+from django.contrib.postgres.aggregates import ArrayAgg
 from marshmallow import EXCLUDE
 
 from server.serialize import *
@@ -181,8 +182,10 @@ class BaseAdminSchema(Schema):
 
     def get_media(self, obj):
         try:
-            medias = ProductMedia.objects.filter(product=obj).select_related(*ProductMedia.select).order_by('priority')
-            medias = [media.media for media in medias]
+            # medias = ProductMedia.objects.filter(product=obj).select_related(*ProductMedia.select).order_by('priority')
+            medias = obj.product_media.all().select_related('media')
+            return ProductMediaASchema().dump(medias, many=True)
+            # medias = [media.media for media in medias]
         except AttributeError:
             if obj.media is not None:
                 return MediaSchema().dump(obj.media)
@@ -191,7 +194,6 @@ class BaseAdminSchema(Schema):
             if obj.media:
                 return MediaASchema().dump(obj.media)
             return
-        return MediaASchema().dump(medias, many=True)
 
     def get_tag(self, obj):
         tags = ProductTag.objects.filter(product=obj)
@@ -211,16 +213,55 @@ class BaseAdminSchema(Schema):
             # return FeatureGroupASchema(exclude=['features']).dump(obj.feature_groups.all(), many=True)
             return FeatureGroupASchema().dump(obj.feature_groups.all(), many=True)
 
-    def get_product_features(self, features, model):  # 4 extra query
-        features_distinct = features.order_by('feature_id').distinct('feature_id')
-        for product_feature in features_distinct:
-            for pf in features.filter(feature=product_feature.feature):
-                try:
-                    product_feature.values.append(pf.feature_value)
-                except AttributeError:
-                    product_feature.values = []
-                    product_feature.values.append(pf.feature_value)
-        return ProductFeatureASchema(model=model).dump(features_distinct, many=True)  # 34 extra query
+    def get_product_features(self, product_features, model):  # tiny extra query problem, not finding problem
+        features_distinct = []
+        for product_feature in product_features:
+            included_features_id = [pf.feature_id for pf in features_distinct]
+            if product_feature.feature_id not in included_features_id:
+                features_distinct.append(product_feature)
+                continue
+            pf = next(pf for pf in features_distinct if pf.feature_id == product_feature.feature_id)
+            try:
+                product_feature.values.append(pf.feature_value)
+            except AttributeError:
+                product_feature.values = []
+                product_feature.values.append(pf.feature_value)
+
+        return ProductFeatureASchema(model=model).dump(features_distinct, many=True)  # 107 extra query
+
+    def get_product_features_new(self, obj):
+        type_filter = {}
+        if obj.__class__.__name__ == 'Storage' or getattr(self, 'only_selectable'):
+            print('this is storage')
+            try:
+                obj = obj.product
+            except AttributeError:
+                pass
+            type_filter = {'feature__type': 3}
+        product_features = obj.product_features.filter(**type_filter).annotate(
+            storage_id=ArrayAgg('product_feature_storages__storage')).select_related('feature_value', 'feature')
+
+        features_distinct = []
+        for product_feature in product_features:
+            product_feature.feature_value.id = product_feature.id
+            included_features_id = [pf.feature_id for pf in features_distinct]
+            product_feature.used = type(next(iter(product_feature.storage_id), None)) == int
+            product_feature.feature_value.storage_id = product_feature.storage_id
+            if product_feature.feature_id not in included_features_id:
+                product_feature.values = []
+                product_feature.values.append(product_feature.feature_value)
+                features_distinct.append(product_feature)
+                continue
+            pf = next(pf for pf in features_distinct if pf.feature_id == product_feature.feature_id)
+            pf.values.append(product_feature.feature_value)
+
+        features = []
+        for pf in features_distinct:
+            features.append({'feature': FeatureASchema(only=['id', 'name', 'type']).dump(pf.feature),
+                             'priority': pf.priority, 'id': pf.id, 'used': pf.used,
+                             'values': FeatureValueASchema(exclude=['created_at', 'updated_at'])
+                            .dump(pf.values, many=True)})
+        return features
 
 
 class BookingASchema(BaseAdminSchema):
@@ -473,7 +514,7 @@ class ProductASchema(BaseAdminSchema):
     categories = fields.Method("get_category")
     thumbnail = fields.Nested("MediaASchema")
     disable = fields.Boolean()
-    has_selectable_feature = fields.Method("get_has_selectable_feature")
+    # has_selectable_feature = fields.Method("get_has_selectable_feature")
     type = fields.Function(lambda o: o.get_type_display())
     booking_type = fields.Function(lambda o: o.get_booking_type_display())
 
@@ -494,9 +535,10 @@ class ProductTagASchema(Schema):
 
 class ProductESchema(ProductASchema, ProductSchema):
     # class ProductESchema(BaseSchema):
-    def __init__(self, include_storage=False, *args, **kwargs):
+    def __init__(self, include_storage=False, only_selectable=False, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.include_storage = include_storage
+        self.only_selectable = only_selectable
 
     class Meta:
         unknown = EXCLUDE
@@ -504,8 +546,7 @@ class ProductESchema(ProductASchema, ProductSchema):
 
     media = fields.Method("get_media")
     tags = ProductTagField()
-    tag_groups = ProductTagGroupField()
-    # brand = fields.Method("get_brand")
+    tag_groups = fields.Method("get_tag_groups")
     brand = fields.Nested(BrandASchema)
     properties = fields.Dict()
     details = fields.Dict()
@@ -513,9 +554,13 @@ class ProductESchema(ProductASchema, ProductSchema):
     short_address = fields.Dict()
     description = fields.Dict()
     short_description = fields.Dict()
+    # default_storage = fields.Function(lambda o: None)
+    # available = fields.Function(lambda o: None)
     default_storage_id = fields.Int()
-    features = fields.Method("get_features")
-    feature_groups = fields.Method("get_feature_groups")
+    has_selectable_feature = fields.Function(lambda o: True)
+    # features = fields.Method("get_features")  # 38 + 19(selected) => 64
+    features = fields.Method("get_product_features_new")
+    feature_groups = fields.Method("get_feature_groups")  # 2
     booking_type = fields.Function(lambda o: o.get_booking_type_display())
     storages = fields.Method("get_storages", load_only=True, dump_only=False)
 
@@ -526,10 +571,9 @@ class ProductESchema(ProductASchema, ProductSchema):
         return []
 
     def get_feature_groups(self, obj):
-        categories = obj.categories.all()
-        feature_groups = obj.feature_groups.all()
-        for category in categories:
-            feature_groups |= category.feature_groups.all()
+        feature_groups = FeatureGroup.objects.filter(categories__in=obj.categories.all()). \
+            prefetch_related('feature_group_features__feature__values')
+        # return FeatureGroupASchema(product=obj, exclude=['box']).dump(feature_groups, many=True)
         return FeatureGroupASchema(product=obj).dump(feature_groups, many=True)
 
     def get_features(self, obj):
@@ -539,6 +583,39 @@ class ProductESchema(ProductASchema, ProductSchema):
         features = obj.product_features.filter(**type_filter).select_related('feature_value', 'feature')
         # features = ProductFeature.objects.filter(product=obj, **type_filter).select_related('feature_value')
         return self.get_product_features(features, model='product')
+
+    def get_features_new(self, obj):
+        type_filter = {}
+        if obj.__class__.__name__ == 'Storage':
+            print('this is storage')
+            type_filter = {'feature__type': 3}
+        product_features = obj.product_features.filter(**type_filter).annotate(
+            storage_id=ArrayAgg('product_feature_storages')).select_related('feature_value', 'feature')
+
+        features_distinct = []
+        for product_feature in product_features:
+            included_features_id = [pf.feature_id for pf in features_distinct]
+            product_feature.used = type(next(iter(product_feature.storage_id), None)) == int
+            product_feature.feature_value.storage_id = product_feature.storage_id
+            if product_feature.feature_id not in included_features_id:
+                product_feature.values = []
+                product_feature.values.append(product_feature.feature_value)
+                features_distinct.append(product_feature)
+                continue
+            pf = next(pf for pf in features_distinct if pf.feature_id == product_feature.feature_id)
+            pf.values.append(product_feature.feature_value)
+
+        features = []
+        for pf in features_distinct:
+            features.append({'feature': FeatureASchema(only=['id', 'name', 'type']).dump(pf.feature),
+                             'priority': pf.priority, 'id': pf.id, 'used': pf.used,
+                             'values': FeatureValueASchema(exclude=['created_at', 'updated_at'])
+                            .dump(pf.values, many=True)})
+        return features
+
+    def get_tag_groups(self, obj):
+        tag_groups = obj.tag_groups.all()
+        return TagGroupASchema(exclude=['tags']).dump(tag_groups, many=True)
 
 
 class ProductFeatureASchema(Schema):
@@ -551,7 +628,8 @@ class ProductFeatureASchema(Schema):
         return dump(raw_data)
 
     id = fields.Int()
-    feature = fields.Nested("FeatureASchema")  # 18 + 19(selected) extra query
+    feature = fields.Nested("FeatureASchema")  # 66 + 19(selected) extra query
+    # feature = fields.Method("get_feature")  # 18 + 19(selected) extra query, solved
     values = fields.Method('get_values')  # 23 extra query
     priority = fields.Int()
 
@@ -560,19 +638,28 @@ class ProductFeatureASchema(Schema):
 
     def get_values(self, obj):
         product_features = ProductFeature.objects.filter(feature=obj.feature, product=obj.product) \
-            .select_related(*ProductFeature.select)
+            .select_related('feature_value').prefetch_related('product_feature_storages')
+
         values = []
         for pf in product_features:
-            product_feature_storage = ProductFeatureStorage.objects.filter(storage__product=pf.product,
-                                                                           product_feature=pf)
-            selected = product_feature_storage.exists()
-            storages_id = list(product_feature_storage.values_list('storage_id', flat=True))
+            selected = 'type(pf.selected) == int'
+            # storages_id = list(product_feature_storage.values_list('storage_id', flat=True))
+            storages_id = 'pf.storages_id'
+            # print(storages_id)
             pk = pf.id
             if self.model == 'product':
                 pk = pf.feature_value_id
             values.append({'id': pk, 'name': pf.feature_value.value, 'selected': selected, 'storage_id': storages_id,
                            'settings': pf.feature_value.settings.get('ui', {})})
         return values
+
+
+class NewProductFeatureASchema(Schema):
+    id = fields.Int()
+    feature = fields.Method("get_feature")
+
+    def get_feature(self, obj):
+        pass
 
 
 class ProductFeatureStorageASchema(Schema):
@@ -609,7 +696,7 @@ class StorageASchema(BaseAdminSchema):
     class Meta:
         additional = ('title', 'start_price', 'final_price', 'discount_price', 'discount_percent',
                       'available_count_for_sale', 'tax', 'product_id', 'settings', 'max_count_for_sale',
-                      'min_count_alert', 'disable', 'unavailable')
+                      'min_count_alert', 'disable', 'unavailable', 'priority')
 
     least_booking_time = fields.Method("get_least_booking_time")
     booking_cost = fields.Method("get_booking_cost")
@@ -633,14 +720,30 @@ class StorageESchema(StorageASchema):
                       'invoice_title', 'dimensions', 'package_discount_price', 'sold_count')
 
     supplier = fields.Nested(MinUserSchema)
-    features = fields.Method('get_features')
-    items = PackageItemsField()
+    # features = fields.Method('get_features')
+    features = fields.Method('get_product_features_new')
+    items = fields.Method("get_items")
     tax = fields.Function(lambda o: o.get_tax_type_display())
     vip_discount_price = fields.Function(lambda o: None)
     vip_discount_percent = fields.Function(lambda o: None)
     vip_prices = VipPriceField()
     start_time = fields.Function(lambda o: o.start_time.timestamp())
     vip_max_count_for_sale = fields.Function(lambda o: None)
+
+    def get_items(self, obj):
+        # items = Package.objects.filter(package_id=obj)
+        items = obj.packages.all().select_related('package_item__product').prefetch_related('package_item__vip_prices')
+        return PackageItemASchema().dump(items, many=True)
+
+    def get_features_new(self, obj):
+        product_features = ProductFeature.objects.filter(product=obj.product, feature__type=3)
+        res = []
+        for pf in product_features:
+            res.append({'feature': FeatureASchema(only=['id', 'name']).dump(pf.feature),
+                        'priority': pf.priority, 'id': pf.id,
+                        'values': FeatureValueASchema(exclude=['created_at', 'updated_at']).dump(pf.feature_value,
+                                                                                                 many=True)})
+        return []
 
     def get_features(self, obj):
         # product_feature_storages = ProductFeatureStorage.objects.filter(storage=obj).values_list('product_feature_id',
@@ -664,10 +767,10 @@ class PackageItemASchema(BaseAdminSchema):
 
     def get_package_item(self, obj):
         try:
-            storage = Storage.objects.get(pk=obj.package_item_id)
+            storage = obj.package_item
             product = storage.product
             product.default_storage = storage
-            return ProductESchema().dump(product)
+            return ProductESchema(only=['id', 'name', 'default_storage']).dump(product)
         except Exception:
             return None
 
@@ -704,6 +807,12 @@ class MediaASchema(BaseAdminSchema):
 
     image = fields.Function(lambda o: HOST + o.image.url if o.image else None)
     type = fields.Function(lambda o: o.get_type_display())
+
+
+class ProductMediaASchema(Schema):
+    id = fields.Int()
+    priority = fields.Int()
+    media = fields.Nested(MediaASchema)
 
 
 class MediaESchema(MediaASchema, MediaSchema):
@@ -744,15 +853,16 @@ class FeatureASchema(BaseAdminSchema):
         # product_feature = ProductFeature.objects.filter(feature=obj, product=self.product)
         # if product_feature.exists():
         #     return [FeatureValueASchema(product=self.product).dump(product_feature.first().feature_value)]
+        values = obj.values.all()
         if getattr(obj, 'get_type_display')() == "text":
-            fv = FeatureValue.objects.filter(feature=obj).order_by('id').first()
+            # fv = values.order_by('id').first()
+            fv = min(values, key=attrgetter('id'))
             if fv:
                 return [FeatureValueASchema(product=self.product).dump(fv)]
             return []
-        product = {}
         if self.only_used_value:
-            product = {'product': self.product}
-        values = FeatureValue.objects.filter(feature=obj, **product)
+            print('fuck')
+            values = FeatureValue.objects.filter(feature=obj, product=self.product)
         return FeatureValueASchema(product=self.product).dump(values, many=True)
 
 
@@ -765,7 +875,17 @@ class FeatureValueASchema(BaseAdminSchema):
         additional = ('settings', 'priority')
 
     name = fields.Function(lambda o: getattr(o, 'value', None))
-    selected = fields.Method("get_selected")  # 19 extra query, get worse with prefetch
+    storage_id = fields.Method('get_storage_id')
+
+    def get_storage_id(self, obj):
+        try:
+            if type(next(iter(obj.storage_id), None)) == int:
+                return obj.storage_id
+            return []
+        except Exception:
+            return []
+
+    # selected = fields.Method("get_selected")  # 19 extra query, get worse with prefetch
 
     def get_selected(self, obj):
         # if self.product:
@@ -781,10 +901,16 @@ class FeatureGroupASchema(BaseAdminSchema):
 
     name = fields.Dict()
     settings = fields.Dict()
+    # features = fields.Method("get_features_old")
     features = fields.Method("get_features")
-    box = fields.Nested(BoxASchema)
+    # features = fields.Nested('FeatureGroupFeatureASchema')
+    # box = fields.Nested(BoxASchema)
 
     def get_features(self, obj):
+        features = obj.feature_group_features.all()
+        return FeatureGroupFeatureASchema(product=self.product).dump(features, many=True)
+
+    def get_features_old(self, obj):
         if obj.__class__.__name__ == 'CategoryGroupFeature':
             feature_ids = FeatureGroupFeature.objects.filter(featuregroup=obj.featuregroup).order_by('priority', 'id') \
                 .distinct('priority', 'id').values_list('feature', flat=True)
@@ -793,6 +919,19 @@ class FeatureGroupASchema(BaseAdminSchema):
                 .distinct('priority', 'id').values_list('feature', flat=True)
         features = sort_by_list_of_id(Feature, feature_ids)
         return FeatureASchema(exclude=['groups'], product=self.product).dump(features, many=True)
+
+
+class FeatureGroupFeatureASchema(BaseAdminSchema):
+    def __init__(self, product=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.product = product
+
+    feature = fields.Method("get_feature")
+    # features = fields.Nested(FeatureASchema)
+    priority = fields.Int()
+
+    def get_feature(self, obj):
+        return FeatureASchema(exclude=['groups'], product=self.product).dump(obj.feature)
 
 
 class TagASchema(Schema):
@@ -810,7 +949,11 @@ class TagGroupTagASchema(Schema):
 
 class TagGroupASchema(BaseAdminSchema):
     name = fields.Dict()
-    tags = TagGroupField()
+    tags = fields.Method("get_tags")
+
+    def get_tags(self, obj):
+        tags = TagGroupTag.objects.filter(taggroup=obj).select_related('tag')
+        return TagGroupTagASchema().dump(tags, many=True)
 
 
 class MenuASchema(BaseAdminSchema):

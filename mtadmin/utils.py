@@ -35,14 +35,31 @@ def serialized_objects(request, model, serializer=None, single_serializer=None, 
     pk = request.GET.get('id', None)
     box_check = get_box_permission(request, box_key) if error_null_box and box_key else {}
     if pk:
+        sip = {}
+        filter_fields = {'exclude': model.exclude_fields}
         try:
-            obj = model.objects.get(pk=pk, **box_check)
-            data = single_serializer(user=request.user).dump(obj)
+            if params:
+                sip = params.get('sip', {})
+                if params.get('filter', []).get('debug', None) is True:
+                    params['filter'].pop('debug', None)
+                    obj = model.objects.select_related(*model.select).prefetch_related(*model.prefetch). \
+                        filter(pk=pk, **box_check).first()
+                else:
+                    obj = model.objects.select_related(*model.select).prefetch_related(*model.prefetch). \
+                        filter(pk=pk, **box_check).first()
+            else:
+                obj = model.objects.select_related(*model.select).prefetch_related(*model.prefetch). \
+                    filter(pk=pk, **box_check).first()
+            if params['exclude_fields']:
+                filter_fields = {'exclude': params['exclude_fields'] + model.exclude_fields}
+            if params['only_fields']:
+                filter_fields = {'only': params['only_fields']}
+            data = single_serializer(user=request.user, **filter_fields, **sip).dump(obj)
             return {"data": data}
         except model.DoesNotExist:
             raise PermissionDenied
         except TypeError:
-            return {"data": single_serializer().dump(obj)}
+            return {"data": single_serializer(**filter_fields, **sip).dump(obj)}
     if not params:
         params = get_params(request, box_key)
     try:
@@ -92,7 +109,7 @@ def serialized_objects(request, model, serializer=None, single_serializer=None, 
         raise FieldError
 
 
-# used n discount code
+# used in discount code
 def translate_params(params, params_new_name, date_key='created_at'):
     params_new_name = {**params_new_name, 'sd': f'{date_key}__gte', 'ed': f'{date_key}__lte'}
     new_params = {}
@@ -110,6 +127,8 @@ def translate_params(params, params_new_name, date_key='created_at'):
 
 def get_params(request, box_key=None, date_key='created_at'):
     remove_param = ['s', 'p', 'delay', 'error', 'all']
+    serializer_init_params = ['only_selectable']
+    sip = {}
     filterby = {}
     excludeby = {}
     orderby = []
@@ -118,16 +137,23 @@ def get_params(request, box_key=None, date_key='created_at'):
     try:
         params = request.GET
         new_params = dict(params)
+        only_fields = new_params.pop('only_fields[]', None)
+        exclude_fields = new_params.pop('exclude_fields[]', None)
         [new_params.pop(key, None) for key in remove_param]
         keys = new_params.keys()
     except AttributeError:
-        return {'filter': filterby, 'exclude': excludeby, 'order': orderby, 'annotate': annotate, 'distinct': False}
+        return {'filter': filterby, 'exclude': excludeby, 'order': orderby, 'annotate': annotate, 'distinct': False,
+                'sip': sip}
     for key in keys:
         value = params.getlist(key)
+        if key in serializer_init_params:
+            sip['only_selectable'] = value[0]
         if key == 'sd':
             filterby[f'{date_key}__gte'] = value[0]
+            continue
         if key == 'ed':
             filterby[f'{date_key}__lte'] = value[0]
+            continue
         if key == 'b':
             # if int(value[0]) in request.user.box_permission.all().values_list('id', flat=True):
             # if User.objects.filter(pk=request.user.id, box_permission=int(value[0])).exists():
@@ -150,8 +176,8 @@ def get_params(request, box_key=None, date_key='created_at'):
             filterby[key.replace('[]', '__in')] = value
             continue
         filterby[key] = value[0]
-
-    return {'filter': filterby, 'exclude': excludeby, 'order': orderby, 'annotate': annotate, 'distinct': distinct}
+    return {'filter': filterby, 'exclude': excludeby, 'order': orderby, 'annotate': annotate, 'distinct': distinct,
+            'exclude_fields': exclude_fields, 'only_fields': only_fields, 'sip': sip}
 
 
 def get_data(request, require_box=True):
@@ -236,6 +262,7 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
         if not Product.objects.filter(pk=data['product_id'], box__in=boxes).exists():
             raise PermissionDenied
     data, m2m, custom_m2m, ordered_m2m, remove_fields = get_m2m_fields(model, data)
+    print(custom_m2m)
     obj = model(**data, created_by=user, updated_by=user)
     obj.save(**remove_fields)
     [getattr(obj, field).set(m2m[field]) for field in m2m]
@@ -365,6 +392,7 @@ def update_object(request, model, box_key='box', return_item=False, serializer=N
     box_check = get_box_permission(request, box_key) if require_box else {}
     footprint = {'updated_by': user, 'updated_at': timezone.now()}
     items = model.objects.filter(pk=pk, **box_check)
+    print(custom_m2m)
     try:
         items.update(**data, remove_fields=remove_fields, **footprint)
     except FieldDoesNotExist:

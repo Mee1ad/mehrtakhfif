@@ -1,94 +1,91 @@
+from django.contrib import auth
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Permission
+from django.contrib.auth.backends import ModelBackend
+from django.contrib.auth.middleware import AuthenticationMiddleware
+from django.db.models import Count, Q
+from django.utils.functional import SimpleLazyObject
+
+from server.utils import get_custom_signed_cookie
 from .models import User
-from django.utils import timezone
-from mehr_takhfif.settings import SECRET_KEY
+from django.conf import settings
+from django.contrib.auth.models import AnonymousUser
+from django.contrib.auth import BACKEND_SESSION_KEY, HASH_SESSION_KEY, _get_user_session_key, load_backend,\
+    constant_time_compare
+from django.urls import resolve
 
 UserModel = get_user_model()
 
 
-class ModelBackend:
+class MyModelBackend(ModelBackend):
+    @staticmethod
+    def get_user1(request):
+        if not hasattr(request, '_cached_user'):
+            request._cached_user = MyModelBackend.get_user2(request)
+        return request._cached_user
 
-    def authenticate(self, token):
+    @staticmethod
+    def get_user2(request):
+        """
+        Return the user model instance associated with the given request session.
+        If no user is retrieved, return an instance of `AnonymousUser`.
+        """
+        user = None
         try:
-            data = hsdecode(token, SECRET_KEY)
-            assert timezone.now() < data['expire']
-            username = data['username']
-            user = User.objects.get(username=username, is_active=True)
-            return True
-        except UserModel.DoesNotExist:
-            return False
+            user_id = _get_user_session_key(request)
+            backend_path = request.session[BACKEND_SESSION_KEY]
+        except KeyError:
+            pass
+        else:
+            if backend_path in settings.AUTHENTICATION_BACKENDS:
+                backend = load_backend(backend_path)
+                user = backend.get_user3(user_id, request)
+                # Verify the session
+                if hasattr(user, 'get_session_auth_hash'):
+                    session_hash = request.session.get(HASH_SESSION_KEY)
+                    session_hash_verified = session_hash and constant_time_compare(
+                        session_hash,
+                        user.get_session_auth_hash()
+                    )
+                    if not session_hash_verified:
+                        request.session.flush()
+                        user = None
 
-    def user_can_authenticate(self, user):
-        is_active = getattr(user, 'is_active', None)
-        return is_active or is_active is None
+        return user or AnonymousUser()
 
-    def _get_user_permissions(self, user_obj):
-        return user_obj.user_permissions.all()
+    def what_to_prefetch(self, request):
+        route = resolve(request.path_info).route
+        data = {'test': {'select': [], 'prefetch': []},
+                'profile': {'select': ['default_address__city', 'default_address__state'], 'prefetch': ['vip_types']}}
+        data.update(dict.fromkeys(['product/<str:permalink>'], {'select': [], 'prefetch': ['vip_types']}))
+        return data.get(route, {'select': [], 'prefetch': []})
 
-    def _get_group_permissions(self, user_obj):
-        user_groups_field = get_user_model()._meta.get_field('groups')
-        user_groups_query = 'group__%s' % user_groups_field.related_query_name()
-        return Permission.objects.filter(**{user_groups_query: user_obj})
-
-    def _get_permissions(self, user_obj, obj, from_name):
-        """
-        Return the permissions of `user_obj` from `from_name`. `from_name` can
-        be either "group" or "user" to return permissions from
-        `_get_group_permissions` or `_get_user_permissions` respectively.
-        """
-        if not user_obj.is_active or user_obj.is_anonymous or obj is not None:
-            return set()
-
-        perm_cache_name = '_%s_perm_cache' % from_name
-        if not hasattr(user_obj, perm_cache_name):
-            if user_obj.is_superuser:
-                perms = Permission.objects.all()
-            else:
-                perms = getattr(self, '_get_%s_permissions' % from_name)(user_obj)
-            perms = perms.values_list('content_type__app_label', 'codename').order_by()
-            setattr(user_obj, perm_cache_name, {"%s.%s" % (ct, name) for ct, name in perms})
-        return getattr(user_obj, perm_cache_name)
-
-    def get_user_permissions(self, user_obj, obj=None):
-        """
-        Return a set of permission strings the user `user_obj` has from their
-        `user_permissions`.
-        """
-        return self._get_permissions(user_obj, obj, 'user')
-
-    def get_group_permissions(self, user_obj, obj=None):
-        """
-        Return a set of permission strings the user `user_obj` has from the
-        groups they belong.
-        """
-        return self._get_permissions(user_obj, obj, 'group')
-
-    def get_all_permissions(self, user_obj, obj=None):
-        if not user_obj.is_active or user_obj.is_anonymous or obj is not None:
-            return set()
-        if not hasattr(user_obj, '_perm_cache'):
-            user_obj._perm_cache = {
-                *self.get_user_permissions(user_obj),
-                *self.get_group_permissions(user_obj),
-            }
-        return user_obj._perm_cache
-
-    def has_perm(self, user_obj, perm, obj=None):
-        return user_obj.is_active and perm in self.get_all_permissions(user_obj, obj)
-
-    def has_module_perms(self, user_obj, app_label):
-        """
-        Return True if user_obj has any permissions in the given app_label.
-        """
-        return user_obj.is_active and any(
-            perm[:perm.index('.')] == app_label
-            for perm in self.get_all_permissions(user_obj)
-        )
-
-    def get_user(self, user_id):
+    def get_user3(self, user_id, request):
+        prefetch = self.what_to_prefetch(request)
+        print(prefetch)
         try:
-            user = UserModel._default_manager.get(pk=user_id)
+            # user = UserModel._default_manager.get(pk=user_id)
+            user = User.objects.filter(pk=user_id).select_related(*prefetch['select'])\
+                .prefetch_related(*prefetch['prefetch']).\
+                annotate(basket_count=Count('baskets__products', filter=Q(baskets__sync=0))).first()
         except UserModel.DoesNotExist:
             return None
         return user if self.user_can_authenticate(user) else None
+
+    @staticmethod
+    def get_user_from_cookie(request):
+        try:
+            client_token = get_custom_signed_cookie(request, 'token', False)
+            return User.objects.get(token=client_token, is_ban=False)
+        except Exception:
+            return None
+
+
+class MyAuthenticationMiddleware(AuthenticationMiddleware):
+    def process_request(self, request):
+        assert hasattr(request, 'session'), (
+            "The Django authentication middleware requires session middleware "
+            "to be installed. Edit your MIDDLEWARE%s setting to insert "
+            "'django.contrib.sessions.middleware.SessionMiddleware' before "
+            "'django.contrib.auth.middleware.AuthenticationMiddleware'."
+        ) % ("_CLASSES" if settings.MIDDLEWARE is None else "")
+        request.user = SimpleLazyObject(lambda: MyModelBackend.get_user1(request))

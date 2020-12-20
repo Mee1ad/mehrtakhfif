@@ -82,6 +82,7 @@ Content-Type: application/json
   "len": 6,
   "prefix": "test"
 }
+
 ###
 ### Post Discount Code
 POST {{admin_host}}/discount_code
@@ -292,7 +293,12 @@ Content-Type: application/json
     "width": 26
   },
   "discount_price": 305000,
-  "features": [],
+  "features": [
+    {
+      "product_feature_id": 628,
+      "extra_data": {}
+    }
+  ],
   "final_price": 338000,
   "invoice_description": {
     "fa": "<p></p>",
@@ -306,7 +312,7 @@ Content-Type: application/json
   },
   "max_count_for_sale": 3,
   "min_count_alert": 0,
-  "product_id": 51,
+  "product_id": 61,
   "shipping_cost": 0,
   "start_price": 270000,
   "start_time": 1591004832,

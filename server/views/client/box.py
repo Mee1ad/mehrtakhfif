@@ -1,4 +1,4 @@
-from django.db.models import Max, Min, Q
+from django.db.models import Max, Min, Q, Case, Exists
 from django.http import JsonResponse
 from server.utils import *
 from server.serialize import BoxSchema, FeatureSchema, MinProductSchema, BrandSchema
@@ -83,8 +83,11 @@ class Filter(View):
         disable = get_product_filter_params(request.user.is_staff)
         if params['related']:
             query = Q(verify=True, **params['filter']) | Q(verify=True, **params['related'])
-        products = Product.objects.annotate(**params['annotate']).filter(query, Q(**disable), ~Q(type=5)).order_by(
-            params['order'], '-id').distinct('id', params['order'].replace('-', ''))
+        products = Product.objects.\
+            annotate(**params['annotate']).\
+            filter(query, Q(**disable), ~Q(type=5)).\
+            prefetch_related('default_storage__vip_prices__vip_type', 'storages').select_related('thumbnail', 'default_storage').\
+            order_by(params['order'], '-id').distinct('id', params['order'].replace('-', ''))
         # params['order']).order_by('-id').distinct('id')
         pg = get_pagination(request, products, MinProductSchema)
         return JsonResponse(pg)

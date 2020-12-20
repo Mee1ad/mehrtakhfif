@@ -311,6 +311,7 @@ class Base(SafeDeleteModel):
     table_annotate = {}
     annotate = {}
     choices = ()
+    exclude_fields = []
 
     _safedelete_policy = SOFT_DELETE_CASCADE
     id = models.BigAutoField(auto_created=True, primary_key=True)
@@ -411,6 +412,7 @@ class MyModel(models.Model):
     table_annotate = {}
     annotate = {}
     choices = ()
+    exclude_fields = []
 
 
 class Ad(Base):
@@ -792,6 +794,8 @@ class Feature(Base):
     types = ((1, 'bool'), (2, 'text'), (3, 'selectable'))
     layout_types = ((1, 'default'),)
     choices = ('type', 'layout_type')
+    table_prefetch = ('values', 'groups__feature_group_features__feature',
+                      'groups__feature_group_features__feature__values')
 
     def __str__(self):
         return get_name(self.name, self)
@@ -822,8 +826,8 @@ class Feature(Base):
 
 class FeatureGroupFeature(MyModel):
     select = ['feature', 'featuregroup'] + MyModel.select
-    feature = models.ForeignKey(Feature, on_delete=CASCADE)
-    featuregroup = models.ForeignKey("FeatureGroup", on_delete=CASCADE)
+    feature = models.ForeignKey(Feature, on_delete=CASCADE, related_name="feature_group_features")
+    featuregroup = models.ForeignKey("FeatureGroup", on_delete=CASCADE, related_name="feature_group_features")
     priority = models.PositiveIntegerField(default=0)
 
     class Meta:
@@ -881,8 +885,8 @@ class Tag(Base):
 
 class TagGroupTag(MyModel):
     select = ['taggroup', 'tag'] + MyModel.select
-    taggroup = models.ForeignKey("TagGroup", on_delete=PROTECT)
-    tag = models.ForeignKey(Tag, on_delete=PROTECT)
+    taggroup = models.ForeignKey("TagGroup", on_delete=PROTECT, related_name='tag_group_tags')
+    tag = models.ForeignKey(Tag, on_delete=PROTECT, related_name='tag_group_tags')
     show = models.BooleanField(default=False)
 
     class Meta:
@@ -947,7 +951,7 @@ class Brand(Base):
 
 class ProductTag(MyModel):
     select = ['product', 'tag'] + MyModel.select
-    product = models.ForeignKey("Product", on_delete=CASCADE, related_name='product_tag')
+    product = models.ForeignKey("Product", on_delete=CASCADE, related_name='product_tags')
     tag = models.ForeignKey(Tag, on_delete=CASCADE)
     show = models.BooleanField(default=False)
 
@@ -963,7 +967,7 @@ class ProductMedia(MyModel):
     def __str__(self):
         return f"{self.id}"
 
-    product = models.ForeignKey("Product", on_delete=CASCADE)
+    product = models.ForeignKey("Product", on_delete=CASCADE, related_name="product_media")
     media = models.ForeignKey(Media, on_delete=CASCADE)
     priority = models.PositiveSmallIntegerField(default=0)
 
@@ -1009,7 +1013,7 @@ class Product(Base):
     table_select = ['thumbnail']
     select = ['box', 'default_storage', 'brand'] + Base.select + table_select
     table_prefetch = ['storages', 'categories']
-    prefetch = ['cities', 'states', 'feature_groups', 'tags', 'product_features'] + Base.prefetch + table_prefetch
+    prefetch = ['cities', 'states'] + Base.prefetch
     # Prefetch('storages', queryset=Storage.objects.filter, to_attr='count')] + Base.prefetch
     table_annotate = {'active_storages_count': Count('storages', filter=Q(storages__disable=False)),
                       'storages_count': Count('storages')}
@@ -1028,6 +1032,7 @@ class Product(Base):
     types = [(1, 'service'), (2, 'product'), (3, 'tourism'), (4, 'package'), (5, 'package_item')]
     booking_types = [(1, 'unbookable'), (2, 'datetime'), (3, 'range')]
     choices = ('type', 'booking_type')
+    exclude_fields = ['feature_groups', 'storages', 'default_storage', 'available']
 
     def pre_process(self, my_dict):
         # if (self.review['chat'] != []) and (my_dict.get('review') != self.review):
@@ -1138,6 +1143,7 @@ class Product(Base):
     settings = JSONField(default=dict, blank=True)
     # review = models.TextField(null=True, blank=True)
     review = JSONField(default=default_review, help_text="{chats: [], state: reviewed/request_review/ready}")
+
     # check_review = models.BooleanField(default=False)
 
     # home_buissiness =
@@ -1174,7 +1180,7 @@ class VipPrice(MyModel):
         return f"{self.storage.title['fa']}"
 
     vip_type = models.ForeignKey(VipType, on_delete=PROTECT)
-    storage = models.ForeignKey("Storage", on_delete=PROTECT)
+    storage = models.ForeignKey("Storage", on_delete=PROTECT, related_name="vip_prices")
     discount_price = models.PositiveIntegerField()
     discount_percent = models.PositiveSmallIntegerField()
     max_count_for_sale = models.PositiveSmallIntegerField(default=1)
@@ -1367,7 +1373,7 @@ class Storage(Base):
     supplier = models.ForeignKey(User, on_delete=PROTECT, null=True, blank=True)
     invoice_description = JSONField(default=multilanguage)
     invoice_title = JSONField(default=multilanguage)
-    vip_prices = models.ManyToManyField(VipType, through='VipPrice', related_name="storages")
+    vip_types = models.ManyToManyField(VipType, through='VipPrice', related_name="storages")
     dimensions = JSONField(help_text="{'weight': '', 'height: '', 'width': '', 'length': ''}",
                            validators=[validate_vip_price], default=dict, blank=True)
     max_shipping_time = models.PositiveIntegerField(default=0)
@@ -1486,7 +1492,7 @@ class Comment(Base):
     reply_to = models.ForeignKey('self', on_delete=CASCADE, blank=True, null=True, related_name="replys")
     suspend = models.BooleanField(default=False)
     type = models.PositiveSmallIntegerField(choices=types)
-    product = models.ForeignKey(Product, on_delete=CASCADE, null=True, blank=True)
+    product = models.ForeignKey(Product, on_delete=CASCADE, null=True, blank=True, related_name="reviews")
     blog_post = models.ForeignKey(BlogPost, on_delete=CASCADE, null=True, blank=True)
 
     class Meta:
@@ -1798,7 +1804,7 @@ class WishList(Base):
     # type = models.CharField(max_length=255, )
     notify = models.BooleanField(default=False)
     wish = models.BooleanField(default=True)
-    product = models.ForeignKey(Product, on_delete=CASCADE)
+    product = models.ForeignKey(Product, on_delete=CASCADE, related_name='wishlists')
 
     class Meta:
         db_table = 'wishList'

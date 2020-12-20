@@ -1,5 +1,3 @@
-import pysnooper
-from django.db import connection
 from django.http import JsonResponse, HttpResponseNotFound
 
 from server.documents import *
@@ -9,25 +7,14 @@ from server.utils import *
 
 class Test(View):
     def get(self, request):
-        # messages.add_message(request, messages.INFO, 'Hello world.')
-
         return JsonResponse({})
-        # print('old', request.session.get('basket'))
-        # if request.session.get('basket') is None:
-        #     request.session['basket'] = []
-        #     request.session['basket'].append({'test': 'test'})
-        #     request.session.save()
-        # print('new', request.session.get('basket'))
-
-        # print(get_custom_signed_cookie(request, 'y'))
+        # request.user = None
         # res = JsonResponse({})
-        # set_custom_signed_cookie(res, 'x', 'oskole')
-        # y = 1
-        # try:
-        #     y = int(get_custom_signed_cookie(request, 'y')) + 1
-        # except Exception:
-        #     pass
-        # set_custom_signed_cookie(res, 'y', y)
+        # login = request.GET.get('login')
+        # if login == 'true':
+        #     res = set_custom_signed_cookie(res, 'is_login', True)
+        # else:
+        #     res = set_custom_signed_cookie(res, 'is_login', False)
         # return res
 
     def delete(self, request):
@@ -140,14 +127,14 @@ class BoxWithCategory(View):
 
 class GetMenu(View):
     def get(self, request):
-        menu = Menu.objects.select_related(*Menu.select).all()
+        menu = Menu.objects.select_related('media').all()
         return JsonResponse({'menu': MenuSchema(request.lang).dump(menu, many=True)})
 
 
 class GetAds(View):
     def get(self, request, ads_type):
         agent = request.user_agent
-        ads = Ad.objects.filter(priority__isnull=False, type=ads_type).select_related(*Ad.select).order_by('priority')
+        ads = Ad.objects.filter(priority__isnull=False, type=ads_type).select_related('media')
         return JsonResponse({'ads': AdSchema(is_mobile=agent.is_mobile).dump(ads, many=True)})
 
 
@@ -164,8 +151,7 @@ class PermalinkToId(LoginRequired):
 class GetSlider(View):
     def get(self, request, slider_type):
         agent = request.user_agent
-        slider = Slider.objects.filter(priority__isnull=False, type=slider_type).select_related(
-            *Slider.select).order_by('priority')
+        slider = Slider.objects.filter(priority__isnull=False, type=slider_type).select_related('media')
         return JsonResponse({'slider': SliderSchema(is_mobile=agent.is_mobile).dump(slider, many=True)})
 
 

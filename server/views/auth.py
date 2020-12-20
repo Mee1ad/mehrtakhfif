@@ -1,30 +1,19 @@
 import random
 
+import pysnooper
+from django.contrib.auth import get_user_model
 from django.contrib.auth import login
 from django.contrib.auth import logout
-from django.contrib.auth.backends import ModelBackend
-from django.http import JsonResponse
-from django.db.models import ProtectedError
-from server.utils import *
-from server.serialize import UserSchema
-import pysnooper
-from secrets import token_hex
-from mehr_takhfif.settings import DEFAULT_COOKIE_DOMAIN, DEBUG, SAFE_IP, TEST_USER
 from django.contrib.sessions.backends.db import SessionStore as OriginalSessionStore
+from django.http import JsonResponse
 from django.utils.crypto import get_random_string
-from django.core.exceptions import PermissionDenied
 from django.utils.translation import gettext_lazy as _
-from push_notifications.models import APNSDevice, GCMDevice
 
+from mehr_takhfif.settings import SAFE_IP, TEST_USER
+from server.authentication import MyModelBackend
+from server.utils import *
 
-class Backend(ModelBackend):
-    @staticmethod
-    def get_user_from_cookie(request):
-        try:
-            client_token = get_custom_signed_cookie(request, 'token', False)
-            return User.objects.get(token=client_token, is_ban=False)
-        except Exception:
-            return None
+UserModel = get_user_model()
 
 
 class SessionStore(OriginalSessionStore):
@@ -106,7 +95,7 @@ class Login(View):
 class PrivacyPolicy(View):
     def put(self, request):
         try:
-            user = Backend.get_user_from_cookie(request)
+            user = MyModelBackend.get_user_from_cookie(request)
             user.privacy_agreement = True
             user.save()
             return Login.send_activation(user, request)  # need activation code
@@ -123,7 +112,7 @@ class SetPassword(View):
     @pysnooper.snoop()
     def put(self, request):
         try:
-            user = Backend.get_user_from_cookie(request)
+            user = MyModelBackend.get_user_from_cookie(request)
             data = json.loads(request.body)
             user.set_password(data['password'])
             user.save()
@@ -135,7 +124,7 @@ class SetPassword(View):
 class ResendCode(View):
     def post(self, request):
         try:
-            user = Backend.get_user_from_cookie(request)
+            user = MyModelBackend.get_user_from_cookie(request)
             res = Login.send_activation(user, request)
             res.status_code = 204
             return res

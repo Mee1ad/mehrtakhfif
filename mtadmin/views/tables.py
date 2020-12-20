@@ -190,6 +190,7 @@ class ProductView(TableView):
             params['filter'].pop('only_id')
             return JsonResponse({'data': list(Product.objects.filter(**params['filter']).order_by('id').distinct('id')
                                               .values_list('id', flat=True))})
+
         return JsonResponse(serialized_objects(request, Product, ProductASchema, ProductESchema, params=params,
                                                **required_box))
 
@@ -311,29 +312,29 @@ class StorageView(TableView):
 
     def get(self, request):
         Storage.objects.filter(deadline__lt=timezone.now(), disable=False).update(disable=True)
+        # required_fields = ['id', 'name', 'type', 'manage', 'default_storage_id', 'has_selectable_feature',
+        #                    'booking_type', 'thumbnail', 'storages', 'box', 'media']
         required_fields = ['id', 'name', 'type', 'manage', 'default_storage_id', 'has_selectable_feature',
-                           'booking_type', 'thumbnail', 'storages', 'box', 'media']
+                           'booking_type', 'box']
         extra_data = []
         box_key = 'product__box'
         params = get_params(request, box_key)
-        if request.GET.get('product_type[]'):
-            product_type = request.GET.getlist('product_type[]')
-            params['filter']['product__type__in'] = product_type
-            del params['filter']['product_type__in']
         if not params['filter'].get(box_key):
             box_check = get_box_permission(request, box_key)
             params['filter'] = {**params['filter'], **box_check}
         params['order'] = ['-priority']
-        data = {}
-        if not params['filter'].get('product_only', None):
-            params['filter'].pop('product_only', None)
-            data = serialized_objects(request, Storage, StorageASchema, StorageESchema, box_key,
-                                      params=params, error_null_box=False)
+        data = serialized_objects(request, Storage, StorageASchema, StorageESchema, box_key,
+                                  params=params, error_null_box=False)
+        # if not params['filter'].get('product_only', None):
+        #     params['filter'].pop('product_only', None)
+        #     data = serialized_objects(request, Storage, StorageASchema, StorageESchema, box_key,
+        #                               params=params, error_null_box=False)
+        #     return JsonResponse({**data})
         try:
             try:
                 product_id = int(request.GET.get('product_id', None) or data.get('data').get('product_id'))
             except AttributeError:
-                extra_data.append('box')
+                # extra_data.append('box')
                 product_id = Storage.objects.filter(pk=params['filter']['id']).values_list('product__id', flat=True)[0]
             product = Product.objects.filter(pk=product_id).select_related('thumbnail', 'box').first()
 

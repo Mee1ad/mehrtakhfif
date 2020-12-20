@@ -16,7 +16,7 @@ def error_handler(func):
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except (FieldError, TypeError, KeyError, ValueError):
+        except (FieldError, TypeError, KeyError, ValueError, AttributeError):
             traceback.print_exc()
             return JsonResponse({'message': 'مشکلی پیش آمده', 'variant': 'error'}, status=res_code['bad_request'])
         except ActivationError as e:

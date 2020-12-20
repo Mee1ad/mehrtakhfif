@@ -29,9 +29,11 @@ from server.serialize import get_tax, BoxCategoriesSchema, BasketSchema, MinProd
 # from barcode import generate
 # from barcode.base import Barcode
 from server.views.post import get_shipping_cost_temp
+from django.core.paginator import Paginator
 
 random_data = string.ascii_lowercase + string.ascii_uppercase + string.digits
-default_step = 10
+default_step = 18
+admin_default_step = 10
 default_page = 1
 
 
@@ -138,7 +140,8 @@ def filter_params(params, lang):
             filters['related'] = {'categories__in': Category.objects.filter(box__permalink=box_permalink,
                                                                             permalink=None).values_list('parent_id',
                                                                                                         flat=True)}
-            filters['filter']['box'] = Box.objects.get(permalink=box_permalink)
+            # filters['filter']['box'] = Box.objects.get(permalink=box_permalink)
+            filters['filter']['box__permalink'] = box_permalink
         except Box.DoesNotExist:
             pass
     if category:
@@ -380,15 +383,14 @@ def get_categories(language, box_id=None, categories=None, is_admin=None, disabl
 def get_pagination(request, query, serializer, show_all=False):
     page = request.page
     step = request.step
-    if step > 100:
-        step = 10
-    try:
-        count = query.count()
-    except TypeError:
-        count = len(query)
-    query = query if show_all and count <= 500 else query[(page - 1) * step: step * page]
+    paginator = Paginator(query, step)
+    count = paginator.count
+    # query = query if show_all and count <= 500 else query[(page - 1) * step: step * page]
+    query = paginator.page(page)
     if show_all and count > 0:
         step = count
+    if step > 100:
+        step = default_step
     try:
         items = serializer(**request.schema_params).dump(query, many=True)
     except TypeError:

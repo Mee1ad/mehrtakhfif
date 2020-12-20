@@ -57,7 +57,8 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     # 'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.admindocs.middleware.XViewMiddleware',  # docadmin
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    # 'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'server.authentication.MyAuthenticationMiddleware',
     'server.middleware.AuthMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -119,8 +120,8 @@ MESSAGE_STORAGE = 'django.contrib.messages.storage.cookie.CookieStorage'
 ROOT_URLCONF = 'mehr_takhfif.urls'
 
 AUTHENTICATION_BACKENDS = [
-    'django.contrib.auth.backends.ModelBackend',
-    # 'server.views.auth.Backend',
+    # 'django.contrib.auth.backends.ModelBackend',
+    'server.authentication.MyModelBackend',
 ]
 
 TEMPLATES = [

@@ -2,7 +2,9 @@
 ### Available routes:
 
 ### product
-GET {{host}}/product/p-30
+GET {{host}}/product/پودر-زردچوبه
+###
+GET {{host}}/features/بازی-فکری-وستروس-game-of-thrones
 
 ### related products
 GET {{host}}/related_products/p-30?p=1&s=3
@@ -49,7 +51,7 @@ Content-Type: Application/json
 }
 ###
 
-
+http://api.mt.com/test
 
 
 

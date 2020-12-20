@@ -6,7 +6,8 @@ from sentry_sdk import configure_scope
 
 from mehr_takhfif.settings import ROLL_NAME, HOST
 from server.models import User, Basket
-from server.utils import default_step, default_page, get_custom_signed_cookie, set_custom_signed_cookie
+from server.utils import default_step, admin_default_step, default_page, get_custom_signed_cookie,\
+    set_custom_signed_cookie
 
 
 class AuthMiddleware:
@@ -19,10 +20,21 @@ class AuthMiddleware:
         pk = {'admin': 1, 'post': 10, 'accountants': 4}
         return User.objects.get(pk=pk[roll_name])
 
+    def attach_pagination(self, request, application):
+        ds = {'server': default_step, 'mtadmin': admin_default_step}[application]
+        try:
+            request.step = int(request.GET.get('s', ds))
+            request.page = int(request.GET.get('p', default_page))
+            request.all = request.GET.get('all', False)
+        except ValueError:
+            pass
+        return request
+
     def __call__(self, request):
         # print(request.META.get('REMOTE_ADDR') or request.META.get('HTTP_X_FORWARDED_FOR'))
         path = request.path_info
         route = resolve(path).route
+
         app_name = resolve(path).app_name
         token_requests = ['POST', 'PUT', 'PATCH']
         allow_without_token = ['login', 'activate', 'resend_code', 'reset_password', 'privacy_policy', 'test']
@@ -43,30 +55,25 @@ class AuthMiddleware:
 
         # assign request attributes
         try:
-            request.step = int(request.GET.get('s', default_step))
-            request.page = int(request.GET.get('p', default_page))
-            request.all = request.GET.get('all', False)
-        except ValueError:
-            pass
-        try:
             request.lang = request.headers['language']
         except Exception:
             request.lang = 'fa'
-
+        # prefetch user attr per route: filter: vip_types, default: basket,
+        # try:  # temp
+        #     request.user = User.objects.filter(pk=request.user.pk).prefetch_related('vip_types').first()
+        # except Exception:
+        #     pass
         request.schema_params = {'language': request.lang, 'user': request.user}
 
         if app_name == 'server':
+            request = self.attach_pagination(request, 'server')
             request.params = {}
             # sync user basket count
             new_basket_count = None
             try:
-                basket = Basket.objects.filter(user=request.user).order_by('-id')
-                db_basket_count = basket.first().products.all().count()
-                request.basket = basket.first()
-            except TypeError:
-                db_basket_count = len(request.session.get('basket', []))
+                db_basket_count = request.user.basket_count
             except AttributeError:
-                db_basket_count = 0
+                db_basket_count = len(request.session.get('basket', []))
             user_basket_count = get_custom_signed_cookie(request, 'basket_count', -1)
             # new_basket_count = int(user_basket_count)
             if not db_basket_count == int(user_basket_count):
@@ -76,6 +83,7 @@ class AuthMiddleware:
         #     new_basket_count = 0
 
         elif app_name == 'mtadmin':
+            request = self.attach_pagination(request, 'mtadmin')
             request.token = request.headers.get('access-token', None)
             try:
                 request.allowed_boxes_id = list(request.user.box_permission.all().values_list('id', flat=True))
@@ -97,7 +105,10 @@ class AuthMiddleware:
         response = self.get_response(request)
         is_login = get_custom_signed_cookie(request, 'is_login', error=None)
         if is_login is None:
-            response = set_custom_signed_cookie(response, 'is_login', request.user.is_authenticated)
+            try:
+                response = set_custom_signed_cookie(response, 'is_login', request.user.is_authenticated)
+            except AttributeError:
+                print(path, route)
         if app_name == 'server' and new_basket_count is not None and 200 <= response.status_code <= 299 and request.method == 'GET':
             response = set_custom_signed_cookie(response, 'basket_count', new_basket_count)
         if request.method in token_requests and app_name != 'admin':
