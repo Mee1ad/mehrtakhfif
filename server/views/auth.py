@@ -49,7 +49,8 @@ class Login(View):
                 raise ValidationError(_('شماره موبایل یا پسورد نامعتبر است'))
             if is_staff:
                 return set_token(user, self.send_activation(user, request))
-            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+            # login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+            login(request, user)
             res = {'user': UserSchema().dump(user)}
             basket = Basket.objects.filter(user=user).order_by('-id')
             res['basket_count'] = 0
@@ -144,7 +145,8 @@ class Activate(View):
             user.activation_expire = timezone.now()
             user.is_active = True
             user.save()
-            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+            # login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+            login(request, user)
             res = {'user': UserSchema().dump(user)}  # signup without password
             if user.is_staff:
                 res['user']['is_staff'] = user.is_staff
