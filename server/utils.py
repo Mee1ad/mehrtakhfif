@@ -128,7 +128,7 @@ def filter_params(params, lang):
     box_permalink = params.get('b', None)
     q = params.get('q', None)
     # todo test and fix s
-    s = params.get('s', None)
+    sa = params.get('sa', None)  # search advanced
     orderby = params.get('o', '-created_at')
     category = params.get('cat', None)
     available = params.get('available', None)
@@ -149,7 +149,7 @@ def filter_params(params, lang):
     if orderby != '-created_at':
         valid_key = valid_orders[orderby]
         filters['order'] = valid_key
-    if s:
+    if sa:
         filters['annotate']['rank'] = get_rank(q, lang)
         filters['order'] = '-rank'
     if q:
