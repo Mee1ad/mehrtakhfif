@@ -261,6 +261,7 @@ class BaseAdminSchema(Schema):
                              'priority': pf.priority, 'id': pf.id, 'used': pf.used,
                              'values': FeatureValueASchema(exclude=['created_at', 'updated_at'])
                             .dump(pf.values, many=True)})
+        features = sorted(features, key=lambda i: i['priority'])
         return features
 
 
@@ -853,7 +854,7 @@ class FeatureASchema(BaseAdminSchema):
         # product_feature = ProductFeature.objects.filter(feature=obj, product=self.product)
         # if product_feature.exists():
         #     return [FeatureValueASchema(product=self.product).dump(product_feature.first().feature_value)]
-        values = obj.values.all()
+        values = obj.values.all().annotate(storage_id=ArrayAgg('product_feature_storages__storage'))
         if getattr(obj, 'get_type_display')() == "text":
             # fv = values.order_by('id').first()
             fv = min(values, key=attrgetter('id'))
@@ -861,7 +862,6 @@ class FeatureASchema(BaseAdminSchema):
                 return [FeatureValueASchema(product=self.product).dump(fv)]
             return []
         if self.only_used_value:
-            print('fuck')
             values = FeatureValue.objects.filter(feature=obj, product=self.product)
         return FeatureValueASchema(product=self.product).dump(values, many=True)
 
