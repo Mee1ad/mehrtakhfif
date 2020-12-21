@@ -31,7 +31,7 @@ def try_except(func):
                 return JsonResponse({'message': e.messages[0], 'varaiant': 'error'}, status=res_code['bad_request'])
             except Exception:
                 return HttpResponseBadRequest()
-        except (AssertionError, ObjectDoesNotExist, StopIteration, AttributeError, KeyError, ValueError):
+        except (AssertionError, ObjectDoesNotExist, StopIteration, AttributeError, KeyError, ValueError, TypeError):
             traceback.print_exc()
             return HttpResponseBadRequest()
         except Exception:
