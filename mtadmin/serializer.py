@@ -854,7 +854,7 @@ class FeatureASchema(BaseAdminSchema):
         # product_feature = ProductFeature.objects.filter(feature=obj, product=self.product)
         # if product_feature.exists():
         #     return [FeatureValueASchema(product=self.product).dump(product_feature.first().feature_value)]
-        values = obj.values.all().annotate(storage_id=ArrayAgg('product_feature_storages__storage'))
+        values = obj.values.all()
         if getattr(obj, 'get_type_display')() == "text":
             # fv = values.order_by('id').first()
             fv = min(values, key=attrgetter('id'))
