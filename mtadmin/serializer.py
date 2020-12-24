@@ -232,7 +232,6 @@ class BaseAdminSchema(Schema):
     def get_product_features_new(self, obj):
         type_filter = {}
         if obj.__class__.__name__ == 'Storage' or getattr(self, 'only_selectable'):
-            print('this is storage')
             try:
                 obj = obj.product
             except AttributeError:
@@ -243,7 +242,7 @@ class BaseAdminSchema(Schema):
 
         features_distinct = []
         for product_feature in product_features:
-            product_feature.feature_value.id = product_feature.id
+            product_feature.feature_value.product_feature_id = product_feature.id
             included_features_id = [pf.feature_id for pf in features_distinct]
             product_feature.used = type(next(iter(product_feature.storage_id), None)) == int
             product_feature.feature_value.storage_id = product_feature.storage_id
@@ -588,7 +587,6 @@ class ProductESchema(ProductASchema, ProductSchema):
     def get_features_new(self, obj):
         type_filter = {}
         if obj.__class__.__name__ == 'Storage':
-            print('this is storage')
             type_filter = {'feature__type': 3}
         product_features = obj.product_features.filter(**type_filter).annotate(
             storage_id=ArrayAgg('product_feature_storages')).select_related('feature_value', 'feature')
@@ -876,6 +874,7 @@ class FeatureValueASchema(BaseAdminSchema):
 
     name = fields.Function(lambda o: getattr(o, 'value', None))
     storage_id = fields.Method('get_storage_id')
+    product_feature_id = fields.Method('get_product_feature_id')
 
     def get_storage_id(self, obj):
         try:
@@ -885,6 +884,11 @@ class FeatureValueASchema(BaseAdminSchema):
         except Exception:
             return []
 
+    def get_product_feature_id(self, obj):
+        try:
+            return obj.product_feature_id
+        except Exception:
+            return None
     # selected = fields.Method("get_selected")  # 19 extra query, get worse with prefetch
 
     def get_selected(self, obj):
@@ -907,6 +911,9 @@ class FeatureGroupASchema(BaseAdminSchema):
     # box = fields.Nested(BoxASchema)
 
     def get_features(self, obj):
+        # product_features = ProductFeature.objects.filter(product=self.product, feature__groups__in=[obj.id])
+        # return ProductFeatureASchema(model='product').dump(product_features, many=True)
+
         features = obj.feature_group_features.all()
         return FeatureGroupFeatureASchema(product=self.product).dump(features, many=True)
 
