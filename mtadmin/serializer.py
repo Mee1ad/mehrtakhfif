@@ -184,8 +184,11 @@ class BaseAdminSchema(Schema):
         try:
             # medias = ProductMedia.objects.filter(product=obj).select_related(*ProductMedia.select).order_by('priority')
             medias = obj.product_media.all().select_related('media')
-            return ProductMediaASchema().dump(medias, many=True)
-            # medias = [media.media for media in medias]
+            new_medias = []
+            for media in medias:
+                media.media.priority = media.priority
+                new_medias.append(media.media)
+            return MediaASchema().dump(new_medias, many=True)
         except AttributeError:
             if obj.media is not None:
                 return MediaSchema().dump(obj.media)
@@ -193,7 +196,7 @@ class BaseAdminSchema(Schema):
         except ValueError:
             if obj.media:
                 return MediaASchema().dump(obj.media)
-            return
+            return None
 
     def get_tag(self, obj):
         tags = ProductTag.objects.filter(product=obj)
@@ -802,7 +805,7 @@ class MediaASchema(BaseAdminSchema):
     list_filter = [Box, Category]
 
     class Meta:
-        additional = ('title',)
+        additional = ('title', 'priority')
 
     image = fields.Function(lambda o: HOST + o.image.url if o.image else None)
     type = fields.Function(lambda o: o.get_type_display())
@@ -889,6 +892,7 @@ class FeatureValueASchema(BaseAdminSchema):
             return obj.product_feature_id
         except Exception:
             return None
+
     # selected = fields.Method("get_selected")  # 19 extra query, get worse with prefetch
 
     def get_selected(self, obj):
@@ -907,6 +911,7 @@ class FeatureGroupASchema(BaseAdminSchema):
     settings = fields.Dict()
     # features = fields.Method("get_features_old")
     features = fields.Method("get_features")
+
     # features = fields.Nested('FeatureGroupFeatureASchema')
     # box = fields.Nested(BoxASchema)
 
