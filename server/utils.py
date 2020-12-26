@@ -219,8 +219,8 @@ def get_invoice_file(request, invoice=None, invoice_id=None, user={}):
         invoice_dict['shipping_invoice']['tax'] = get_tax(2, invoice_dict['shipping_invoice']['amount'], 0)
     invoice_dict['user'] = UserSchema().dump(invoice.user)
     try:
-        dt = jdatetime.datetime.fromgregorian(datetime=invoice.payed_at)
-        invoice_dict['date'] = add_minutes(dt).strftime("%Y/%m/%d")
+        invoice_dict['date'] = jdatetime.datetime.fromgregorian(datetime=add_minutes(invoice.payed_at)) \
+            .strftime("%Y/%m/%d")
     except ValueError:
         invoice_dict['date'] = '1399/99/99'
     invoice_dict['barcode'] = get_barcode(invoice.id)
