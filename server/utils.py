@@ -14,6 +14,7 @@ from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
 from django.core import serializers
 from django.core.exceptions import PermissionDenied
 from django.core.mail import EmailMultiAlternatives
+from django.core.paginator import Paginator
 from django.db.models import Sum
 from django.utils.translation import gettext_lazy as _
 from django.views import View
@@ -29,7 +30,6 @@ from server.serialize import get_tax, BoxCategoriesSchema, BasketSchema, MinProd
 # from barcode import generate
 # from barcode.base import Barcode
 from server.views.post import get_shipping_cost_temp
-from django.core.paginator import Paginator
 
 random_data = string.ascii_lowercase + string.ascii_uppercase + string.digits
 default_step = 18
@@ -82,6 +82,10 @@ def load_data(request, check_token=True):
 
 def add_minutes(minutes, time=None):
     return (time or timezone.now()) + timezone.timedelta(minutes=minutes)
+
+
+def to_jalali(dt):
+    return add_minutes(210, dt)
 
 
 def add_days(days):
@@ -215,7 +219,8 @@ def get_invoice_file(request, invoice=None, invoice_id=None, user={}):
         invoice_dict['shipping_invoice']['tax'] = get_tax(2, invoice_dict['shipping_invoice']['amount'], 0)
     invoice_dict['user'] = UserSchema().dump(invoice.user)
     try:
-        invoice_dict['date'] = jdatetime.date.fromgregorian(date=invoice.payed_at).strftime("%Y/%m/%d")
+        dt = jdatetime.datetime.fromgregorian(datetime=invoice.payed_at)
+        invoice_dict['date'] = add_minutes(dt).strftime("%Y/%m/%d")
     except ValueError:
         invoice_dict['date'] = '1399/99/99'
     invoice_dict['barcode'] = get_barcode(invoice.id)

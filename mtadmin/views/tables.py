@@ -315,7 +315,7 @@ class StorageView(TableView):
         # required_fields = ['id', 'name', 'type', 'manage', 'default_storage_id', 'has_selectable_feature',
         #                    'booking_type', 'thumbnail', 'storages', 'box', 'media']
         required_fields = ['id', 'name', 'type', 'manage', 'default_storage_id', 'has_selectable_feature',
-                           'booking_type', 'box']
+                           'booking_type', 'box', 'media']
         extra_data = []
         box_key = 'product__box'
         params = get_params(request, box_key)
