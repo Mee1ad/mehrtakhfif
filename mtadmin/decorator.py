@@ -32,8 +32,8 @@ def error_handler(func):
         except ValidationError as e:
             try:
                 traceback.print_exc()
-                # return JsonResponse({'message': e.message, 'variant': 'error'}, status=res_code['bad_request'])
-                return JsonResponse({'message': str(e), 'variant': 'error'}, status=res_code['bad_request'])
+                return JsonResponse({'message': e.message, 'variant': 'error'}, status=res_code['bad_request'])
+                # return JsonResponse({'message': str(e), 'variant': 'error'}, status=res_code['bad_request'])
             except Exception:
                 traceback.print_exc()
                 return HttpResponseBadRequest()

@@ -1259,6 +1259,8 @@ class Storage(Base):
             my_dict['tax_type'] = {'has_not': 1, 'from_total_price': 2, 'from_profit': 3}[my_dict['tax_type']]
         if my_dict.get('discount_price'):
             my_dict['discount_percent'] = int(100 - int(my_dict['discount_price']) / int(my_dict['final_price']) * 100)
+            if my_dict['discount_percent'] < 0:
+                raise ValidationError(_('تخفیف داری میدی؟ درصد تخفیف منفیه ک!'))
         if my_dict.get('features', None) and not my_dict.get('features_percent', None):
             # todo debug
             # todo feature: add default_selected_value for feature
