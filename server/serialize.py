@@ -587,7 +587,7 @@ class MinStorageSchema(BaseSchema):
             pass
 
     def get_discount_price(self, obj):
-        if self.user:
+        if self.user.is_authenticated:
             user_groups = self.user.vip_types.all()
             # prices = VipPrice.objects.filter(storage_id=obj.pk, available_count_for_sale__gt=0,
             #                                  vip_type__in=user_groups).values_list('discount_price', flat=True)
@@ -620,7 +620,7 @@ class MinStorageSchema(BaseSchema):
         #     if obj.available_count_for_sale > 0:
         #         return obj.discount_percent
         #     return 0
-        if self.user:
+        if self.user.is_authenticated:
             user_groups = self.user.vip_types.all()
             prices = obj.vip_prices.all()
             prices = sorted(prices, key=lambda o: o.discount_percent)

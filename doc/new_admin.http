@@ -218,7 +218,6 @@ Content-Type: application/json
       "settings": {}
     }
   ],
-  "check_review": false,
   "description": {
     "data": {
       "ar": {},
@@ -244,7 +243,6 @@ Content-Type: application/json
     "en": "",
     "ar": ""
   },
-  "review": null,
   "settings": {
     "adminNote": "انبار ندارد↵اصلاح اسم محصول",
     "productStatus": 2

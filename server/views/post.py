@@ -1,9 +1,8 @@
-from py3dbp import Packer, Bin, Item
-from server.models import BasketProduct, Basket
 from math import ceil
-import pysnooper
-from django.db.models import F, Sum, Max, Avg
-from django.contrib.postgres.fields.jsonb import KeyTextTransform
+
+from py3dbp import Packer, Bin, Item
+
+from server.models import BasketProduct, Basket
 
 
 class CustomBin(Bin):

@@ -34,14 +34,20 @@ class ProductView(View):
         #     .prefetch_related(f'{p}categories', f'{p}cities', f'{p}states', f'{p}media', f'{p}tag_groups',
         #                       f'{p}features', f'{p}feature_groups')
         # product_obj = product_tag.first().product
-        product_obj = Product.objects.filter(permalink=permalink, **product_preview). \
-            annotate(review_count=Count('reviews'),
-                     wish=Exists(WishList.objects.filter(user=user, wish=True, product__permalink=permalink)),
-                     notify=Exists(WishList.objects.filter(user=user, notify=True, product__permalink=permalink)),
-                     purchased=Exists(
-                         Invoice.objects.filter(user=user, status=2, storages__product__permalink=permalink))). \
-            select_related('thumbnail', 'box', 'brand'). \
-            prefetch_related('product_tags__tag', 'tag_groups__tag_group_tags__tag', 'categories__parent').first()
+        try:
+            product_obj = Product.objects.filter(permalink=permalink, **product_preview). \
+                annotate(review_count=Count('reviews'),
+                         wish=Exists(WishList.objects.filter(user=user, wish=True, product__permalink=permalink)),
+                         notify=Exists(WishList.objects.filter(user=user, notify=True, product__permalink=permalink)),
+                         purchased=Exists(
+                             Invoice.objects.filter(user=user, status=2, storages__product__permalink=permalink))). \
+                select_related('thumbnail', 'box', 'brand'). \
+                prefetch_related('product_tags__tag', 'tag_groups__tag_group_tags__tag', 'categories__parent').first()
+        except TypeError:
+            product_obj = Product.objects.filter(permalink=permalink, **product_preview). \
+                annotate(review_count=Count('reviews')). \
+                select_related('thumbnail', 'box', 'brand'). \
+                prefetch_related('product_tags__tag', 'tag_groups__tag_group_tags__tag', 'categories__parent').first()
 
         features = self.get_features(product_obj, request.lang)
         # features = []
