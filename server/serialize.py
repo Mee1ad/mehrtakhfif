@@ -150,26 +150,27 @@ class BaseSchema(Schema):
 
     def get_box(self, obj):
         if obj.box is not None:
-            return BoxSchema(self.lang).dump(obj.box)
+            return BoxSchema(self.lang, exclude=['media']).dump(obj.box)
         return None
 
     def get_parent(self, obj):
         if obj.parent is not None:
-            return CategorySchema(self.lang).dump(obj.parent)
+            return CategorySchema(self.lang, exclude=['media']).dump(obj.parent)
         return None
 
     def get_category(self, obj):
-        if obj.categories.all():
-            return CategorySchema(self.lang).dump(obj.categories.all(), many=True)
+        categories = obj.categories.all()
+        if categories:
+            return CategorySchema(self.lang, exclude=['media']).dump(categories, many=True)
         return []
 
     def get_product(self, obj):
         if obj.product is not None:
-            return ProductSchema(self.lang, self.user).dump(obj.product)
+            return ProductSchema(self.lang, self.user, exclude=['storages']).dump(obj.product)
         return None
 
     def get_house(self, obj):
-        if hasattr(obj, 'house'):
+        if hasattr(obj, 'house_id'):
             return HouseSchema(self.lang, self.user).dump(obj.house)
         return None
 
@@ -193,11 +194,11 @@ class BaseSchema(Schema):
 
     def get_min_storage(self, obj):
         try:
-            if hasattr(obj, 'house'):
+            if hasattr(obj, 'house_id'):
                 return {}
-            if hasattr(obj, 'default_storage'):
+            if hasattr(obj, 'default_storage_id'):
                 return MinStorageSchema(self.lang, vip=self.vip, user=self.user).dump(obj.default_storage)
-            if hasattr(obj, 'storage'):
+            if hasattr(obj, 'storage_id'):
                 return MinStorageSchema(self.lang, vip=self.vip, user=self.user).dump(obj.storage)
             return {}
         except Exception:
@@ -258,12 +259,12 @@ class BaseSchema(Schema):
 
     def get_vip_max_count_for_sale(self, obj):
         try:
-            user_vip_types = self.user.vip_types.all().values_list('id', flat=True)
-            if not user_vip_types:
+            user_vip_prices = self.user.user_vip_prices.all().values_list('id', flat=True)
+            if not user_vip_prices:
                 return None
             storage_vip_prices = VipPrice.objects.filter(storage=obj)
             max_count_for_sale = obj.max_count_for_sale
-            for vip_type in user_vip_types:
+            for vip_type in user_vip_prices:
                 try:
                     vip_max_count_for_sale = storage_vip_prices.get(vip_type=vip_type).max_count_for_sale
                     if vip_max_count_for_sale < max_count_for_sale:
@@ -290,6 +291,9 @@ class BaseSchema(Schema):
             return StateSchema().dump(obj.state)
         except AttributeError:
             pass
+
+    def get_settings(self, obj):
+        return obj.settings.get('ui', {})
 
 
 class MinUserSchema(BaseSchema):
@@ -418,27 +422,47 @@ class FeatureSchema(BaseSchema):
     name = fields.Method('get_name')
 
 
+class FeatureGroupSchema(BaseSchema):
+    name = fields.Method('get_name')
+    settings = fields.Method('get_settings')
+    features = fields.Function(lambda o: [])
+
+    def get_settings(self, obj):
+        return obj.settings.get('ui', {})
+
+
 class FeatureValueSchema(BaseSchema):
     value = fields.Method('get_value')
-    settings = fields.Function(lambda o: o.settings.get('ui'))
+    settings = fields.Method("get_settings")
+    priority = fields.Int()
 
 
 class ProductFeatureSchema(BaseSchema):
+    def __init__(self, list_of_values=False, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.list_of_values = list_of_values
+
     class Meta:
         additional = ('priority',)
 
     feature = fields.Method('get_feature')
     feature_value = fields.Method('get_feature_value')
     settings = fields.Method('get_settings')
+    feature_groups = fields.Method("get_feature_groups")
+
+    def get_feature_groups(self, obj):
+        try:
+            return obj.feature_groups
+        except Exception:
+            return []
 
     def get_feature(self, obj):
         return self.get(obj.feature.name)
 
     def get_feature_value(self, obj):
+        if self.list_of_values:
+            return [FeatureValueSchema().dump(obj.feature_value)]
         return self.get(obj.feature_value.value)
-
-    def get_settings(self, obj):
-        return obj.feature_value.settings.get('ui', {})
 
 
 class FeatureStorageSchema(BaseSchema):
@@ -473,13 +497,18 @@ class MinProductSchema(BaseSchema):
     available = fields.Method('is_available')
 
     def is_available(self, obj):
-        return obj.storages.filter(available_count_for_sale__gt=0, disable=False, unavailable=False).exists()
+        storages = obj.storages.all()
+        for storage in storages:
+            if storage.available_count_for_sale > 0 and storage.disable is False and storage.unavailable is False:
+                return True
+        return False
 
 
 class ProductSchema(MinProductSchema):
     class Meta:
         additional = MinProductSchema.Meta.additional + ('gender',)
 
+    default_storage = fields.Function(lambda o: None)
     address = fields.Method("get_address")
     short_address = fields.Method("get_short_address")
     type = fields.Function(lambda o: o.get_type_display())
@@ -487,17 +516,44 @@ class ProductSchema(MinProductSchema):
     box = fields.Method("get_box")
     categories = fields.Method("get_category")
     house = fields.Method("get_house")
-    tags = TagField()
+    tags = fields.Method("get_tags")
     media = MediaField()
     short_description = fields.Method("get_short_description")
     description = fields.Method("get_description")
     properties = fields.Method("get_properties")
     details = fields.Method("get_details")
     location = fields.Method("get_location")
-    cities = CityField()
-    states = CityField()
+    cities = fields.Method("get_cities")
+    states = fields.Method("get_states")
     # todo make it day for long hours
     max_shipping_time = fields.Int()
+    review_count = fields.Method("get_review_count")
+    storages = fields.Method("get_storages")
+
+    def get_storages(self, obj):
+        return StorageSchema(only=['id', 'discount_price', 'max_count_for_sale']).dump(obj.storages.all(), many=True)
+
+    def get_tags(self, obj):
+        # tags = list(ProductTag.objects.filter(product=obj))
+        tags = list(obj.product_tags.all())
+        for tag_group in obj.tag_groups.all():
+            # tags += TagGroupTag.objects.filter(taggroup=tag_group)
+            tags += tag_group.tag_group_tags.all()
+        return TagSchema().dump(set(tags), many=True)
+
+    def get_review_count(self, obj):
+        try:
+            return obj.review_count
+        except AttributeError:
+            return 0
+
+    def get_cities(self, obj):
+        cities = obj.cities.all()
+        return CitySchema().dump(cities, many=True)
+
+    def get_states(self, obj):
+        states = obj.states.all()
+        return StateSchema().dump(states, many=True)
 
 
 class ProductMediaSchema(BaseSchema):
@@ -518,7 +574,9 @@ class MinStorageSchema(BaseSchema):
 
     def get_vip_type(self, obj):
         try:
-            return VipPrice.objects.filter(storage_id=obj.pk).order_by('discount_price').first().vip_type.name
+            vip_prices = obj.vip_prices.all()
+            return min(vip_prices, key=attrgetter('discount_price')).vip_type.name
+            # return VipPrice.objects.filter(storage_id=obj.pk).order_by('discount_price').first().vip_type.name
         except Exception:
             return None
 
@@ -529,15 +587,23 @@ class MinStorageSchema(BaseSchema):
             pass
 
     def get_discount_price(self, obj):
-        try:
+        if self.user:
             user_groups = self.user.vip_types.all()
-            prices = VipPrice.objects.filter(storage_id=obj.pk, available_count_for_sale__gt=0,
-                                             vip_type__in=user_groups).values_list('discount_price', flat=True)
-            return min(prices)
-        except Exception:
+            # prices = VipPrice.objects.filter(storage_id=obj.pk, available_count_for_sale__gt=0,
+            #                                  vip_type__in=user_groups).values_list('discount_price', flat=True)
+
+            # prices = obj.vip_prices.filter(vip_type__in=user_groups, available_count_for_sale__gt=0, storage_id=obj.pk)
+            prices = obj.vip_prices.all()
+            prices = sorted(prices, key=lambda o: o.discount_price)
+            min_price = 0
             if obj.available_count_for_sale > 0:
-                return obj.discount_price
-            return 0
+                min_price = obj.discount_price
+            for price in prices:
+                if price.available_count_for_sale > 0 and price.storage_id == obj.pk and price.vip_type_id in user_groups:
+                    min_price = price.discount_price
+                    break
+            return min_price
+        return obj.discount_price
 
     def get_final_price(self, obj):
         if obj.available_count_for_sale > 0:
@@ -545,15 +611,28 @@ class MinStorageSchema(BaseSchema):
         return 0
 
     def get_discount_percent(self, obj):
-        try:
+        # try:
+        #     user_groups = self.user.vip_types.all()
+        #     prices = VipPrice.objects.filter(storage_id=obj.pk, available_count_for_sale__gt=0,
+        #                                      vip_type__in=user_groups).values_list('discount_percent', flat=True)
+        #     return min(prices)
+        # except Exception:
+        #     if obj.available_count_for_sale > 0:
+        #         return obj.discount_percent
+        #     return 0
+        if self.user:
             user_groups = self.user.vip_types.all()
-            prices = VipPrice.objects.filter(storage_id=obj.pk, available_count_for_sale__gt=0,
-                                             vip_type__in=user_groups).values_list('discount_percent', flat=True)
-            return min(prices)
-        except Exception:
+            prices = obj.vip_prices.all()
+            prices = sorted(prices, key=lambda o: o.discount_percent)
+            min_percent = 0
             if obj.available_count_for_sale > 0:
-                return obj.discount_percent
-            return 0
+                min_percent = obj.discount_percent
+            for price in prices:
+                if price.available_count_for_sale > 0 and price.storage_id == obj.pk and price.vip_type in user_groups:
+                    min_percent = price.discount_percent
+                    break
+            return min_percent
+        return obj.discount_percent
 
 
 class StorageSchema(MinStorageSchema):
@@ -852,7 +931,7 @@ class AdSchema(BaseSchema):
 
 class SliderSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'url')
+        additional = ('id', 'url', 'priority')
 
     title = fields.Method('get_title')
     product = fields.Method("get_permalink")

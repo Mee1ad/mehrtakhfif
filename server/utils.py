@@ -557,7 +557,7 @@ def get_best_seller(request, box, invoice_ids):
     return get_pagination(request, products, MinProductSchema)
 
 
-def sync_storage(basket_id, op):
+def sync_storage(invoice, op):
     def update_storage_counts(s, c):  # Storage, Count
         s.available_count = op(s.available_count, c)
         s.available_count_for_sale = op(s.available_count_for_sale, c)
@@ -566,17 +566,18 @@ def sync_storage(basket_id, op):
         if op == add:
             s.sold_count = sub(s.sold_count, c)
 
-    basket_products = BasketProduct.objects.filter(basket_id=basket_id)
-    for basket_product in basket_products:
-        if basket_product.storage.product.get_type_display() == 'package':
-            package_items = Package.objects.filter(package=basket_product.storage)
+    # basket_products = BasketProduct.objects.filter(basket_id=basket_id)
+    invoice_storages = invoice.invoice_storages.all()
+    for invoice_storage in invoice_storages:
+        if invoice_storage.storage.product.get_type_display() == 'package':
+            package_items = Package.objects.filter(package=invoice_storage.storage)
             for package_item in package_items:
                 storage = package_item.package_item
                 count = package_item.count
                 update_storage_counts(storage, count)
                 storage.save()
-        count = basket_product.count
-        storage = basket_product.storage
+        count = invoice_storage.count
+        storage = invoice_storage.storage
         update_storage_counts(storage, count)
         storage.save()
 

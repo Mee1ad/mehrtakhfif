@@ -260,7 +260,10 @@ class BookingView(View):
         user = request.user
         if user.default_address.state_id != 25:
             raise ValidationError('در حال حاضر محصولات فقط در استان گیلان قابل ارسال میباشد')
-        shipping_cost = get_shipping_cost_temp(user) + storage.shipping_cost + storage.booking_cost
+        if storage.shipping_cost:
+            shipping_cost = storage.shipping_cost + storage.booking_cost
+        else:
+            shipping_cost = get_shipping_cost_temp(user)
         tax = get_tax(storage.tax_type, storage.discount_price, storage.start_price)
         address = AddressSchema().dump(user.default_address)
         post_invoice = Invoice.objects.create(created_by=user, updated_by=user, user=user, address=address,

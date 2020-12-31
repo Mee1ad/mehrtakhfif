@@ -65,8 +65,8 @@ Content-Type: application/json
 
 {
   "b": 10,
-  "tax_type": "from_total_price",
-  "discount_price": 20000,
+  "tax_type": "has_not",
+  "discount_price": 5000,
   "start_price": 0,
   "final_price": 10000,
   "shipping_cost": 1000
@@ -292,7 +292,7 @@ Content-Type: application/json
     "length": 40,
     "width": 26
   },
-  "discount_price": 305000,
+  "discount_price": 310000,
   "features": [
     {
       "product_feature_id": 628,

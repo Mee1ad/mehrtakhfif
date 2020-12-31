@@ -913,7 +913,10 @@ class FeatureGroupASchema(BaseAdminSchema):
     features = fields.Method("get_features")
 
     # features = fields.Nested('FeatureGroupFeatureASchema')
-    # box = fields.Nested(BoxASchema)
+    box = fields.Method('get_box')
+
+    def get_box(self, obj):
+        return BoxASchema(only=['id']).dump(obj.box)
 
     def get_features(self, obj):
         # product_features = ProductFeature.objects.filter(product=self.product, feature__groups__in=[obj.id])

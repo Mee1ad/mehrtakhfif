@@ -30,6 +30,7 @@ from safedelete.signals import post_softdelete
 from mehr_takhfif.settings import HOST, MEDIA_ROOT
 from mtadmin.exception import *
 from server.field_validation import *
+from math import ceil
 
 deliver_status = [(1, 'pending'), (2, 'packing'), (3, 'sending'), (4, 'delivered'), (5, 'referred')]
 
@@ -646,7 +647,7 @@ class Box(Base):
             [special_product.safe_delete() for special_product in special_products]
 
     name = JSONField(default=multilanguage)
-    permalink = models.CharField(max_length=255, db_index=True, unique=True)
+    permalink = models.CharField(max_length=255, unique=True)
     owner = models.ForeignKey(User, on_delete=PROTECT)
     settings = JSONField(default=dict, blank=True)
     disable = models.BooleanField(default=True)
@@ -658,6 +659,12 @@ class Box(Base):
         db_table = 'box'
         ordering = ['-id']
         permissions = [("has_access", "Can manage that box")]
+        # indexes = [
+        #     models.Index(
+        #         name="core_book_status_title_6099efdb_idx",
+        #         fields=["permalink", "title"],
+        #     )
+        # ]
 
 
 class Media(Base):
@@ -837,6 +844,7 @@ class FeatureGroupFeature(MyModel):
 
 class FeatureGroup(Base):
     select = ['box'] + Base.select
+    prefetch = ['feature_group_features__feature__values']
 
     def __str__(self):
         return get_name(self.name, self)
@@ -1269,6 +1277,14 @@ class Storage(Base):
 
         if my_dict.get('priority', None) == 0 and my_dict.get('disable', None):
             my_dict['manage'] = True
+        if my_dict.get('discount_price', None):
+            recommended_profit = 1.15
+            tax_factor = 1
+            if my_dict.get('tax_type', self.tax_type) == 2:
+                tax_factor = 1.09
+            recommended_price = ceil(my_dict.get('start_price', self.start_price) * recommended_profit * tax_factor)
+            if recommended_price > my_dict.get('discount_price'):
+                raise ValidationError(_(f'قیمت فروش باید بیشتر از {recommended_price} باشد'))
         return my_dict
 
     def post_process(self, my_dict):

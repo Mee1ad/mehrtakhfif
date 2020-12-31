@@ -54,7 +54,7 @@ def cancel_reservation(self, invoice_id, **kwargs):
     with task_lock(lock_id, self.app.oid) as acquired:
         if acquired:
             try:
-                invoice = Invoice.objects.get(pk=invoice_id)
+                invoice = Invoice.objects.filter(pk=invoice_id).prefetch_related('invoice_storages').first()
                 #  ((1, 'pending'), (2, 'payed'), (3, 'canceled'), (4, 'rejected'), (5, 'sent'), (6, 'ready'))
                 successful_status = [2, 5]  # payed, posted
                 if invoice.status not in successful_status:
@@ -66,7 +66,8 @@ def cancel_reservation(self, invoice_id, **kwargs):
                         pass
                     invoice.cancel_at = timezone.now()
                     invoice.save()
-                    sync_storage(invoice.basket_id, add)
+                    # sync_storage(invoice.basket_id, add)
+                    sync_storage(invoice, add)
                     try:
                         invoice.basket.sync = 2  # canceled
                     except AttributeError:
