@@ -48,6 +48,9 @@ class ProductView(View):
                 annotate(review_count=Count('reviews')). \
                 select_related('thumbnail', 'box', 'brand'). \
                 prefetch_related('product_tags__tag', 'tag_groups__tag_group_tags__tag', 'categories__parent').first()
+            product_obj.purchased = False
+            product_obj.notify = False
+            product_obj.wish = False
 
         features = self.get_features(product_obj, request.lang)
         # features = []
