@@ -1371,7 +1371,7 @@ class Storage(Base):
     sku = models.CharField(max_length=255, null=True, blank=True, help_text="stock keeping unit")
     final_price = models.PositiveIntegerField(default=0, verbose_name='Final price')
     discount_price = models.PositiveIntegerField(default=0, verbose_name='Discount price')
-    shipping_cost = models.PositiveIntegerField(default=0, blank=True)
+    shipping_cost = models.PositiveIntegerField(blank=True, null=True)
     booking_cost = models.PositiveIntegerField(default=0, blank=True)
     least_booking_time = models.PositiveIntegerField(default=48, blank=True)
     available_count_for_sale = models.PositiveIntegerField(default=0, verbose_name='Available count for sale')
