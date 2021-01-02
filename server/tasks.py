@@ -99,7 +99,8 @@ def sale_report(self, invoice_id, **kwargs):
                                  قیمت: {invoice_storage.storage.discount_price}"""
                     email_list.append(owner.email)
                     owner.gcmdevice_set.all().send_message(message, extra={'title': "گزارش فروش"})
-                    [send_email('گزارش فروش', email, from_email='notification@mehrtakhfif.com', message=message) for email in email_list]
+                    [send_email('گزارش فروش', email, from_email='notification@mehrtakhfif.com', message=message)
+                     for email in email_list]
                 return f"{invoice_id}-successfully reported"
             except Exception as e:
                 logger.exception(e)

@@ -113,7 +113,7 @@ def next_month():
 def upload_to(instance, filename):
     date = timezone.now().strftime("%Y-%m-%d")
     time = timezone.now().strftime("%H-%M-%S-%f")[:-4]
-    if instance.type in Media.has_placeholder:
+    if instance.type < 100:
         time = f'{time}-has-ph'
     # file_type = re.search('\\w+', instance.type)[0]
     file_format = os.path.splitext(instance.image.name)[-1]
@@ -673,7 +673,6 @@ class Media(Base):
     no_box_type = [4, 5, 6, 8]
     media_sizes = {'thumbnail': (600, 372), 'media': (1280, 794), 'category': (800, 500), 'ads': (820, 300),
                    'mobile_ads': (500, 384), 'slider': (1920, 504), 'mobile_slider': (980, 860)}
-    has_placeholder = [1, 2, 3, 4, 5]
     select = ['box'] + Base.select
 
     def __str__(self):
@@ -694,7 +693,7 @@ class Media(Base):
         except ValueError:
             pass
         super().save(*args, **kwargs)
-        if self.type in self.has_placeholder:
+        if self.type < 100:
             ph = reduce_image_quality(self.image.path)
             name = self.image.name.replace('has-ph', 'ph')
             ph.save(f'{MEDIA_ROOT}/{name}', optimize=True, quality=80)
