@@ -587,23 +587,18 @@ class MinStorageSchema(BaseSchema):
             pass
 
     def get_discount_price(self, obj):
+        min_price = 0
+        if obj.available_count_for_sale > 0:
+            min_price = obj.discount_price
         if getattr(getattr(self, 'user', None), 'is_authenticated', None):
             user_groups = self.user.vip_types.all()
-            # prices = VipPrice.objects.filter(storage_id=obj.pk, available_count_for_sale__gt=0,
-            #                                  vip_type__in=user_groups).values_list('discount_price', flat=True)
-
-            # prices = obj.vip_prices.filter(vip_type__in=user_groups, available_count_for_sale__gt=0, storage_id=obj.pk)
             prices = obj.vip_prices.all()
             prices = sorted(prices, key=lambda o: o.discount_price)
-            min_price = 0
-            if obj.available_count_for_sale > 0:
-                min_price = obj.discount_price
             for price in prices:
                 if price.available_count_for_sale > 0 and price.storage_id == obj.pk and price.vip_type_id in user_groups:
                     min_price = price.discount_price
                     break
-            return min_price
-        return obj.discount_price
+        return min_price
 
     def get_final_price(self, obj):
         if obj.available_count_for_sale > 0:
@@ -620,19 +615,18 @@ class MinStorageSchema(BaseSchema):
         #     if obj.available_count_for_sale > 0:
         #         return obj.discount_percent
         #     return 0
+        min_percent = 0
+        if obj.available_count_for_sale > 0:
+            min_percent = obj.discount_percent
         if getattr(getattr(self, 'user', None), 'is_authenticated', None):
             user_groups = self.user.vip_types.all()
             prices = obj.vip_prices.all()
             prices = sorted(prices, key=lambda o: o.discount_percent)
-            min_percent = 0
-            if obj.available_count_for_sale > 0:
-                min_percent = obj.discount_percent
             for price in prices:
                 if price.available_count_for_sale > 0 and price.storage_id == obj.pk and price.vip_type in user_groups:
                     min_percent = price.discount_percent
                     break
-            return min_percent
-        return obj.discount_percent
+        return min_percent
 
 
 class StorageSchema(MinStorageSchema):
