@@ -255,4 +255,5 @@ def server_backup():
 
 @shared_task(bind=True)
 def test_task(self, *args, **kwargs):
-    return "test task was successful"
+
+    return f"{self}{args}{kwargs}"
