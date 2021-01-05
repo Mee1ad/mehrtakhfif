@@ -1286,7 +1286,7 @@ class Storage(Base):
         #     recommended_price = ceil(my_dict.get('start_price', self.start_price) * recommended_profit * tax_factor)
         #     if recommended_price > my_dict.get('discount_price'):
         #         raise ValidationError(_(f'قیمت فروش باید بیشتر از {recommended_price} باشد'))
-        # return my_dict
+        return my_dict
 
     def post_process(self, my_dict):
         if my_dict is None:
