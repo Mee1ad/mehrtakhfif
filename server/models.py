@@ -1276,15 +1276,17 @@ class Storage(Base):
 
         if my_dict.get('priority', None) == 0 and my_dict.get('disable', None):
             my_dict['manage'] = True
-        if my_dict.get('discount_price', None):
-            recommended_profit = 1.15
-            tax_factor = 1
-            if my_dict.get('tax_type', self.tax_type) == 2:
-                tax_factor = 1.09
-            recommended_price = ceil(my_dict.get('start_price', self.start_price) * recommended_profit * tax_factor)
-            if recommended_price > my_dict.get('discount_price'):
-                raise ValidationError(_(f'قیمت فروش باید بیشتر از {recommended_price} باشد'))
-        return my_dict
+        no_profit_boxes = [14]  # home jobs
+        # todo free post recommended profit
+        # if my_dict.get('discount_price', None) and box_id not in no_profit_boxes:
+        #     recommended_profit = 1.15
+        #     tax_factor = 1
+        #     if my_dict.get('tax_type', self.tax_type) == 2:
+        #         tax_factor = 1.09
+        #     recommended_price = ceil(my_dict.get('start_price', self.start_price) * recommended_profit * tax_factor)
+        #     if recommended_price > my_dict.get('discount_price'):
+        #         raise ValidationError(_(f'قیمت فروش باید بیشتر از {recommended_price} باشد'))
+        # return my_dict
 
     def post_process(self, my_dict):
         if my_dict is None:
