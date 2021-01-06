@@ -51,6 +51,7 @@ class IPG(View):
 
 
 class PaymentRequest(LoginRequired):
+    @pysnooper.snoop()
     def get(self, request, basket_id):
         # ip = request.META.get('REMOTE_ADDR') or request.META.get('HTTP_X_FORWARDED_FOR')
 
@@ -197,7 +198,7 @@ class PaymentRequest(LoginRequired):
         task, created = PeriodicTask.objects.get_or_create(interval=schedule, name=task_name, kwargs=json.dumps(kwargs),
                                                            task='server.tasks.cancel_reservation', one_off=True)
         task.save()
-
+    @pysnooper.snoop()
     def create_invoice(self, request, basket=None, charity_id=1):
         user = request.user
         address = None
