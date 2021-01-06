@@ -226,7 +226,10 @@ class FeatureView(View):
 
     def get(self, request, permalink):
         product = Product.objects.filter(permalink=permalink).select_related('default_storage'). \
-            annotate(storages_count=Count('storages')). \
+            annotate(storages_count=Count('storages'),
+                     active_storages_count=Count('storages', filter=Q(storages__unavailable=False,
+                                                                      storages__disable=False,
+                                                                      storages__available_count_for_sale__gt=0))). \
             prefetch_related('product_features__product_feature_storages__storage__vip_prices__vip_type',
                              'product_features__feature', 'default_storage__vip_prices__vip_type',
                              'product_features__feature_value').first()
@@ -240,6 +243,8 @@ class FeatureView(View):
         # product_features = ProductFeature.objects.filter(product=product, feature__type=3)  # selectable
         product_features = product.product_features.all()  # selectable
         product_features = [pf for pf in product_features if pf.feature.type == 3]
+        if product.active_storages_count == 0:
+            return JsonResponse({'features': [], 'storage': {}})
         if not product_features or product.storages_count == 1:
             try:
                 storage = StorageSchema(**request.schema_params).dump(product.default_storage)
