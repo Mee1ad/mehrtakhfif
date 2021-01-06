@@ -309,6 +309,7 @@ class CallBack(View):
     def post(self, request):
         # todo redirect to site anyway
         data = request.body.decode().split('&')
+        print(data)
         data_dict = {}
         for param in data:
             val = param.split('=')
