@@ -51,7 +51,7 @@ class IPG(View):
 
 
 class PaymentRequest(LoginRequired):
-    @pysnooper.snoop()
+
     def get(self, request, basket_id):
         # ip = request.META.get('REMOTE_ADDR') or request.META.get('HTTP_X_FORWARDED_FOR')
 
@@ -60,10 +60,13 @@ class PaymentRequest(LoginRequired):
         #     raise ValidationError(_('متاسفانه در حال حاضر امکان خرید وجود ندارد'))
         # if request.user.is_staff:
         basket = Basket.objects.filter(user=request.user, id=basket_id).first()
+        if basket.count < 1:
+            return JsonResponse({"message": "سبد خرید خالی است", "variant": "error"})
         permitted_user = []
         # if basket.sync in [2, 3]:  # [(0, 'ready'), (1, 'reserved'), (2, 'canceled'), (3, 'done')]
         #     raise ValidationError(_('سبد خرید باید فعال باشد'))
-        if DEBUG is True and request.user.pk in permitted_user:
+
+        if DEBUG is False and request.user.pk in permitted_user:
             # if DEBUG:
             invoice = self.create_invoice(request)
             self.submit_invoice_storages(request, invoice.pk)
@@ -198,7 +201,7 @@ class PaymentRequest(LoginRequired):
         task, created = PeriodicTask.objects.get_or_create(interval=schedule, name=task_name, kwargs=json.dumps(kwargs),
                                                            task='server.tasks.cancel_reservation', one_off=True)
         task.save()
-    @pysnooper.snoop()
+
     def create_invoice(self, request, basket=None, charity_id=1):
         user = request.user
         address = None
