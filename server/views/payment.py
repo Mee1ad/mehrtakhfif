@@ -12,6 +12,9 @@ from server.serialize import *
 from server.tasks import cancel_reservation
 from server.utils import LoginRequired, get_basket, add_one_off_job, sync_storage, add_minutes, get_share
 import pysnooper
+from django.db import transaction
+import urllib.parse as urlparse
+from urllib.parse import parse_qs
 
 ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'disable': False},
                 {'id': 2, 'key': 'melli', 'name': 'ملی', 'hide': True, 'disable': True},
@@ -93,12 +96,12 @@ class PaymentRequest(LoginRequired):
         invoice = self.create_invoice(request)
         self.reserve_storage(basket, invoice)
         self.submit_invoice_storages(request, invoice.pk)
-        url = self.behpardakht_api(request, invoice.pk)
+        url = self.get_payment_url(invoice)
         basket.products.clear()
         return JsonResponse({"url": url})
 
     @staticmethod
-    def behpardakht_api(request, invoice_id, charity_id=1, booking=False):
+    def behpardakht_api(invoice_id, charity_id=1, booking=False):
         # charity_deposit = Charity.objects.get(pk=charity_id).deposit_id
         invoice = Invoice.objects.filter(pk=invoice_id).prefetch_related('storages').select_related(
             'post_invoice').first()
@@ -165,6 +168,26 @@ class PaymentRequest(LoginRequired):
             print(additional_data)
             raise ValueError(_(f"can not get ipg page: {r}"))
 
+    @staticmethod
+    def get_payment_url(invoice):
+        url = PaymentRequest.behpardakht_api(invoice.pk)
+        parsed = urlparse.urlparse(url)
+        ref_id = parse_qs(parsed.query)['RefId'][0]
+        if timezone.now() > add_minutes(-15, invoice.expire):
+            task = invoice.sync_task
+            task.enabled = False
+            task.save()
+            task.description = f"retried {invoice.retried_times} times"
+            schedule, created = IntervalSchedule.objects.get_or_create(every=16, period=IntervalSchedule.MINUTES)
+            task.interval = schedule
+            task.enabled = True
+            task.save()
+            invoice.expire = add_minutes(16)
+            invoice.save()
+        PaymentHistory.objects.create(reference_id=ref_id, amount=invoice.amount, invoice=invoice,
+                                      description="پرداخت توسط درگاه پرداخت")
+        return url
+
     def postpone_invoice(self, invoice):
         invoice.expire = add_minutes(30)
         task_name = f'{invoice.id}: cancel reservation'
@@ -195,11 +218,11 @@ class PaymentRequest(LoginRequired):
         shipping_cost = basket['summary']['shipping_cost']
         if shipping_cost:
             post_invoice = Invoice.objects.create(created_by=user, updated_by=user, user=user, address=address,
-                                                  expire=add_minutes(30), amount=shipping_cost,
+                                                  amount=shipping_cost,
                                                   basket_id=basket['basket']['id'])
         invoice = Invoice.objects.create(created_by=user, updated_by=user, user=user, charity_id=charity_id,
                                          # mt_profit=basket['summary']['mt_profit'],
-                                         expire=add_minutes(30), basket_id=basket['basket']['id'],
+                                         basket_id=basket['basket']['id'],
                                          invoice_discount=basket['summary']['invoice_discount'], address=address,
                                          # charity=basket['summary']['charity'],
                                          amount=basket['summary']['discount_price'] + basket['summary']['tax'],
@@ -210,11 +233,11 @@ class PaymentRequest(LoginRequired):
     def reserve_storage(self, basket, invoice):
         if basket.sync != 1:  # [(0, 'ready'), (1, 'reserved'), (2, 'canceled'), (3, 'done')]
             sync_storage(basket, operator.sub)
-            task_name = f'{invoice.id}: cancel reservation'
-            # args = []
-            kwargs = {"invoice_id": invoice.id, "task_name": task_name}
-            invoice.sync_task = add_one_off_job(name=task_name, kwargs=kwargs, interval=30,
-                                                task='server.tasks.cancel_reservation')
+            # task_name = f'{invoice.id}: cancel reservation'
+            # # args = []
+            # kwargs = {"invoice_id": invoice.id, "task_name": task_name}
+            # invoice.sync_task = add_one_off_job(name=task_name, kwargs=kwargs, interval=30,
+            #                                     task='server.tasks.cancel_reservation')
             # basket.active = False
             basket.sync = 1  # reserved
             basket.save()
@@ -251,6 +274,26 @@ class PaymentRequest(LoginRequired):
                                discount=(storage.final_price - storage.discount_price) * product.count,
                                created_by=invoice.user, updated_by=invoice.user))
         InvoiceStorage.objects.bulk_create(invoice_products)
+
+
+class RePayInvoice(LoginRequired):
+    def get(self, request, invoice_id):
+        # invoices = Invoice.objects.select_for_update().filter(pk=invoice_id)
+        # with transaction.atomic():
+        #     old_invoice = invoices.first()
+        #     old_invoice.status = 3  # canceled
+        #     old_invoice.post_invoice.status = 3
+        #     old_invoice.post_invoice.save()
+        #     old_invoice.cancel_at = timezone.now()
+        #     old_invoice.save()
+        # CallBack.finish_invoice_jobs(old_invoice, cancel=True)
+        # new_invoice = old_invoice
+        # new_post_invoice = old_invoice.post_invoice
+        # new_post_invoice.__dict__.update({"pk": None, "expire": add_minutes(30), "status": 1})
+        # new_invoice.__dict__.update({"pk": None, "reference_id": None, "expire": add_minutes(30), "status": 1})
+        invoice = Invoice.objects.filter(pk=invoice_id, status=1).annotate(retried_times=Count('histories')).first()
+        url = PaymentRequest.get_payment_url(invoice)
+        return JsonResponse({"url": url})
 
 
 class CallBack(View):
@@ -291,7 +334,8 @@ class CallBack(View):
         self.notification_admin(invoice)
         return HttpResponseRedirect(f"{CLIENT_HOST}/invoice/{invoice_id}")
 
-    def finish_invoice_jobs(self, invoice, cancel=None, finish=None):
+    @staticmethod
+    def finish_invoice_jobs(invoice, cancel=None, finish=None):
         if finish:  # successfull payment, cancel task
             task_name = f'{invoice.id}: cancel reservation'
             description = f'{timezone.now()}: canceled by system'

@@ -1586,6 +1586,17 @@ class Invoice(Base):
         ordering = ['-id']
 
 
+class PaymentHistory(SafeDeleteModel):
+    _safedelete_policy = SOFT_DELETE_CASCADE
+
+    id = models.BigAutoField(auto_created=True, primary_key=True)
+    description = models.TextField()
+    reference_id = models.CharField(max_length=31)
+    status = models.BooleanField(default=0)
+    amount = models.PositiveIntegerField()
+    invoice = models.ForeignKey(Invoice, on_delete=PROTECT, related_name="histories")
+
+
 # todo disable value_added type (half)
 # todo remove
 class InvoiceSuppliers(MyModel):

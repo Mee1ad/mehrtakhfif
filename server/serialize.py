@@ -701,6 +701,13 @@ class InvoiceSchema(BaseSchema):
     end_date = fields.Method("get_end_date")
     invoice = fields.Method("get_invoice_file")
     booking_type = fields.Method("get_booking_type")
+    payment_url = fields.Method("get_payment_url")
+
+    def get_payment_url(self, obj):
+        if self.only:
+            if 'payment_url' in getattr(self, 'only', []):
+                if obj.status == 1:
+                    return f"{HOST}/repay/{obj.pk}"
 
     def get_booking_type(self, obj):
         if not obj.start_date:
@@ -713,7 +720,6 @@ class InvoiceSchema(BaseSchema):
         try:
             return obj.start_date.timestamp()
         except Exception as e:
-            print(e)
             return None
 
     def get_end_date(self, obj):
