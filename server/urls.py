@@ -29,7 +29,8 @@ home = [
     path('special_product', try_except(GetSpecialProduct.as_view()), name='special_product'),
     path('best_seller', try_except(BestSeller.as_view()), name='best_seller'),
     path('box_with_category', try_except(BoxWithCategory.as_view()), name='box_with_category'),
-    path('menu', cache_page(60 * 5)(try_except(GetMenu.as_view())), name='menu'),
+    # path('menu', cache_page(60 * 5)(try_except(GetMenu.as_view())), name='menu'),
+    path('menu', (try_except(GetMenu.as_view())), name='menu'),
     path('suggest', try_except(ElasticSearch.as_view()), name='suggest'),
     path('search', try_except(ElasticSearch2.as_view()), name='search'),
     path('ads/<str:ads_type>', try_except(GetAds.as_view()), name='ads'),
@@ -61,6 +62,7 @@ tourism = [
 
 shopping = [
     path('basket', try_except(BasketView.as_view()), name='basket'),
+    path('edit_invoice', try_except(EditInvoice.as_view()), name='edit_invoice'),
     path('product', try_except(GetProducts.as_view()), name='product'),  # for anonymous users
     # path('show_codes', ShowCodes.as_view(), name='show_codes'),
     path('discount_code', try_except(DiscountCodeView.as_view()), name='discount_code')

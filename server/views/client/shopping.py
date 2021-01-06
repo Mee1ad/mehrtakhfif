@@ -19,7 +19,7 @@ class BasketView(View):
             basket = None
         try:
             invoices = Invoice.objects.filter(user=request.user, status=1)
-            invoices = InvoiceSchema(only=['id', 'amount', 'expire']).dump(invoices, many=True)
+            invoices = InvoiceSchema(only=['id', 'amount', 'expire', 'payment_url']).dump(invoices, many=True)
         except TypeError:  # AnonymousUser
             invoices = []
         deleted_items = self.check_basket(basket)
@@ -151,6 +151,20 @@ class BasketView(View):
         return deleted_items
 
 
+class EditInvoice(LoginRequired):
+    def patch(self, request, invoice_id):
+        invoice = Invoice.objects.filter(pk=invoice_id, user=request.user, status=1)\
+            .prefetch_related('invoice_storages')
+        invoice_storages = invoice.invoice_storages.all()
+        new_basket_products = [
+            BasketProduct(storage=invoice_storage.storage, count=invoice_storage.count, box=invoice_storage.box,
+                          features=invoice_storage.features, basket_id=invoice.basket_id)
+            for invoice_storage in invoice_storages]
+        BasketProduct.objects.bulk_create(new_basket_products)
+        return JsonResponse({"message": "محصولات خریداری شده برای ایجاد تغییرات به سبد خرید افزوده شدند",
+                             "variant": "success"})
+
+
 class GetProducts(View):
     def post(self, request):
         data = load_data(request)
@@ -226,7 +240,7 @@ class BookingView(View):
             # return JsonResponse({'invoice_id': invoice.id})
             # return HttpResponseRedirect(f"http://mt.com:3002/invoice/{invoice.id}")
             return HttpResponseRedirect(f"{CLIENT_HOST}/invoice/{invoice.id}")
-        url = PaymentRequest.behpardakht_api(request, invoice_id, booking=True)
+        url = PaymentRequest.behpardakht_api(invoice_id, booking=True)
         return HttpResponseRedirect(url)
 
     def post(self, request):
@@ -267,10 +281,10 @@ class BookingView(View):
         tax = get_tax(storage.tax_type, storage.discount_price, storage.start_price)
         address = AddressSchema().dump(user.default_address)
         post_invoice = Invoice.objects.create(created_by=user, updated_by=user, user=user, address=address,
-                                              expire=add_minutes(30), amount=shipping_cost)
+                                              amount=shipping_cost)
 
         invoice = Invoice.objects.create(created_by=user, updated_by=user, user=user, charity_id=charity_id,
-                                         expire=add_minutes(30), final_price=storage.final_price,
+                                         final_price=storage.final_price,
                                          amount=storage.discount_price + tax, start_date=start_date,
                                          end_date=end_date, details={'cart_postal': cart_postal_text},
                                          invoice_discount=storage.final_price - storage.discount_price, address=address,
@@ -281,11 +295,11 @@ class BookingView(View):
 
     def reserve_storage(self, basket, invoice):
         sync_storage(basket, operator.sub)
-        task_name = f'{invoice.id}: cancel reservation'
-        kwargs = {"invoice_id": invoice.id, "task_name": task_name}
-        invoice.sync_task = add_one_off_job(name=task_name, kwargs=kwargs, interval=30,
-                                            task='server.tasks.cancel_reservation')
-        invoice.save()
+        # task_name = f'{invoice.id}: cancel reservation'
+        # kwargs = {"invoice_id": invoice.id, "task_name": task_name}
+        # invoice.sync_task = add_one_off_job(name=task_name, kwargs=kwargs, interval=30,
+        #                                     task='server.tasks.cancel_reservation')
+        # invoice.save()
 
     def submit_invoice_storages(self, invoice_id, storage, user_id, count=1):
         storage.count = count
