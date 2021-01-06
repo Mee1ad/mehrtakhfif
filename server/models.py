@@ -1603,6 +1603,7 @@ class PaymentHistory(SafeDeleteModel):
     status = models.BooleanField(default=0)
     amount = models.PositiveIntegerField()
     invoice = models.ForeignKey(Invoice, on_delete=PROTECT, related_name="histories")
+    created_at = models.DateTimeField(auto_now_add=True)
 
 
 # todo disable value_added type (half)

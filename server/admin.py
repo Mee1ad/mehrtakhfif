@@ -447,6 +447,24 @@ class InvoiceAdmin(Base):
     get_invoice.short_description = 'invoice'
 
 
+class PaymentHistoryAdmin(Base):
+    list_display = ('id', 'get_invoice', 'reference_id', 'status', 'amount', 'description') + SafeDeleteAdmin.list_display
+    list_filter = ('status',) + SafeDeleteAdmin.list_filter
+    list_per_page = 10
+
+    def get_invoice(self, obj):
+        link = f'{HOST}/superuser/server/invoice/?q={obj.id}'
+        return mark_safe(f'<a href="{link}">Show</a>')
+
+    get_invoice.short_description = 'invoice'
+
+
+class TagAdmin(Base):
+    list_display = ('id', 'name_fa', 'permalink') + SafeDeleteAdmin.list_display
+    list_per_page = 10
+    search_fields = ['name']
+
+
 class InvoiceStorageAdmin(admin.ModelAdmin):
     list_display = (
         'id', 'storage_name', 'discount_price', 'tax', 'charity', 'start_price', 'dev', 'admin', 'mt_profit',
@@ -561,11 +579,11 @@ register_list = [(Session, SessionAdmin), (User, UserAdmin), (Box, BoxAdmin), (C
                  (HousePrice, HousePriceAdmin), (ResidenceType, ResidenceTypeAdmin),
                  (Storage, StorageAdmin), (Basket, BasketAdmin), (Comment, CommentAdmin), (Invoice, InvoiceAdmin),
                  (InvoiceStorage, InvoiceStorageAdmin), (InvoiceSuppliers, InvoiceSupplierAdmin), (Menu, MenuAdmin),
-                 (Tag,), (TagGroup,), (Rate,), (Slider, SliderAdmin), (SpecialOffer, SpecialOfferAdmin),
+                 (Tag, TagAdmin), (TagGroup,), (Rate,), (Slider, SliderAdmin), (SpecialOffer, SpecialOfferAdmin),
                  (Holiday, HolidayAdmin), (Charity, CharityAdmin), (DiscountCode, DiscountCodeAdmin),
                  (SpecialProduct, SpecialProductAdmin), (Blog,), (BlogPost,), (WishList,), (NotifyUser,), (Ad, AdAdmin),
                  (State, StateAdmin), (City, CityAdmin), (Permission,), (VipType, VipTypeAdmin),
-                 (Supplier, SupplierAdmin)]
+                 (Supplier, SupplierAdmin), (PaymentHistory, PaymentHistoryAdmin)]
 for item in register_list:
     admin.site.register(*item)
 admin.site.site_header = "Mehr Takhfif"
