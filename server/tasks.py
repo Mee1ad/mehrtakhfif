@@ -23,7 +23,7 @@ from push_notifications.models import GCMDevice
 from mehr_takhfif.settings import ARVAN_API_KEY
 from mehr_takhfif.settings import INVOICE_ROOT, BASE_DIR
 from server.models import Invoice, InvoiceStorage, User
-from server.utils import sync_storage, send_sms, send_email, random_data, add_days
+from server.utils import sync_storage, send_sms, send_email, random_data, add_days, add_minutes
 
 logger = logging.getLogger(__name__)
 LOCK_EXPIRE = 60 * 10  # Lock expires in 10 minutes
@@ -54,7 +54,9 @@ def cancel_reservation(self, invoice_id, **kwargs):
     with task_lock(lock_id, self.app.oid) as acquired:
         if acquired:
             try:
-                invoice = Invoice.objects.filter(pk=invoice_id).prefetch_related('invoice_storages').first()
+                invoice = Invoice.objects.filter(pk=invoice_id).prefetch_related('invoice_storages',
+                                                                                 'histories').first()
+
                 #  ((1, 'pending'), (2, 'payed'), (3, 'canceled'), (4, 'rejected'), (5, 'sent'), (6, 'ready'))
                 successful_status = [2, 5]  # payed, posted
                 if invoice.status not in successful_status:
@@ -73,6 +75,7 @@ def cancel_reservation(self, invoice_id, **kwargs):
                     except AttributeError:
                         pass
                     return 'invoice canceled, storage synced successfully'
+                return 'successful payment, task terminated'
             except Exception as e:
                 logger.exception(e)
                 self.retry(countdown=3 ** self.request.retries)
@@ -90,17 +93,21 @@ def sale_report(self, invoice_id, **kwargs):
                 invoice_storages = InvoiceStorage.objects.filter(invoice_id=invoice_id). \
                     select_related('storage__product__box__owner').\
                     prefetch_related('storage__product__box__owner__gcmdevice_set')
-
+                owners = {}
                 for invoice_storage in invoice_storages:
                     owner = invoice_storage.storage.product.box.owner
-                    message = f"""عنوان محصول:
-                                  {invoice_storage.storage.title['fa']}
-                                  تعداد:{invoice_storage.count}
-                                 قیمت: {invoice_storage.storage.discount_price}"""
-                    email_list.append(owner.email)
-                    owner.gcmdevice_set.all().send_message(message, extra={'title': "گزارش فروش"})
-                    [send_email('گزارش فروش', email, from_email='notification@mehrtakhfif.com', message=message)
-                     for email in email_list]
+                    product_data = f"{invoice_storage.count} عدد {invoice_storage.storage.title['fa']}"
+                    if owner in owners:
+                        owners[owner].append(product_data)
+                        continue
+                    owners[owner] = [product_data]
+                all_products = []
+                for email, products in owners.items():
+                    all_products += products
+                    send_email('گزارش فروش', to=email, message='\n'.join(products))
+                    owner.gcmdevice_set.all().send_message("برای مشاهده جزئیات فروش وارد پنل شوید",
+                                                           extra={'title': "گزارش فروش"})
+                [send_email('گزارش فروش', to=mail, message='\n'.join(all_products)) for mail in email_list]
                 return f"{invoice_id}-successfully reported"
             except Exception as e:
                 logger.exception(e)
@@ -157,7 +164,7 @@ def task_postrun_handler(task_id=None, **kwargs):
 
 
 @shared_task(bind=True, max_retries=3)
-def send_invoice(self, invoice_id, lang, **kwargs):
+def send_invoice(self, invoice_id, lang="fa", **kwargs):
     hashcode = md5('test'.encode()).hexdigest()
     lock_id = '{0}-lock-{1}'.format(self.name, hashcode)
     with task_lock(lock_id, self.app.oid) as acquired:
@@ -212,6 +219,21 @@ def send_invoice(self, invoice_id, lang, **kwargs):
                     send_email("صورتحساب خرید", user.email, html_content=all_renders, attach=pdf_list)
                     res += ', email sent'
                 return res
+            except Exception as e:
+                logger.exception(e)
+                self.retry(countdown=3 ** self.request.retries)
+    return "This task is duplicate"
+
+
+@shared_task(bind=True, max_retries=3)
+def email_task(self, to, subject, message, **kwargs):
+    hashcode = md5(f"{to}{subject}{message}{timezone.now().day}".encode()).hexdigest()
+    lock_id = '{0}-lock-{1}'.format(self.name, hashcode)
+    with task_lock(lock_id, self.app.oid) as acquired:
+        if acquired:
+            try:
+                send_email(subject=subject, message=message, to=to)
+                return f"{to}\n{subject}\n{message}"
             except Exception as e:
                 logger.exception(e)
                 self.retry(countdown=3 ** self.request.retries)

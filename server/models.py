@@ -1,5 +1,6 @@
 import datetime
 import os
+from math import ceil
 from operator import attrgetter
 from random import randint
 
@@ -30,7 +31,6 @@ from safedelete.signals import post_softdelete
 from mehr_takhfif.settings import HOST, MEDIA_ROOT
 from mtadmin.exception import *
 from server.field_validation import *
-from math import ceil
 
 deliver_status = [(1, 'pending'), (2, 'packing'), (3, 'sending'), (4, 'delivered'), (5, 'referred')]
 
@@ -187,6 +187,10 @@ def default_review():
     return {"chats": [], "state": "ready"}
 
 
+def next_half_hour(minutes=30):
+    return timezone.now() + timezone.timedelta(minutes=minutes)
+
+
 class MyQuerySet(SafeDeleteQueryset):
     _safedelete_visibility = DELETED_INVISIBLE
     _safedelete_visibility_field = 'pk'
@@ -242,7 +246,7 @@ class MyQuerySet(SafeDeleteQueryset):
     def storage_validation(self, **kwargs):
         # for storage and invoice_storage
         storage = self.first()
-        kwargs = storage.pre_process(kwargs)
+        kwargs = storage.pre_process(kwargs, storage.product.box_id)
         return kwargs
 
     def invoice_validation(self, **kwargs):
@@ -870,11 +874,12 @@ class Tag(Base):
 
     def validation(self, kwargs):
         permalink_validation(kwargs.get('permalink', 'pass'))
-        name = kwargs['name']
-        if Tag.objects.filter((Q(name__en=name['en']) & ~Q(name__en="") & ~Q(id=kwargs['id'])) |
-                              (Q(name__fa=name['fa']) & ~Q(name__fa="") & ~Q(id=kwargs['id'])) |
-                              (Q(name__ar=name['ar']) & ~Q(name__ar="") & ~Q(id=kwargs['id']))).count() > 0:
-            raise IntegrityError("DETAIL:  Key (name)=() already exists.")
+        if kwargs.get('name', None):
+            name = kwargs['name']
+            if Tag.objects.filter((Q(name__en=name['en']) & ~Q(name__en="") & ~Q(id=kwargs['id'])) |
+                                  (Q(name__fa=name['fa']) & ~Q(name__fa="") & ~Q(id=kwargs['id'])) |
+                                  (Q(name__ar=name['ar']) & ~Q(name__ar="") & ~Q(id=kwargs['id']))).count() > 0:
+                raise IntegrityError("DETAIL:  Key (name)=() already exists.")
         return kwargs
 
     def save(self, *args, **kwargs):
@@ -1254,7 +1259,7 @@ class Storage(Base):
     def __str__(self):
         return f"{self.product}"
 
-    def pre_process(self, my_dict):
+    def pre_process(self, my_dict, box_id=None):
         [my_dict.pop(field, None) for field in self.remove_fields]
         if type(my_dict.get('start_time')) is int or type(my_dict.get('start_time')) is float:
             my_dict['start_time'] = timestamp_to_datetime(my_dict['start_time'])
@@ -1292,7 +1297,7 @@ class Storage(Base):
         if my_dict is None:
             return True
         ds = getattr(self.product, 'default_storage', None)
-        if self.product.manage or getattr(ds, 'available_count_for_sale', 0) < 1\
+        if self.product.manage or getattr(ds, 'available_count_for_sale', 0) < 1 \
                 or getattr(ds, 'disable', None) is True or getattr(ds, 'unavailable', None) is True:
             self.product.assign_default_value()
         if my_dict.get('vip_prices', None):
@@ -1352,10 +1357,13 @@ class Storage(Base):
             package.save()
 
     def save(self, *args, **kwargs):
-        self.__dict__ = self.pre_process(self.__dict__)
-        self.priority = Product.objects.filter(pk=self.product_id).count() - 1
-        super().save(*args)
-        self.post_process(kwargs)
+        admin = kwargs.get('admin', None)
+        if admin:
+            self.__dict__ = self.pre_process(self.__dict__, self.product.box_id)
+            self.priority = Product.objects.filter(pk=self.product_id).count() - 1
+        super().save(*args, **kwargs)
+        if admin:
+            self.post_process(kwargs)
 
     def is_available(self, count=1):
         return self.available_count_for_sale >= count and self.max_count_for_sale >= count
@@ -1377,7 +1385,7 @@ class Storage(Base):
     least_booking_time = models.PositiveIntegerField(default=48, blank=True)
     available_count_for_sale = models.PositiveIntegerField(default=0, verbose_name='Available count for sale')
     max_count_for_sale = models.PositiveSmallIntegerField(default=1)
-    min_count_alert = models.PositiveSmallIntegerField(default=5)
+    min_count_alert = models.PositiveSmallIntegerField(default=3)
     priority = models.PositiveSmallIntegerField(default=0)
     tax_type = models.PositiveSmallIntegerField(default=0, choices=tax_types)
     tax = models.PositiveIntegerField(default=0)
@@ -1439,7 +1447,7 @@ class BasketProduct(MyModel):
         super().save(*args, **kwargs)
 
     storage = models.ForeignKey(Storage, on_delete=CASCADE)
-    basket = models.ForeignKey(Basket, on_delete=CASCADE, null=True, blank=True)
+    basket = models.ForeignKey(Basket, on_delete=CASCADE, null=True, blank=True, related_name="basket_storages")
     count = models.PositiveIntegerField(default=1)
     box = models.ForeignKey(Box, on_delete=PROTECT)
     features = JSONField(default=dict, help_text="{'name': 'feature name', 'value': 'feature value'}")
@@ -1572,7 +1580,7 @@ class Invoice(Base):
     # mt_profit = models.PositiveIntegerField(null=True, blank=True)
     # charity = models.PositiveIntegerField(null=True, blank=True)
     ipg = models.PositiveSmallIntegerField(default=1)
-    expire = models.DateTimeField(null=True, blank=True)
+    expire = models.DateTimeField(default=next_half_hour)
     status = models.PositiveSmallIntegerField(default=1, choices=statuss)
     max_shipping_time = models.IntegerField(default=0)
     suppliers = models.ManyToManyField(User, through="InvoiceSuppliers", related_name='invoice_supplier')

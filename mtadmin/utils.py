@@ -10,6 +10,7 @@ from django.views import View
 from mtadmin.serializer import tables
 from server.models import *
 from server.utils import get_pagination, get_token_from_cookie, set_token, check_access_token, res_code
+from django.db.models.query import QuerySet
 
 rolls = ['superuser', 'backup', 'admin', 'accountants']
 
@@ -262,14 +263,13 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
         if not Product.objects.filter(pk=data['product_id'], box__in=boxes).exists():
             raise PermissionDenied
     data, m2m, custom_m2m, ordered_m2m, remove_fields = get_m2m_fields(model, data)
-    print(custom_m2m)
     obj = model(**data, created_by=user, updated_by=user)
-    obj.save(**remove_fields)
-    [getattr(obj, field).set(m2m[field]) for field in m2m]
-    for field in custom_m2m:
-        add_custom_m2m(obj, field, custom_m2m[field], user, 'custom_m2m', restrict_m2m, used_product_feature_ids)
-    for field in ordered_m2m:
-        add_custom_m2m(obj, field, ordered_m2m[field], user, 'ordered_m2m', restrict_m2m, used_product_feature_ids)
+    obj.save(**remove_fields, admin=True)
+    add_m2m(user, obj, m2m, custom_m2m, ordered_m2m, restrict_m2m, used_product_feature_ids)
+    # for field in custom_m2m:
+    #     add_custom_m2m(obj, field, custom_m2m[field], user, 'custom_m2m', restrict_m2m, used_product_feature_ids)
+    # for field in ordered_m2m:
+    #     add_custom_m2m(obj, field, ordered_m2m[field], user, 'ordered_m2m', restrict_m2m, used_product_feature_ids)
     if return_item:
         request.GET._mutable = True
         request.GET['id'] = obj.pk
@@ -377,6 +377,21 @@ def add_custom_m2m(obj, field, item_list, user, m2m_type, restrict_m2m, used_pro
         many_to_many_model.objects.bulk_create(items)
 
 
+def add_m2m(user, obj, m2m, custom_m2m, ordered_m2m, restrict_m2m, used_product_feature_ids):
+    if isinstance(obj, QuerySet):
+        obj = obj.first()
+    if m2m:
+        [getattr(obj, field).set(m2m[field]) for field in m2m]
+    if custom_m2m:
+        for field in custom_m2m:
+            add_custom_m2m(obj, field, custom_m2m[field], user, 'custom_m2m', restrict_m2m,
+                           used_product_feature_ids)
+    if ordered_m2m:
+        for field in ordered_m2m:
+            add_custom_m2m(obj, field, ordered_m2m[field], user, 'ordered_m2m', restrict_m2m,
+                           used_product_feature_ids)
+
+
 def update_object(request, model, box_key='box', return_item=False, serializer=None, data=None, require_box=True,
                   extra_response={}, restrict_objects=(), restrict_m2m=(), used_product_feature_ids=()):
     user = request.user
@@ -387,12 +402,11 @@ def update_object(request, model, box_key='box', return_item=False, serializer=N
     try:
         data, m2m, custom_m2m, ordered_m2m, remove_fields = get_m2m_fields(model, data)
     except AttributeError:
-        m2m, custom_m2m, ordered_m2m, remove_fields = [], [], [], []
+        m2m, custom_m2m, ordered_m2m, remove_fields = None, None, None, None
     pk = data['id']
     box_check = get_box_permission(request, box_key) if require_box else {}
     footprint = {'updated_by': user, 'updated_at': timezone.now()}
     items = model.objects.filter(pk=pk, **box_check)
-    print(custom_m2m)
     try:
         items.update(**data, remove_fields=remove_fields, **footprint)
     except FieldDoesNotExist:
@@ -400,13 +414,7 @@ def update_object(request, model, box_key='box', return_item=False, serializer=N
             items.update(**data, **footprint)
         except FieldDoesNotExist:
             items.update(**data)
-    [getattr(items.first(), field).set(m2m[field]) for field in m2m]
-    for field in custom_m2m:
-        add_custom_m2m(items.first(), field, custom_m2m[field], user, 'custom_m2m', restrict_m2m,
-                       used_product_feature_ids)
-    for field in ordered_m2m:
-        add_custom_m2m(items.first(), field, ordered_m2m[field], user, 'ordered_m2m', restrict_m2m,
-                       used_product_feature_ids)
+    add_m2m(user, items, m2m, custom_m2m, ordered_m2m, restrict_m2m, used_product_feature_ids)
     try:
         item = items.first()
         if item.disable is False:

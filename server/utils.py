@@ -351,7 +351,7 @@ def send_sms(to, template, token):
         print(e)
 
 
-def send_email(subject, to, from_email='support@mehrtakhfif.com', message=None, html_content=None, attach=None):
+def send_email(subject, to, from_email='notification@mehrtakhfif.com', message=None, html_content=None, attach=None):
     if type(to) != list:
         to = [to]
     msg = EmailMultiAlternatives(subject, message, from_email, to)
@@ -387,7 +387,7 @@ def get_categories(language, box_id=None, categories=None, is_admin=None, disabl
     return BoxCategoriesSchema(language=language).dump(new_cats, many=True)
 
 
-def get_pagination(request, query, serializer, show_all=False):
+def get_pagination(request, query, serializer, show_all=False, serializer_args={}):
     page = request.page
     step = request.step
     paginator = Paginator(query, step)
@@ -399,16 +399,16 @@ def get_pagination(request, query, serializer, show_all=False):
     if step > 100:
         step = default_step
     try:
-        items = serializer(**request.schema_params).dump(query, many=True)
+        items = serializer(**request.schema_params, **serializer_args).dump(query, many=True)
     except TypeError:
-        items = serializer().dump(query, many=True)
+        items = serializer(**serializer_args).dump(query, many=True)
     return {'pagination': {'last_page': ceil(count / step), 'count': count},
             'data': items}
 
 
-def user_data_with_pagination(model, serializer, request, show_all=False, extra={}):
+def user_data_with_pagination(model, serializer, request, show_all=False, extra={}, serializer_args={}):
     query = model.objects.filter(user=request.user, **extra)
-    return get_pagination(request, query, serializer, show_all=show_all)
+    return get_pagination(request, query, serializer, show_all=show_all, serializer_args=serializer_args)
 
 
 def get_discount_price(storage):
@@ -566,18 +566,18 @@ def sync_storage(invoice, op):
         if op == add:
             s.sold_count = sub(s.sold_count, c)
 
-    # basket_products = BasketProduct.objects.filter(basket_id=basket_id)
-    invoice_storages = invoice.invoice_storages.all()
-    for invoice_storage in invoice_storages:
-        if invoice_storage.storage.product.get_type_display() == 'package':
-            package_items = Package.objects.filter(package=invoice_storage.storage)
+    attr = {'Basket': 'basket_storages', 'Invoice': 'invoice_storages'}[invoice.__class__.__name__]
+    products = getattr(invoice, attr).all()
+    for product in products:
+        if product.storage.product.get_type_display() == 'package':
+            package_items = Package.objects.filter(package=product.storage)
             for package_item in package_items:
                 storage = package_item.package_item
                 count = package_item.count
                 update_storage_counts(storage, count)
                 storage.save()
-        count = invoice_storage.count
-        storage = invoice_storage.storage
+        count = product.count
+        storage = product.storage
         update_storage_counts(storage, count)
         storage.save()
 
@@ -665,7 +665,6 @@ def set_csrf_cookie(response):
 def check_csrf_token(request):
     csrf_cookie = get_custom_signed_cookie(request, 'csrf_cookie', False)
 
-    @pysnooper.snoop()
     def double_check_token(minute):
         time = add_minutes(minute).strftime("%Y-%m-%d-%H-%M")
         try:

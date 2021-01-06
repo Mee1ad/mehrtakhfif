@@ -111,17 +111,17 @@ Content-Type: application/json
   ],
   "features": [
     {
-      "feature_id": 31,
+      "feature_id": 90,
       "feature_value_id": 87,
       "settings": {}
     },
     {
-      "feature_id": 32,
+      "feature_id": 89,
       "feature_value_id": 88,
       "settings": {}
     }
   ],
-  "check_review": false,
+  "review": {"chats": [], "state": "ready"},
   "description": {
     "data": {
       "ar": {},
@@ -136,7 +136,6 @@ Content-Type: application/json
       }
     }
   },
-  "id": 51,
   "media": [
     1184,
     1185,
@@ -148,8 +147,7 @@ Content-Type: application/json
     "en": "",
     "ar": ""
   },
-  "permalink": "test1019",
-  "review": null,
+  "permalink": "testhehe2",
   "settings": {
     "adminNote": "انبار ندارد↵اصلاح اسم محصول",
     "productStatus": 2
@@ -271,6 +269,30 @@ Content-Type: application/json
 }
 
 ###
+PUT {{admin_host}}/product
+Content-Type: application/json
+
+{
+  "id": 1237,
+  "name": {
+    "fa": "test"
+  },
+  "tags": [
+    {
+      "tag_id": 159,
+      "show": true
+    },
+    {
+      "tag_id": 158,
+      "show": false
+    },
+    {
+      "tag_id": 157,
+      "show": false
+    }
+  ]
+}
+###
 DELETE {{admin_host}}/product?id=54
 
 ### ProductFeature CRUD
@@ -290,7 +312,7 @@ Content-Type: application/json
     "length": 40,
     "width": 26
   },
-  "discount_price": 310000,
+  "discount_price": 315000,
   "features": [
     {
       "product_feature_id": 628,
@@ -345,7 +367,7 @@ Content-Type: application/json
     "length": 5,
     "width": 5
   },
-  "discount_price": 305000,
+  "discount_price": 4000,
   "features": [
     {
       "product_feature_id": 29,
@@ -368,7 +390,7 @@ Content-Type: application/json
     "ar": ""
   },
   "max_count_for_sale": 1,
-  "max_shipping_time": 0,
+  "max_shipping_time": 48,
   "min_count_alert": 0,
   "product_id": 303,
   "shipping_cost": null,
@@ -838,3 +860,5 @@ Content-Type: application/json
 }
 
 ###
+
+GET https://tinama.ir

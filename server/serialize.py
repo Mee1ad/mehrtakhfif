@@ -432,7 +432,7 @@ class FeatureGroupSchema(BaseSchema):
 
 
 class FeatureValueSchema(BaseSchema):
-    value = fields.Method('get_value')
+    name = fields.Method('get_value')
     settings = fields.Method("get_settings")
     priority = fields.Int()
 

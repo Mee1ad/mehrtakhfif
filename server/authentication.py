@@ -61,7 +61,6 @@ class MyModelBackend(ModelBackend):
 
     def get_user3(self, user_id, request):
         prefetch = self.what_to_prefetch(request)
-        print(prefetch)
         try:
             # user = UserModel._default_manager.get(pk=user_id)
             user = User.objects.filter(pk=user_id).select_related(*prefetch['select'])\

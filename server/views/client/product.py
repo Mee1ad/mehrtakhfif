@@ -1,6 +1,8 @@
 import collections
+from collections import Counter
 from itertools import groupby
 from operator import attrgetter as ga
+from operator import itemgetter
 
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import Exists
@@ -9,8 +11,6 @@ from toolz import unique
 
 from server.serialize import *
 from server.utils import View, get_pagination, load_data, get_preview_permission
-from collections import Counter
-from operator import itemgetter
 
 
 class ProductView(View):
@@ -251,11 +251,14 @@ class FeatureView(View):
         multi_select_features = [item for item, count in feature_count if count > 1]
         # product_features = product_features.filter(feature_id__in=multi_select_features)
         product_features = [pf for pf in product_features if pf.feature_id in multi_select_features]
-        product_feature_storages = ProductFeatureStorage.objects.filter(product_feature__in=product_features,
-                                                                        storage__available_count_for_sale__gt=0,
-                                                                        storage__unavailable=False,
-                                                                        storage__disable=False) \
+        all_pfs = ProductFeatureStorage.objects.filter(product_feature__in=product_features,
+                                                          # storage__available_count_for_sale__gt=0,
+                                                          # storage__unavailable=False,
+                                                          storage__disable=False) \
             .select_related('storage', 'product_feature').order_by('product_feature_id')
+        product_feature_storages = [pfs for pfs in all_pfs
+                                    if pfs.storage.available_count_for_sale > 0 and pfs.storage.unavailable is False]
+
         if selected:
             # selected_pfs = product_feature_storages.filter(product_feature_id__in=selected)
             selected_pfs = [pfs for pfs in product_feature_storages if pfs.product_feature_id in selected]
@@ -277,36 +280,51 @@ class FeatureView(View):
             # selected = list(product_feature_storages.filter(storage=default_storage).values_list('product_feature_id',
             #                                                                                      flat=True))
             selected = [pfs.product_feature_id for pfs in product_feature_storages if pfs.storage == default_storage]
-        features_list = self.get_features(product_features, product_feature_storages, default_storage, selected)
+        features_list = self.get_features(product_features, product_feature_storages, all_pfs, default_storage, selected)
         return JsonResponse({'features': features_list,
                              'storage': StorageSchema(exclude=['features']).dump(default_storage)})
 
-    def get_features(self, product_features, product_feature_storages, default_storage=None, selected=None):
+    def get_features(self, product_features, product_feature_storages, all_pfs, default_storage=None, selected=None):
+
         if not selected:
             selected = []
         features_list = []
         # product_features_distinct = product_features.order_by('feature_id').distinct('feature_id')
         product_features_distinct = [next(g) for k, g in groupby(product_features, key=ga('feature_id'))]
-        product_feature_storages_distinct = [next(g) for k, g in groupby(product_feature_storages,
-                                                                         key=ga('storage_id'))]
+        all_pfs_distinct = [next(g) for k, g in groupby(all_pfs, key=ga('storage_id'))]
         # selected_feature = list(
         #     product_feature_storages.filter(storage=default_storage).values_list('product_feature_id', flat=True))
-        selected_feature = [pfs.product_feature_id for pfs in product_feature_storages if pfs.storage ==
+        selected_feature = [pfs.product_feature_id for pfs in all_pfs if pfs.storage ==
                             default_storage]
         available_combos = []
+        all_combos = []
         feature_value_combo = []
         # for pf in product_feature_storages.order_by('storage_id').distinct('storage_id'):
-        for pf in product_feature_storages_distinct:
+        for pf in all_pfs_distinct:
             # available_combos.append(
             #     list(product_feature_storages.filter(storage_id=pf.storage_id).values_list(
             #         'product_feature_id', flat=True)))
-            available_combos.append([pfs.product_feature_id for pfs in product_feature_storages
+
+            available_combos.append([pfs.product_feature_id for pfs in all_pfs
+                                     if pfs.storage_id == pf.storage_id and pfs.storage.unavailable is False
+                                     and pfs.storage.available_count_for_sale > 0])
+            all_combos.append([pfs.product_feature_id for pfs in all_pfs
                                      if pfs.storage_id == pf.storage_id])
+
+            # combo = []
+            # for pfs in all_pfs:
+            #     if pfs.storage_id == pf.storage_id:
+            #         if pfs.storage.unavailable is False and pfs.storage.available_count_for_sale > 0:
+            #             combo.append(pfs.product_feature_id)
+            #             continue
+            #         all_combos.append(pfs.product_feature_id)
+            #     available_combos.append(pfs.product_feature_id)
             # used_values_combo.append([(pfs.product_feature.feature_id, pfs.product_feature.feature_value_id) for pfs in
             #                           product_feature_storages if pfs.storage_id == pf.storage_id])
-            for pfs in product_feature_storages:
+            for pfs in all_pfs:
                 if pfs.storage_id == pf.storage_id:
                     feature_value_combo.append((pfs.product_feature.feature_id, pfs.product_feature.feature_value_id))
+        print(all_combos)
         print(available_combos)
         print(feature_value_combo)
         # print(available_combos)
