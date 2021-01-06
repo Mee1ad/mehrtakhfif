@@ -175,6 +175,7 @@ class PaymentRequest(LoginRequired):
 
     @staticmethod
     def get_payment_url(invoice):
+        invoice.refresh_from_db()
         url = PaymentRequest.behpardakht_api(invoice.pk, retried_times=getattr(invoice, 'retried_times', 0))
         parsed = urlparse.urlparse(url)
         ref_id = parse_qs(parsed.query)['RefId'][0]
