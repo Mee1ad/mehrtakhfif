@@ -105,10 +105,11 @@ class PaymentRequest(LoginRequired):
         return JsonResponse({"url": url})
 
     @staticmethod
-    def behpardakht_api(invoice_id, charity_id=1, booking=False):
+    def behpardakht_api(invoice_id, invoice=None, retried_times=0, charity_id=1, booking=False):
         # charity_deposit = Charity.objects.get(pk=charity_id).deposit_id
-        invoice = Invoice.objects.filter(pk=invoice_id).prefetch_related('storages').select_related(
-            'post_invoice').first()
+        if not Invoice:
+            invoice = Invoice.objects.filter(pk=invoice_id).prefetch_related('storages').select_related(
+                'post_invoice').first()
         share = get_share(invoice=invoice)
         shipping_cost = getattr(getattr(invoice, 'post_invoice', None), 'amount', 0)
         additional_data = [[1, (share['mt_profit'] + share['tax'] + shipping_cost + share['admin']) * 10, 0],
@@ -159,10 +160,10 @@ class PaymentRequest(LoginRequired):
         if not DEBUG:
             r = client.service.bpCumulativeDynamicPayRequest(terminalId=bp['terminal_id'], userName=bp['username'],
                                                              userPassword=bp['password'], localTime=local_time,
-                                                             localDate=local_date, orderId=invoice.id,
+                                                             localDate=local_date, callBackUrl=bp['callback'],
+                                                             orderId=f"{retried_times}{invoice.id}",
                                                              amount=(invoice.amount + shipping_cost) * 10,
-                                                             additionalData=additional_data,
-                                                             callBackUrl=bp['callback'])
+                                                             additionalData=additional_data)
         if r[0:2] == "0,":
             ref_id = r[2:]
             invoice.reference_id = ref_id
@@ -174,7 +175,7 @@ class PaymentRequest(LoginRequired):
 
     @staticmethod
     def get_payment_url(invoice):
-        url = PaymentRequest.behpardakht_api(invoice.pk)
+        url = PaymentRequest.behpardakht_api(invoice.pk, retried_times=invoice.retried_times)
         parsed = urlparse.urlparse(url)
         ref_id = parse_qs(parsed.query)['RefId'][0]
         if timezone.now() > add_minutes(-15, invoice.expire):
