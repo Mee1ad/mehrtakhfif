@@ -238,7 +238,9 @@ def safe_get(*args):
     except Exception:
         pass
 
+import pysnooper
 
+@pysnooper.snoop()
 def get_share(storage=None, invoice=None):
     """
     :param storage:

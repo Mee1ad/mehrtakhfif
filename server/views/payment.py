@@ -51,7 +51,7 @@ class IPG(View):
 
 
 class PaymentRequest(LoginRequired):
-
+    @pysnooper.snoop()
     def get(self, request, basket_id):
         # ip = request.META.get('REMOTE_ADDR') or request.META.get('HTTP_X_FORWARDED_FOR')
 
@@ -105,9 +105,10 @@ class PaymentRequest(LoginRequired):
         return JsonResponse({"url": url})
 
     @staticmethod
+    @pysnooper.snoop()
     def behpardakht_api(invoice_id, invoice=None, retried_times=0, charity_id=1, booking=False):
         # charity_deposit = Charity.objects.get(pk=charity_id).deposit_id
-        if not Invoice:
+        if invoice is None:
             invoice = Invoice.objects.filter(pk=invoice_id).prefetch_related('storages').select_related(
                 'post_invoice').first()
         share = get_share(invoice=invoice)
@@ -175,8 +176,7 @@ class PaymentRequest(LoginRequired):
 
     @staticmethod
     def get_payment_url(invoice):
-        invoice.refresh_from_db()
-        url = PaymentRequest.behpardakht_api(invoice.pk, retried_times=getattr(invoice, 'retried_times', 0))
+        url = PaymentRequest.behpardakht_api(invoice_id=invoice.pk, retried_times=getattr(invoice, 'retried_times', 0))
         parsed = urlparse.urlparse(url)
         ref_id = parse_qs(parsed.query)['RefId'][0]
         if timezone.now() > add_minutes(-15, invoice.expire):
