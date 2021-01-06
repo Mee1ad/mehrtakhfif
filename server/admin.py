@@ -454,7 +454,7 @@ class InvoiceStorageAdmin(admin.ModelAdmin):
 
     # list_filter = ['status', 'supplier']
     # # list_display_links = ('',)
-    search_fields = ['invoice__id']
+    search_fields = ['invoice__id', 'storage__title__fa']
 
     # list_per_page = 10
     # ordering = ('-created_at',)
