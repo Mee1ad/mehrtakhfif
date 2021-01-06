@@ -629,11 +629,11 @@ Content-Type: application/json
 
 {
   "name": {
-    "fa": "api-test",
+    "fa": "api-test55",
     "en": "",
     "ar": ""
   },
-  "permalink": "api-test"
+  "permalink": "api-test55"
 }
 
 ###

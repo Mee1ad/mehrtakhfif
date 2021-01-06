@@ -102,9 +102,9 @@ def sale_report(self, invoice_id, **kwargs):
                         continue
                     owners[owner] = [product_data]
                 all_products = []
-                for email, products in owners.items():
+                for owner, products in owners.items():
                     all_products += products
-                    send_email('گزارش فروش', to=email, message='\n'.join(products))
+                    send_email('گزارش فروش', to=owner.email, message='\n'.join(products))
                     owner.gcmdevice_set.all().send_message("برای مشاهده جزئیات فروش وارد پنل شوید",
                                                            extra={'title': "گزارش فروش"})
                 [send_email('گزارش فروش', to=mail, message='\n'.join(all_products)) for mail in email_list]

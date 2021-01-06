@@ -264,7 +264,10 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
             raise PermissionDenied
     data, m2m, custom_m2m, ordered_m2m, remove_fields = get_m2m_fields(model, data)
     obj = model(**data, created_by=user, updated_by=user)
-    obj.save(**remove_fields, admin=True)
+    save_data = {}
+    if model == Storage:
+        save_data = {'admin': True}
+    obj.save(**remove_fields, **save_data)
     add_m2m(user, obj, m2m, custom_m2m, ordered_m2m, restrict_m2m, used_product_feature_ids)
     # for field in custom_m2m:
     #     add_custom_m2m(obj, field, custom_m2m[field], user, 'custom_m2m', restrict_m2m, used_product_feature_ids)
