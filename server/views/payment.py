@@ -81,9 +81,9 @@ class PaymentRequest(LoginRequired):
             kwargs = {"invoice_id": invoice.pk, "lang": request.lang, 'name': task_name}
             invoice.email_task = add_one_off_job(name=task_name, kwargs=kwargs, interval=0,
                                                  task='server.tasks.send_invoice')
-            invoice.basket.status = 3  # done
+            # invoice.basket.status = 3  # done
             invoice.basket.discount_code.update(invoice=invoice)
-            invoice.basket.save()
+            # invoice.basket.save()
             Basket.objects.create(user=invoice.user, created_by=invoice.user, updated_by=invoice.user)
             # CallBack.notification_admin(invoice)
             # return JsonResponse({'invoice_id': invoice.id})
@@ -318,8 +318,11 @@ class CallBack(View):
         invoice_id = sale_order_id[2:]
         ref_id = data_dict.get('SaleReferenceId', None)
         invoice = Invoice.objects.get(pk=invoice_id, reference_id=data_dict['RefId'])
+        invoice.sale_order_id = sale_order_id
+        invoice.ipg_res_code = data_dict['ResCode']
         if not ref_id or not self.verify(invoice_id, ref_id):
             self.finish_invoice_jobs(invoice, cancel=True)
+            invoice.save()
             return HttpResponseRedirect(f'{CLIENT_HOST}/basket')
         # todo https://memoryleaks.ir/unlimited-charge-of-mytehran-account/
         invoice.status = 2
@@ -332,8 +335,7 @@ class CallBack(View):
         invoice.payed_at = timezone.now()
         invoice.card_holder = data_dict['CardHolderPan']
         invoice.final_amount = data_dict['FinalAmount']
-        invoice.sale_order_id = sale_order_id
-        invoice.ipg_res_code = data_dict['ResCode']
+
         task_name = f'{invoice.id}: send invoice'
         kwargs = {"invoice_id": invoice.pk, "lang": request.lang, 'name': task_name}
         invoice.email_task = add_one_off_job(name=task_name, kwargs=kwargs, interval=0,
@@ -345,16 +347,18 @@ class CallBack(View):
 
     @staticmethod
     def finish_invoice_jobs(invoice, cancel=None, finish=None):
-        if finish:  # successfull payment, cancel task
-            task_name = f'{invoice.id}: cancel reservation'
-            description = f'{timezone.now()}: canceled by system'
-            invoice.basket.status = 3  # done
+        task_name = f'{invoice.id}: cancel reservation'
+        description = f'{timezone.now()}: unknown reason'
+        if finish:  # successful payment, cancel task
+            # invoice.basket.status = 3  # done
+            description = f'{timezone.now()}: successful payment'
             invoice.basket.discount_code.update(invoice=invoice)
-            invoice.basket.save()
-            Basket.objects.create(user=invoice.user, created_by=invoice.user, updated_by=invoice.user)
-            PeriodicTask.objects.filter(name=task_name).update(enabled=False, description=description)
-        if cancel:
+            # invoice.basket.save()
+            # Basket.objects.create(user=invoice.user, created_by=invoice.user, updated_by=invoice.user)
+        elif cancel:
+            description = f'{timezone.now()}: reserve canceled'
             cancel_reservation(invoice.pk)
+        PeriodicTask.objects.filter(name=task_name).update(enabled=False, description=description)
 
     @staticmethod
     def notification_admin(invoice):
