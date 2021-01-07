@@ -70,10 +70,10 @@ def cancel_reservation(self, invoice_id, **kwargs):
                     invoice.save()
                     # sync_storage(invoice.basket_id, add)
                     sync_storage(invoice, add)
-                    try:
-                        invoice.basket.sync = 2  # canceled
-                    except AttributeError:
-                        pass
+                    # try:
+                        # invoice.basket.sync = 2  # canceled
+                    # except AttributeError:
+                    #     pass
                     return 'invoice canceled, storage synced successfully'
                 return 'successful payment, task terminated'
             except Exception as e:

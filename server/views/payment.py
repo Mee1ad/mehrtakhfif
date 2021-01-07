@@ -51,7 +51,6 @@ class IPG(View):
 
 
 class PaymentRequest(LoginRequired):
-    @pysnooper.snoop()
     def get(self, request, basket_id):
         # ip = request.META.get('REMOTE_ADDR') or request.META.get('HTTP_X_FORWARDED_FOR')
 
@@ -70,8 +69,8 @@ class PaymentRequest(LoginRequired):
             # if DEBUG:
             invoice = self.create_invoice(request)
             self.submit_invoice_storages(request, invoice.pk)
-            invoice.basket.sync = 3
-            invoice.basket.save()
+            # invoice.basket.sync = 3
+            # invoice.basket.save()
             invoice.status = 2
             invoice.payed_at = timezone.now()
             invoice.card_holder = '012345******6789'
@@ -105,7 +104,6 @@ class PaymentRequest(LoginRequired):
         return JsonResponse({"url": url})
 
     @staticmethod
-    @pysnooper.snoop()
     def behpardakht_api(invoice_id, invoice=None, retried_times=0, charity_id=1, booking=False):
         # charity_deposit = Charity.objects.get(pk=charity_id).deposit_id
         if invoice is None:
@@ -237,17 +235,17 @@ class PaymentRequest(LoginRequired):
         return invoice
 
     def reserve_storage(self, basket, invoice):
-        if basket.sync != 1:  # [(0, 'ready'), (1, 'reserved'), (2, 'canceled'), (3, 'done')]
-            sync_storage(basket, operator.sub)
-            # task_name = f'{invoice.id}: cancel reservation'
-            # # args = []
-            # kwargs = {"invoice_id": invoice.id, "task_name": task_name}
-            # invoice.sync_task = add_one_off_job(name=task_name, kwargs=kwargs, interval=30,
-            #                                     task='server.tasks.cancel_reservation')
-            # basket.active = False
-            basket.sync = 1  # reserved
-            basket.save()
-            invoice.save()
+        # if basket.sync != 1:  # [(0, 'ready'), (1, 'reserved'), (2, 'canceled'), (3, 'done')]
+        sync_storage(basket, operator.sub)
+        # task_name = f'{invoice.id}: cancel reservation'
+        # # args = []
+        # kwargs = {"invoice_id": invoice.id, "task_name": task_name}
+        # invoice.sync_task = add_one_off_job(name=task_name, kwargs=kwargs, interval=30,
+        #                                     task='server.tasks.cancel_reservation')
+        # basket.active = False
+        # basket.sync = 1  # reserved
+        # basket.save()
+        invoice.save()
 
     def submit_invoice_storages(self, request, invoice_id):
         invoice = Invoice.objects.filter(pk=invoice_id).select_related(*Invoice.select).first()
