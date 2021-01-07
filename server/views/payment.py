@@ -157,6 +157,7 @@ class PaymentRequest(LoginRequired):
         local_time = pytz.timezone("Iran").localize(datetime.datetime.now()).strftime("%H%M%S")
         r = "0,123456789"
         if not DEBUG:
+            print("order id", f"{retried_times}{invoice.id}")
             r = client.service.bpCumulativeDynamicPayRequest(terminalId=bp['terminal_id'], userName=bp['username'],
                                                              userPassword=bp['password'], localTime=local_time,
                                                              localDate=local_date, callBackUrl=bp['callback'],
