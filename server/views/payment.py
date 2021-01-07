@@ -322,10 +322,11 @@ class CallBack(View):
         invoice.ipg_res_code = data_dict['ResCode']
         if not ref_id or not self.verify(invoice_id, ref_id):
             self.finish_invoice_jobs(invoice, cancel=True)
+            invoice.status = 3
             invoice.save()
             return HttpResponseRedirect(f'{CLIENT_HOST}/basket')
         # todo https://memoryleaks.ir/unlimited-charge-of-mytehran-account/
-        invoice.status = 2
+
         try:
             invoice.post_invoice.status = 2
             invoice.post_invoice.save()
