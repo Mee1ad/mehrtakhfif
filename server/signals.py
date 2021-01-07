@@ -16,7 +16,7 @@ def invoice_job_maker(sender, instance, **kwargs):
 
 @receiver(post_save, sender=Storage, dispatch_uid="inventory_alert_handler")
 def inventory_alert(sender, instance, **kwargs):
-    if kwargs and 'sold_count' in kwargs.get('update_fields', []):
+    if kwargs.get('update_fields', None) and 'sold_count' in kwargs.get('update_fields', []):
         if instance.special_products.all() and instance.available_count_for_sale == 0:
             subject = "هشدار اتمام موجودی محصول ویژه"
             message = f"موجودی {instance.title['fa']} به اتمام رسیده است"
