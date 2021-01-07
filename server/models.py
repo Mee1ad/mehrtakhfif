@@ -1574,6 +1574,7 @@ class Invoice(Base):
     final_price = models.PositiveIntegerField(null=True, blank=True)
     reference_id = models.CharField(max_length=127, null=True, blank=True)
     sale_order_id = models.BigIntegerField(null=True, blank=True)
+    ipg_res_code = models.PositiveIntegerField(null=True, blank=True)
     sale_reference_id = models.BigIntegerField(null=True, blank=True)
     card_holder = models.CharField(max_length=31, null=True, blank=True)
     final_amount = models.PositiveIntegerField(help_text='from bank', null=True, blank=True)

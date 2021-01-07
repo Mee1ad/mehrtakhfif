@@ -104,7 +104,7 @@ class PaymentRequest(LoginRequired):
         return JsonResponse({"url": url})
 
     @staticmethod
-    def behpardakht_api(invoice_id, invoice=None, retried_times=0, charity_id=1, booking=False):
+    def behpardakht_api(invoice_id, invoice=None, retried_times=10, charity_id=1, booking=False):
         # charity_deposit = Charity.objects.get(pk=charity_id).deposit_id
         if invoice is None:
             invoice = Invoice.objects.filter(pk=invoice_id).prefetch_related('storages').select_related(
@@ -295,7 +295,7 @@ class RePayInvoice(LoginRequired):
         # new_post_invoice = old_invoice.post_invoice
         # new_post_invoice.__dict__.update({"pk": None, "expire": add_minutes(30), "status": 1})
         # new_invoice.__dict__.update({"pk": None, "reference_id": None, "expire": add_minutes(30), "status": 1})
-        invoice = Invoice.objects.filter(pk=invoice_id, status=1).annotate(retried_times=Count('histories')).first()
+        invoice = Invoice.objects.filter(pk=invoice_id, status=1).annotate(retried_times=Count('histories')+10).first()
         url = PaymentRequest.get_payment_url(invoice)
         return JsonResponse({"url": url})
 
@@ -308,12 +308,12 @@ class CallBack(View):
     def post(self, request):
         # todo redirect to site anyway
         data = request.body.decode().split('&')
-        print(data)
         data_dict = {}
         for param in data:
             val = param.split('=')
             data_dict[val[0]] = val[1]
-        invoice_id = data_dict['SaleOrderId']
+        sale_order_id = data_dict['SaleOrderId']
+        invoice_id = sale_order_id[2:]
         ref_id = data_dict.get('SaleReferenceId', None)
         invoice = Invoice.objects.get(pk=invoice_id, reference_id=data_dict['RefId'])
         if not ref_id or not self.verify(invoice_id, ref_id):
@@ -330,6 +330,8 @@ class CallBack(View):
         invoice.payed_at = timezone.now()
         invoice.card_holder = data_dict['CardHolderPan']
         invoice.final_amount = data_dict['FinalAmount']
+        invoice.sale_order_id = sale_order_id
+        invoice.ipg_res_code = data_dict['ResCode']
         task_name = f'{invoice.id}: send invoice'
         kwargs = {"invoice_id": invoice.pk, "lang": request.lang, 'name': task_name}
         invoice.email_task = add_one_off_job(name=task_name, kwargs=kwargs, interval=0,
