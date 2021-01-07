@@ -175,7 +175,7 @@ class PaymentRequest(LoginRequired):
 
     @staticmethod
     def get_payment_url(invoice):
-        url = PaymentRequest.behpardakht_api(invoice_id=invoice.pk, retried_times=getattr(invoice, 'retried_times', 0))
+        url = PaymentRequest.behpardakht_api(invoice_id=invoice.pk, retried_times=getattr(invoice, 'retried_times', 10))
         parsed = urlparse.urlparse(url)
         ref_id = parse_qs(parsed.query)['RefId'][0]
         if timezone.now() > add_minutes(-15, invoice.expire):
