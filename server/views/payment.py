@@ -1,5 +1,7 @@
 import json
 import operator
+import urllib.parse as urlparse
+from urllib.parse import parse_qs
 
 import zeep
 from django.http import JsonResponse, HttpResponseRedirect
@@ -11,10 +13,6 @@ from mehr_takhfif.settings import DEBUG, CLIENT_HOST
 from server.serialize import *
 from server.tasks import cancel_reservation
 from server.utils import LoginRequired, get_basket, add_one_off_job, sync_storage, add_minutes, get_share
-import pysnooper
-from django.db import transaction
-import urllib.parse as urlparse
-from urllib.parse import parse_qs
 
 ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'disable': False},
                 {'id': 2, 'key': 'melli', 'name': 'ملی', 'hide': True, 'disable': True},
@@ -296,9 +294,28 @@ class RePayInvoice(LoginRequired):
         # new_post_invoice = old_invoice.post_invoice
         # new_post_invoice.__dict__.update({"pk": None, "expire": add_minutes(30), "status": 1})
         # new_invoice.__dict__.update({"pk": None, "reference_id": None, "expire": add_minutes(30), "status": 1})
-        invoice = Invoice.objects.filter(pk=invoice_id, status=1).annotate(retried_times=Count('histories')+10).first()
+        invoice = Invoice.objects.filter(pk=invoice_id, status=1).annotate(
+            retried_times=Count('histories') + 10).first()
         url = PaymentRequest.get_payment_url(invoice)
         return JsonResponse({"url": url})
+
+
+class EditInvoice(LoginRequired):
+    def patch(self, request, invoice_id):
+        invoice = Invoice.objects.filter(pk=invoice_id, user=request.user, status=1) \
+            .prefetch_related('invoice_storages')
+        self.restore_products(invoice)
+        return JsonResponse({"message": "محصولات خریداری شده برای ایجاد تغییرات به سبد خرید افزوده شدند",
+                             "variant": "success"})
+
+    @staticmethod
+    def restore_products(invoice):
+        invoice_storages = invoice.invoice_storages.all()
+        new_basket_products = [
+            BasketProduct(storage=invoice_storage.storage, count=invoice_storage.count, box=invoice_storage.box,
+                          features=invoice_storage.features, basket_id=invoice.basket_id)
+            for invoice_storage in invoice_storages]
+        BasketProduct.objects.bulk_create(new_basket_products)
 
 
 class CallBack(View):
@@ -324,6 +341,7 @@ class CallBack(View):
             self.finish_invoice_jobs(invoice, cancel=True)
             invoice.status = 3
             invoice.save()
+            EditInvoice.restore_products(invoice)
             return HttpResponseRedirect(f'{CLIENT_HOST}/basket')
         # todo https://memoryleaks.ir/unlimited-charge-of-mytehran-account/
 

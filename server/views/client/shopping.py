@@ -151,20 +151,6 @@ class BasketView(View):
         return deleted_items
 
 
-class EditInvoice(LoginRequired):
-    def patch(self, request, invoice_id):
-        invoice = Invoice.objects.filter(pk=invoice_id, user=request.user, status=1)\
-            .prefetch_related('invoice_storages')
-        invoice_storages = invoice.invoice_storages.all()
-        new_basket_products = [
-            BasketProduct(storage=invoice_storage.storage, count=invoice_storage.count, box=invoice_storage.box,
-                          features=invoice_storage.features, basket_id=invoice.basket_id)
-            for invoice_storage in invoice_storages]
-        BasketProduct.objects.bulk_create(new_basket_products)
-        return JsonResponse({"message": "محصولات خریداری شده برای ایجاد تغییرات به سبد خرید افزوده شدند",
-                             "variant": "success"})
-
-
 class GetProducts(View):
     def post(self, request):
         data = load_data(request)
