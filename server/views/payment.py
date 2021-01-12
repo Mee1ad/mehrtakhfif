@@ -326,7 +326,6 @@ class CallBack(View):
     def post(self, request):
         # todo redirect to site anyway
         data = request.body.decode().split('&')
-        print(data)
         data_dict = {}
         for param in data:
             val = param.split('=')
@@ -337,9 +336,11 @@ class CallBack(View):
         invoice = Invoice.objects.get(pk=invoice_id, reference_id=data_dict['RefId'])
         invoice.sale_order_id = sale_order_id
         invoice.ipg_res_code = data_dict['ResCode']
-        if not ref_id or not self.verify(sale_order_id, ref_id):
+        verified = self.verify(sale_order_id, ref_id)
+        if not ref_id or not verified:
             self.finish_invoice_jobs(invoice, cancel=True)
-            invoice.status = 3
+            invoice.status = 1
+            invoice.description = f"{invoice.description}\n{verified}"
             invoice.save()
             EditInvoice.restore_products(invoice)
             return HttpResponseRedirect(f'{CLIENT_HOST}/basket')
@@ -385,10 +386,10 @@ class CallBack(View):
         invoice.sync_task = add_one_off_job(name=f"sales report - {invoice.pk}", kwargs=kwargs, interval=0,
                                             task='server.tasks.sale_report')
 
-    def verify(self, invoice_id, sale_ref_id):
+    def verify(self, sale_order_id, sale_ref_id):
         r = client.service.bpVerifyRequest(terminalId=bp['terminal_id'], userName=bp['username'],
-                                           userPassword=bp['password'], orderId=invoice_id,
-                                           saleOrderId=invoice_id, saleReferenceId=sale_ref_id)
+                                           userPassword=bp['password'], orderId=sale_order_id,
+                                           saleOrderId=sale_order_id, saleReferenceId=sale_ref_id)
         if r == '0':
             return True
         return False
