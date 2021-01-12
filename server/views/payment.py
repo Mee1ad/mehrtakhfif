@@ -337,7 +337,7 @@ class CallBack(View):
         invoice = Invoice.objects.get(pk=invoice_id, reference_id=data_dict['RefId'])
         invoice.sale_order_id = sale_order_id
         invoice.ipg_res_code = data_dict['ResCode']
-        if not ref_id or not self.verify(invoice_id, ref_id):
+        if not ref_id or not self.verify(sale_order_id, ref_id):
             self.finish_invoice_jobs(invoice, cancel=True)
             invoice.status = 3
             invoice.save()
