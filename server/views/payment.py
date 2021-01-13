@@ -347,7 +347,7 @@ class CallBack(View):
             EditInvoice.restore_products(invoice)
             return HttpResponseRedirect(f'{CLIENT_HOST}/basket')
         # todo https://memoryleaks.ir/unlimited-charge-of-mytehran-account/
-
+        invoice.status = 2
         try:
             invoice.post_invoice.status = 2
             invoice.post_invoice.save()
