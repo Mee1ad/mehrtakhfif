@@ -386,7 +386,7 @@ class CallBack(View):
         kwargs = {"invoice_id": invoice.pk}
         invoice.sync_task = add_one_off_job(name=f"sales report - {invoice.pk}", kwargs=kwargs, interval=0,
                                             task='server.tasks.sale_report')
-
+    @pysnooper.snoop()
     def verify(self, sale_order_id, sale_ref_id):
         r = client.service.bpVerifyRequest(terminalId=bp['terminal_id'], userName=bp['username'],
                                            userPassword=bp['password'], orderId=sale_order_id,
