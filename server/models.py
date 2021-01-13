@@ -1361,7 +1361,7 @@ class Storage(Base):
         if admin:
             self.__dict__ = self.pre_process(self.__dict__, self.product.box_id)
             self.priority = Product.objects.filter(pk=self.product_id).count() - 1
-        super().save(*args, **kwargs)
+        super().save()
         if admin:
             self.post_process(kwargs)
 
