@@ -27,10 +27,6 @@ bp = {'terminal_id': 5290645, 'username': "takh252", 'password': "71564848",
       'ipg_url': "https://bpm.shaparak.ir/pgwchannel/startpay.mellat",
       'callback': 'https://api.mehrtakhfif.com/payment/callback'}  # mellat
 
-r = client.service.bpVerifyRequest(terminalId=5290645, userName="takh252",
-                                   userPassword="71564848", orderId=10409,
-                                   saleOrderId=10409, saleReferenceId=10409)
-
 deposit = {'charity': 5000, 'dev': 2}
 
 if not DEBUG:
