@@ -336,15 +336,12 @@ class CallBack(View):
         sale_order_id = data_dict['SaleOrderId']
         invoice_id = sale_order_id[2:]
         sale_ref_id = data_dict.get('SaleReferenceId', None)
-        ref_id = data_dict.get('RefId', None)
-        invoice = Invoice.objects.get(pk=invoice_id, reference_id=ref_id)
+        invoice = Invoice.objects.get(pk=invoice_id, reference_id=data_dict['RefId'])
         invoice.sale_order_id = sale_order_id
         invoice.ipg_res_code = data_dict['ResCode']
-        verified = self.verify(sale_order_id, sale_ref_id)
-        if not ref_id or not verified:
+        if not sale_ref_id or not self.verify(sale_order_id, sale_ref_id):
             self.finish_invoice_jobs(invoice, cancel=True)
             invoice.status = 1
-            invoice.description = f"{invoice.description}\n{verified}"
             invoice.save()
             EditInvoice.restore_products(invoice)
             return HttpResponseRedirect(f'{CLIENT_HOST}/basket')
