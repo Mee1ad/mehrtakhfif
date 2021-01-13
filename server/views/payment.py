@@ -333,8 +333,9 @@ class CallBack(View):
             data_dict[val[0]] = val[1]
         sale_order_id = data_dict['SaleOrderId']
         invoice_id = sale_order_id[2:]
-        ref_id = data_dict.get('SaleReferenceId', None)
-        invoice = Invoice.objects.get(pk=invoice_id, reference_id=data_dict['RefId'])
+        sale_ref_id = data_dict.get('SaleReferenceId', None)
+        ref_id = data_dict.get('RefId', None)
+        invoice = Invoice.objects.get(pk=invoice_id, reference_id=ref_id)
         invoice.sale_order_id = sale_order_id
         invoice.ipg_res_code = data_dict['ResCode']
         verified = self.verify(sale_order_id, ref_id)
@@ -393,4 +394,5 @@ class CallBack(View):
                                            saleOrderId=sale_order_id, saleReferenceId=sale_ref_id)
         if r == '0':
             return True
+
         return False
