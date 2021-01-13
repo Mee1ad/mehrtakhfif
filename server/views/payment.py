@@ -13,6 +13,7 @@ from mehr_takhfif.settings import DEBUG, CLIENT_HOST
 from server.serialize import *
 from server.tasks import cancel_reservation
 from server.utils import LoginRequired, get_basket, add_one_off_job, sync_storage, add_minutes, get_share
+import pysnooper
 
 ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'disable': False},
                 {'id': 2, 'key': 'melli', 'name': 'ملی', 'hide': True, 'disable': True},
@@ -302,8 +303,8 @@ class RePayInvoice(LoginRequired):
 
 class EditInvoice(LoginRequired):
     def patch(self, request, invoice_id):
-        invoice = Invoice.objects.filter(pk=invoice_id, user=request.user, status=1) \
-            .prefetch_related('invoice_storages')
+        invoice = Invoice.objects.filter(pk=invoice_id, user=request.user, status=1, expire__gt=timezone.now()) \
+            .prefetch_related('invoice_storages').first()
         self.restore_products(invoice)
         return JsonResponse({"message": "محصولات خریداری شده برای ایجاد تغییرات به سبد خرید افزوده شدند",
                              "variant": "success"})
@@ -322,7 +323,7 @@ class CallBack(View):
     # todo dor debug
     def get(self, request):
         return HttpResponseRedirect(f"{CLIENT_HOST}/profile/all-order")
-
+    @pysnooper.snoop()
     def post(self, request):
         # todo redirect to site anyway
         data = request.body.decode().split('&')
