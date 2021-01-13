@@ -146,6 +146,7 @@ class PaymentRequest(LoginRequired):
         #     else:
         #         additional_data.append([supplier.deposit_id, basket_product.start_price * 10, 0])
         print(additional_data)
+        additional_data = [item for item in additional_data if item[1] > 0]
         additional_data = ';'.join(','.join(str(x) for x in b) for b in additional_data)
 
         local_date = timezone.now().strftime("%Y%m%d")
