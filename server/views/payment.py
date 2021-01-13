@@ -13,7 +13,6 @@ from mehr_takhfif.settings import DEBUG, CLIENT_HOST
 from server.serialize import *
 from server.tasks import cancel_reservation
 from server.utils import LoginRequired, get_basket, add_one_off_job, sync_storage, add_minutes, get_share
-import pysnooper
 
 ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'disable': False},
                 {'id': 2, 'key': 'melli', 'name': 'ملی', 'hide': True, 'disable': True},
@@ -323,6 +322,8 @@ class CallBack(View):
     # todo dor debug
     def get(self, request):
         return HttpResponseRedirect(f"{CLIENT_HOST}/profile/all-order")
+    import pysnooper
+
     @pysnooper.snoop()
     def post(self, request):
         # todo redirect to site anyway
@@ -387,12 +388,31 @@ class CallBack(View):
         kwargs = {"invoice_id": invoice.pk}
         invoice.sync_task = add_one_off_job(name=f"sales report - {invoice.pk}", kwargs=kwargs, interval=0,
                                             task='server.tasks.sale_report')
-    @pysnooper.snoop()
+
     def verify(self, sale_order_id, sale_ref_id):
         r = client.service.bpVerifyRequest(terminalId=bp['terminal_id'], userName=bp['username'],
                                            userPassword=bp['password'], orderId=sale_order_id,
                                            saleOrderId=sale_order_id, saleReferenceId=sale_ref_id)
         if r == '0':
             return True
-
+        print(f'{sale_order_id}-bpVerifyRequest response:', r)
+        time.sleep(1)
+        r = client.service.bpVerifyRequest(terminalId=bp['terminal_id'], userName=bp['username'],
+                                           userPassword=bp['password'], orderId=sale_order_id,
+                                           saleOrderId=sale_order_id, saleReferenceId=sale_ref_id)
+        if r == '0':
+            return True
+        print(f'{sale_order_id}-bpVerifyRequest2 response:', r)
+        time.sleep(1)
+        r = client.service.bpInquiryRequest(terminalId=bp['terminal_id'], userName=bp['username'],
+                                            userPassword=bp['password'], orderId=sale_order_id,
+                                            saleOrderId=sale_order_id, saleReferenceId=sale_ref_id)
+        print(f'{sale_order_id}-bpInquiryRequest response:', r)
+        r = client.service.bpSettleRequest(terminalId=bp['terminal_id'], userName=bp['username'],
+                                           userPassword=bp['password'], orderId=sale_order_id,
+                                           saleOrderId=sale_order_id, saleReferenceId=sale_ref_id)
+        time.sleep(1)
+        if r == '0':
+            return True
+        print(f'{sale_order_id}-bpSettleRequest response:', r)
         return False
