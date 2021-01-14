@@ -187,7 +187,7 @@ class ElasticSearch(View):
             products.append(product)
         for hit in c[:3]:
             category = {'name': hit.name_fa, 'permalink': hit.permalink, 'media': hit.media}
-            if hit.name_fa == q or hit.parent is None:
+            if hit.name_fa == q or hit.parent is None and q in hit.name_fa:
                 categories.append(category)
                 continue
             if q not in hit.name_fa:
