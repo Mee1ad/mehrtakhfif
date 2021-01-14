@@ -42,6 +42,7 @@ class CategoryDocument(Document):
     name_fa = fields.TextField(analyzer=ngram, attr='get_name_fa')
     # name = fields.TextField(attr='get_name_fa')
     parent = fields.TextField(attr='get_parent_fa')
+    box = fields.TextField(attr="get_box_name")
     media = fields.TextField(attr='get_media')
     id = fields.IntegerField()
 

@@ -174,8 +174,8 @@ class ElasticSearch(View):
         p = ProductDocument.search()
         c = CategoryDocument.search()
         t = TagDocument.search()
-        p = p.query("multi_match", query=q, fields=['name_fa', 'category_fa'])
-        c = c.query("match", name_fa=q)
+        p = p.query("multi_match", query=q, fields=['name_fa', 'category_fa']).query('match', disable=False)
+        c = c.query("match", name_fa=q).query('match', disable=False)
         t = t.query("match", name_fa=q)
         products, categories, subcategories, tags = [], [], [], []
         removed_products, removed_categories, removed_subcategories, removed_tags = [], [], [], []
@@ -187,16 +187,20 @@ class ElasticSearch(View):
             products.append(product)
         for hit in c[:3]:
             category = {'name': hit.name_fa, 'permalink': hit.permalink, 'media': hit.media}
-            if hit.name_fa == q or hit.parent is None and q in hit.name_fa:
+            if hit.name_fa == q:
                 categories.append(category)
                 continue
             if q not in hit.name_fa:
                 removed_categories.append(category)
+                continue
+            if hit.parent is None:
+                hit.parent = hit.box
             subcategories.append({'parent': hit.parent, **category})
         for hit in t[:3]:
             tag = {'name': hit.name_fa, 'permalink': hit.permalink}
             if q not in hit.name_fa:
                 removed_tags.append(tag)
+                continue
             tags.append(tag)
         if not products:
             products = removed_products
