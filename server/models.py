@@ -751,6 +751,9 @@ class Category(Base):
         except Exception:
             pass
 
+    def get_parent_fa(self):
+        return getattr(getattr(self, 'parent', None), 'name', {}).get('fa')
+
     parent = models.ForeignKey("self", on_delete=CASCADE, null=True, blank=True)
     box = models.ForeignKey(Box, on_delete=CASCADE)
     # features = models.ManyToManyField("Feature")

@@ -155,7 +155,7 @@ class GetSlider(View):
         return JsonResponse({'slider': SliderSchema(is_mobile=agent.is_mobile).dump(slider, many=True)})
 
 
-class ElasticSearch(View):
+class Suggest(View):
     def get(self, request):
         q = request.GET.get('q', '')
         lang = request.lang
@@ -167,7 +167,7 @@ class ElasticSearch(View):
         return JsonResponse({'products': products})
 
 
-class ElasticSearch2(View):
+class ElasticSearch(View):
     def get(self, request):
         q = request.GET.get('q', '')
         lang = request.lang
@@ -177,11 +177,16 @@ class ElasticSearch2(View):
         p = p.query("multi_match", query=q, fields=['name_fa', 'category_fa'])
         c = c.query("match", name_fa=q)
         t = t.query("match", name_fa=q)
-        products, categories, tags = [], [], []
+        products, categories, subcategories, tags = [], [], [], []
         for hit in p[:3]:
             products.append({'name': hit.name_fa, 'permalink': hit.permalink, 'thumbnail': hit.thumbnail})
         for hit in c[:3]:
-            categories.append({'name': hit.name_fa, 'permalink': hit.permalink, 'media': hit.media})
+            if hit.name_fa == q or hit.parent is None:
+                categories.append({'name': hit.name_fa, 'permalink': hit.permalink, 'media': hit.media})
+                continue
+            subcategories.append({'name': hit.name_fa, 'parent': hit.parent, 'permalink': hit.permalink,
+                                  'media': hit.media})
         for hit in t[:3]:
             tags.append({'name': hit.name_fa, 'permalink': hit.permalink})
-        return JsonResponse({'products': products, 'categories': categories, 'tags': tags})
+        return JsonResponse({'products': products, 'categories': categories, 'subcategories': subcategories,
+                             'tags': tags})
