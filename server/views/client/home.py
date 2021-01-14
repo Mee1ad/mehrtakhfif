@@ -204,8 +204,6 @@ class ElasticSearch(View):
             tags.append(tag)
         if not products:
             products = removed_products
-        if not categories:
-            categories = removed_categories
         if not tags:
             tags = removed_tags
         return JsonResponse({'products': products, 'categories': categories, 'subcategories': subcategories,
