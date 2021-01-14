@@ -178,15 +178,31 @@ class ElasticSearch(View):
         c = c.query("match", name_fa=q)
         t = t.query("match", name_fa=q)
         products, categories, subcategories, tags = [], [], [], []
+        removed_products, removed_categories, removed_subcategories, removed_tags = [], [], [], []
         for hit in p[:3]:
-            products.append({'name': hit.name_fa, 'permalink': hit.permalink, 'thumbnail': hit.thumbnail})
-        for hit in c[:3]:
-            if hit.name_fa == q or hit.parent is None:
-                categories.append({'name': hit.name_fa, 'permalink': hit.permalink, 'media': hit.media})
+            product = {'name': hit.name_fa, 'permalink': hit.permalink, 'thumbnail': hit.thumbnail}
+            if q not in hit.name_fa:
+                removed_products.append(product)
                 continue
-            subcategories.append({'name': hit.name_fa, 'parent': hit.parent, 'permalink': hit.permalink,
-                                  'media': hit.media})
+            products.append(product)
+        for hit in c[:3]:
+            category = {'name': hit.name_fa, 'permalink': hit.permalink, 'media': hit.media}
+            if hit.name_fa == q or hit.parent is None:
+                categories.append(category)
+                continue
+            if q not in hit.name_fa:
+                removed_categories.append(category)
+            subcategories.append({'parent': hit.parent, **category})
         for hit in t[:3]:
-            tags.append({'name': hit.name_fa, 'permalink': hit.permalink})
+            tag = {'name': hit.name_fa, 'permalink': hit.permalink}
+            if q not in hit.name_fa:
+                removed_tags.append(tag)
+            tags.append(tag)
+        if not products:
+            products = removed_products
+        if not categories:
+            categories = removed_categories
+        if not tags:
+            tags = removed_tags
         return JsonResponse({'products': products, 'categories': categories, 'subcategories': subcategories,
                              'tags': tags})
