@@ -11,6 +11,7 @@ from server.views.client.user import *
 from server.views.payment import *
 from django.views.decorators.cache import cache_page
 from django.http import HttpResponseRedirect, StreamingHttpResponse
+from .urls_test import urls
 
 app_name = 'server'
 
@@ -94,10 +95,9 @@ auth = [
     path('login', try_except(Login.as_view()), name='login'),
     path('add_device', try_except(AddDevice.as_view()), name='add_device'),
     path('logout', try_except(LogoutView.as_view()), name='logout'),
-    path('activate', try_except(Activate.as_view()), name='activate'),
-    path('resend_code', try_except(ResendCode.as_view()), name='resend_code'),
+    path('send_code', try_except(SendCode.as_view()), name='send_code'),
     path('set_password', try_except(SetPassword.as_view()), name='set_password'),
-    path('privacy_policy', try_except(PrivacyPolicy.as_view()), name='privacy_policy'),
 ]
 
-urlpatterns = [*home, *box, *user, *shopping, *product, *tourism, *auth, *pay]
+urlpatterns = [*home, *box, *user, *shopping, *product, *tourism, *auth, *pay,
+               *urls]

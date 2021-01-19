@@ -238,9 +238,7 @@ def safe_get(*args):
     except Exception:
         pass
 
-import pysnooper
 
-@pysnooper.snoop()
 def get_share(storage=None, invoice=None):
     """
     :param storage:
@@ -337,13 +335,14 @@ def send_sms_old(to, pattern="gs3vltcvoi", content=None, input_data=None):
     return requests.post('http://ippanel.com/api/select', data=json.dumps(data))
 
 
-def send_sms(to, template, token):
+def send_sms(to, template, token, token2=None):
     try:
         api = KavenegarAPI(SMS_KEY)
         params = {
             'receptor': to,  # multiple mobile number, split by comma
             'template': template,
             'token': token,
+            'token2': token2,
             'type': 'sms',  # sms vs call
         }
         api.verify_lookup(params)
@@ -415,7 +414,10 @@ def user_data_with_pagination(model, serializer, request, show_all=False, extra=
 
 def get_discount_price(storage):
     try:
-        prices = VipPrice.objects.filter(storage_id=storage.pk).values_list('discount_price', flat=True)
+        prices = storage.vip_prices.all()
+        prices = [price.discount_price for price in prices]
+        # prices = storage.vip_prices.all()
+        # return 0
         return min(prices)
     except Exception:
         return storage.discount_price
@@ -423,7 +425,8 @@ def get_discount_price(storage):
 
 def get_discount_percent(storage):
     try:
-        prices = VipPrice.objects.filter(storage_id=storage.pk).values_list('discount_percent', flat=True)
+        prices = storage.vip_prices.all()
+        prices = [price.discount_percent for price in prices]
         return min(prices)
     except Exception:
         return storage.discount_percent
@@ -441,13 +444,20 @@ def get_basket(request, basket_id=None, basket=None, basket_products=None, retur
         basket = type('Basket', (), {'basket_products': basket_products})()
     if user.is_authenticated:
         if basket_id:
-            basket = Basket.objects.filter(pk=basket_id).select_related('discount_code').first()
+            basket = Basket.objects.filter(pk=basket_id).select_related('discount_code') \
+                .prefetch_related('basket_storages__storage__features', 'basket_storages__storage__product__box',
+                                  'basket_storages__storage__product__thumbnail',
+                                  'basket_storages__storage__vip_prices') \
+                .first()
         if not basket_id and not basket:
-            basket = basket or Basket.objects.filter(user=user).order_by('-id').first()
+            basket = user.baskets.all() \
+                .prefetch_related('basket_storages__storage__features', 'basket_storages__storage__product__box',
+                                  'basket_storages__storage__product__thumbnail',
+                                  'basket_storages__storage__vip_prices') \
+                .order_by('-id').first()
     if basket is None:
         return {'basket': {}, 'summary': {}, 'address_required': False}
-    basket_products = basket_products or BasketProduct.objects.filter(
-        basket=basket).select_related(*BasketProduct.related)
+    basket_products = basket_products or basket.basket_storages.all()
     summary = {"total_price": 0, "discount_price": 0, "profit": 0, "mt_profit": 0, 'charity': 0,
                "shipping_cost": 0, "tax": 0, "final_price": 0}
     address_required = False
@@ -458,7 +468,7 @@ def get_basket(request, basket_id=None, basket=None, basket_products=None, retur
         storage = basket_product.storage
         basket_product.product = storage.product
         basket_product.product.default_storage = storage
-        basket_product.supplier = storage.supplier
+        # basket_product.supplier = storage.supplier
         if basket_product.product.type == 2 and not address_required:
             address_required = True
         storage.discount_price = get_discount_price(storage)
@@ -518,8 +528,18 @@ def get_basket(request, basket_id=None, basket=None, basket_products=None, retur
     return {'basket': basket, 'summary': summary, 'address_required': address_required}
 
 
+def get_basket_count(user=None, basket_id=None, session=None):
+    if session:
+        return sum([product['count'] for product in session.get('basket', [])])
+    if basket_id:
+        return BasketProduct.objects.filter(basket_id=basket_id).aggregate(count=Sum('count'))['count']
+    return user.baskets.order_by('id').prefetch_related('basket_products').last().basket_storages \
+        .aggregate(count=Sum('count'))['count']
+
+
 def sync_session_basket(request):
     user = request.user
+    basket_count = 0
     if request.session.get('basket', None):
         try:
             basket = Basket.objects.filter(user=user).order_by('-id').first()
@@ -532,6 +552,8 @@ def sync_session_basket(request):
             BasketProduct.objects.create(basket=basket, **product)
         request.session['basket'] = []
         request.session.save()
+        basket_count = get_basket_count(session=request.session)
+    return basket_count
 
 
 def sync_default_storage(storages, products):

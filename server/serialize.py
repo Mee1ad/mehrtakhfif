@@ -678,6 +678,9 @@ class BasketProductSchema(BaseSchema):
         features = obj.storage.features.all()
         return ProductFeatureSchema().dump(features, many=True)
 
+    def get_min_product(self, obj):
+        return MinProductSchema(self.lang, self.user, exclude=['available']).dump(obj.storage.product)
+
 
 class BasketSchema(BaseSchema):
     class Meta:
@@ -687,6 +690,10 @@ class BasketSchema(BaseSchema):
 
 
 class InvoiceSchema(BaseSchema):
+    def __init__(self, with_shipping_cost=False, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.with_shipping_cost = with_shipping_cost
+
     class Meta:
         additional = ('id', 'final_price', 'invoice_discount', 'details')
 
@@ -736,9 +743,11 @@ class InvoiceSchema(BaseSchema):
             return None
 
     def get_amount(self, obj):
-        if InvoiceStorage.objects.filter(invoice=obj).exists():
-            prices = InvoiceStorage.objects.filter(invoice=obj).values_list('discount_price', flat=True)
-            return sum(prices)
+        # if InvoiceStorage.objects.filter(invoice=obj).exists():
+        #     prices = InvoiceStorage.objects.filter(invoice=obj).values_list('discount_price', flat=True)
+        #     return sum(prices)
+        if self.with_shipping_cost:
+            return obj.amount + getattr(getattr(obj, 'post_invoice', None), 'amount', 0)
         return obj.amount
 
     def get_payed_at(self, obj):

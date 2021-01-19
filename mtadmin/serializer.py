@@ -549,6 +549,7 @@ class ProductESchema(ProductASchema, ProductSchema):
 
     media = fields.Method("get_media")
     tags = ProductTagField()
+    box = fields.Nested(BoxASchema(only=['id', 'name']))
     tag_groups = fields.Method("get_tag_groups")
     brand = fields.Nested(BrandASchema)
     properties = fields.Dict()

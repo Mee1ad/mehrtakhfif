@@ -55,7 +55,8 @@ class MyModelBackend(ModelBackend):
     def what_to_prefetch(self, request):
         route = resolve(request.path_info).route
         data = {'test': {'select': [], 'prefetch': []},
-                'profile': {'select': ['default_address__city', 'default_address__state'], 'prefetch': ['vip_types']}}
+                'profile': {'select': ['default_address__city', 'default_address__state'], 'prefetch': ['vip_types']},
+                'basket': {'select': ['default_address'], 'prefetch': []}}
         data.update(dict.fromkeys(['product/<str:permalink>'], {'select': [], 'prefetch': ['vip_types']}))
         return data.get(route, {'select': [], 'prefetch': []})
 

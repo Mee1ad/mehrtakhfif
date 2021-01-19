@@ -645,7 +645,7 @@ class AdsView(TableView):
 
     def patch(self, request):
         priorities = json.loads(request.body)['priorities']
-        Ad.objects.update(priority=None)
+        Ad.objects.update(priority=0)
         [Ad.objects.filter(pk=pk).update(priority=priorities.index(pk)) for pk in priorities]
         return JsonResponse({'message': 'باموفقیت ذخیرته شد'})
 

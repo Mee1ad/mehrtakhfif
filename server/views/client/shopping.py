@@ -13,15 +13,25 @@ from server.views.post import *
 
 class BasketView(View):
     def get(self, request):
-        try:
-            basket = Basket.objects.filter(user=request.user).order_by('-id').first()
-        except TypeError:
-            basket = None
-        try:
-            invoices = Invoice.objects.filter(user=request.user, status=1)
-            invoices = InvoiceSchema(only=['id', 'amount', 'expire', 'payment_url']).dump(invoices, many=True)
-        except TypeError:  # AnonymousUser
-            invoices = []
+        basket = Basket.objects.filter(user=request.user) \
+            .annotate(invoice_exists=Count('invoice', filter=Q(invoice__user=request.user, invoice__status=1,
+                                                               invoice__expire__gt=timezone.now(),
+                                                               invoice__final_price__isnull=False))) \
+            .prefetch_related('basket_storages__storage__features', 'basket_storages__storage__product__box',
+                              'basket_storages__storage__product__thumbnail',
+                              'basket_storages__storage__vip_prices') \
+            .order_by('-id').first()
+
+        invoices = []
+        if basket.invoice_exists:
+            print('shit')
+            try:
+                invoices = Invoice.objects.filter(user=request.user, status=1, expire__gt=timezone.now(),
+                                                  final_price__isnull=False)
+                invoices = InvoiceSchema(only=['id', 'amount', 'expire', 'payment_url'], with_shipping_cost=True) \
+                    .dump(invoices, many=True)
+            except TypeError:  # AnonymousUser
+                pass
         deleted_items = self.check_basket(basket)
         return JsonResponse({**get_basket(request, basket=basket, tax=True),
                              'deleted_items': deleted_items, 'active_invoice': list(invoices)})
@@ -120,9 +130,6 @@ class BasketView(View):
             storage = Storage.objects.get(pk=product['storage_id'])
             if storage.available_count_for_sale < count or storage.max_count_for_sale < count or storage.disable \
                     or storage.product.disable:
-                print('count:', count, 'available_count_for_sale:', storage.available_count_for_sale,
-                      'max_count_for_sale:', storage.max_count_for_sale, 'storage.disable:', storage.disable,
-                      'storage.product.disable:', storage.product.disable)
                 raise ValidationError(_('متاسفانه این محصول ناموجود میباشد'))
             try:
                 basket_product = BasketProduct.objects.filter(basket=basket, storage=storage)
@@ -135,19 +142,22 @@ class BasketView(View):
                 BasketProduct.objects.create(basket=basket, storage=storage, count=count, box=box,
                                              features=features)
 
-        basket.count = basket.products.all().count()
+        basket.count = basket.basket_storages.aggregate(count=Sum('count'))['count']
         basket.save()
         basket.discount_code.update(basket=None)
         return basket.count
 
     def check_basket(self, basket):
-        basket_products = BasketProduct.objects.filter(basket=basket)
+        basket_products = basket.basket_storages.all()
         # todo test
         deleted_items = []
         for basket_product in basket_products:
-            if basket_product.count > basket_product.storage.available_count_for_sale:
+            if basket_product.storage.available_count_for_sale == 0:
                 deleted_items.append(BasketProductSchema().dump(basket_product))
                 basket_product.delete()
+            elif basket_product.count > basket_product.storage.available_count_for_sale:
+                basket_product.count = basket_product.storage.available_count_for_sale
+                basket_product.save()
         return deleted_items
 
 

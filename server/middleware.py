@@ -7,7 +7,7 @@ from sentry_sdk import configure_scope
 from mehr_takhfif.settings import ROLL_NAME, HOST
 from server.models import User, Basket
 from server.utils import default_step, admin_default_step, default_page, get_custom_signed_cookie,\
-    set_custom_signed_cookie
+    set_custom_signed_cookie, get_basket_count
 
 
 class AuthMiddleware:
@@ -42,7 +42,7 @@ class AuthMiddleware:
             # check_csrf_token(request)
             pass
         if HOST == 'http://api.mt.com':
-            request.user = self.get_user(ROLL_NAME)
+            # request.user = self.get_user(ROLL_NAME)
             delay = request.GET.get('delay', None)
             if delay:
                 time.sleep(float(delay))
@@ -73,7 +73,7 @@ class AuthMiddleware:
             try:
                 db_basket_count = request.user.basket_count
             except AttributeError:
-                db_basket_count = len(request.session.get('basket', []))
+                db_basket_count = get_basket_count(session=request.session)
             user_basket_count = get_custom_signed_cookie(request, 'basket_count', -1)
             # new_basket_count = int(user_basket_count)
             if not db_basket_count == int(user_basket_count):

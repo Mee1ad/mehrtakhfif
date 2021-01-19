@@ -1,6 +1,5 @@
 import datetime
 import os
-from math import ceil
 from operator import attrgetter
 from random import randint
 
@@ -8,7 +7,7 @@ import pytz
 from PIL import Image, ImageFilter
 from django.contrib.auth.models import AbstractUser
 from django.contrib.postgres.fields import JSONField
-from django.contrib.postgres.indexes import GinIndex
+from django.contrib.postgres.indexes import GinIndex, HashIndex, BrinIndex, BTreeIndex
 from django.contrib.sessions.models import Session
 from django.core.exceptions import FieldDoesNotExist
 from django.core.validators import *
@@ -436,7 +435,7 @@ class Ad(Base):
 
     title = JSONField(default=multilanguage)
     url = models.CharField(max_length=255, null=True, blank=True)
-    priority = models.PositiveSmallIntegerField(default=0)
+    priority = models.PositiveIntegerField(default=0)
     media = models.ForeignKey("Media", on_delete=PROTECT, related_name='ad')
     mobile_media = models.ForeignKey("Media", on_delete=PROTECT, null=True, blank=True, related_name='ad_mobile')
     storage = models.ForeignKey("Storage", on_delete=PROTECT, blank=True, null=True)
@@ -1565,7 +1564,7 @@ class Invoice(Base):
     start_date = models.DateTimeField(null=True, blank=True)
     end_date = models.DateTimeField(null=True, blank=True)
 
-    user = models.ForeignKey(User, on_delete=CASCADE)
+    user = models.ForeignKey(User, on_delete=CASCADE, related_name='invoices')
     sync_task = models.ForeignKey(PeriodicTask, on_delete=CASCADE, null=True, blank=True,
                                   related_name='invoice_sync_task')
     email_task = models.ForeignKey(PeriodicTask, on_delete=CASCADE, null=True, blank=True)
