@@ -139,24 +139,30 @@ class Search(AdminView):
     def category(self, q, **kwargs):
         return self.multi_match(q, Category, CategoryASchema, CategoryDocument, 'categories')
 
-    def product(self, q, box_id, types, **kwargs):
+    def product(self, q, **kwargs):
+        box_id = kwargs.get('box_id')
+        types = kwargs.get('types')
         products_id = []
         s = ProductDocument.search()
         # type_query = Q('bool', should=[Q("match", type=product_type) for product_type in types])
         # r = s.query('match', box_id=box_id).query(must=[Q('match', name_fa=q), Q('match', disable=False)])
-        r = s.query('match', box_id=box_id).query('match', name_fa=q).query('match', disable=False)
-
-        # r = s.query('match', box_id=box_id).query(type_query).query('match', name_fa=q)
-
-        if r.count() == 0 and not q:
-            r = s.query('match', box_id=box_id).query('match', disable=False)
-
+        if box_id:
+            only_fields = ['id', 'name', 'storages', 'thumbnail.id', 'thumbnail.title', 'thumbnail.image']
+            box_info = {'box_id': box_id}
+            s = s.query('match', **box_info).query('match', name_fa=q).query('match', disable=False)
+            # r = s.query('match', box_id=box_id).query(type_query).query('match', name_fa=q)
+            if s.count() == 0 and not q and box_info:
+                s = s.query('match', **box_info).query('match', disable=False)
+        else:
+            s = s.query('match', name_fa=q).query('match', disable=False)
+            only_fields = ['id', 'name', 'box', 'categories']
             # r = s.query('match', box_id=box_id).query('match_all')[:10]
-        [products_id.append(product.id) for product in r]
+        [products_id.append(product.id) for product in s]
         products = Product.objects.select_related('thumbnail').prefetch_related('storages').in_bulk(products_id)
         products = [products[x] for x in products_id]
+
         return {'products': ProductESchema(
-            only=['id', 'name', 'storages', 'thumbnail.id', 'thumbnail.title', 'thumbnail.image'],
+            only=only_fields,
             include_storage=True).dump(products, many=True)}
 
     def supplier(self, q, username, **kwargs):
@@ -301,3 +307,21 @@ class SetOrder(View):
             obj.priority = ids.index(obj.pk)
         model.objects.bulk_update(objects, ['priority'])
         return JsonResponse({**responses['priority']}, status=202)
+
+
+class Test(View):
+    def get(self, request):
+        pk = request.GET.get('pk')
+        product = Product.objects.filter(pk=pk).select_related('brand', 'house', 'box', 'thumbnail',
+                                                               ). \
+            prefetch_related().first()
+        product = ProductESchema(only=['fg']).dump(product)
+        return JsonResponse({**product})
+
+
+class Test2(View):
+    def get(self, request):
+        pk = request.GET.get('pk')
+        storage = Storage.objects.filter(pk=pk).first()
+        storage = StorageESchema(only=['items']).dump(storage)
+        return JsonResponse({**storage})
