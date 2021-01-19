@@ -11,8 +11,8 @@ Content-Type: Application/json
 {
   "products": [
     {
-      "storage_id": 41,
-      "count": 2
+      "storage_id": 334,
+      "count": 1
     }
   ]
 }

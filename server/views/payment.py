@@ -324,9 +324,6 @@ class CallBack(View):
     def get(self, request):
         return HttpResponseRedirect(f"{CLIENT_HOST}/profile/all-order")
 
-    import pysnooper
-
-    @pysnooper.snoop()
     def post(self, request):
         # todo redirect to site anyway
         data = request.body.decode().split('&')
@@ -357,7 +354,6 @@ class CallBack(View):
         invoice.payed_at = timezone.now()
         invoice.card_holder = data_dict['CardHolderPan']
         invoice.final_amount = data_dict['FinalAmount']
-
         task_name = f'{invoice.id}: send invoice'
         kwargs = {"invoice_id": invoice.pk, "lang": request.lang, 'name': task_name}
         invoice.email_task = add_one_off_job(name=task_name, kwargs=kwargs, interval=0,

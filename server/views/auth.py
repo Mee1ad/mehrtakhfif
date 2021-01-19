@@ -1,13 +1,12 @@
 import random
+import traceback
 
-import pysnooper
 from django.contrib.auth import get_user_model
 from django.contrib.auth import login
 from django.contrib.auth import logout
 from django.contrib.sessions.backends.db import SessionStore as OriginalSessionStore
 from django.http import JsonResponse
 from django.utils.crypto import get_random_string
-from django.utils.translation import gettext_lazy as _
 
 from mehr_takhfif.settings import SAFE_IP, TEST_USER
 from server.authentication import MyModelBackend
@@ -25,8 +24,7 @@ class SessionStore(OriginalSessionStore):
         return session_key
 
 
-class Login(View):
-    @pysnooper.snoop()
+class Login_old(View):
     def post(self, request):
         data = load_data(request, check_token=False)
         cookie_age = 30 * 60
@@ -46,17 +44,13 @@ class Login(View):
             if not user.is_active:  # incomplete signup
                 raise User.DoesNotExist  # redirect to signup
             if not user.check_password(password):
-                raise ValidationError(_('شماره موبایل یا پسورد نامعتبر است'))
+                return JsonResponse({'message': 'شماره موبایل یا پسورد نامعتبر است'}, status=res_code['unauthorized'])
             if is_staff:
                 return set_token(user, self.send_activation(user, request))
             # login(request, user, backend='django.contrib.auth.backends.ModelBackend')
             login(request, user)
             res = {'user': UserSchema().dump(user)}
-            basket = Basket.objects.filter(user=user).order_by('-id')
-            res['basket_count'] = 0
-            if basket.exists():
-                res['basket_count'] = basket.first().products.all().count()
-            basket_count = res['basket_count']
+            basket_count = get_basket_count(user=user)
             res = JsonResponse(res)
             res = set_custom_signed_cookie(res, 'basket_count', basket_count)
             res = set_custom_signed_cookie(res, 'is_login', True)
@@ -93,24 +87,78 @@ class Login(View):
         return user.password[:6] == 'argon2'
 
 
-class PrivacyPolicy(View):
-    def put(self, request):
-        try:
-            user = MyModelBackend.get_user_from_cookie(request)
-            user.privacy_agreement = True
-            user.save()
-            return Login.send_activation(user, request)  # need activation code
-        except Exception:
-            return JsonResponse({}, status=res_code['unauthorized'])
+class Login(View):
+    def post(self, request):
+        data = load_data(request, check_token=False)
+        cookie_age = 30 * 60
+        username = data['username']
+        password = data.get('password', None)
+        code = data.get('code', None)
+        try:  # Login
+            user = User.objects.get(username=username)
+            is_staff = user.is_staff
+            if user.is_ban:
+                return JsonResponse({'message': 'user is banned'}, status=res_code['banned'])
+            if code:
+                return self.check_code(request, code)
+            if password is None or not user.is_active:
+                res = JsonResponse({'status': 'registered_user'})
+                return set_token(user, res)
+            if not user.check_password(password):
+                return JsonResponse({'message': 'شماره موبایل یا پسورد نامعتبر است'}, status=res_code['unauthorized'])
+            if is_staff and user.check_password(password) and not request.session.get('login_with_otp'):
+                request.session['login_with_password'] = True
+                res = JsonResponse({'status': 'otp_required'})
+                return set_token(user, res)
+            # login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+            login(request, user)
+            res = JsonResponse({})
+            basket_count = sync_session_basket(request)
+            res = set_custom_signed_cookie(res, 'is_login', True)
+            res = set_custom_signed_cookie(res, 'basket_count', basket_count)
+            res.delete_cookie('token')
+            return res
+        except User.DoesNotExist:  # Signup
+            user = User.objects.create_user(username=username)
+            res = JsonResponse({"status": "guest_user"})
+            return set_token(user, res)
 
     @staticmethod
-    def get_user(request):
-        client_token = get_custom_signed_cookie(request, 'token', False)
-        return User.objects.get(token=client_token)
+    def check_password(user):
+        return user.password[:6] == 'argon2'
+
+    def check_code(self, request, code):
+        # TODO: get csrf code
+        try:
+            client_token = get_custom_signed_cookie(request, 'token', False)
+            user = User.objects.get(activation_code=code, token=client_token, is_ban=False,
+                                    activation_expire__gte=timezone.now())
+            user.activation_expire = timezone.now()
+            user.is_active = True
+            user.save()
+            # login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+            status = ''
+            if Login.check_password(user) is False:
+                status = 'set_password_required'
+            if user.is_staff and not request.session.get('login_with_password', False):
+                request.session['login_with_otp'] = True
+                return JsonResponse({"status": "password_required"})
+            login(request, user)
+            basket_count = sync_session_basket(request)
+            res = JsonResponse({'status': status})
+            res = set_custom_signed_cookie(res, 'basket_count', basket_count)
+            res = set_custom_signed_cookie(res, 'is_login', True)
+            res.delete_cookie('token')
+            request.session['login_with_password'] = None
+            request.session['login_with_otp'] = None
+            return res
+
+        except Exception:
+            traceback.print_exc()
+            return JsonResponse({'message': 'code not found'}, status=res_code['unauthorized'])
 
 
 class SetPassword(View):
-    @pysnooper.snoop()
     def put(self, request):
         try:
             user = MyModelBackend.get_user_from_cookie(request)
@@ -122,51 +170,36 @@ class SetPassword(View):
             return JsonResponse({}, status=res_code['bad_request'])
 
 
-class ResendCode(View):
+class SendCode(View):
     def post(self, request):
         try:
             user = MyModelBackend.get_user_from_cookie(request)
-            res = Login.send_activation(user, request)
-            res.status_code = 204
-            return res
-        except Exception:
+            return self.send_activation(user, request)
+        except Exception as e:
+            traceback.print_exc()
             return JsonResponse({'message': 'token not found'}, status=res_code['bad_request'])
 
+    import pysnooper
 
-class Activate(View):
-    def post(self, request):
-        data = load_data(request)
-        # TODO: get csrf code
-        try:
-            client_token = get_custom_signed_cookie(request, 'token', False)
-            code = data['code']
-            user = User.objects.get(activation_code=code, token=client_token, is_ban=False,
-                                    activation_expire__gte=timezone.now())
-            user.activation_expire = timezone.now()
-            user.is_active = True
-            user.save()
-            # login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-            login(request, user)
-            res = {'user': UserSchema().dump(user)}  # signup without password
-            if user.is_staff:
-                res['user']['is_staff'] = user.is_staff
-            basket = Basket.objects.filter(user=user).order_by('-id')
-            res['basket_count'] = 0
-            if basket.exists():
-                res['basket_count'] = basket.first().products.all().count()
-            if data.get('new_password'):
-                user.set_password(data['new_password'])
-                user.save()
-            response = JsonResponse(res, status=res_code['signup_with_pass'])
-            if Login.check_password(user):
-                response = JsonResponse(res)  # successful login
-                response = set_custom_signed_cookie(response, 'basket_count', res['basket_count'])
-                response = set_custom_signed_cookie(response, 'is_login', True)
-                response.delete_cookie('token')
-                sync_session_basket(request)
-            return response
-        except Exception:
-            return JsonResponse({'message': 'code not found'}, status=res_code['unauthorized'])
+    @pysnooper.snoop()
+    def send_activation(self, user, request=None):
+        resend_timeout = 1
+        activation_expire = 2
+        if timezone.now() < add_minutes((resend_timeout - activation_expire), time=user.activation_expire):
+            return JsonResponse(
+                {'resend_timeout': add_minutes(resend_timeout * -1, time=user.activation_expire).timestamp(),
+                 'activation_expire': user.activation_expire.timestamp()})
+        user.activation_code = random.randint(10000, 99999)
+        user.activation_expire = add_minutes(activation_expire)
+        user.save()
+        ip = request.META.get('REMOTE_ADDR') or request.META.get('HTTP_X_FORWARDED_FOR')
+        res = {'resend_timeout': add_minutes(resend_timeout).timestamp(),
+               'activation_expire': add_minutes(activation_expire).timestamp(), 'code': user.activation_code}
+        if not (DEBUG or (ip in SAFE_IP and user.username == TEST_USER)):
+            send_sms(user.username, "verify", user.activation_code)
+            res = {'resend_timeout': add_minutes(resend_timeout).timestamp(),
+                   'activation_expire': user.activation_expire.timestamp()}
+        return JsonResponse(res, status=res_code['updated'])
 
 
 class LogoutView(View):
