@@ -20,6 +20,8 @@ Content-Type: Application/json
 	"password": "123456"
 }
 ###
+GET {{host}}/test_login
+###
 POST {{host}}/activate
 Content-Type: Application/json
 

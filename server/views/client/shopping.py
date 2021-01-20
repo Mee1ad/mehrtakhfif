@@ -13,18 +13,20 @@ from server.views.post import *
 
 class BasketView(View):
     def get(self, request):
-        basket = Basket.objects.filter(user=request.user) \
-            .annotate(invoice_exists=Count('invoice', filter=Q(invoice__user=request.user, invoice__status=1,
-                                                               invoice__expire__gt=timezone.now(),
-                                                               invoice__final_price__isnull=False))) \
-            .prefetch_related('basket_storages__storage__features', 'basket_storages__storage__product__box',
-                              'basket_storages__storage__product__thumbnail',
-                              'basket_storages__storage__vip_prices') \
-            .order_by('-id').first()
-
+        try:
+            basket = Basket.objects.filter(user=request.user) \
+                .annotate(invoice_exists=Count('invoice', filter=Q(invoice__user=request.user, invoice__status=1,
+                                                                   invoice__expire__gt=timezone.now(),
+                                                                   invoice__final_price__isnull=False))) \
+                .prefetch_related('basket_storages__storage__features', 'basket_storages__storage__product__box',
+                                  'basket_storages__storage__product__thumbnail',
+                                  'basket_storages__storage__vip_prices') \
+                .order_by('-id').first()
+        except TypeError:
+            basket = None
         invoices = []
-        if basket.invoice_exists:
-            print('shit')
+        deleted_items = []
+        if getattr(basket, 'invoice_exists', None):
             try:
                 invoices = Invoice.objects.filter(user=request.user, status=1, expire__gt=timezone.now(),
                                                   final_price__isnull=False)
@@ -32,7 +34,8 @@ class BasketView(View):
                     .dump(invoices, many=True)
             except TypeError:  # AnonymousUser
                 pass
-        deleted_items = self.check_basket(basket)
+        if basket:
+            deleted_items = self.check_basket(basket)
         return JsonResponse({**get_basket(request, basket=basket, tax=True),
                              'deleted_items': deleted_items, 'active_invoice': list(invoices)})
 
