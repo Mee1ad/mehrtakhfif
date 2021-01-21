@@ -3,7 +3,7 @@ from django.http import JsonResponse, HttpResponseNotFound
 from server.documents import *
 from server.serialize import *
 from server.utils import *
-
+import re
 
 class Test(View):
     def get(self, request):
@@ -170,12 +170,13 @@ class Suggest(View):
 class ElasticSearch(View):
     def get(self, request):
         q = request.GET.get('q', '')
-        lang = request.lang
+        # lang = request.lang
         p = ProductDocument.search()
         c = CategoryDocument.search()
         t = TagDocument.search()
         p = p.query("multi_match", query=q, fields=['name_fa', 'category_fa']).query('match', disable=False)
-        c = c.query("match", name_fa=q).query('match', disable=False)
+        # c = c.query("match", name_fa=q).query('match', disable=False)
+        c = c.query("match", name_fa=q)
         t = t.query("match", name_fa=q)
         products, categories, subcategories, tags = [], [], [], []
         removed_products, removed_categories, removed_subcategories, removed_tags = [], [], [], []
@@ -190,12 +191,12 @@ class ElasticSearch(View):
             if hit.name_fa == q:
                 categories.append(category)
                 continue
-            if q not in hit.name_fa:
-                removed_categories.append(category)
-                continue
             if hit.parent is None:
                 hit.parent = hit.box
-            subcategories.append({'parent': hit.parent, **category})
+            if not re.search(f".+{q}.+", hit.name_fa):
+                subcategories.append({'parent': hit.parent, **category})
+                continue
+            removed_categories.append(category)
         for hit in t[:3]:
             tag = {'name': hit.name_fa, 'permalink': hit.permalink}
             if q not in hit.name_fa:

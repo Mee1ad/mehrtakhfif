@@ -5,7 +5,7 @@ from elasticsearch_dsl import analyzer, tokenizer
 from django_elasticsearch_dsl.registries import registry
 from .models import Product, User, Category, Tag
 
-ngram = analyzer('ngram', tokenizer=tokenizer('trigram', 'nGram', min_gram=3, max_gram=3), filter=["lowercase"])
+ngram = analyzer('ngram', tokenizer=tokenizer('trigram', 'nGram', min_gram=2, max_gram=3), filter=["lowercase"])
 
 
 @registry.register_document
