@@ -70,7 +70,8 @@ class BasketView(View):
                 return JsonResponse({'message': 'تعداد درخواست شده موجود نمیباشد', 'variant': 'error'})
             product['count'] = count
             request.session.save()
-            return JsonResponse(get_basket(request))
+            res = JsonResponse(get_basket(request))
+            return set_custom_signed_cookie(res, 'basket_count', get_basket_count(user, session=request.session))
         basket = Basket.objects.filter(user=user).order_by('-id').first()
         basket_product = BasketProduct.objects.filter(basket=basket, pk=pk).select_related('storage')
         storage = basket_product.first().storage
@@ -78,7 +79,8 @@ class BasketView(View):
             return JsonResponse({'message': 'تعداد درخواست شده موجود نمیباشد', 'variant': 'error'})
         basket_product.update(count=data['count'])
         basket.discount_code.update(basket=None)
-        return JsonResponse(get_basket(request))
+        res = JsonResponse(get_basket(request))
+        return set_custom_signed_cookie(res, 'basket_count', get_basket_count(user, basket_id=basket.id))
 
     def delete(self, request):
         # storage_id = request.GET.get('storage_id', None)

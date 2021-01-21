@@ -100,6 +100,23 @@ class BoxAdmin(Base):
     list_per_page = 10
     # ordering = ('-created_at',)
 
+    # def get_queryset(self, request):
+    #     queryset = super().get_queryset(request)
+    #     queryset = queryset.annotate(
+    #         _hero_count=Count("hero", distinct=True),
+    #         _villain_count=Count("villain", distinct=True),
+    #     )
+    #     return queryset
+
+    # list_select_related = (
+    #     'category',
+    # )
+
+    # raw_id_fields = (
+    #     'user',
+    # )
+    # show_full_result_count = False
+
 
 class AdAdmin(admin.ModelAdmin):
     list_display = ('id', 'title_fa', 'url', 'storage', 'get_media', 'get_mobile_media')
