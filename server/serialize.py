@@ -531,7 +531,9 @@ class ProductSchema(MinProductSchema):
     storages = fields.Method("get_storages")
 
     def get_storages(self, obj):
-        return StorageSchema(only=['id', 'discount_price', 'max_count_for_sale']).dump(obj.storages.all(), many=True)
+        storages = StorageSchema(only=['id', 'discount_price', 'max_count_for_sale']).dump(obj.storages.all(),
+                                                                                           many=True)
+        return sorted(storages, key=lambda i: i['discount_price'])
 
     def get_tags(self, obj):
         # tags = list(ProductTag.objects.filter(product=obj))
