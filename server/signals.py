@@ -1,17 +1,18 @@
-from django.db.models.signals import post_init, post_save
+from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 from server.models import Invoice, Storage
 from server.utils import add_one_off_job
 
 
-@receiver(post_init, sender=Invoice, dispatch_uid="invoice_job_handler")
+@receiver(post_save, sender=Invoice, dispatch_uid="invoice_job_handler")
 def invoice_job_maker(sender, instance, **kwargs):
-    task_name = f'{instance.id}: cancel reservation'
-    kwargs = {"invoice_id": instance.id, "task_name": task_name}
-    if instance.final_price:
-        instance.sync_task = add_one_off_job(name=task_name, kwargs=kwargs, interval=30,
-                                             task='server.tasks.cancel_reservation')
+    if kwargs.get('created', False):
+        task_name = f'{instance.id}: cancel reservation'
+        kwargs = {"invoice_id": instance.id, "task_name": task_name}
+        if instance.final_price:
+            instance.sync_task = add_one_off_job(name=task_name, kwargs=kwargs, interval=30,
+                                                 task='server.tasks.cancel_reservation')
 
 
 @receiver(post_save, sender=Storage, dispatch_uid="inventory_alert_handler")
