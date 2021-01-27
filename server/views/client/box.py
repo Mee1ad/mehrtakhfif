@@ -43,13 +43,13 @@ class FilterDetail(View):
             filter_by['categories'] = category
             cat_filter_by['box'] = category.box
             res['box'] = BoxSchema(**request.schema_params).dump(category.box)
-        categories = Category.objects.filter(**cat_filter_by, **disable)
+        categories = Category.objects.filter(**cat_filter_by, **disable).select_related('media', 'parent')
         if q:
             rank = get_rank(q, request.lang)
             rank = {'rank': rank}
             order_by = ['-rank']
         products = Product.objects.annotate(**rank).filter(**filter_by).order_by(*order_by). \
-            select_related('brand', 'default_storage')
+            select_related('brand', 'default_storage').only('brand', 'categories', 'default_storage')
         if q:
             categories = Category.objects.filter(
                 pk__in=list(filter(None, set(products.values_list('categories', flat=True)))), **disable)

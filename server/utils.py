@@ -377,7 +377,8 @@ def get_categories(language, box_id=None, categories=None, is_admin=None, disabl
         if cat.parent is None:
             continue
         try:
-            parent_index = new_cats.index(categories.filter(pk=cat.parent_id).first())
+            category = next(category for category in categories if cat.parent_id == category.pk)
+            parent_index = new_cats.index(category)
             if not hasattr(new_cats[parent_index], 'child'):
                 new_cats[parent_index].child = []
             new_cats[parent_index].child.append(cat)
@@ -388,11 +389,11 @@ def get_categories(language, box_id=None, categories=None, is_admin=None, disabl
     return BoxCategoriesSchema(language=language).dump(new_cats, many=True)
 
 
-def get_pagination(request, query, serializer, show_all=False, serializer_args={}):
+def get_pagination(request, query, serializer, select=(), prefetch=(), show_all=False, serializer_args={}):
     page = request.page
     step = request.step
     paginator = Paginator(query, step)
-    count = paginator.count
+    count = len(query)
     # query = query if show_all and count <= 500 else query[(page - 1) * step: step * page]
     query = paginator.page(page)
     if show_all and count > 0:

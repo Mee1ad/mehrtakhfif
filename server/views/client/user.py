@@ -5,6 +5,7 @@ from mehr_takhfif.settings import INVOICE_ROOT
 from server.serialize import *
 from server.utils import *
 from server.utils import LoginRequired
+from django.db.models import Prefetch
 
 
 # from selenium import webdriver
@@ -71,14 +72,24 @@ class Avatar(LoginRequired):
 class Orders(LoginRequired):
     def get(self, request):
         pk = request.GET.get('id', None)
+        only = ('id', 'created_at', 'amount', 'final_price', 'status')
         if pk:
+            only += ('address', 'storages')
+            invoice_storage_only_field = ('count', 'unit_price', 'discount_price', 'discount', 'storage')
             try:
-                invoice = Invoice.objects.get(pk=pk, user=request.user)
+                prefetch_storages = Storage.objects.all().only('id', 'title', 'invoice_title')
+                invoice = Invoice.objects.only(*only).filter(pk=pk, user=request.user)\
+                    .prefetch_related(Prefetch('invoice_storages__storage', queryset=prefetch_storages)).first()
             except Invoice.DoesNotExist:
                 return JsonResponse({}, status=404)
-            return JsonResponse({'data': InvoiceSchema(user=request.user).dump(invoice)})
-        orders = user_data_with_pagination(Invoice, InvoiceSchema, request, extra={"final_price__isnull": False})
-        return JsonResponse(orders)
+            return JsonResponse({'data': InvoiceSchema(user=request.user, only=only,
+                                                       invoice_storage_only_field=invoice_storage_only_field)
+                                .dump(invoice)})
+
+        query = Invoice.objects.filter(user=request.user, final_price__isnull=False).only(*only)
+        only_fields = {'only': only}
+        res = get_pagination(request, query, InvoiceSchema, serializer_args=only_fields)
+        return JsonResponse(res)
 
 
 class InvoiceView(LoginRequired):

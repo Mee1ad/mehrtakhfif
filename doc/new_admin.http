@@ -602,6 +602,8 @@ Content-Type: application/json
 GET {{admin_host}}/brand?id=6
 
 ###
+GET {{admin_host}}/brand?b=3&p=1&s=100&o=id&all=true
+###
 GET {{admin_host}}/brand
 
 ###
@@ -774,7 +776,7 @@ GET {{admin_host}}/invoice
 ### Media CRUD
 POST {{admin_host}}/media
 Content-Type: multipart/form-data; boundary=WebAppBoundary
-access-token: {{access-token}}
+#access-token: {{access-token}}
 
 --WebAppBoundary
 Content-Disposition: form-data; name="data"
@@ -784,10 +786,6 @@ Content-Disposition: form-data; name="data"
 Content-Disposition: form-data; name="file"; filename="takh1.jpg"
 
 < F:\Download\Photos\takh1.jpg
---WebAppBoundary--
-Content-Disposition: form-data; name="file"; filename="takh2.jpg"
-
-< F:\Download\Photos\takh2.jpg
 
 ###
 GET {{admin_host}}/media?b=3

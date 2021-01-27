@@ -639,6 +639,7 @@ class StorageSchema(MinStorageSchema):
     features = FeatureField()
     least_booking_time = fields.Method("get_least_booking_time")
     booking_cost = fields.Method("get_booking_cost")
+    invoice_title = fields.Method('get_invoice_title')
 
     def get_least_booking_time(self, obj):
         if obj.product.booking_type == 1:  # unbookable
@@ -649,6 +650,9 @@ class StorageSchema(MinStorageSchema):
         if obj.product.booking_type == 1:  # unbookable
             return -1
         return obj.booking_cost
+
+    def get_invoice_title(self, obj):
+        return self.get(obj.invoice_title)
 
 
 class PackageSchema(StorageSchema):
@@ -692,9 +696,12 @@ class BasketSchema(BaseSchema):
 
 
 class InvoiceSchema(BaseSchema):
-    def __init__(self, with_shipping_cost=False, *args, **kwargs):
+    def __init__(self, with_shipping_cost=False, invoice_storage_only_field=None,
+                 storage_only_field=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.with_shipping_cost = with_shipping_cost
+        self.invoice_storage_only_field = invoice_storage_only_field
+        self.storage_only_field = storage_only_field
 
     class Meta:
         additional = ('id', 'final_price', 'invoice_discount', 'details')
@@ -702,7 +709,7 @@ class InvoiceSchema(BaseSchema):
     payed_at = fields.Method('get_payed_at')
     status = fields.Function(lambda o: o.get_status_display())
     address = fields.Dict()
-    storages = InvoiceStorageField()
+    storages = fields.Method('get_invoice_storages')
     amount = fields.Method('get_amount')  # without tax
     created_at = fields.Function(lambda o: o.created_at.timestamp())
     expire = fields.Function(lambda o: o.expire.timestamp())
@@ -711,6 +718,14 @@ class InvoiceSchema(BaseSchema):
     invoice = fields.Method("get_invoice_file")
     booking_type = fields.Method("get_booking_type")
     payment_url = fields.Method("get_payment_url")
+
+    def get_invoice_storages(self, obj):
+        only = {}
+        if self.invoice_storage_only_field:
+            only = {'only': self.invoice_storage_only_field}
+        invoice_storages = obj.invoice_storages.all()
+        return InvoiceStorageSchema(**only, storage_only_field=self.storage_only_field).dump(invoice_storages,
+                                                                                             many=True)
 
     def get_payment_url(self, obj):
         if self.only:
@@ -760,6 +775,10 @@ class InvoiceSchema(BaseSchema):
 
 
 class InvoiceStorageSchema(BaseSchema):
+    def __init__(self, storage_only_field=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.storage_only_field = storage_only_field
+
     class Meta:
         additional = ('count', 'discount_price', 'final_price', 'discount_percent', 'discount_price_without_tax',
                       'invoice_id', 'invoice_description', 'details', 'tax', 'discount', 'total_price')
@@ -791,12 +810,13 @@ class InvoiceStorageSchema(BaseSchema):
         return product
 
     def get_storage(self, obj):
-        storage = obj.storage
-        storage = {"id": storage.pk, "title": storage.title[self.lang],
-                   "invoice_description": storage.invoice_description[self.lang],
-                   "invoice_title": storage.invoice_title[self.lang]}
-
-        return storage
+        # storage = obj.storage
+        # storage = {"id": storage.pk, "title": storage.title[self.lang],
+        #            "invoice_description": storage.invoice_description[self.lang],
+        #            "invoice_title": storage.invoice_title[self.lang]}
+        #
+        # return storage
+        return StorageSchema(only=('id', 'title', 'invoice_title')).dump(obj.storage)
 
     def get_purchase_date(self, obj):
         try:

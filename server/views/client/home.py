@@ -3,7 +3,6 @@ from django.http import JsonResponse, HttpResponseNotFound
 from server.documents import *
 from server.serialize import *
 from server.utils import *
-import re
 
 class Test(View):
     def get(self, request):
