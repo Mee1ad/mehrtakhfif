@@ -19,6 +19,8 @@ SHORTLINK = "https://mhrt.ir"
 AUTH_USER_MODEL = 'server.User'
 IPRESTRICT_GEOIP_ENABLED = False
 
+DATA_UPLOAD_MAX_MEMORY_SIZE = 1024000
+
 INSTALLED_APPS = \
     [
         'jet.dashboard',
