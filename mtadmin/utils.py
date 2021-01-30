@@ -84,8 +84,8 @@ def serialized_objects(request, model, serializer=None, single_serializer=None, 
         if params.get('aggregate', None):
             # todo tax
             pass
-        # http://localhost/admin/product?box_id=15&name__fa=نامیرا
-        common_items = list(set(params['filter']).intersection(['name__fa']))
+        annotate_list = ['name__fa']  # http://localhost/admin/product?box_id=15&name__fa=نامیرا
+        common_items = list(set(params['filter']).intersection(annotate_list))
         if common_items or params['annotate']:
             for item in common_items:
                 params['filter'][item + '__contains'] = params['filter'][item]

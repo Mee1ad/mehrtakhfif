@@ -12,6 +12,7 @@ from mtadmin.serializer import *
 from mtadmin.utils import *
 from server.documents import *
 from server.utils import *
+from django.utils.crypto import get_random_string
 
 
 class Token(AdminView):
@@ -59,6 +60,23 @@ class ReviewPrice(AdminView):
                  'profit': profit, 'discount_percent': dper}
         return JsonResponse({'data': share})
 
+
+class GenerateCode(AdminView):
+    def post(self, request):
+        data = json.loads(request.body)
+        storage_id = data['storage_id']
+        count = data['count']
+        code_len = data.get('len', 5)
+        storage = Storage.objects.get(pk=storage_id)
+        prefix = data.get('prefix', storage.title['fa'][:2])
+        codes = [prefix + '-' + get_random_string(code_len, random_data) for c in range(count)]
+        while len(set(codes)) < count:
+            codes = list(set(codes))
+            codes += [prefix + '-' + get_random_string(code_len, random_data) for c in range(count - len(set(codes)))]
+        user = request.user
+        items = [DiscountCode(code=code, storage=storage, created_by=user, updated_by=user) for code in codes]
+        DiscountCode.objects.bulk_create(items)
+        return JsonResponse({})
 
 class MailView(AdminView):
     def post(self, request):

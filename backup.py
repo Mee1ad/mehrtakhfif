@@ -15,6 +15,9 @@ s3_client = session.client(
     endpoint_url=endpoint,
 )
 
+bucket_name = 'mtbackup'
+upload_testfile = '/home/ubuntu/backup/done'
+
 
 def list_buckets():
     response = s3_client.list_buckets()

@@ -33,6 +33,7 @@ urlpatterns = [
     path('mail', error_handler(MailView.as_view()), name='mail'),
     path('review_price', error_handler(ReviewPrice.as_view()), name='review_price'),
     path('discount_code', error_handler(DiscountCodeView.as_view()), name='discount_code'),
+path('generate_code', error_handler(GenerateCode.as_view()), name='generate_code'),
     path('table_filter/<str:table>', error_handler(TableFilter.as_view()), name='table_filter'),
     path('roll', error_handler(CheckLoginToken.as_view()), name='get_roll'),
     path('tax', error_handler(Tax.as_view()), name='tax'),

@@ -115,19 +115,43 @@ class BaseAdminSchema(Schema):
     # noinspection DuplicatedCode
     def dump(self, *args, **kwargs):
         raw_data = super().dump(*args, **kwargs)
-        return dump(raw_data)
-
-    def get_date(self, obj, field):
+        if type(raw_data) is not list:
+            return raw_data
+        data = []
+        for d in raw_data:
+            if d not in data:
+                data.append(d)
         try:
-            return getattr(obj, field).timestamp()
-        except AttributeError:
+            data = sorted(data, key=lambda i: i['priority'])
+        except (KeyError, TypeError):
             pass
+        return data
 
     def get_created_at(self, obj):
-        return self.get_date(obj, 'created_at')
+        try:
+            return obj.created_at.timestamp()
+        except AttributeError:
+            return None
+
+    def get_created_by(self, obj):
+        try:
+            user = obj.created_by
+            return {'id': obj.pk, 'name': f"{user.first_name} {user.last_name}"}
+        except AttributeError:
+            return None
 
     def get_updated_at(self, obj):
-        return self.get_date(obj, 'updated_at')
+        try:
+            return obj.updated_at.timestamp()
+        except AttributeError:
+            return None
+
+    def get_updated_by(self, obj):
+        try:
+            user = obj.updated_by
+            return {'id': obj.pk, 'name': f"{user.first_name} {user.last_name}"}
+        except AttributeError:
+            return None
 
     def get_name(self, obj):
         return obj.name

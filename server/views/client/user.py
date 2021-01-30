@@ -223,6 +223,11 @@ class WishlistView(LoginRequired):
 
         return JsonResponse({}, status=201)
 
+    def delete(self, request):
+        wishlist_id = request.GET.get('id', None)
+        WishList.objects.filter(pk=wishlist_id, user_id=request.user).delete()
+        return JsonResponse({})
+
 
 class NotifyView(LoginRequired):
     def get(self, request):
