@@ -1,156 +1,518 @@
-### Authentication, Basket, Wishlist, Address, Profile, Avatar
+### Home
+GET {{host}}/test
 
-### Available routes: orders, user_comments
-GET {{host}}/user_comments
-
-### Authentication
-POST {{host}}/signup
-Content-Type: Application/json
-
-{
-  "username": "09015518457",
-  "password": "12345678"
-}
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
 
 ###
-POST {{host}}/login
-Content-Type: Application/json
+GET {{host}}/init
 
-{
-  "username": "09015518439",
-  "password": "123456"
-}
-
-###
-GET {{host}}/test_login
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
 
 ###
-POST {{host}}/activate
-Content-Type: Application/json
+GET {{host}}/slider/home
 
-{
-  "code": 54150,
-  "token": "493c33304780f3579503e7b74b27ee726da16aab15a1589df0954c1c8a6684c607eb4b1577d44bef181b0e967e140bcb6a1c1fc87178de74f932341c852592562ce3e60a2fe2f350517daf6e3de16ad3a8917785145a710500967c9d90ada6b46bd5a227"
-}
-
-###
-POST {{host}}/resend_code
-Content-Type: Application/json
-
-{
-  "token": "pbkdf2_sha256$150000$activation_code$pHDguRDU41GcBFRTOLgrlF/+f1k/eCWE9KSQvDpEHXM="
-}
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
 
 ###
-POST {{host}}/reset_password_request
-Content-Type: Application/json
+GET {{host}}/special_offer
 
-{
-  "phone": "09015518439"
-}
-
-###
-POST {{host}}/reset_password
-Content-Type: Application/json
-
-{
-  "new_password": "123456",
-  "token": "fed5510948065bc84974"
-}
-
-### Wishlist
-GET {{host}}/wishlist
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
 
 ###
-DELETE {{host}}/wishlist?id=8
+GET {{host}}/box_special_product
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
 
 ###
-POST {{host}}/wishlist
-Content-Type: Application/json
+GET {{host}}/special_product
 
-{
-  "type": "admin",
-  "notify": false,
-  "product_id": "4"
-}
-
-###
-
-### Address
-GET {{host}}/address
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
 
 ###
-DELETE http://{{host}}/address?id=39
+GET {{host}}/best_seller
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
 
 ###
-POST http://{{host}}/address
-Content-Type: Application/json
+GET {{host}}/box_with_category
 
-{
-  "state_id": 9,
-  "city_id": 1699,
-  "postal_code": "1234512345",
-  "address": "رشت فلکه پاز چمارسرا",
-  "location": null,
-  "name": "محمد حسین باقری",
-  "phone": "09015515685",
-  "set_default": false
-}
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
 
 ###
-PUT http://{{host}}/address
-Content-Type: Application/json
+GET {{host}}/menu
 
-{
-  "id": 38,
-  "state_id": 9,
-  "city_id": 1699,
-  "postal_code": "1234512345",
-  "address": "محله آرین اینا",
-  "location": [
-    12,
-    13
-  ],
-  "name": "محمد جوادیان",
-  "phone": "09015518439",
-  "set_default": false
-}
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
 
 ###
+GET {{host}}/suggest?id='test'
 
-### Profile
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/search?id='test'
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/ads/home
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/permalink_id/هفت-سین-سفالی
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/favicon
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+### Box
+### filter
+GET {{host}}/filter
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/filter?o=cheap
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/filter?o=expensive
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/filter?o=best_seller
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/filter?o=popular
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/filter?o=discount
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/filter?b=%D9%BE%D8%AA-%D8%B4%D8%A7%D9%BE
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/filter?q=%D8%B3%DA%AF
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/filter?s=20&p=1&b=%D8%B3%D9%88%D9%BE%D8%B1%D9%85%D8%A7%D8%B1%DA%A9%D8%AA&cat=%D8%AA%D9%86%D9%82%D9%84%D8%A7%D8%AA
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/filter?s=20&p=1&b=%D8%B3%D9%88%D9%BE%D8%B1%D9%85%D8%A7%D8%B1%DA%A9%D8%AA&available=true
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/filter_detail?b=ورزش&minp=142600&maxp=501000
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/filter?s=20&p=1&b=%D9%88%D8%B1%D8%B2%D8%B4&brand[]=7&min_price=142600&max_price=501000
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+### filter detail
+GET {{host}}/filter_detail
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/filter_detail?o=cheap
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/filter_detail?o=expensive
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/filter_detail?o=best_seller
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/filter_detail?o=popular
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/filter_detail?o=discount
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/filter_detail?b=%D9%BE%D8%AA-%D8%B4%D8%A7%D9%BE
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/filter_detail?q=سگ
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/filter_detail?s=20&p=1&b=گلکده&cat=گلدانی
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/filter_detail?s=20&p=1&b=گلکده&available=true
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/filter_detail?b=%D9%88%D8%B1%D8%B2%D8%B4&minp=142600&maxp=501000
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/filter_detail?s=20&p=1&b=%D9%88%D8%B1%D8%B2%D8%B4&brand[]=7&min_price=142600&max_price=501000
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+### features
+
+GET {{host}}/features/کفش-آدیداس-تستی
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+### tag
+
+GET {{host}}/tag/سفال
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+### category
+
+GET {{host}}/category/غذا-خشک-گربه
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+### Product
+GET {{host}}/product/هفت-سین-سفالی
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/comment?prp=هفت-سین-سفالی&type=1
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/comment?prp=هفت-سین-سفالی&type=2
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/related_products/هفت-سین-سفالی
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/features/کفش-آدیداس-تستی
+###
+GET {{host}}/features/کفش-آدیداس-تستی?select[]=4&select[]=7
+
+### Payment
+GET {{host}}/ipg
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/payment/31
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/invoice/5ZaBzK
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+### User
 GET {{host}}/profile
 
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
 ###
-PUT http://{{host}}/profile
-Content-Type: Application/json
+GET {{host}}/states
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/cities/1
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/orders
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/orders?id=100
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/trips
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+GET {{host}}/wishlist
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+POST {{host}}//add_device
+Content-Type: application/json
 
 {
-  "first_name": "محمد",
-  "last_name": "باقری",
-  "gender": true,
-  "email": "soheil@gmail.com",
-  "meli_code": 2580759721,
-  "shaba": "IR123456789",
-  "birthday": "1995-03-16",
-  "subscribe": false
+  "token": "test",
+  "device_id": 1
 }
 
-###
-
-### Avatar
-DELETE {{host}}/avatar
-
-###
-POST {{host}}/avatar
-Content-Type: multipart/form-data; boundary=WebAppBoundary
-access-token: {{access-token}}
-
---WebAppBoundary--
-Content-Disposition: form-data; name="file"; filename="fmb.jpg"
-Content-Type: video/mp4
-
-
-< F:\Download\Photos\fmb.jpg
-
-###
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}

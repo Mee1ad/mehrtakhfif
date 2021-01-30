@@ -4,6 +4,7 @@ from server.documents import *
 from server.serialize import *
 from server.utils import *
 
+
 class Test(View):
     def get(self, request):
         return JsonResponse({})
@@ -75,8 +76,9 @@ class BoxesGetSpecialProduct(View):
         products = []
 
         for box, index in zip(all_box, range(len(all_box))):
-            box_special_product = SpecialProduct.objects.select_related(*SpecialProduct.select).filter(box=box) \
-                [(page - 1) * step:step * page]
+            box_special_product = SpecialProduct.objects.select_related('thumbnail', 'storage__product__thumbnail') \
+                                      .prefetch_related('storage__vip_prices') \
+                                      .filter(box=box)[(page - 1) * step:step * page]
             if box_special_product:
                 box = {'id': box.pk, 'name': box.name[language], 'key': box.permalink}
                 box['special_products'] = SpecialProductSchema(**request.schema_params).dump(box_special_product,

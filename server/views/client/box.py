@@ -52,7 +52,8 @@ class FilterDetail(View):
             select_related('brand', 'default_storage').only('brand', 'categories', 'default_storage')
         if q:
             categories = Category.objects.filter(
-                pk__in=list(filter(None, set(products.values_list('categories', flat=True)))), **disable)
+                pk__in=list(filter(None, set(products.values_list('categories', flat=True)))),
+                **disable).select_related('media', 'parent')
         prices = products.aggregate(max=Max('default_storage__discount_price'),
                                     min=Min('default_storage__discount_price'))
         categories = get_categories(request.lang, categories=categories)
