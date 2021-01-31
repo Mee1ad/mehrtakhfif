@@ -668,20 +668,11 @@ def get_preview_permission(user, category_check=True, box_check=True, box_key='b
     return preview
 
 
-def is_available(storage, count):
-    max_count_for_sale = storage.max_count_for_sale if storage.max_count_for_sale else \
-        storage.available_count_for_sale - 1
-    if storage.available_count_for_sale < count or max_count_for_sale < count or storage.disable \
-            or storage.product.disable:
-        return False
-    return True
-
-
 def add_to_basket(basket, products):
     for product in products:
         count = int(product['count'])
         storage = Storage.objects.get(pk=product['storage_id'])
-        if is_available(storage, count) is False:
+        if storage.is_available(count) is False:
             raise ValidationError(_('متاسفانه این محصول ناموجود میباشد'))
         try:
             basket_product = BasketProduct.objects.filter(basket=basket, storage=storage)

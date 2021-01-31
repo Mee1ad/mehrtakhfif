@@ -109,6 +109,7 @@ class PaymentRequest(LoginRequired):
                 'post_invoice').first()
         share = get_share(invoice=invoice)
         shipping_cost = getattr(getattr(invoice, 'post_invoice', None), 'amount', 0)
+        print(share['mt_profit'], share['tax'], shipping_cost, share['admin'], share['charity'], share['dev'])
         additional_data = [[1, (share['mt_profit'] + share['tax'] + shipping_cost + share['admin']) * 10, 0],
                            [deposit['charity'], share['charity'] * 10, 0],
                            [deposit['dev'], share['dev'] * 10, 0]]

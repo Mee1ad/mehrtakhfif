@@ -103,7 +103,7 @@ class BasketView(View):
         for product in products:
             count = int(product['count'])
             storage = Storage.objects.get(pk=product['storage_id'])
-            if is_available(storage, count) is False:
+            if storage.is_available(count) is False:
                 print('count:', count, 'available_count_for_sale:', storage.available_count_for_sale,
                       'max_count_for_sale:', storage.max_count_for_sale, 'storage.disable:', storage.disable,
                       'storage.product.disable:', storage.product.disable)

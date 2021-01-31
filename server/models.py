@@ -1370,8 +1370,17 @@ class Storage(Base):
         if admin:
             self.post_process(kwargs)
 
+    def get_max_count(self):
+        if (self.available_count_for_sale >= self.max_count_for_sale) and (self.max_count_for_sale != 0):
+            return self.max_count_for_sale
+        if self.available_count_for_sale > 1:
+            return self.available_count_for_sale - 1
+        return self.available_count_for_sale
+
     def is_available(self, count=1):
-        return self.available_count_for_sale >= count and self.max_count_for_sale >= count
+        max_count_for_sale = self.get_max_count()
+        return self.available_count_for_sale >= count and max_count_for_sale >= count and\
+            self.disable is False and self.product.disable is False
 
     product = models.ForeignKey(Product, on_delete=CASCADE, related_name='storages')
     # features = models.ManyToManyField(ProductFeature, through='StorageFeature', related_name="storages")

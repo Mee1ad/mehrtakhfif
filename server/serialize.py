@@ -255,6 +255,8 @@ class BaseSchema(Schema):
     def get_max_count_for_sale(self, obj):
         if (obj.available_count_for_sale >= obj.max_count_for_sale) and (obj.max_count_for_sale != 0):
             return obj.max_count_for_sale
+        if obj.available_count_for_sale > 1:
+            return obj.available_count_for_sale - 1
         return obj.available_count_for_sale
 
     def get_vip_max_count_for_sale(self, obj):
@@ -263,10 +265,12 @@ class BaseSchema(Schema):
             if not user_vip_prices:
                 return None
             storage_vip_prices = VipPrice.objects.filter(storage=obj)
-            max_count_for_sale = obj.max_count_for_sale
+            max_count_for_sale = obj.get_max_count()
+
             for vip_type in user_vip_prices:
                 try:
-                    vip_max_count_for_sale = storage_vip_prices.get(vip_type=vip_type).max_count_for_sale
+                    vip = storage_vip_prices.get(vip_type=vip_type)
+                    vip_max_count_for_sale = vip.max_count_for_sale
                     if vip_max_count_for_sale < max_count_for_sale:
                         max_count_for_sale = vip_max_count_for_sale
                 except Exception:
