@@ -922,13 +922,14 @@ class SpecialOfferSchema(BaseSchema):
 
 class SpecialProductSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'url')
+        additional = ('id', 'url', 'box_id')
 
     name = fields.Method('get_name')
     default_storage = fields.Method('get_min_storage')
     # media = fields.Method('get_media')
     thumbnail = fields.Method("get_thumbnail")
     permalink = fields.Function(lambda o: o.storage.product.permalink)
+    box = fields.Method("get_box")
 
     def get_name(self, obj):
         name = self.get(obj.name)

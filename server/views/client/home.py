@@ -1,3 +1,6 @@
+from itertools import groupby
+from operator import itemgetter
+
 from django.http import JsonResponse, HttpResponseNotFound
 
 from server.documents import *
@@ -68,7 +71,7 @@ class GetSpecialProduct(View):
 
 
 class BoxesGetSpecialProduct(View):
-    def get(self, request):
+    def get_old(self, request):
         step = int(request.GET.get('s', default_step))
         page = int(request.GET.get('e', default_page))
         all_box = Box.objects.all()
@@ -86,6 +89,26 @@ class BoxesGetSpecialProduct(View):
                 products.append(box)
         res = {'products': products}
         return JsonResponse(res)
+
+    def get(self, request):
+        step = int(request.GET.get('s', default_step))
+        page = int(request.GET.get('e', default_page))
+        language = request.lang
+        special_products = []
+        products = SpecialProduct.objects.select_related('thumbnail', 'storage__product__thumbnail', 'box') \
+            .prefetch_related('storage__vip_prices')
+        products = SpecialProductSchema(**request.schema_params).dump(products, many=True)
+        # products = groupby(sorted(products, key=itemgetter('box')), key=itemgetter('box'))
+        # for item in products:
+        #     special_products.append({**item[0], 'special_products': item[1]})
+        for box, event_list in groupby(sorted(products, key=itemgetter('box_id')), itemgetter('box')):
+            sp = list(event_list)
+            list(map(lambda d: d.pop('box'), sp))
+            special_products.append({**box, 'special_product': sp})
+
+            # for e in event_list:
+            #     print(e)
+        return JsonResponse({'products': special_products})
 
 
 class BestSeller(View):
