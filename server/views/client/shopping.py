@@ -25,7 +25,6 @@ class BasketView(View):
         except TypeError:
             basket = None
         invoices = []
-        deleted_items = []
         if getattr(basket, 'invoice_exists', None):
             try:
                 invoices = Invoice.objects.filter(user=request.user, status=1, expire__gt=timezone.now(),
@@ -34,10 +33,7 @@ class BasketView(View):
                     .dump(invoices, many=True)
             except TypeError:  # AnonymousUser
                 pass
-        if basket:
-            deleted_items = self.check_basket(basket)
-        return JsonResponse({**get_basket(request, basket=basket, tax=True),
-                             'deleted_items': deleted_items, 'active_invoice': list(invoices)})
+        return JsonResponse({**get_basket(request, basket=basket, tax=True), 'active_invoice': list(invoices)})
 
     def post(self, request):
         data = load_data(request)
@@ -107,8 +103,7 @@ class BasketView(View):
         for product in products:
             count = int(product['count'])
             storage = Storage.objects.get(pk=product['storage_id'])
-            if storage.available_count_for_sale < count or storage.max_count_for_sale < count or storage.disable \
-                    or storage.product.disable:
+            if is_available(storage, count) is False:
                 print('count:', count, 'available_count_for_sale:', storage.available_count_for_sale,
                       'max_count_for_sale:', storage.max_count_for_sale, 'storage.disable:', storage.disable,
                       'storage.product.disable:', storage.product.disable)
@@ -128,19 +123,6 @@ class BasketView(View):
             request.session['basket'].append(product)
             request.session.save()
             return len(request.session['basket'])
-
-    def check_basket(self, basket):
-        basket_products = basket.basket_storages.all()
-        # todo test
-        deleted_items = []
-        for basket_product in basket_products:
-            if basket_product.storage.available_count_for_sale == 0:
-                deleted_items.append(BasketProductSchema().dump(basket_product))
-                basket_product.delete()
-            elif basket_product.count > basket_product.storage.available_count_for_sale:
-                basket_product.count = basket_product.storage.available_count_for_sale
-                basket_product.save()
-        return deleted_items
 
 
 class GetProducts(View):

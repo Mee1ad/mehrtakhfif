@@ -104,7 +104,7 @@ class BoxesGetSpecialProduct(View):
         for box, event_list in groupby(sorted(products, key=itemgetter('box_id')), itemgetter('box')):
             sp = list(event_list)
             list(map(lambda d: d.pop('box'), sp))
-            special_products.append({**box, 'special_product': sp})
+            special_products.append({**box, 'special_products': sp})
 
             # for e in event_list:
             #     print(e)

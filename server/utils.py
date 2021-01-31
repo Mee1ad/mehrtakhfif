@@ -24,9 +24,8 @@ from kavenegar import *
 from mehr_takhfif.settings import CSRF_SALT, TOKEN_SALT, DEFAULT_COOKIE_DOMAIN
 from mehr_takhfif.settings import DEBUG, SMS_KEY
 from server.models import *
-from server.serialize import InvoiceSchema
-from server.serialize import UserSchema
-from server.serialize import get_tax, BoxCategoriesSchema, BasketSchema, MinProductSchema, ProductFeatureSchema
+from server.serialize import get_tax, BoxCategoriesSchema, BasketSchema, MinProductSchema, ProductFeatureSchema, \
+    BasketProductSchema, UserSchema, InvoiceSchema
 # from barcode import generate
 # from barcode.base import Barcode
 from server.views.post import get_shipping_cost_temp
@@ -433,11 +432,28 @@ def get_discount_percent(storage):
         return storage.discount_percent
 
 
+def check_basket(basket):
+    basket_products = basket.basket_storages.all()
+    # todo test
+    deleted_items = []
+    changed_items = []
+    for basket_product in basket_products:
+        if basket_product.storage.available_count_for_sale == 0:
+            deleted_items.append(BasketProductSchema().dump(basket_product))
+            basket_product.delete()
+        elif basket_product.count > basket_product.storage.available_count_for_sale:
+            changed_items.append({'product_name': basket_product.storage.title['fa'], 'old_count': basket_product.count,
+                                  'new_count': basket_product.storage.available_count_for_sale})
+            basket_product.count = basket_product.storage.available_count_for_sale
+            basket_product.save()
+    return {'deleted': deleted_items, 'changed': changed_items}
+
+
 def get_basket(request, basket_id=None, basket=None, basket_products=None, return_obj=False, tax=False,
                require_profit=False, use_session=False):
     user = request.user
     lang = request.lang
-    if (not user.is_authenticated or (DEBUG is True and (request.GET.get('use_session') == 'True' or use_session))) and \
+    if (not user.is_authenticated or (DEBUG is True and (request.GET.get('use_session') == 'True' or use_session))) and\
             request.session.get('basket'):
         basket = request.session.get('basket', [])
         basket_products = [BasketProduct(**basket_product, id=index) for index, basket_product in enumerate(basket)]
@@ -458,6 +474,7 @@ def get_basket(request, basket_id=None, basket=None, basket_products=None, retur
                 .order_by('-id').first()
     if basket is None:
         return {'basket': {}, 'summary': {}, 'address_required': False}
+    changed_items = check_basket(basket)
     basket_products = basket_products or basket.basket_storages.all()
     summary = {"total_price": 0, "discount_price": 0, "profit": 0, "mt_profit": 0, 'charity': 0,
                "shipping_cost": 0, "tax": 0, "final_price": 0}
@@ -526,7 +543,7 @@ def get_basket(request, basket_id=None, basket=None, basket_products=None, retur
     summary['invoice_discount'] = summary['total_price'] - summary['discount_price']
     summary['total_price'] += shipping_cost
     summary['discount_price'] += shipping_cost
-    return {'basket': basket, 'summary': summary, 'address_required': address_required}
+    return {'basket': basket, 'summary': summary, 'address_required': address_required, **changed_items}
 
 
 def get_basket_count(user=None, basket_id=None, session=None):
@@ -651,12 +668,20 @@ def get_preview_permission(user, category_check=True, box_check=True, box_key='b
     return preview
 
 
+def is_available(storage, count):
+    max_count_for_sale = storage.max_count_for_sale if storage.max_count_for_sale else \
+        storage.available_count_for_sale - 1
+    if storage.available_count_for_sale < count or max_count_for_sale < count or storage.disable \
+            or storage.product.disable:
+        return False
+    return True
+
+
 def add_to_basket(basket, products):
     for product in products:
         count = int(product['count'])
         storage = Storage.objects.get(pk=product['storage_id'])
-        if storage.available_count_for_sale < count or storage.max_count_for_sale < count or storage.disable \
-                or storage.product.disable:
+        if is_available(storage, count) is False:
             raise ValidationError(_('متاسفانه این محصول ناموجود میباشد'))
         try:
             basket_product = BasketProduct.objects.filter(basket=basket, storage=storage)
