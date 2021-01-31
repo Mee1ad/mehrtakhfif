@@ -108,7 +108,7 @@ class BoxesGetSpecialProduct(View):
 
             # for e in event_list:
             #     print(e)
-        return JsonResponse({'products': special_products})
+        return JsonResponse({'products': sorted(special_products, key=itemgetter('priority'))})
 
 
 class BestSeller(View):

@@ -362,7 +362,7 @@ class AddressSchema(BaseSchema):
 
 class BoxSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'permalink')
+        additional = ('id', 'permalink', 'priority')
 
     id = fields.Int()
     name = fields.Method("get_name")
