@@ -13,6 +13,7 @@ from mehr_takhfif.settings import DEBUG, CLIENT_HOST
 from server.serialize import *
 from server.tasks import cancel_reservation
 from server.utils import LoginRequired, get_basket, add_one_off_job, sync_storage, add_minutes, get_share
+from server.views.client.shopping import BasketView
 
 ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'disable': False},
                 {'id': 2, 'key': 'melli', 'name': 'ملی', 'hide': True, 'disable': True},
@@ -312,11 +313,9 @@ class EditInvoice(LoginRequired):
     @staticmethod
     def restore_products(invoice):
         invoice_storages = invoice.invoice_storages.all()
-        new_basket_products = [
-            BasketProduct(storage=invoice_storage.storage, count=invoice_storage.count, box=invoice_storage.box,
-                          features=invoice_storage.features, basket_id=invoice.basket_id)
-            for invoice_storage in invoice_storages]
-        BasketProduct.objects.bulk_create(new_basket_products)
+        new_basket_products = [{'storage_id': invoice_storage.storage_id, 'count': invoice_storage.count}
+                               for invoice_storage in invoice_storages]
+        BasketView.add_to_basket(invoice.basket, new_basket_products)
 
 
 class CallBack(View):

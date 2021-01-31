@@ -129,7 +129,8 @@ class BasketView(View):
             request.session.save()
             return len(request.session['basket'])
 
-    def add_to_basket(self, basket, products):
+    @staticmethod
+    def add_to_basket(basket, products):
         for product in products:
             count = int(product['count'])
             storage = Storage.objects.get(pk=product['storage_id'])
