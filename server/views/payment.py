@@ -324,6 +324,9 @@ class CallBack(View):
     def get(self, request):
         return HttpResponseRedirect(f"{CLIENT_HOST}/profile/all-order")
 
+    import pysnooper
+
+    @pysnooper.snoop()
     def post(self, request):
         # todo redirect to site anyway
         data = request.body.decode().split('&')
