@@ -339,10 +339,10 @@ class CallBack(View):
         invoice.sale_order_id = sale_order_id
         invoice.ipg_res_code = data_dict['ResCode']
         if not sale_ref_id or not self.verify(sale_order_id, sale_ref_id):
-            self.finish_invoice_jobs(invoice, cancel=True)
-            invoice.status = 1
-            invoice.save()
-            EditInvoice.restore_products(invoice)
+            # self.finish_invoice_jobs(invoice, cancel=True)
+            # invoice.status = 1
+            # invoice.save()
+            # EditInvoice.restore_products(invoice)
             return HttpResponseRedirect(f'{CLIENT_HOST}/basket')
         # todo https://memoryleaks.ir/unlimited-charge-of-mytehran-account/
         invoice.status = 2
