@@ -26,7 +26,7 @@ from mehr_takhfif.settings import DEBUG, SMS_KEY
 from server.models import *
 from server.serialize import InvoiceSchema
 from server.serialize import UserSchema
-from server.serialize import get_tax, BoxCategoriesSchema, BasketSchema, MinProductSchema
+from server.serialize import get_tax, BoxCategoriesSchema, BasketSchema, MinProductSchema, ProductFeatureSchema
 # from barcode import generate
 # from barcode.base import Barcode
 from server.views.post import get_shipping_cost_temp
@@ -649,6 +649,30 @@ def get_preview_permission(user, category_check=True, box_check=True, box_key='b
     if box_check:
         preview[f'{product}{box_key}__disable'] = False
     return preview
+
+
+def add_to_basket(basket, products):
+    for product in products:
+        count = int(product['count'])
+        storage = Storage.objects.get(pk=product['storage_id'])
+        if storage.available_count_for_sale < count or storage.max_count_for_sale < count or storage.disable \
+                or storage.product.disable:
+            raise ValidationError(_('متاسفانه این محصول ناموجود میباشد'))
+        try:
+            basket_product = BasketProduct.objects.filter(basket=basket, storage=storage)
+            assert basket_product.exists()
+            basket_product.update(count=count)
+        except AssertionError:
+            box = storage.product.box
+            features = storage.features.all()
+            features = ProductFeatureSchema().dump(features, many=True)
+            BasketProduct.objects.create(basket=basket, storage=storage, count=count, box=box,
+                                         features=features)
+
+    basket.count = basket.basket_storages.aggregate(count=Sum('count'))['count']
+    basket.save()
+    basket.discount_code.update(basket=None)
+    return basket.count
 
 
 # Security

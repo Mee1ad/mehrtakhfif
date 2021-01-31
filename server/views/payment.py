@@ -12,8 +12,7 @@ from django_celery_beat.models import IntervalSchedule
 from mehr_takhfif.settings import DEBUG, CLIENT_HOST
 from server.serialize import *
 from server.tasks import cancel_reservation
-from server.utils import LoginRequired, get_basket, add_one_off_job, sync_storage, add_minutes, get_share
-from server.views.client.shopping import BasketView
+from server.utils import LoginRequired, get_basket, add_one_off_job, sync_storage, add_minutes, get_share, add_to_basket
 
 ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'disable': False},
                 {'id': 2, 'key': 'melli', 'name': 'ملی', 'hide': True, 'disable': True},
@@ -315,7 +314,7 @@ class EditInvoice(LoginRequired):
         invoice_storages = invoice.invoice_storages.all()
         new_basket_products = [{'storage_id': invoice_storage.storage_id, 'count': invoice_storage.count}
                                for invoice_storage in invoice_storages]
-        BasketView.add_to_basket(invoice.basket, new_basket_products)
+        add_to_basket(invoice.basket, new_basket_products)
 
 
 class CallBack(View):
