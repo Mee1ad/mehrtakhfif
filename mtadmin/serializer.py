@@ -290,6 +290,12 @@ class BaseAdminSchema(Schema):
         features = sorted(features, key=lambda i: i['priority'])
         return features
 
+    def get_date(self, obj, time_attr):
+        try:
+            return getattr(obj, time_attr).timestamp()
+        except AttributeError:
+            pass
+
 
 class BookingASchema(BaseAdminSchema):
     start_date = fields.Function(lambda o: o.start_time.timestamp())
