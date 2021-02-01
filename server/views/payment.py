@@ -64,7 +64,7 @@ class PaymentRequest(LoginRequired):
         # if basket.sync in [2, 3]:  # [(0, 'ready'), (1, 'reserved'), (2, 'canceled'), (3, 'done')]
         #     raise ValidationError(_('سبد خرید باید فعال باشد'))
 
-        if DEBUG is False and request.user.pk in permitted_user:
+        if DEBUG and request.user.pk in permitted_user:
             # if DEBUG:
             invoice = self.create_invoice(request)
             self.reserve_storage(basket, invoice)
