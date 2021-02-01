@@ -452,7 +452,7 @@ def check_basket(basket):
 
 
 def get_basket(request, basket_id=None, basket=None, basket_products=None, return_obj=False, tax=False,
-               require_profit=False, use_session=False):
+               require_profit=False, use_session=False, with_changes=False):
     user = request.user
     lang = request.lang
     if (not user.is_authenticated or (DEBUG is True and (request.GET.get('use_session') == 'True' or use_session))) and\
@@ -476,7 +476,9 @@ def get_basket(request, basket_id=None, basket=None, basket_products=None, retur
                 .order_by('-id').first()
     if basket is None:
         return {'basket': {}, 'summary': {}, 'address_required': False}
-    changed_items = check_basket(basket)
+    changed_items = {}
+    if with_changes:
+        changed_items = check_basket(basket)
     basket_products = basket_products or basket.basket_storages.all()
     summary = {"total_price": 0, "discount_price": 0, "profit": 0, "mt_profit": 0, 'charity': 0,
                "shipping_cost": 0, "tax": 0, "final_price": 0}
@@ -600,7 +602,7 @@ def get_best_seller(request, box, invoice_ids):
     sync_default_storage(storages, products)
     return get_pagination(request, products, MinProductSchema)
 
-
+@pysnooper.snoop()
 def sync_storage(invoice, op):
     def update_storage_counts(s, c):  # Storage, Count
         s.available_count = op(s.available_count, c)

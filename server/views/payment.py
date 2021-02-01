@@ -13,6 +13,7 @@ from mehr_takhfif.settings import DEBUG, CLIENT_HOST
 from server.serialize import *
 from server.tasks import cancel_reservation
 from server.utils import LoginRequired, get_basket, add_one_off_job, sync_storage, add_minutes, get_share, add_to_basket
+import pysnooper
 
 ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'disable': False},
                 {'id': 2, 'key': 'melli', 'name': 'ملی', 'hide': True, 'disable': True},
@@ -59,13 +60,14 @@ class PaymentRequest(LoginRequired):
         basket = Basket.objects.filter(user=request.user, id=basket_id).first()
         if basket.count < 1:
             return JsonResponse({"message": "سبد خرید خالی است", "variant": "error"})
-        permitted_user = []
+        permitted_user = [1]
         # if basket.sync in [2, 3]:  # [(0, 'ready'), (1, 'reserved'), (2, 'canceled'), (3, 'done')]
         #     raise ValidationError(_('سبد خرید باید فعال باشد'))
 
         if DEBUG is False and request.user.pk in permitted_user:
             # if DEBUG:
             invoice = self.create_invoice(request)
+            self.reserve_storage(basket, invoice)
             self.submit_invoice_storages(request, invoice.pk)
             # invoice.basket.sync = 3
             # invoice.basket.save()
@@ -74,15 +76,10 @@ class PaymentRequest(LoginRequired):
             invoice.card_holder = '012345******6789'
             invoice.final_amount = invoice.amount
             invoice.save()
-            Basket.objects.create(user=invoice.user, created_by=invoice.user, updated_by=invoice.user)
-            task_name = f'{invoice.id}: send invoice'
-            kwargs = {"invoice_id": invoice.pk, "lang": request.lang, 'name': task_name}
-            invoice.email_task = add_one_off_job(name=task_name, kwargs=kwargs, interval=0,
-                                                 task='server.tasks.send_invoice')
             # invoice.basket.status = 3  # done
             invoice.basket.discount_code.update(invoice=invoice)
+            url = self.get_payment_url(invoice)
             # invoice.basket.save()
-            Basket.objects.create(user=invoice.user, created_by=invoice.user, updated_by=invoice.user)
             # CallBack.notification_admin(invoice)
             # return JsonResponse({'invoice_id': invoice.id})
             # return HttpResponseRedirect(f"http://mt.com:3002/invoice/{invoice.id}")
@@ -95,8 +92,8 @@ class PaymentRequest(LoginRequired):
         if user.first_name is None or user.last_name is None or user.meli_code is None or user.username is None:
             raise ValidationError(_('لطفا قبل از خرید پروفایل خود را تکمیل نمایید'))
         invoice = self.create_invoice(request)
-        self.reserve_storage(basket, invoice)
         self.submit_invoice_storages(request, invoice.pk)
+        self.reserve_storage(basket, invoice)
         url = self.get_payment_url(invoice)
         basket.products.clear()
         return JsonResponse({"url": url})
@@ -206,7 +203,8 @@ class PaymentRequest(LoginRequired):
     def create_invoice(self, request, basket=None, charity_id=1):
         user = request.user
         address = None
-        basket = basket or get_basket(request, require_profit=True)
+        basket = basket or get_basket(request, require_profit=True, with_changes=True)
+        # todo if changes
         if basket['address_required']:
             if user.default_address.state_id != 25:
                 raise ValidationError('در حال حاضر محصولات فقط در گیلان قابل ارسال میباشد')

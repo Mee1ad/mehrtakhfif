@@ -33,7 +33,8 @@ class BasketView(View):
                     .dump(invoices, many=True)
             except TypeError:  # AnonymousUser
                 pass
-        return JsonResponse({**get_basket(request, basket=basket, tax=True), 'active_invoice': list(invoices)})
+        return JsonResponse({**get_basket(request, basket=basket, tax=True, with_changes=True),
+                             'active_invoice': list(invoices)})
 
     def post(self, request):
         data = load_data(request)
