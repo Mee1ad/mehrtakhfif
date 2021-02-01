@@ -602,7 +602,7 @@ def get_best_seller(request, box, invoice_ids):
     sync_default_storage(storages, products)
     return get_pagination(request, products, MinProductSchema)
 
-@pysnooper.snoop()
+
 def sync_storage(invoice, op):
     def update_storage_counts(s, c):  # Storage, Count
         s.available_count = op(s.available_count, c)
