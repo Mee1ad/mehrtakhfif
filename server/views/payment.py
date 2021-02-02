@@ -400,8 +400,8 @@ class CallBack(View):
         print(f'{sale_order_id}-bpVerifyRequest2 response:', r)
         time.sleep(1)
         r = client.service.bpInquiryRequest(terminalId=bp['terminal_id'], userName=bp['username'],
-                                            userPassword=bp['password'], orderId=sale_order_id,
-                                            saleOrderId=sale_order_id, saleReferenceId=sale_ref_id)
+                                            userPassword=bp['password'], orderId=10434,
+                                            saleOrderId=10434, saleReferenceId="184589975811")
         print(f'{sale_order_id}-bpInquiryRequest response:', r)
         r = client.service.bpSettleRequest(terminalId=bp['terminal_id'], userName=bp['username'],
                                            userPassword=bp['password'], orderId=sale_order_id,
