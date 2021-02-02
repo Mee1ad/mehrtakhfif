@@ -434,8 +434,13 @@ def get_discount_percent(storage):
         return storage.discount_percent
 
 
-def check_basket(basket):
-    basket_products = basket.basket_storages.all()
+def check_basket(request, basket):
+    if isinstance(basket, Basket):
+        basket_products = basket.basket_storages.all()
+    else:
+        basket = request.session.get('basket', [])
+        basket_products = [BasketProduct(**basket_product, id=index) for index, basket_product in enumerate(basket)]
+
     # todo test
     deleted_items = []
     changed_items = []
@@ -478,7 +483,7 @@ def get_basket(request, basket_id=None, basket=None, basket_products=None, retur
         return {'basket': {}, 'summary': {}, 'address_required': False}
     changed_items = {}
     if with_changes:
-        changed_items = check_basket(basket)
+        changed_items = check_basket(request, basket)
     basket_products = basket_products or basket.basket_storages.all()
     summary = {"total_price": 0, "discount_price": 0, "profit": 0, "mt_profit": 0, 'charity': 0,
                "shipping_cost": 0, "tax": 0, "final_price": 0}

@@ -470,7 +470,7 @@ class PaymentHistoryAdmin(Base):
     list_per_page = 10
 
     def get_invoice(self, obj):
-        link = f'{HOST}/superuser/server/invoice/?q={obj.id}'
+        link = f'{HOST}/superuser/server/invoice/?q={obj.invoice_id}'
         return mark_safe(f'<a href="{link}">Show</a>')
 
     get_invoice.short_description = 'invoice'
