@@ -299,6 +299,11 @@ class BaseSchema(Schema):
     def get_settings(self, obj):
         return obj.settings.get('ui', {})
 
+    def get_date(self, obj, attr):
+        try:
+            return getattr(obj, attr).timestamp()
+        except Exception as e:
+            return None
 
 class MinUserSchema(BaseSchema):
     class Meta:
@@ -715,8 +720,8 @@ class InvoiceSchema(BaseSchema):
     address = fields.Dict()
     storages = fields.Method('get_invoice_storages')
     amount = fields.Method('get_amount')  # without tax
-    created_at = fields.Function(lambda o: o.created_at.timestamp())
-    expire = fields.Function(lambda o: o.expire.timestamp())
+    created_at = fields.Method("get_created_at_date")
+    expire = fields.Method("get_expire_date")
     start_date = fields.Method("get_start_date")
     end_date = fields.Method("get_end_date")
     invoice = fields.Method("get_invoice_file")
@@ -745,16 +750,16 @@ class InvoiceSchema(BaseSchema):
         return 'range'
 
     def get_start_date(self, obj):
-        try:
-            return obj.start_date.timestamp()
-        except Exception as e:
-            return None
+        return self.get_date(obj, 'start_date')
+
+    def get_created_at_date(self, obj):
+        return self.get_date(obj, 'created_at')
+
+    def get_expire_date(self, obj):
+        return self.get_date(obj, 'expire')
 
     def get_end_date(self, obj):
-        try:
-            return obj.end_date.timestamp()
-        except Exception:
-            return None
+        return self.get_date(obj, 'end_date')
 
     def get_invoice_file(self, obj):
         try:
@@ -772,10 +777,7 @@ class InvoiceSchema(BaseSchema):
         return obj.amount
 
     def get_payed_at(self, obj):
-        try:
-            return obj.payed_at.timestamp()
-        except AttributeError:
-            return None
+        return self.get_date(obj, 'payed_at')
 
 
 class InvoiceStorageSchema(BaseSchema):
