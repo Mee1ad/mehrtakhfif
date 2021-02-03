@@ -82,6 +82,7 @@ class Orders(LoginRequired):
                     .prefetch_related(Prefetch('invoice_storages__storage', queryset=prefetch_storages)).first()
             except Invoice.DoesNotExist:
                 return JsonResponse({}, status=404)
+            only += ('invoice', )
             return JsonResponse({'data': InvoiceSchema(user=request.user, only=only,
                                                        invoice_storage_only_field=invoice_storage_only_field)
                                 .dump(invoice)})
