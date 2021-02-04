@@ -180,7 +180,7 @@ class PaymentRequest(LoginRequired):
             task = invoice.sync_task
             task.enabled = False
             task.save()
-            task.description = f"retried {invoice.retried_times} times"
+            task.description = f"retried {invoice.retried_times[1:]} times"
             schedule, created = IntervalSchedule.objects.get_or_create(every=16, period=IntervalSchedule.MINUTES)
             task.interval = schedule
             task.enabled = True
