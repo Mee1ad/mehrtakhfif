@@ -60,9 +60,9 @@ def cancel_reservation(self, invoice_id, **kwargs):
                     .prefetch_related('invoice_storages', 'histories').first().invoice
                 url = f"https://bpm.shaparak.ir/pgwchannel/startpay.mellat?RefId={invoice.reference_id}"
                 r = requests.get(url)
+                task = invoice.sync_task
                 if re.search(r'<form.*>', r.text):
                     print("ok, i`ll try it later")
-                    task = invoice.sync_task
                     task.description = f"{task.description} - delay for 3 minutes"
                     schedule, created = IntervalSchedule.objects.get_or_create(every=3,
                                                                                period=IntervalSchedule.MINUTES)
@@ -72,6 +72,8 @@ def cancel_reservation(self, invoice_id, **kwargs):
                     return 'waiting for ipg'
 
                 #  ((1, 'pending'), (2, 'payed'), (3, 'canceled'), (4, 'rejected'), (5, 'sent'), (6, 'ready'))
+                task.one_off = True
+                task.save()
                 successful_status = [2, 5]  # payed, posted
                 if invoice.status not in successful_status:
                     invoice.status = 3  # canceled
