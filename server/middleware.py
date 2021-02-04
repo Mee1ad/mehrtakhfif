@@ -103,7 +103,10 @@ class AuthMiddleware:
                 scope.user = {"email": user.email, 'first_name': user.first_name, 'last_name': user.last_name}
 
         response = self.get_response(request)
-        response = set_custom_signed_cookie(response, 'is_login', request.user.is_authenticated)
+        try:
+            response = set_custom_signed_cookie(response, 'is_login', request.user.is_authenticated)
+        except AttributeError:
+            print('attribute error for set is login cookie in', path, route)
         # is_login = get_custom_signed_cookie(request, 'is_login', error=None)
         # if is_login is None:
         #     try:
