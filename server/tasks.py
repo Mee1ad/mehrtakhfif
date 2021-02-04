@@ -22,8 +22,10 @@ from push_notifications.models import GCMDevice
 
 from mehr_takhfif.settings import ARVAN_API_KEY
 from mehr_takhfif.settings import INVOICE_ROOT, BASE_DIR
-from server.models import Invoice, InvoiceStorage, User
+from server.models import Invoice, InvoiceStorage, User, PaymentHistory
 from server.utils import sync_storage, send_sms, send_email, random_data, add_days, add_minutes
+import re
+from django_celery_beat.models import IntervalSchedule
 
 logger = logging.getLogger(__name__)
 LOCK_EXPIRE = 60 * 10  # Lock expires in 10 minutes
@@ -54,8 +56,20 @@ def cancel_reservation(self, invoice_id, **kwargs):
     with task_lock(lock_id, self.app.oid) as acquired:
         if acquired:
             try:
-                invoice = Invoice.objects.filter(pk=invoice_id).prefetch_related('invoice_storages',
-                                                                                 'histories').first()
+                invoice = PaymentHistory.objects.get(invoice_id=invoice_id).order_by('-id')\
+                    .prefetch_related('invoice_storages', 'histories').first().invoice
+                url = f"https://bpm.shaparak.ir/pgwchannel/startpay.mellat?RefId={invoice.reference_id}"
+                r = requests.get(url)
+                if re.search(r'<form.*>', r.text):
+                    print("ok, i`ll try it later")
+                    task = invoice.sync_task
+                    task.description = f"{task.description} - delay for 3 minutes"
+                    schedule, created = IntervalSchedule.objects.get_or_create(every=3,
+                                                                               period=IntervalSchedule.MINUTES)
+                    task.interval = schedule
+                    task.one_off = False
+                    task.save()
+                    return 'waiting for ipg'
 
                 #  ((1, 'pending'), (2, 'payed'), (3, 'canceled'), (4, 'rejected'), (5, 'sent'), (6, 'ready'))
                 successful_status = [2, 5]  # payed, posted

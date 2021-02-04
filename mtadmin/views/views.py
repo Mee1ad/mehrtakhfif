@@ -4,6 +4,7 @@ from time import sleep
 from django.core.mail import send_mail
 from django.http import HttpResponseBadRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import render_to_response, render
+from django.utils.crypto import get_random_string
 from django_telegram_login.authentication import verify_telegram_authentication
 from django_telegram_login.errors import TelegramDataIsOutdatedError, NotTelegramDataError
 
@@ -12,7 +13,6 @@ from mtadmin.serializer import *
 from mtadmin.utils import *
 from server.documents import *
 from server.utils import *
-from django.utils.crypto import get_random_string
 
 
 class Token(AdminView):
@@ -77,6 +77,7 @@ class GenerateCode(AdminView):
         items = [DiscountCode(code=code, storage=storage, created_by=user, updated_by=user) for code in codes]
         DiscountCode.objects.bulk_create(items)
         return JsonResponse({})
+
 
 class MailView(AdminView):
     def post(self, request):

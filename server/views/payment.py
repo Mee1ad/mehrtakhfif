@@ -176,6 +176,7 @@ class PaymentRequest(LoginRequired):
         parsed = urlparse.urlparse(url)
         ref_id = parse_qs(parsed.query)['RefId'][0]
         if timezone.now() > add_minutes(-15, invoice.expire):
+            print('invoice task extended')
             task = invoice.sync_task
             task.enabled = False
             task.save()
@@ -185,6 +186,7 @@ class PaymentRequest(LoginRequired):
             task.enabled = True
             task.save()
             invoice.expire = add_minutes(16)
+            invoice.reference_id = ref_id
             invoice.save()
         PaymentHistory.objects.create(reference_id=ref_id, amount=invoice.amount, invoice=invoice,
                                       description="پرداخت توسط درگاه پرداخت")
@@ -331,16 +333,15 @@ class CallBack(View):
         for param in data:
             val = param.split('=')
             data_dict[val[0]] = val[1]
-        sale_order_id = data_dict['SaleOrderId']
-        invoice_id = sale_order_id[2:]
-        sale_ref_id = data_dict.get('SaleReferenceId', None)
-        invoice = Invoice.objects.get(pk=invoice_id, reference_id=data_dict['RefId'])
-        invoice.sale_order_id = sale_order_id
+        invoice_id = data_dict['SaleOrderId'][2:]  # data_dict['SaleOrderId'][:2] = retried times
+        invoice = PaymentHistory.objects.get(invoice_id=invoice_id, reference_id=data_dict['RefId']).invoice
+        invoice.sale_reference_id = data_dict.get('SaleReferenceId', None)
+        invoice.sale_order_id = data_dict['SaleOrderId']
         invoice.ipg_res_code = data_dict['ResCode']
-        if not sale_ref_id or not self.verify(sale_order_id, sale_ref_id):
+        if not invoice.sale_reference_id or not self.verify(invoice.sale_order_id, invoice.sale_reference_id):
             # self.finish_invoice_jobs(invoice, cancel=True)
             # invoice.status = 1
-            # invoice.save()
+            invoice.save()
             # EditInvoice.restore_products(invoice)
             return HttpResponseRedirect(f'{CLIENT_HOST}/basket')
         # todo https://memoryleaks.ir/unlimited-charge-of-mytehran-account/
