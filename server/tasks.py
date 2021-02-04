@@ -56,8 +56,7 @@ def cancel_reservation(self, invoice_id, **kwargs):
     with task_lock(lock_id, self.app.oid) as acquired:
         if acquired:
             try:
-                invoice = PaymentHistory.objects.filter(invoice_id=invoice_id).order_by('-id')\
-                    .prefetch_related('invoice_storages', 'histories').first().invoice
+                invoice = PaymentHistory.objects.filter(invoice_id=invoice_id).order_by('-id').first().invoice
                 url = f"https://bpm.shaparak.ir/pgwchannel/startpay.mellat?RefId={invoice.reference_id}"
                 r = requests.get(url)
                 task = invoice.sync_task
