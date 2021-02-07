@@ -20,7 +20,7 @@ def success_response(message):
 
 
 responses = {'201': success_response('با موفقیت ایجاد شد'), '202': success_response('با موفقیت به روز رسانی شد'),
-             'priority': success_response('مرتب کردمش برات :)')}
+             'priority': success_response('مرتب شد :)')}
 
 
 class TableView(LoginRequiredMixin, PermissionRequiredMixin, View):

@@ -135,6 +135,7 @@ def filter_params(params, lang):
     sa = params.get('sa', None)  # search advanced
     orderby = params.get('o', '-created_at')
     category = params.get('cat', None)
+    tag = params.get('tag', None)
     available = params.get('available', None)
     brand = params.getlist('brand[]', None)
     min_price = params.get('min_price', None)
@@ -150,6 +151,8 @@ def filter_params(params, lang):
             pass
     if category:
         filters['filter']['categories__permalink'] = category
+    if tag:
+        filters['filter']['tags__permalink'] = tag
     if orderby != '-created_at':
         valid_key = valid_orders[orderby]
         filters['order'] = valid_key

@@ -87,7 +87,8 @@ class Filter(View):
         products = Product.objects.\
             annotate(**params['annotate']).\
             filter(query, Q(**disable), ~Q(type=5)).\
-            prefetch_related('default_storage__vip_prices__vip_type', 'storages').select_related('thumbnail', 'default_storage').\
+            prefetch_related('default_storage__vip_prices__vip_type', 'storages')\
+            .select_related('thumbnail', 'default_storage').\
             order_by(params['order'], '-id').distinct('id', params['order'].replace('-', ''))
         # params['order']).order_by('-id').distinct('id')
         pg = get_pagination(request, products, MinProductSchema)
@@ -120,14 +121,6 @@ class BestSeller(View):
         invoice_ids = Invoice.objects.filter(created_at__gte=last_week, status='payed').values('id')
         best_seller = get_best_seller(request, box, invoice_ids)
         return JsonResponse({'best_seller': best_seller})
-
-
-class TagView(View):
-    def get(self, request, permalink):
-        tag = Tag.objects.filter(permalink=permalink).first()
-        products = tag.products.all()
-        pg = get_pagination(request, products, MinProductSchema)
-        return JsonResponse(pg)
 
 
 class CategoryView(View):

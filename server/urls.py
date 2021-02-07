@@ -45,7 +45,6 @@ box = [
     # path('special_product/<str:permalink>', GetSpecialProduct.as_view(), name='special_product'),
     path('filter_detail', try_except(FilterDetail.as_view()), name='filter_detail'),
     # path('features', try_except(GetFeature.as_view()), name='features'),
-    path('tag/<str:permalink>', try_except(TagView.as_view()), name='tag'),
     path('category/<str:permalink>', try_except(CategoryView.as_view()), name='category'),
 ]
 

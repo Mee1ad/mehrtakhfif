@@ -233,6 +233,9 @@ GET {{host}}/filter?s=20&p=1&b=%D9%88%D8%B1%D8%B2%D8%B4&brand[]=7&min_price=1426
     });
 %}
 
+### Tag
+GET {{host}}/filter?tag=سفال
+
 ### filter detail
 GET {{host}}/filter_detail
 
@@ -340,7 +343,6 @@ GET {{host}}/filter_detail?s=20&p=1&b=%D9%88%D8%B1%D8%B2%D8%B4&brand[]=7&min_pri
         client.assert(response.status === 200, "Response status is not 200");
     });
 %}
-
 ### features
 
 GET {{host}}/features/کفش-آدیداس-تستی
