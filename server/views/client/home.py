@@ -202,7 +202,7 @@ class ElasticSearch(View):
         c = c.query("multi_match", query=q, fields=['name_fa', 'permalink']).query('match', disable=False)
         t = t.query("match", name_fa=q)
         products, categories, tags = [], [], []
-        removed_products, removed_categories, removed_tags = [], [], []
+        removed_products, removed_tags = [], []
         for hit in p[:3]:
             product = {'name': hit.name_fa, 'permalink': hit.permalink, 'thumbnail': hit.thumbnail}
             if q not in hit.name_fa:
@@ -211,10 +211,8 @@ class ElasticSearch(View):
             products.append(product)
         for hit in c[:3]:
             category = {'name': hit.name_fa, 'permalink': hit.permalink, 'media': hit.media, 'parent': hit.parent}
-            if hit.name_fa == q or not re.search(f".+{q}.+", hit.name_fa):
+            if q in hit.name_fa and not re.search(f".+{q}.+", hit.name_fa):
                 categories.append(category)
-                continue
-            removed_categories.append(category)
         for hit in t[:3]:
             tag = {'name': hit.name_fa, 'permalink': hit.permalink}
             if q not in hit.name_fa:
@@ -225,4 +223,5 @@ class ElasticSearch(View):
             products = removed_products
         if not tags:
             tags = removed_tags
-        return JsonResponse({'products': products, 'categories': categories, 'tags': tags})
+        categories = sorted(categories, key=lambda i: 1 if i['parent'] else 0)
+        return JsonResponse({'categories': categories, 'tags': tags, 'products': products})
