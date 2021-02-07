@@ -724,7 +724,7 @@ class Category(Base):
     select = ['parent', 'box', 'media'] + Base.select
 
     def clean(self):
-        if not self.products.count() < 10:
+        if self.products.count() > 10 is False:
             self.make_item_disable(self)
             raise ActivationError('حداقل تعداد محصولات باید 10 عدد باشد')
         if self.parent is None and self.permalink is None:
