@@ -859,4 +859,16 @@ Content-Type: application/json
 
 ###
 
+PUT {{admin_host}}/ordering
+Content-Type: application/json
+
+{
+  "model": "category",
+  "ids": [
+    220,
+    216,
+    213
+  ]
+}
+###
 GET https://tinama.ir

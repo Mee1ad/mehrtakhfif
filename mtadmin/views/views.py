@@ -317,10 +317,10 @@ class SetOrder(View):
     def put(self, request):
         # check_user_permission(request.user, 'change_feature')
         data = get_data(request, require_box=False)
-        print(data)
+        data = to_obj(data)
         model = {'product_feature': ProductFeature, 'feature_value': FeatureValue,
-                 'feature_group_feature': FeatureGroupFeature}[data['model']]
-        ids = data['ids']
+                 'feature_group_feature': FeatureGroupFeature, 'category': Category}[data.model]
+        ids = data.ids
         objects = model.objects.filter(pk__in=ids)
         for obj in objects:
             obj.priority = ids.index(obj.pk)

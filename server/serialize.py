@@ -400,7 +400,7 @@ class CategorySchema(BaseSchema):
 
 class BoxCategoriesSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'permalink', 'disable')
+        additional = ('id', 'permalink', 'disable', 'priority')
 
     name = fields.Method('resolve_name_type')
     child = fields.Method('get_child')
