@@ -23,7 +23,7 @@ from push_notifications.models import GCMDevice
 from mehr_takhfif.settings import ARVAN_API_KEY
 from mehr_takhfif.settings import INVOICE_ROOT, BASE_DIR
 from server.models import Invoice, InvoiceStorage, User, PaymentHistory
-from server.utils import sync_storage, send_sms, send_email, random_data, add_days, add_minutes
+from server.utils import sync_storage, send_sms, send_email, send_pm, random_data, add_days, add_minutes
 import re
 from django_celery_beat.models import IntervalSchedule
 
@@ -119,7 +119,11 @@ def sale_report(self, invoice_id, **kwargs):
                 all_products = []
                 for owner, products in owners.items():
                     all_products += products
-                    send_email('گزارش فروش', to=owner.email, message='\n'.join(products))
+                    title = 'گزارش فروش'
+                    if owner.email_alert:
+                        send_email(title, to=owner.email, message='\n'.join(products))
+                    if owner.tg_alert and owner.tg_id:
+                        send_pm(owner.tg_id, message='گزارش فروش\n\n' + '\n'.join(products))
                     owner.gcmdevice_set.all().send_message("برای مشاهده جزئیات فروش وارد پنل شوید",
                                                            extra={'title': "گزارش فروش"})
                 [send_email('گزارش فروش', to=mail, message='\n'.join(all_products)) for mail in email_list]

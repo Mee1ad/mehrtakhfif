@@ -7,7 +7,6 @@ from operator import add, sub
 
 import jdatetime
 import magic
-import requests
 from MyQR import myqr
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.postgres.fields.jsonb import KeyTextTransform
@@ -357,9 +356,13 @@ def send_sms(to, template, token, token2=None):
 
 
 def send_pm(tg_id, message):
-    url = "mtmessenger.herokuapp.com/send_message"
+    url = "https://mtmessenger.herokuapp.com/send_message"
     data = {"tg_id": tg_id, "message": message}
-    r = requests.post(url, data=data)
+    r = requests.post(url, json=data)
+    retry = 0
+    while r.status_code != 200 and retry < 3:
+        r = requests.post(url, json=data)
+        retry += 1
 
 
 def send_email(subject, to, from_email='notification@mehrtakhfif.com', message=None, html_content=None, attach=None):
