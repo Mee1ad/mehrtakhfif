@@ -7,6 +7,7 @@ from operator import add, sub
 
 import jdatetime
 import magic
+import requests
 from MyQR import myqr
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.postgres.fields.jsonb import KeyTextTransform
@@ -240,9 +241,7 @@ def safe_get(*args):
     except Exception:
         pass
 
-import pysnooper
 
-@pysnooper.snoop()
 def get_share(storage=None, invoice=None):
     """
     :param storage:
@@ -300,8 +299,9 @@ def move(obj, folder):
         obj.save()
 
 
-def to_obj(body):
-    dic = json.loads(body)
+def to_obj(dic):
+    if type(dic) is not dict:
+        dic = json.loads(dic)
     obj = type('test', (object,), {})()
     obj.__dict__ = dic
     return obj
@@ -354,6 +354,12 @@ def send_sms(to, template, token, token2=None):
         print(e)
     except HTTPException as e:
         print(e)
+
+
+def send_pm(tg_id, message):
+    url = "mtmessenger.herokuapp.com/send_message"
+    data = {"tg_id": tg_id, "message": message}
+    r = requests.post(url, data=data)
 
 
 def send_email(subject, to, from_email='notification@mehrtakhfif.com', message=None, html_content=None, attach=None):
@@ -463,7 +469,7 @@ def get_basket(request, basket_id=None, basket=None, basket_products=None, retur
                require_profit=False, use_session=False, with_changes=False):
     user = request.user
     lang = request.lang
-    if (not user.is_authenticated or (DEBUG is True and (request.GET.get('use_session') == 'True' or use_session))) and\
+    if (not user.is_authenticated or (DEBUG is True and (request.GET.get('use_session') == 'True' or use_session))) and \
             request.session.get('basket'):
         basket = request.session.get('basket', [])
         basket_products = [BasketProduct(**basket_product, id=index) for index, basket_product in enumerate(basket)]
