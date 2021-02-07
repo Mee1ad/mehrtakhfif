@@ -727,6 +727,9 @@ class Category(Base):
         if self.products.count() > 10 is False:
             self.make_item_disable(self)
             raise ActivationError('حداقل تعداد محصولات باید 10 عدد باشد')
+        if getattr(getattr(self, 'parent', None), 'disable', None) is True:
+            self.make_item_disable(self)
+            raise ActivationError('لطفا ابتدا دسته بندی والد را فعال نمایید')
         if self.parent is None and self.permalink is None:
             self.make_item_disable(self)
             raise ActivationError('این دسته بندی که ساختی بدرد نمیخوره')
