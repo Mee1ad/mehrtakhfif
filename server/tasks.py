@@ -2,12 +2,12 @@ from __future__ import absolute_import, unicode_literals
 
 import logging
 import random
+import re
 import time
 from contextlib import contextmanager
 from hashlib import md5
 from operator import add
 from time import sleep
-from urllib.error import URLError
 
 import pdfkit
 import requests
@@ -16,16 +16,14 @@ from celery.signals import task_postrun
 from django.core.cache import cache
 from django.template.loader import render_to_string
 from django.utils import timezone
+from django_celery_beat.models import IntervalSchedule
 from django_celery_beat.models import PeriodicTask
 from django_celery_results.models import TaskResult
-from push_notifications.models import GCMDevice
 
 from mehr_takhfif.settings import ARVAN_API_KEY
 from mehr_takhfif.settings import INVOICE_ROOT, BASE_DIR
 from server.models import Invoice, InvoiceStorage, User, PaymentHistory
-from server.utils import sync_storage, send_sms, send_email, send_pm, random_data, add_days, add_minutes
-import re
-from django_celery_beat.models import IntervalSchedule
+from server.utils import sync_storage, send_sms, send_email, send_pm, random_data, add_days
 
 logger = logging.getLogger(__name__)
 LOCK_EXPIRE = 60 * 10  # Lock expires in 10 minutes
@@ -86,7 +84,7 @@ def cancel_reservation(self, invoice_id, **kwargs):
                     # sync_storage(invoice.basket_id, add)
                     sync_storage(invoice, add)
                     # try:
-                        # invoice.basket.sync = 2  # canceled
+                    # invoice.basket.sync = 2  # canceled
                     # except AttributeError:
                     #     pass
                     return 'invoice canceled, storage synced successfully'
@@ -97,32 +95,52 @@ def cancel_reservation(self, invoice_id, **kwargs):
     return "This task is duplicate"
 
 
+def support_sale_report(data):
+    support_group_id = '-550039210'
+    rows = []
+    for k, v in data.items():
+        item = f'{k}: {v}'
+        if k == 'محصولات':
+            v = '\n' + "\n".join(v) if type(v) is list else v
+            item = f'\n| {k} |{v}'
+        rows.append(item)
+    data = '\n'.join(rows)
+    send_pm(support_group_id, message=data)
+
+
 @shared_task(bind=True, max_retries=3)
 def sale_report(self, invoice_id, **kwargs):
     hashcode = md5(f"sale_report{invoice_id}".encode()).hexdigest()
     lock_id = '{0}-lock-{1}'.format(self.name, hashcode)
     email_list = ['accounting@mehrtakhfif.com', 'post@mehrtakhfif.com', 'support@mehrtakhfif.com']
+    # email_list = []
     with task_lock(lock_id, self.app.oid) as acquired:
         if acquired:
             try:
                 invoice_storages = InvoiceStorage.objects.filter(invoice_id=invoice_id). \
-                    select_related('storage__product__box__owner').\
+                    select_related('storage__product__box__owner', 'invoice'). \
                     prefetch_related('storage__product__box__owner__gcmdevice_set')
                 owners = {}
+                invoice = invoice_storages.first().invoice
+                address = invoice.address
+                invoice = {'نام': address['name'], 'شماره تماس': address['phone'], 'شهر': address['city']['name'],
+                           'آدرس': address['address'], 'محصولات': [], '\nقیمت': invoice.amount}
                 for invoice_storage in invoice_storages:
                     owner = invoice_storage.storage.product.box.owner
                     product_data = f"{invoice_storage.count} عدد {invoice_storage.storage.title['fa']}"
+                    invoice['محصولات'].append(product_data)
                     if owner in owners:
                         owners[owner].append(product_data)
                         continue
                     owners[owner] = [product_data]
+                support_sale_report(invoice)
                 all_products = []
                 for owner, products in owners.items():
                     all_products += products
                     title = 'گزارش فروش'
                     if owner.email_alert:
                         send_email(title, to=owner.email, message='\n'.join(products))
-                    if owner.tg_alert and owner.tg_id:
+                    if owner.pm_alert and owner.tg_id:
                         send_pm(owner.tg_id, message='گزارش فروش\n\n' + '\n'.join(products))
                     owner.gcmdevice_set.all().send_message("برای مشاهده جزئیات فروش وارد پنل شوید",
                                                            extra={'title': "گزارش فروش"})
@@ -296,5 +314,4 @@ def server_backup():
 
 @shared_task(bind=True)
 def test_task(self, *args, **kwargs):
-
     return f"{self}{args}{kwargs}"
