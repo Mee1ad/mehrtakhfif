@@ -175,7 +175,7 @@ class DiscountCodeView(View):
         try:
             discount_code = DiscountCode.objects.exclude(basket__invoice__expire__gte=timezone.now()) \
                 .get(code=code, invoice_storage__isnull=True, basket__isnull=True)
-            discount_code.basket = request.basket
+            discount_code.basket = Basket.objects.order_by('-id').first()
             discount_code.save()
             if discount_code.type == 3:  # post
                 return JsonResponse({'message': 'هزینه پست شما رایگان شد', 'variant': 'success'})
