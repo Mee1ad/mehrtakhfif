@@ -1,8 +1,9 @@
-from django.db.models import Max, Min, Q, Case, Exists
+from django.db.models import Max, Min
+from django.db.models import Prefetch
 from django.http import JsonResponse
+
+from server.serialize import BoxSchema, FeatureSchema, BrandSchema, SpecialProductSchema
 from server.utils import *
-from server.serialize import BoxSchema, FeatureSchema, MinProductSchema, BrandSchema
-import pysnooper
 
 
 class GetSpecialOffer(View):
@@ -18,7 +19,7 @@ class GetSpecialProduct(View):
         page = int(request.GET.get('e', default_page))
         special_products = SpecialProduct.objects.filter(box__permalink=permalink) \
                                .select_related(*SpecialProduct.min_select)[(page - 1) * step:step * page]
-        special_products = MinSpecialProductSchema(**request.schema_params).dump(special_products, many=True)
+        special_products = SpecialProductSchema(**request.schema_params).dump(special_products, many=True)
         return JsonResponse({'special_product': special_products})
 
 
@@ -84,11 +85,13 @@ class Filter(View):
         disable = get_product_filter_params(request.user.is_staff)
         if params['related']:
             query = Q(verify=True, **params['filter']) | Q(verify=True, **params['related'])
-        products = Product.objects.\
-            annotate(**params['annotate']).\
-            filter(query, Q(**disable), ~Q(type=5)).\
-            prefetch_related('default_storage__vip_prices__vip_type', 'storages')\
-            .select_related('thumbnail', 'default_storage').\
+        products = Product.objects. \
+            annotate(**params['annotate']). \
+            filter(query, Q(**disable), ~Q(type=5)). \
+            prefetch_related('default_storage__vip_prices__vip_type', 'storages',
+                             Prefetch('product_features', queryset=ProductFeature.objects.filter(feature_id=35)
+                                      .prefetch_related('product_feature_storages__storage__media'), to_attr='colors')) \
+            .select_related('thumbnail', 'default_storage'). \
             order_by(params['order'], '-id').distinct('id', params['order'].replace('-', ''))
         # params['order']).order_by('-id').distinct('id')
         pg = get_pagination(request, products, MinProductSchema)

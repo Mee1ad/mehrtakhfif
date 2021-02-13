@@ -726,7 +726,7 @@ class Category(Base):
     select = ['parent', 'box', 'media'] + Base.select
 
     def clean(self):
-        if self.products.count() > 10 is False:
+        if self.products.count() <= 10:
             self.make_item_disable(self)
             raise ActivationError('حداقل تعداد محصولات باید 10 عدد باشد')
         if getattr(getattr(self, 'parent', None), 'disable', None) is True:
@@ -1131,7 +1131,7 @@ class Product(Base):
     categories = models.ManyToManyField(Category, related_name="products")
     box = models.ForeignKey(Box, on_delete=PROTECT)
     brand = models.ForeignKey(Brand, on_delete=SET_NULL, null=True, blank=True, related_name="products")
-    thumbnail = models.ForeignKey(Media, on_delete=PROTECT, related_name='product_thumbnail', null=True, blank=True)
+    thumbnail = models.ForeignKey(Media, on_delete=PROTECT, related_name='products', null=True, blank=True)
     cities = models.ManyToManyField(City)
     states = models.ManyToManyField(State)
     default_storage = models.OneToOneField(null=True, blank=True, to="Storage", on_delete=SET_NULL,

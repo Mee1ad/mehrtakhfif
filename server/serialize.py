@@ -305,6 +305,7 @@ class BaseSchema(Schema):
         except Exception as e:
             return None
 
+
 class MinUserSchema(BaseSchema):
     class Meta:
         additional = ('first_name', 'last_name', 'username', 'meli_code')
@@ -504,6 +505,20 @@ class MinProductSchema(BaseSchema):
     thumbnail = fields.Method("get_thumbnail")
     default_storage = fields.Method("get_min_storage")
     available = fields.Method('is_available')
+    colors = fields.Method('get_colors')
+
+    def get_colors(self, obj):
+        colors = []
+        distinct = []
+        for item in getattr(obj, 'colors', []):
+            if item.feature_value_id not in distinct:
+                try:
+                    image = HOST + item.product_feature_storages.first().storage.media.image.url
+                except AttributeError:
+                    image = ''
+                colors.append({'color': item.feature_value_id, 'image': image})
+                distinct.append(item.feature_value_id)
+        return colors
 
     def is_available(self, obj):
         storages = obj.storages.all()
@@ -606,7 +621,7 @@ class MinStorageSchema(BaseSchema):
             prices = obj.vip_prices.all()
             prices = sorted(prices, key=lambda o: o.discount_price)
             for price in prices:
-                if price.available_count_for_sale > 0 and price.storage_id == obj.pk and price.vip_type_id in user_groups:
+                if price.available_count_for_sale > 0 and price.storage_id == obj.pk and price.vip_type in user_groups:
                     min_price = price.discount_price
                     break
         return min_price
