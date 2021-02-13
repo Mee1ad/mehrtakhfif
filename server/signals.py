@@ -22,8 +22,14 @@ def inventory_alert(sender, instance, **kwargs):
             subject = "هشدار اتمام موجودی محصول ویژه"
             message = f"موجودی {instance.title['fa']} به اتمام رسیده است"
             task_name = f'{instance.id} inventory_alert'
-            kwargs = {"to": instance.product.box.owner.email, "subject": subject, 'message': message}
-            add_one_off_job(name=task_name, kwargs=kwargs, interval=0, task='server.tasks.email_task')
+            owner = instance.product.box.owner
+            if owner.email_alert:
+                kwargs = {"to": owner.email, "subject": subject, 'message': message}
+                add_one_off_job(name=task_name, kwargs=kwargs, interval=0, task='server.tasks.email_task')
+            if owner.pm_alert:
+                kwargs = {"tg_id": owner.email, 'message': subject + '\n\n' + message}
+                add_one_off_job(name=task_name, kwargs=kwargs, interval=0, task='server.tasks.pm_task')
+
 
         elif instance.available_count_for_sale <= instance.min_count_alert:
             subject = "هشدار اتمام موجودی انبار"

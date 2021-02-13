@@ -277,6 +277,21 @@ def email_task(self, to, subject, message, **kwargs):
     return "This task is duplicate"
 
 
+@shared_task(bind=True, max_retries=3)
+def pm_task(self, tg_id, message, **kwargs):
+    hashcode = md5(f"{tg_id}{message}{timezone.now().day}".encode()).hexdigest()
+    lock_id = '{0}-lock-{1}'.format(self.name, hashcode)
+    with task_lock(lock_id, self.app.oid) as acquired:
+        if acquired:
+            try:
+                send_pm(tg_id, message)
+                return f"message sent"
+            except Exception as e:
+                logger.exception(e)
+                self.retry(countdown=3 ** self.request.retries)
+    return "This task is duplicate"
+
+
 def get_snapshots(self, name=None):
     images = requests.get(self.url + f'/regions/{self.region}/images?type=server', headers=self.headers).json()
     if name:
