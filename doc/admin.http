@@ -186,7 +186,7 @@ PUT {{admin_host}}/product
 Content-Type: application/json
 
 {
-  "id": 1237,
+  "id": 61,
   "box_id": 3,
   "type": "product",
   "brand_id": 26,
@@ -196,23 +196,23 @@ Content-Type: application/json
   ],
   "features": [
     {
-      "feature_id": 75,
-      "feature_value_id": 147,
+      "feature_id": 35,
+      "feature_value_id": 187,
       "settings": {}
     },
     {
-      "feature_id": 76,
-      "feature_value_id": 148,
+      "feature_id": 35,
+      "feature_value_id": 10,
       "settings": {}
     },
     {
-      "feature_id": 77,
-      "feature_value_id": 149,
+      "feature_id": 35,
+      "feature_value_id": 11,
       "settings": {}
     },
     {
-      "feature_id": 67,
-      "feature_value_id": 150,
+      "feature_id": 35,
+      "feature_value_id": 12,
       "settings": {}
     }
   ],

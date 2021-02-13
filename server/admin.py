@@ -183,6 +183,12 @@ class BasketAdmin(Base):
     # get_user.short_description = 'user'
 
 
+class BrandAdmin(Base):
+    list_display = ('id', 'name_fa', 'permalink') + SafeDeleteAdmin.list_display
+    list_per_page = 10
+    search_fields = ['name']
+
+
 class CategoryAdmin(Base):
     list_display = ('parent', 'box', 'name_fa', 'deleted_by') + SafeDeleteAdmin.list_display
     list_filter = ('name',) + SafeDeleteAdmin.list_filter
@@ -208,7 +214,7 @@ class DiscountCodeAdmin(Base):
 
 
 class FeatureAdmin(Base):
-    list_display = ('name_fa', 'type', 'layout_type', 'values') + SafeDeleteAdmin.list_display
+    list_display = ('id', 'name_fa', 'type', 'layout_type', 'values') + SafeDeleteAdmin.list_display
     list_filter = ('type', 'layout_type') + SafeDeleteAdmin.list_filter
     search_fields = ['name']
     list_per_page = 10
