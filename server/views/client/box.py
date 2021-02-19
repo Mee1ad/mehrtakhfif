@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from django.db.models import Max, Min
 from django.db.models import Prefetch
 from django.http import JsonResponse
@@ -18,7 +19,7 @@ class GetSpecialProduct(View):
         step = int(request.GET.get('s', default_step))
         page = int(request.GET.get('e', default_page))
         special_products = SpecialProduct.objects.filter(box__permalink=permalink) \
-                               .select_related(*SpecialProduct.min_select)[(page - 1) * step:step * page]
+                               .select_related(*SpecialProduct.select)[(page - 1) * step:step * page]
         special_products = SpecialProductSchema(**request.schema_params).dump(special_products, many=True)
         return JsonResponse({'special_product': special_products})
 
@@ -36,11 +37,11 @@ class FilterDetail(View):
         disable = {'disable': False} if not request.user.is_staff else {}
         cat_filter_by = {}
         if box_permalink:
-            filter_by['box'] = Box.objects.get(permalink=box_permalink)
+            filter_by['box'] = Box.objects.get(permalink=box_permalink, **disable)
             cat_filter_by['box'] = filter_by['box']
             res['box'] = BoxSchema(**request.schema_params).dump(filter_by['box'])
         if category_permalink:
-            category = Category.objects.get(permalink=category_permalink)
+            category = Category.objects.get(permalink=category_permalink, **disable)
             filter_by['categories'] = category
             cat_filter_by['box'] = category.box
             res['box'] = BoxSchema(**request.schema_params).dump(category.box)
@@ -49,8 +50,11 @@ class FilterDetail(View):
             rank = get_rank(q, request.lang)
             rank = {'rank': rank}
             order_by = ['-rank']
-        products = Product.objects.annotate(**rank).filter(**filter_by).order_by(*order_by). \
+        products = Product.objects.annotate(**rank).filter(**filter_by, **disable).order_by(*order_by). \
             select_related('brand', 'default_storage').only('brand', 'categories', 'default_storage')
+        if not products:
+            return JsonResponse({'max_price': 0, 'min_price': 0, 'brands': [],
+                                 'categories': [], 'breadcrumb': [], 'colors': []})
         if q:
             categories = Category.objects.filter(
                 pk__in=list(filter(None, set(products.values_list('categories', flat=True)))),
@@ -60,14 +64,16 @@ class FilterDetail(View):
         categories = get_categories(request.lang, categories=categories)
         brands = [product.brand for product in products.order_by('brand_id').distinct('brand_id') if product.brand]
         breadcrumb = self.get_breadcrumb(category_permalink)
+        colors = get_colors_hex(products)
         return JsonResponse({'max_price': prices['max'], 'min_price': prices['min'], **res,
                              'brands': BrandSchema(**request.schema_params).dump(brands, many=True),
-                             'categories': categories, 'breadcrumb': breadcrumb})
+                             'categories': categories, 'breadcrumb': breadcrumb, 'colors': colors})
 
     def get_breadcrumb(self, category_permalink, lang='fa'):
         breadcrumb = []
         if not category_permalink:
             return breadcrumb
+        category = None
         while True:
             if not breadcrumb:
                 category = Category.objects.get(permalink=category_permalink)
@@ -83,6 +89,10 @@ class Filter(View):
         params = filter_params(request.GET, request.lang)
         query = Q(verify=True, **params['filter'])
         disable = get_product_filter_params(request.user.is_staff)
+        colors = cache.get('colors', None)
+        if colors is None:
+            colors = get_colors_hex()
+            cache.set('colors', colors)
         if params['related']:
             query = Q(verify=True, **params['filter']) | Q(verify=True, **params['related'])
         products = Product.objects. \
@@ -94,7 +104,7 @@ class Filter(View):
             .select_related('thumbnail', 'default_storage'). \
             order_by(params['order'], '-id').distinct('id', params['order'].replace('-', ''))
         # params['order']).order_by('-id').distinct('id')
-        pg = get_pagination(request, products, MinProductSchema)
+        pg = get_pagination(request, products, MinProductSchema, serializer_args={'colors': colors})
         return JsonResponse(pg)
 
 

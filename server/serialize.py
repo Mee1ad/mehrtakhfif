@@ -498,6 +498,12 @@ class BrandSchema(BaseSchema):
 
 
 class MinProductSchema(BaseSchema):
+    def __init__(self, colors=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if colors is None:
+            colors = {}
+        self.colors = colors
+
     class Meta:
         additional = ('id', 'permalink', 'rate', 'disable')
 
@@ -516,7 +522,9 @@ class MinProductSchema(BaseSchema):
                     image = HOST + item.product_feature_storages.first().storage.media.image.url
                 except AttributeError:
                     image = ''
-                colors.append({'color': item.feature_value_id, 'image': image})
+                color = next((color for color in self.colors if color['id'] == item.feature_value_id), {})\
+                    .get('settings__hex')
+                colors.append({'color': color, 'image': image})
                 distinct.append(item.feature_value_id)
         return colors
 

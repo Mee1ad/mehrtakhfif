@@ -396,7 +396,7 @@ def add_m2m(user, obj, m2m, custom_m2m, ordered_m2m, restrict_m2m, used_product_
 
 
 def update_object(request, model, box_key='box', return_item=False, serializer=None, data=None, require_box=True,
-                  extra_response={}, restrict_objects=(), restrict_m2m=(), used_product_feature_ids=()):
+                  extra_response={}, restrict_objects=(), restrict_m2m=(), used_product_feature_ids=(), notif=True):
     user = request.user
     if not user.has_perm(f'server.change_{model.__name__.lower()}'):
         raise PermissionDenied
@@ -424,12 +424,15 @@ def update_object(request, model, box_key='box', return_item=False, serializer=N
             items.first().full_clean()
     except AttributeError:
         pass
+    message = {}
+    if notif:
+        message = responses['202']
     if return_item:
         request.GET._mutable = True
         request.GET['id'] = items.first().pk
         items = serialized_objects(request, model, single_serializer=serializer, error_null_box=require_box)
-        return JsonResponse({"data": items, **extra_response, **responses['202']}, status=res_code['updated'])
-    return JsonResponse({**extra_response, **responses['202']}, status=res_code['updated'])
+        return JsonResponse({"data": items, **extra_response, **message}, status=res_code['updated'])
+    return JsonResponse({**extra_response, **message}, status=res_code['updated'])
 
 
 def delete_base(request, model, require_box=False):

@@ -220,8 +220,9 @@ class ProductView(TableView):
                 {', '.join(features)}"""
                 extra_response = {'message': message, 'variant': 'warning'}
                 # data.pop('features')
+        notif = data.pop('notif', True)
         return update_object(request, Product, data=data, extra_response=extra_response, restrict_objects=features,
-                             restrict_m2m=['features'], used_product_feature_ids=used_product_feature_ids)
+                             restrict_m2m=['features'], used_product_feature_ids=used_product_feature_ids, notif=notif)
 
     def delete(self, request):
         return delete_base(request, Product)

@@ -21,8 +21,7 @@ from django.views import View
 from django_celery_beat.models import IntervalSchedule
 from kavenegar import *
 
-from mehr_takhfif.settings import CSRF_SALT, TOKEN_SALT, DEFAULT_COOKIE_DOMAIN
-from mehr_takhfif.settings import DEBUG, SMS_KEY
+from mehr_takhfif.settings import CSRF_SALT, TOKEN_SALT, DEFAULT_COOKIE_DOMAIN, DEBUG, SMS_KEY, color_feature_id
 from server.models import *
 from server.serialize import get_tax, BoxCategoriesSchema, BasketSchema, MinProductSchema, ProductFeatureSchema, \
     BasketProductSchema, UserSchema, InvoiceSchema
@@ -710,6 +709,15 @@ def add_to_basket(basket, products):
     basket.save()
     basket.discount_code.update(basket=None)
     return basket.count
+
+
+def get_colors_hex(products=None, count=5):
+    if products:
+        return list(ProductFeature.objects.filter(feature_id=35, product__in=products)
+                    .order_by('feature_value_id').distinct('feature_value_id')[:count]
+                    .values_list('feature_value_id', 'feature_value__settings__hex', 'feature_value__value__fa'))
+
+    return list(FeatureValue.objects.filter(feature_id=color_feature_id).values('id', 'settings__hex', 'value__fa'))
 
 
 # Security

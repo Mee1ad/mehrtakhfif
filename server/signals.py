@@ -1,8 +1,10 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from server.models import Invoice, Storage
-from server.utils import add_one_off_job
+from server.models import Invoice, Storage, FeatureValue
+from server.utils import add_one_off_job, get_colors_hex
+from django.core.cache import cache
+from mehr_takhfif.settings import color_feature_id
 
 
 @receiver(post_save, sender=Invoice, dispatch_uid="invoice_job_handler")
@@ -37,3 +39,9 @@ def inventory_alert(sender, instance, **kwargs):
             task_name = f'{instance.id} inventory_alert'
             kwargs = {"to": instance.product.box.owner.email, "subject": subject, 'message': message}
             add_one_off_job(name=task_name, kwargs=kwargs, interval=0, task='server.tasks.email_task')
+
+
+@receiver(post_save, sender=FeatureValue, dispatch_uid="update_colors_in_cache")
+def update_colors_in_cache(sender, instance, **kwargs):
+    if instance.feature_id == color_feature_id:
+        cache.set('colors', get_colors_hex())
