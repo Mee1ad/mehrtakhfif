@@ -28,6 +28,8 @@ from server.serialize import get_tax, BoxCategoriesSchema, BasketSchema, MinProd
 # from barcode import generate
 # from barcode.base import Barcode
 from server.views.post import get_shipping_cost_temp
+from django.core.cache import cache
+from hashlib import sha3_512
 
 random_data = string.ascii_lowercase + string.ascii_uppercase + string.digits
 default_step = 18
@@ -354,7 +356,7 @@ def send_sms(to, template, token, token2=None):
         print(e)
 
 
-def send_pm(tg_id, message):
+def send_pm(tg_id, message):  #312145983  -550039210
     url = "https://mtmessenger.herokuapp.com/send_message"
     data = {"tg_id": tg_id, "message": message}
     r = requests.post(url, json=data)
@@ -711,13 +713,24 @@ def add_to_basket(basket, products):
     return basket.count
 
 
-def get_colors_hex(products=None, count=5):
+def get_colors_hex(products=None, with_price=False):
+    key = sha3_512(f"colors{products}".encode()).hexdigest()
+    colors = cache.get(key, None)
+    if colors:
+        return colors
     if products:
-        return list(ProductFeature.objects.filter(feature_id=35, product__in=products)
-                    .order_by('feature_value_id').distinct('feature_value_id')[:count]
-                    .values_list('feature_value_id', 'feature_value__settings__hex', 'feature_value__value__fa'))
-
-    return list(FeatureValue.objects.filter(feature_id=color_feature_id).values('id', 'settings__hex', 'value__fa'))
+        product_ids = products.values_list('id', flat=True)
+        product_features = list(ProductFeature.objects.filter(feature_id=35, product_id__in=product_ids).annotate(
+            color=KeyTextTransform('hex', 'feature_value__settings'),
+            name=KeyTextTransform('fa', 'feature_value__value')).order_by('feature_value_id').distinct(
+            'feature_value_id').values('feature_value_id', 'color', 'name'))
+        for item in product_features:
+            item['id'] = item.pop('feature_value_id')
+        cache.set(key, product_features, timeout=60 * 60 * 24 * 30)
+        return product_features
+    colors = list(FeatureValue.objects.filter(feature_id=color_feature_id).values('id', 'settings__hex', 'value__fa'))
+    cache.set(key, colors, timeout=60 * 60 * 24 * 30)
+    return colors
 
 
 # Security

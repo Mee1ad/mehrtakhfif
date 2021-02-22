@@ -11,6 +11,7 @@ from server.models import *
 from server.utils import res_code
 from django.core.exceptions import NON_FIELD_ERRORS
 import pysnooper
+from server.views.client.home import Init
 
 
 def try_except(func):
@@ -18,9 +19,9 @@ def try_except(func):
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except PermissionDenied:
+        except (PermissionDenied, PermissionError):
             traceback.print_exc()
-            return HttpResponseForbidden()
+            return Init.get(args[0])
         except json.decoder.JSONDecodeError:
             traceback.print_exc()
             return HttpResponseServerError()

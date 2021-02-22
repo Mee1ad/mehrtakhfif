@@ -10,7 +10,7 @@ from server.utils import *
 
 class Test(View):
     def get(self, request):
-        return JsonResponse({})
+        return JsonResponse({"message": "test 1"})
         # request.user = None
         # res = JsonResponse({})
         # login = request.GET.get('login')
@@ -31,6 +31,9 @@ class Test(View):
         res = JsonResponse({})
         return set_custom_signed_cookie(res, 'is_login', not is_login)
 
+    def post(self, request):
+        return JsonResponse({"message": "test 1"})
+
 
 class NotifTest(View):
     def get(self, request, pk):
@@ -47,13 +50,12 @@ class NotifTest(View):
 
 
 class Init(View):
-    def get(self, request):
+    @staticmethod
+    def get(request):
         res = JsonResponse({})
         if request.user.is_authenticated:
-            res = set_custom_signed_cookie(res, 'is_login', True)
-        else:
-            res = set_custom_signed_cookie(res, 'is_login', False)
-        return res
+            return set_custom_signed_cookie(res, 'is_login', True)
+        return set_custom_signed_cookie(res, 'is_login', False)
 
 
 class GetSpecialOffer(View):

@@ -1098,7 +1098,7 @@ class Product(Base):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.name['fa']}"
+        return getattr(self.name, 'fa', '')
 
     def get_name_en(self):
         return self.name['en']

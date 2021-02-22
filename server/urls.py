@@ -1,4 +1,6 @@
 from django.urls import path
+from django.views.decorators.cache import cache_page
+from django.views.decorators.vary import vary_on_headers
 
 from server.decorators import try_except
 from server.views.auth import *
@@ -6,11 +8,8 @@ from server.views.client.box import *
 from server.views.client.home import *
 from server.views.client.product import *
 from server.views.client.shopping import *
-from server.views.client.tourism import *
 from server.views.client.user import *
 from server.views.payment import *
-from django.views.decorators.cache import cache_page
-from django.http import HttpResponseRedirect, StreamingHttpResponse
 from .urls_test import urls
 
 app_name = 'server'
@@ -20,48 +19,58 @@ def get_favicon(request):
     return HttpResponseRedirect('https://mehrtakhfif.com/drawable/icons/mt/favicon.ico')
 
 
+def cache_proxy(func, key, minutes=5):
+    name = re.match(r'(?P<route>\w+/?\w+)/?(?P<var><.*)?', key).group('route')
+    if DEBUG:
+        return path(key, (try_except(func)), name=name)
+    return path(key, cache_page(60 * minutes, key_prefix=name)(try_except((vary_on_headers())(func))), name=name)
+
+
+#  10: day, 20: month
+lvl = {0: 1, 1: 5, 2: 10, 3: 15, 4: 30, 5: 60, 6: 120, 7: 180, 8: 360, 9: 720, 10: 1440, 20: 2592000}
+
 home = [
-    path('test', try_except(Test.as_view()), name='test'),
+    cache_proxy(Test.as_view(), 'test', lvl[9]),
     path('n/<int:pk>', try_except(NotifTest.as_view()), name='n'),
-    path('init', try_except(Init.as_view()), name='init'),
-    path('slider/<str:slider_type>', try_except(GetSlider.as_view()), name='slider'),
-    path('special_offer', try_except(GetSpecialOffer.as_view()), name='special_offer'),
-    path('box_special_product', try_except(BoxesGetSpecialProduct.as_view()), name='box_special_product'),
-    path('special_product', try_except(GetSpecialProduct.as_view()), name='special_product'),
-    path('best_seller', try_except(BestSeller.as_view()), name='best_seller'),
-    path('box_with_category', try_except(BoxWithCategory.as_view()), name='box_with_category'),
+    path('init', try_except(Init.as_view()), name='init'),  # no cache
+    cache_proxy(GetSlider.as_view(), 'slider/<str:slider_type>', lvl[6]),
+    cache_proxy(GetSpecialOffer.as_view(), 'special_offer', lvl[6]),
+    cache_proxy(BoxesGetSpecialProduct.as_view(), 'box_special_product', lvl[6]),
+    cache_proxy(GetSpecialProduct.as_view(), 'special_product', lvl[6]),
+    cache_proxy(BestSeller.as_view(), 'best_seller', lvl[6]),
+    path('box_with_category', try_except(BoxWithCategory.as_view()), name='box_with_category'),  # not for admin
     # path('menu', cache_page(60 * 5)(try_except(GetMenu.as_view())), name='menu'),
-    path('menu', (try_except(GetMenu.as_view())), name='menu'),
-    path('suggest', try_except(Suggest.as_view()), name='suggest'),
-    path('search', try_except(ElasticSearch.as_view()), name='search'),
-    path('ads/<str:ads_type>', try_except(GetAds.as_view()), name='ads'),
-    path('favicon', get_favicon, name='favicon'),
-    path('permalink_id/<str:permalink>', try_except(PermalinkToId.as_view()), name='permalink_id'),
+    cache_proxy(GetMenu.as_view(), 'menu', lvl[9]),
+    cache_proxy(Suggest.as_view(), 'suggest', lvl[9]),
+    cache_proxy(ElasticSearch.as_view(), 'search', lvl[9]),
+    cache_proxy(GetAds.as_view(), 'ads/<str:ads_type>', lvl[9]),
+    cache_proxy(get_favicon, 'favicon', lvl[10]),
+    cache_proxy(PermalinkToId.as_view(), 'permalink_id/<str:permalink>', lvl[10]),
 ]
 
 box = [
-    path('filter', try_except(Filter.as_view()), name='filter'),
+    cache_proxy(Filter.as_view(), 'filter', lvl[5]),
     # path('special_offer/<str:name>', GetSpecialOffer.as_view(), name='special_offer'),
     # path('special_product/<str:permalink>', GetSpecialProduct.as_view(), name='special_product'),
-    path('filter_detail', try_except(FilterDetail.as_view()), name='filter_detail'),
+    cache_proxy(FilterDetail.as_view(), 'filter_detail', lvl[5]),
     # path('features', try_except(GetFeature.as_view()), name='features'),
-    path('category/<str:permalink>', try_except(CategoryView.as_view()), name='category'),
+    cache_proxy(CategoryView.as_view(), 'category', lvl[5]),
 ]
 
 product = [
-    path('product/<str:permalink>', try_except(ProductView.as_view()), name='single'),
-    path('comment', try_except(CommentView.as_view()), name='comment'),
-    path('features/<str:permalink>', try_except(FeatureView.as_view()), name='features'),
-    path('related_products/<str:permalink>', try_except(RelatedProduct.as_view()), name='related_products'),
+    cache_proxy(ProductView.as_view(), 'single', lvl[10]),
+    cache_proxy(CommentView.as_view(), 'comment', lvl[1]),
+    path('features/<str:permalink>', try_except(FeatureView.as_view()), name='features'),  # no cache
+    cache_proxy(RelatedProduct.as_view(), 'related_products', lvl[7]),
 ]
 
 tourism = [
     path('booking', try_except(BookingView.as_view()), name='booking'),
-    path('booking/<int:invoice_id>', try_except(BookingView.as_view()), name='booking')
+    path('booking/<int:invoice_id>', try_except(BookingView.as_view()), name='booking')  # no cache
 ]
 
 shopping = [
-    path('basket', try_except(BasketView.as_view()), name='basket'),
+    path('basket', try_except(BasketView.as_view()), name='basket'),  # no cache
     path('edit_invoice/<str:invoice_id>', try_except(EditInvoice.as_view()), name='edit_invoice'),
     path('product', try_except(GetProducts.as_view()), name='product'),  # for anonymous users
     # path('show_codes', ShowCodes.as_view(), name='show_codes'),
@@ -69,7 +78,7 @@ shopping = [
 ]
 
 pay = [
-    path('ipg', try_except(IPG.as_view()), name='ipg'),
+    cache_proxy(IPG.as_view(), 'ipg', lvl[20]),
     path('payment/<int:basket_id>', try_except(PaymentRequest.as_view()), name='payment'),
     path('repay/<int:invoice_id>', try_except(RePayInvoice.as_view()), name='repay'),
     path('payment/callback', try_except(CallBack.as_view()), name='callback'),
@@ -78,8 +87,8 @@ pay = [
 
 user = [
     path('profile', try_except(Profile.as_view()), name='profile'),
-    path('states', try_except(GetState.as_view()), name='get_states'),
-    path('cities/<int:state_id>', try_except(GetCity.as_view()), name='get_cities'),
+    cache_proxy(GetState.as_view(), 'states', lvl[20]),
+    cache_proxy(GetCity.as_view(), 'cities/<int:state_id>', lvl[20]),
     path('orders', try_except(Orders.as_view()), name='orders'),
     path('orders/product', try_except(OrderProduct.as_view()), name='order/product'),
     path('trips', try_except(Trips.as_view()), name='trips'),
@@ -98,5 +107,4 @@ auth = [
     path('set_password', try_except(SetPassword.as_view()), name='set_password'),
 ]
 
-urlpatterns = [*home, *box, *user, *shopping, *product, *tourism, *auth, *pay,
-               *urls]
+urlpatterns = [*home, *box, *user, *shopping, *product, *tourism, *auth, *pay, *urls]

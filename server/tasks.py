@@ -96,7 +96,7 @@ def cancel_reservation(self, invoice_id, **kwargs):
 
 
 def support_sale_report(data):
-    support_group_id = '-550039210'
+    support_group_id = '-1001378697854'
     rows = []
     for k, v in data.items():
         item = f'{k}: {v}'

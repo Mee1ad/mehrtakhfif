@@ -522,9 +522,10 @@ class MinProductSchema(BaseSchema):
                     image = HOST + item.product_feature_storages.first().storage.media.image.url
                 except AttributeError:
                     image = ''
-                color = next((color for color in self.colors if color['id'] == item.feature_value_id), {})\
-                    .get('settings__hex')
-                colors.append({'color': color, 'image': image})
+                color = next((color for color in self.colors if color['id'] == item.feature_value_id), {})
+                color_hex = color.get('color')
+                color_name = color.get('name')
+                colors.append({'id': item.feature_value_id, 'color': color_hex, 'name': color_name, 'image': image})
                 distinct.append(item.feature_value_id)
         return colors
 

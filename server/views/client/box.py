@@ -51,7 +51,7 @@ class FilterDetail(View):
             rank = {'rank': rank}
             order_by = ['-rank']
         products = Product.objects.annotate(**rank).filter(**filter_by, **disable).order_by(*order_by). \
-            select_related('brand', 'default_storage').only('brand', 'categories', 'default_storage')
+            select_related('brand', 'default_storage').only('brand', 'categories', 'default_storage', 'name')
         if not products:
             return JsonResponse({'max_price': 0, 'min_price': 0, 'brands': [],
                                  'categories': [], 'breadcrumb': [], 'colors': []})
@@ -89,10 +89,6 @@ class Filter(View):
         params = filter_params(request.GET, request.lang)
         query = Q(verify=True, **params['filter'])
         disable = get_product_filter_params(request.user.is_staff)
-        colors = cache.get('colors', None)
-        if colors is None:
-            colors = get_colors_hex()
-            cache.set('colors', colors)
         if params['related']:
             query = Q(verify=True, **params['filter']) | Q(verify=True, **params['related'])
         products = Product.objects. \
@@ -103,6 +99,10 @@ class Filter(View):
                                       .prefetch_related('product_feature_storages__storage__media'), to_attr='colors')) \
             .select_related('thumbnail', 'default_storage'). \
             order_by(params['order'], '-id').distinct('id', params['order'].replace('-', ''))
+        colors = cache.get('colors', None)
+        if colors is None:
+            colors = get_colors_hex(products)
+            cache.set('colors', colors)
         # params['order']).order_by('-id').distinct('id')
         pg = get_pagination(request, products, MinProductSchema, serializer_args={'colors': colors})
         return JsonResponse(pg)
