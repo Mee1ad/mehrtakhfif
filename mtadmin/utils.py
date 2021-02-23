@@ -365,7 +365,9 @@ def add_custom_m2m(obj, field, item_list, user, m2m_type, restrict_m2m, used_pro
                 last_priority = 0
                 if many_to_many_model in append_on_priority:
                     last_priority = many_to_many_model.objects.filter(**extra_fields).count()
-                priority = {"priority": last_priority + item_list.index(item)}
+                priority = {}
+                if 'priority' not in item:
+                    priority = {"priority": last_priority + item_list.index(item)}
             if type(item) != dict:  # because simple ordered m2m is int
                 related = {getattr(obj, field).model.__name__.lower() + '_id': item}
                 item = {}

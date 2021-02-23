@@ -54,14 +54,14 @@ box = [
     # path('special_product/<str:permalink>', GetSpecialProduct.as_view(), name='special_product'),
     cache_proxy(FilterDetail.as_view(), 'filter_detail', lvl[5]),
     # path('features', try_except(GetFeature.as_view()), name='features'),
-    cache_proxy(CategoryView.as_view(), 'category', lvl[5]),
+    cache_proxy(CategoryView.as_view(), 'category/<str:permalink>', lvl[5]),
 ]
 
 product = [
-    cache_proxy(ProductView.as_view(), 'single', lvl[10]),
+    cache_proxy(ProductView.as_view(), 'product/<str:permalink>', lvl[10]),
     cache_proxy(CommentView.as_view(), 'comment', lvl[1]),
     path('features/<str:permalink>', try_except(FeatureView.as_view()), name='features'),  # no cache
-    cache_proxy(RelatedProduct.as_view(), 'related_products', lvl[7]),
+    cache_proxy(RelatedProduct.as_view(), 'related_products/<str:permalink>', lvl[7]),
 ]
 
 tourism = [
@@ -72,7 +72,7 @@ tourism = [
 shopping = [
     path('basket', try_except(BasketView.as_view()), name='basket'),  # no cache
     path('edit_invoice/<str:invoice_id>', try_except(EditInvoice.as_view()), name='edit_invoice'),
-    path('product', try_except(GetProducts.as_view()), name='product'),  # for anonymous users
+    cache_proxy(GetProducts.as_view(), 'product', lvl[5]),  # vary by group user
     # path('show_codes', ShowCodes.as_view(), name='show_codes'),
     path('discount_code', try_except(DiscountCodeView.as_view()), name='discount_code')
 ]
@@ -90,13 +90,12 @@ user = [
     cache_proxy(GetState.as_view(), 'states', lvl[20]),
     cache_proxy(GetCity.as_view(), 'cities/<int:state_id>', lvl[20]),
     path('orders', try_except(Orders.as_view()), name='orders'),
-    path('orders/product', try_except(OrderProduct.as_view()), name='order/product'),
-    path('trips', try_except(Trips.as_view()), name='trips'),
+    cache_proxy(OrderProduct.as_view(), 'order/product', lvl[10]),  # vary by user
     path('wishlist', try_except(WishlistView.as_view()), name='wishlist'),
     # path('avatar', try_except(Avatar.as_view()), name='avatar'),
     path('address', try_except(AddressView.as_view()), name='address'),
     path('user_comments', try_except(UserCommentView.as_view()), name='user_comments'),
-    path('invoice_detail/<int:invoice_id>', try_except(InvoiceView.as_view()), name='invoice_detail')
+    cache_proxy(InvoiceView.as_view(), 'invoice_detail/<int:invoice_id>', lvl[10])  # vary by user
 ]
 
 auth = [

@@ -90,8 +90,8 @@ class BasketView(View):
                 basket.discount_code.update(basket=None)
             except TypeError:
                 session = request.session
-                products = session.get('basket', [])
-                products.pop(int(basket_product_id))
+                products = session.get('basket', {})
+                products.pop(int(basket_product_id), None)
                 session.save()
             res = {}
             if summary:
