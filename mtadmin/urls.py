@@ -38,6 +38,7 @@ path('generate_code', error_handler(GenerateCode.as_view()), name='generate_code
     path('roll', error_handler(CheckLoginToken.as_view()), name='get_roll'),
     path('tax', error_handler(Tax.as_view()), name='tax'),
     path('search', error_handler(Search.as_view()), name='search'),
+    path('ftsearch', error_handler(PSearch.as_view()), name='ftsearch'),
     path('settings/<str:model>', error_handler(BoxSettings.as_view()), name='settings'),
     path('supplier', error_handler(SupplierView.as_view()), name='supplier'),
     path('snapshot', error_handler(Snapshot.as_view()), name='snapshot'),

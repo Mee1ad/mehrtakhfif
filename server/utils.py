@@ -176,8 +176,8 @@ def get_request_params(request):
     return param_dict
 
 
-def get_rank(q, lang):
-    sv = SearchVector(KeyTextTransform(lang, 'name'), weight='A')  # + \
+def get_rank(q, lang="fa", field='name'):
+    sv = SearchVector(KeyTextTransform(lang, field), weight='A')  # + \
     # SearchVector(KeyTextTransform('fa', 'product__category__name'), weight='B')
     sq = SearchQuery(q)
     rank = SearchRank(sv, sq, weights=[0.2, 0.4, 0.6, 0.8])

@@ -132,6 +132,16 @@ class CheckLoginToken(AdminView):
         return JsonResponse(res)
 
 
+class PSearch(AdminView):
+    def get(self, request):
+        params = get_request_params(request)
+        # switch = {'media': self.supplier, 'tag': self.tag,}
+        rank = get_rank(params['q'], 'fa', 'title')
+        medias = Media.objects.annotate(rank=rank).filter(rank__gt=0).order_by('-rank')[:5]
+        medias = MediaASchema().dump(medias, many=True)
+        return JsonResponse({"media": medias})
+
+
 class Search(AdminView):
 
     def get(self, request):

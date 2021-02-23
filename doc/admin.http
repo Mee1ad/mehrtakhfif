@@ -121,7 +121,10 @@ Content-Type: application/json
       "settings": {}
     }
   ],
-  "review": {"chats": [], "state": "ready"},
+  "review": {
+    "chats": [],
+    "state": "ready"
+  },
   "description": {
     "data": {
       "ar": {},
@@ -188,7 +191,7 @@ Content-Type: application/json
 {
   "id": 61,
   "box_id": 3,
-  "type": "product",
+  "priority": 0,
   "brand_id": 26,
   "categories": [
     234,
@@ -292,6 +295,7 @@ Content-Type: application/json
     }
   ]
 }
+
 ###
 DELETE {{admin_host}}/product?id=54
 
@@ -603,6 +607,7 @@ GET {{admin_host}}/brand?id=6
 
 ###
 GET {{admin_host}}/brand?b=3&p=1&s=100&o=id&all=true
+
 ###
 GET {{admin_host}}/brand
 
@@ -870,5 +875,6 @@ Content-Type: application/json
     213
   ]
 }
+
 ###
 GET https://tinama.ir
