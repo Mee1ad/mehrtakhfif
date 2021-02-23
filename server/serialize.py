@@ -113,7 +113,7 @@ class BaseSchema(Schema):
             if name.get(self.lang, None):
                 return name[self.lang]
             return name[self.default_lang]
-        except (KeyError, TypeError):
+        except (KeyError, TypeError, AttributeError):
             return None
 
     def get_name(self, obj):
