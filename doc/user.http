@@ -353,19 +353,9 @@ GET {{host}}/features/کفش-آدیداس-تستی
     });
 %}
 
-### tag
-
-GET {{host}}/tag/سفال
-
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
-
 ### category
 
-GET {{host}}/category/غذا-خشک-گربه
+GET {{host}}/category/ورزش-ها
 
 > {%
     client.test("Request executed successfully", function() {
@@ -374,7 +364,7 @@ GET {{host}}/category/غذا-خشک-گربه
 %}
 
 ### Product
-GET {{host}}/product/هفت-سین-سفالی
+GET {{host}}/product/بازی-فکری-وستروس-game-of-thrones
 
 > {%
     client.test("Request executed successfully", function() {
@@ -383,7 +373,7 @@ GET {{host}}/product/هفت-سین-سفالی
 %}
 
 ###
-GET {{host}}/comment?prp=هفت-سین-سفالی&type=1
+GET {{host}}/comment?prp=بازی-فکری-وستروس-game-of-thrones&type=1
 
 > {%
     client.test("Request executed successfully", function() {
@@ -392,7 +382,7 @@ GET {{host}}/comment?prp=هفت-سین-سفالی&type=1
 %}
 
 ###
-GET {{host}}/comment?prp=هفت-سین-سفالی&type=2
+GET {{host}}/comment?prp=بازی-فکری-وستروس-game-of-thrones&type=2
 
 > {%
     client.test("Request executed successfully", function() {
@@ -401,7 +391,7 @@ GET {{host}}/comment?prp=هفت-سین-سفالی&type=2
 %}
 
 ###
-GET {{host}}/related_products/هفت-سین-سفالی
+GET {{host}}/related_products/بازی-فکری-وستروس-game-of-thrones
 
 > {%
     client.test("Request executed successfully", function() {
@@ -479,15 +469,6 @@ GET {{host}}/orders
 
 ###
 GET {{host}}/orders?id=100
-
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
-
-###
-GET {{host}}/trips
 
 > {%
     client.test("Request executed successfully", function() {
