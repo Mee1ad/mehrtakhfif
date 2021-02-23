@@ -120,7 +120,7 @@ def upload(request, titles, media_type, box=None):
     return media_list
 
 
-def filter_params(params, lang):
+def filter_params(params, new_params=(), lang='fa'):
     filters = {'filter': {'default_storage__isnull': False}, 'rank': {}, 'related': {}, 'query': {}, 'annotate': {},
                'order': '-created_at'}
     if not params:
@@ -130,15 +130,19 @@ def filter_params(params, lang):
     valid_orders = {'cheap': f'{ds}{dis}_price', 'expensive': f'-{ds}{dis}_price',
                     'best_seller': f'-{ds}sold_count', 'popular': '-created_at',
                     'discount': f'-{ds}{dis}_percent'}
+    for k in params.keys():
+        value = params[k]
+        if params[k] in ['false', 'true']:
+            value = json.loads(params[k].lower())
+        try:
+            filters['filter'][new_params[k]] = value
+        except KeyError:
+            pass
     box_permalink = params.get('b', None)
     q = params.get('q', None)
     # todo test and fix s
     sa = params.get('sa', None)  # search advanced
     orderby = params.get('o', '-created_at')
-    category = params.get('cat', None)
-    tag = params.get('tag', None)
-    available = params.get('available', None)
-    brand = params.getlist('brand[]', None)
     min_price = params.get('min_price', None)
     max_price = params.get('max_price', None)
     if box_permalink:
@@ -146,14 +150,8 @@ def filter_params(params, lang):
             filters['related'] = {'categories__in': Category.objects.filter(box__permalink=box_permalink,
                                                                             permalink=None).values_list('parent_id',
                                                                                                         flat=True)}
-            # filters['filter']['box'] = Box.objects.get(permalink=box_permalink)
-            filters['filter']['box__permalink'] = box_permalink
         except Box.DoesNotExist:
             pass
-    if category:
-        filters['filter']['categories__permalink'] = category
-    if tag:
-        filters['filter']['tags__permalink'] = tag
     if orderby != '-created_at':
         valid_key = valid_orders[orderby]
         filters['order'] = valid_key
@@ -162,30 +160,9 @@ def filter_params(params, lang):
         filters['order'] = '-rank'
     if q:
         filters['annotate']['text'] = KeyTextTransform(lang, 'name')
-        filters['filter']['text__contains'] = q
         filters['order'] = 'text'
-    if available:
-        filters['filter']['storages__available_count_for_sale__gt'] = 0
     if min_price and max_price:
         filters['filter'][f'{ds}{dis}_price__range'] = (min_price, max_price)
-    if brand:
-        filters['filter']['brand__in'] = brand
-
-    # keys = params.keys()
-    # for key in keys:
-    #     if len(key) < 3:
-    #         continue
-    #     if key == 'orderby':
-    #         valid_key = valid_orders[f'{params[key]}']
-    #         orderby = valid_key
-    #         continue
-    #     value = params.getlist(key)
-    #     if len(value) == 1:
-    #         valid_key = difflib.get_close_matches(key, valid_filters)[0]
-    #         filter_by[valid_key] = value[0]
-    #         continue
-    #     filter_by[key + '__in'] = value
-
     return filters
 
 
@@ -719,8 +696,7 @@ def get_colors_hex(products=None, with_price=False):
     if colors:
         return colors
     if products:
-        product_ids = products.values_list('id', flat=True)
-        product_features = list(ProductFeature.objects.filter(feature_id=35, product_id__in=product_ids).annotate(
+        product_features = list(ProductFeature.objects.filter(feature_id=35, product__in=products).annotate(
             color=KeyTextTransform('hex', 'feature_value__settings'),
             name=KeyTextTransform('fa', 'feature_value__value')).order_by('feature_value_id').distinct(
             'feature_value_id').values('feature_value_id', 'color', 'name'))

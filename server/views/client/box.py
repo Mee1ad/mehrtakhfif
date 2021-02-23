@@ -1,10 +1,10 @@
-from django.core.cache import cache
 from django.db.models import Max, Min
 from django.db.models import Prefetch
 from django.http import JsonResponse
 
 from server.serialize import BoxSchema, FeatureSchema, BrandSchema, SpecialProductSchema
 from server.utils import *
+from mtadmin.utils import translate_params
 
 
 class GetSpecialOffer(View):
@@ -86,19 +86,22 @@ class FilterDetail(View):
 
 class Filter(View):
     def get(self, request):
-        params = filter_params(request.GET, request.lang)
+        new_params = {'fv': 'product_features__feature_value_id', 'q': 'text__contains', 'b': 'box__permalink',
+                      'cat': 'categories__permalink', 'tag': 'tags__permalink',
+                      'available': 'storages__available_count_for_sale__gte', 'brand': 'brand__in'}
+        params = filter_params(request.GET, new_params, request.lang)
         query = Q(verify=True, **params['filter'])
         disable = get_product_filter_params(request.user.is_staff)
         if params['related']:
             query = Q(verify=True, **params['filter']) | Q(verify=True, **params['related'])
-        products = Product.objects. \
-            annotate(**params['annotate']). \
-            filter(query, Q(**disable), ~Q(type=5)). \
-            prefetch_related('default_storage__vip_prices__vip_type', 'storages',
-                             Prefetch('product_features', queryset=ProductFeature.objects.filter(feature_id=35)
-                                      .prefetch_related('product_feature_storages__storage__media'), to_attr='colors')) \
-            .select_related('thumbnail', 'default_storage'). \
-            order_by(params['order'], '-id').distinct('id', params['order'].replace('-', ''))
+        products = list(Product.objects.annotate(**params['annotate']).filter(query, Q(**disable), ~Q(type=5)). \
+                        prefetch_related('default_storage__vip_prices__vip_type', 'storages',
+                                         Prefetch('product_features',
+                                                  queryset=ProductFeature.objects.filter(feature_id=35)
+                                                  .prefetch_related('product_feature_storages__storage__media'),
+                                                  to_attr='colors')) \
+                        .select_related('thumbnail', 'default_storage'). \
+                        order_by(params['order'], '-id').distinct('id', params['order'].replace('-', '')))
         colors = cache.get('colors', None)
         if colors is None:
             colors = get_colors_hex(products)
