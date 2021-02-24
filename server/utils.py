@@ -368,7 +368,7 @@ def get_categories(language, box_id=None, categories=None, is_admin=None, disabl
         if cat.parent is None:
             continue
         try:
-            category = next(category for category in categories if cat.parent_id == category.pk)
+            category = next((category for category in categories if cat.parent_id == category.pk), None)
             parent_index = new_cats.index(category)
             if not hasattr(new_cats[parent_index], 'child'):
                 new_cats[parent_index].child = []
