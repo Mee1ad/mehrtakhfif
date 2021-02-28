@@ -113,9 +113,11 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
     'token',
     'admin',
+    'cache-control',
+    'agent'
 ]
 
-CORS_EXPOSE_HEADERS = ['error']
+CORS_EXPOSE_HEADERS = ['error', 'agent']
 
 MESSAGE_STORAGE = 'django.contrib.messages.storage.cookie.CookieStorage'
 
