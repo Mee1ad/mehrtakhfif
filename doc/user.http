@@ -1,489 +1,295 @@
 ### Home
 GET {{host}}/test
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/init
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/slider/home
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/special_offer
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/box_special_product
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/special_product
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/best_seller
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/box_with_category
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/menu
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/suggest?id='test'
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/search?id='test'
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/ads/home
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/permalink_id/هفت-سین-سفالی
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/favicon
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ### Box
 ### filter
 GET {{host}}/filter
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/filter?o=cheap
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/filter?o=expensive
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/filter?o=best_seller
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/filter?o=popular
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/filter?o=discount
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/filter?b=%D9%BE%D8%AA-%D8%B4%D8%A7%D9%BE
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/filter?q=%D8%B3%DA%AF
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
+
+###
+GET {{host}}/filter?fv=10
+
+> res.js
 
 ###
 GET {{host}}/filter?s=20&p=1&b=%D8%B3%D9%88%D9%BE%D8%B1%D9%85%D8%A7%D8%B1%DA%A9%D8%AA&cat=%D8%AA%D9%86%D9%82%D9%84%D8%A7%D8%AA
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/filter?s=20&p=1&b=%D8%B3%D9%88%D9%BE%D8%B1%D9%85%D8%A7%D8%B1%DA%A9%D8%AA&available=true
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/filter_detail?b=ورزش&minp=142600&maxp=501000
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
+
+###
+GET {{host}}/filter_detail?fv=10
+
+> res.js
 
 ###
 GET {{host}}/filter?s=20&p=1&b=%D9%88%D8%B1%D8%B2%D8%B4&brand[]=7&min_price=142600&max_price=501000
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ### Tag
 GET {{host}}/filter?tag=سفال
 
+> res.js
+
 ### filter detail
 GET {{host}}/filter_detail
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/filter_detail?o=cheap
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/filter_detail?o=expensive
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/filter_detail?o=best_seller
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/filter_detail?o=popular
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/filter_detail?o=discount
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/filter_detail?b=%D9%BE%D8%AA-%D8%B4%D8%A7%D9%BE
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/filter_detail?q=سگ
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/filter_detail?s=20&p=1&b=گلکده&cat=گلدانی
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/filter_detail?s=20&p=1&b=گلکده&available=true
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/filter_detail?b=%D9%88%D8%B1%D8%B2%D8%B4&minp=142600&maxp=501000
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/filter_detail?s=20&p=1&b=%D9%88%D8%B1%D8%B2%D8%B4&brand[]=7&min_price=142600&max_price=501000
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
+
 ### features
 
 GET {{host}}/features/کفش-آدیداس-تستی
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ### category
 
 GET {{host}}/category/ورزش-ها
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ### Product
 GET {{host}}/product/بازی-فکری-وستروس-game-of-thrones
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/comment?prp=بازی-فکری-وستروس-game-of-thrones&type=1
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/comment?prp=بازی-فکری-وستروس-game-of-thrones&type=2
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/related_products/بازی-فکری-وستروس-game-of-thrones
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/features/کفش-آدیداس-تستی
+
+> res.js
+
 ###
 GET {{host}}/features/کفش-آدیداس-تستی?select[]=4&select[]=7
+
+> res.js
 
 ### Payment
 GET {{host}}/ipg
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/payment/31
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/invoice/5ZaBzK
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ### User
 GET {{host}}/profile
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/states
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/cities/1
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/orders
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/orders?id=100
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 GET {{host}}/wishlist
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js
 
 ###
 POST {{host}}//add_device
@@ -494,8 +300,4 @@ Content-Type: application/json
   "device_id": 1
 }
 
-> {%
-    client.test("Request executed successfully", function() {
-        client.assert(response.status === 200, "Response status is not 200");
-    });
-%}
+> res.js

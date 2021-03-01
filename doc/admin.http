@@ -23,11 +23,18 @@ Content-Type: application/json
   "media": null
 }
 
+> res.js
+
 ###
 GET {{admin_host}}/category?id=54
 
+> res.js
+
 ###
 GET {{admin_host}}/category?b=3
+
+
+> res.js
 
 ###
 PUT {{admin_host}}/category
@@ -46,6 +53,7 @@ Content-Type: application/json
   "permalink": "permalink-test3",
   "media": 1
 }
+> res.js
 
 ###
 PUT {{admin_host}}/category
@@ -56,8 +64,12 @@ Content-Type: application/json
   "disable": false
 }
 
+> res.js
+
 ###
 DELETE {{admin_host}}/category?id=54
+
+> res.js
 
 ### check prices
 POST {{admin_host}}/review_price
@@ -72,6 +84,8 @@ Content-Type: application/json
   "shipping_cost": 1000
 }
 
+> res.js
+
 ### DiscountCode CR, Params: id, storage_id
 POST {{admin_host}}/discount_code
 Content-Type: application/json
@@ -83,6 +97,8 @@ Content-Type: application/json
   "prefix": "test"
 }
 
+> res.js
+
 ###
 ### Post Discount Code
 POST {{admin_host}}/discount_code
@@ -93,8 +109,12 @@ Content-Type: application/json
   "username": "09015518439"
 }
 
+> res.js
+
 ###
 GET {{admin_host}}/discount_code?id=5
+
+> res.js
 
 ###
 ### Product CRUD
@@ -178,11 +198,17 @@ Content-Type: application/json
   "thumbnail_id": 1186
 }
 
+> res.js
+
 ###
 GET {{admin_host}}/product?id=516
 
+> res.js
+
 ###
 GET {{admin_host}}/product?b=11
+
+> res.js
 
 ###
 PUT {{admin_host}}/product
@@ -271,6 +297,8 @@ Content-Type: application/json
   "thumbnail_id": 1186
 }
 
+> res.js
+
 ###
 PUT {{admin_host}}/product
 Content-Type: application/json
@@ -296,11 +324,17 @@ Content-Type: application/json
   ]
 }
 
+> res.js
+
 ###
 DELETE {{admin_host}}/product?id=54
 
+> res.js
+
 ### ProductFeature CRUD
 GET {{admin_host}}/product?id=513
+
+> res.js
 
 ### Storage CRUD
 POST {{admin_host}}/storage
@@ -350,11 +384,17 @@ Content-Type: application/json
   "vip_prices": []
 }
 
+> res.js
+
 ###
 GET {{admin_host}}/storage?id=516
 
+> res.js
+
 ###
 GET {{admin_host}}/storage
+
+> res.js
 
 ###
 PUT {{admin_host}}/storage
@@ -410,8 +450,12 @@ Content-Type: application/json
   "vip_prices": []
 }
 
+> res.js
+
 ###
 DELETE {{admin_host}}/storage?id=54
+
+> res.js
 
 ### Feature CRUD
 POST {{admin_host}}/feature
@@ -448,11 +492,17 @@ Content-Type: application/json
   ]
 }
 
+> res.js
+
 ###
 GET {{admin_host}}/feature?id=31
 
+> res.js
+
 ###
 GET {{admin_host}}/feature?b=3
+
+> res.js
 
 ###
 PUT {{admin_host}}/feature
@@ -490,6 +540,8 @@ Content-Type: application/json
   ]
 }
 
+> res.js
+
 ###
 PATCH {{admin_host}}/feature
 Content-Type: application/json
@@ -503,8 +555,12 @@ Content-Type: application/json
   ]
 }
 
+> res.js
+
 ###
 DELETE {{admin_host}}/feature_value?id=54
+
+> res.js
 
 ### FeatureValue CRUD
 POST {{admin_host}}/feature_value
@@ -517,11 +573,17 @@ Content-Type: application/json
   "feature_id": 43
 }
 
+> res.js
+
 ###
 GET {{admin_host}}/feature_value?id=9
 
+> res.js
+
 ###
 GET {{admin_host}}/feature_value
+
+> res.js
 
 ###
 PUT {{admin_host}}/feature_value
@@ -535,8 +597,12 @@ Content-Type: application/json
   "feature_id": 102
 }
 
+> res.js
+
 ###
 DELETE {{admin_host}}/feature_value?id=54
+
+> res.js
 
 ### FeatureGroup CRUD
 POST {{admin_host}}/feature_group
@@ -559,11 +625,17 @@ Content-Type: application/json
   ]
 }
 
+> res.js
+
 ###
 GET {{admin_host}}/feature_group?id=1
 
+> res.js
+
 ###
 GET {{admin_host}}/feature_group?b=1
+
+> res.js
 
 ###
 PUT {{admin_host}}/feature_group
@@ -586,8 +658,12 @@ Content-Type: application/json
   ]
 }
 
+> res.js
+
 ###
 DELETE {{admin_host}}/feature_group?id=54
+
+> res.js
 
 ### Brand CRUD
 POST {{admin_host}}/brand
@@ -602,14 +678,22 @@ Content-Type: application/json
   "permalink": "api-test"
 }
 
+> res.js
+
 ###
 GET {{admin_host}}/brand?id=6
+
+> res.js
 
 ###
 GET {{admin_host}}/brand?b=3&p=1&s=100&o=id&all=true
 
+> res.js
+
 ###
 GET {{admin_host}}/brand
+
+> res.js
 
 ###
 PUT {{admin_host}}/brand
@@ -625,8 +709,12 @@ Content-Type: application/json
   "permalink": "api-test2"
 }
 
+> res.js
+
 ###
 DELETE {{admin_host}}/brand?id=6
+
+> res.js
 
 ###
 
@@ -643,11 +731,17 @@ Content-Type: application/json
   "permalink": "api-test55"
 }
 
+> res.js
+
 ###
 GET {{admin_host}}/tag?id=6
 
+> res.js
+
 ###
 GET {{admin_host}}/tag
+
+> res.js
 
 ###
 PUT {{admin_host}}/tag
@@ -663,6 +757,8 @@ Content-Type: application/json
   "permalink": "api-test2"
 }
 
+> res.js
+
 ###
 PATCH {{admin_host}}/tag
 Content-Type: application/json
@@ -675,8 +771,12 @@ Content-Type: application/json
   ]
 }
 
+> res.js
+
 ###
 DELETE {{admin_host}}/brand?id=6
+
+> res.js
 
 ###
 
@@ -700,11 +800,17 @@ Content-Type: application/json
   ]
 }
 
+> res.js
+
 ###
 GET {{admin_host}}/tag_group?b=1
 
+> res.js
+
 ###
 GET {{admin_host}}/tag_group?id=1
+
+> res.js
 
 ###
 PUT {{admin_host}}/tag_group
@@ -730,16 +836,24 @@ Content-Type: application/json
   ]
 }
 
+> res.js
+
 ###
 DELETE {{admin_host}}/tag_group?id=1
+
+> res.js
 
 ###
 
 ### Invoice R
 GET {{admin_host}}/invoice
 
+> res.js
+
 ### Invoice Product
 GET {{admin_host}}//invoice_product
+
+> res.js
 
 ### Seupplier CRU
 POST {{admin_host}}/supplier
@@ -753,6 +867,8 @@ Content-Type: application/json
   "shaba": "IR123456789",
   "meli_code": "2580859722"
 }
+
+> res.js
 
 ###
 PUT {{admin_host}}/supplier
@@ -768,13 +884,19 @@ Content-Type: application/json
   "meli_code": "2580859722"
 }
 
+> res.js
+
 ###
 GET {{admin_host}}/supplier?id=2
+
+> res.js
 
 ###
 
 ### Invoice R
 GET {{admin_host}}/invoice
+
+> res.js
 
 ###
 
@@ -792,13 +914,19 @@ Content-Disposition: form-data; name="file"; filename="takh1.jpg"
 
 < F:\Download\Photos\takh1.jpg
 
+> res.js
+
 ###
 GET {{admin_host}}/media?b=3
 Accept: application/json
 
+> res.js
+
 ###
 GET {{admin_host}}/media?id=18
 Accept: application/json
+
+> res.js
 
 ###
 PATCH {{admin_host}}/media
@@ -811,16 +939,24 @@ Content-Type: application/json
   }
 }
 
+> res.js
+
 ###
 DELETE {{admin_host}}/media?id=18
+
+> res.js
 
 ###
 
 ### TableFilter R
 GET {{admin_host}}/table_filter/product
 
+> res.js
+
 ###
 GET {{admin_host}}/table_filter/media
+
+> res.js
 
 ###
 
@@ -829,23 +965,33 @@ GET {{admin_host}}/table_filter/media
 ### Roll R
 GET {{admin_host}}/roll
 
+> res.js
+
 ###
 
 ### Search
 GET {{admin_host}}/search?type=supplier&q=میلاد
+
+> res.js
 
 ###
 
 ### Settings
 GET {{admin_host}}/settings/box
 
+> res.js
+
 ###
 GET {{admin_host}}/settings/product
+
+> res.js
 
 ###
 
 ### Icon
 GET {{admin_host}}/icon/feature
+
+> res.js
 
 ###
 
@@ -862,6 +1008,8 @@ Content-Type: application/json
   ]
 }
 
+> res.js
+
 ###
 
 PUT {{admin_host}}/ordering
@@ -876,5 +1024,19 @@ Content-Type: application/json
   ]
 }
 
+> res.js
+
+### Cache Control
+GET {{admin_host}}/cache
+
+> res.js
+
 ###
-GET https://tinama.ir
+DELETE {{admin_host}}/cache/*
+
+> res.js
+
+###
+DELETE http://api.mt.com/admin/cache/a?token=ff5294ad781a23c32824ea9adbfc1521f771481cc95aecede421ed65
+
+> res.js
