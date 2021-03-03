@@ -19,9 +19,9 @@ def get_favicon(request):
     return HttpResponseRedirect('https://mehrtakhfif.com/drawable/icons/mt/favicon.ico')
 
 
-def cache_proxy(func, key, minutes=5):
+def cache_proxy(func, key, minutes=5, cached=True):
     name = re.match(r'(?P<route>\w+/?\w+)/?(?P<var><.*)?', key).group('route')
-    if DEBUG:
+    if DEBUG or not cached:
         return path(key, (try_except(func)), name=name)
     return path(key, cache_page(60 * minutes, key_prefix=name)(try_except((vary_on_headers())(func))), name=name)
 
@@ -33,7 +33,7 @@ home = [
     cache_proxy(Test.as_view(), 'test', lvl[9]),
     path('n/<int:pk>', try_except(NotifTest.as_view()), name='n'),
     path('init', try_except(Init.as_view()), name='init'),  # no cache
-    cache_proxy(GetSlider.as_view(), 'slider/<str:slider_type>', lvl[6]),
+    cache_proxy(GetSlider.as_view(), 'slider/<str:slider_type>', lvl[6], False),
     cache_proxy(GetSpecialOffer.as_view(), 'special_offer', lvl[6]),
     cache_proxy(BoxesGetSpecialProduct.as_view(), 'box_special_product', lvl[6]),
     cache_proxy(GetSpecialProduct.as_view(), 'special_product', lvl[6]),

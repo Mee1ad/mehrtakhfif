@@ -15,6 +15,35 @@ from server.documents import *
 from server.utils import *
 
 
+class Cache(TableView):
+    permission_required = 'is_superuser'
+
+    def get(self, request):
+        page = request.page
+        step = request.step
+        q = request.GET.get('q', '')
+        data = cache.keys(f'*{q}*')[(page - 1) * step:(page - 1) * step + step]
+        return JsonResponse({'data': data})
+
+    def delete(self, request, key):
+        key = key.strip().replace('*', '')
+        if len(key) < 3:
+            return HttpResponseNotFound()
+        caches = cache.keys(f'*{key}*')
+        token = request.GET.get('token', None)
+        if token:
+            verified = check_access_token(token, request.user, data=caches)
+            if verified:
+                cache.delete_many(caches)
+                return JsonResponse({'message': ' deleted successfully'})
+            return HttpResponseNotFound()
+        token = get_access_token(request.user, data=caches)
+        delete_url = ""
+        if caches:
+            delete_url = HOST + f"/admin/cache/{key}?token={token}"
+        return JsonResponse({'caches': caches, 'delete': delete_url})
+
+
 class Token(AdminView):
     def get(self, request):
         res = JsonResponse({'token': get_access_token(request.user)})
