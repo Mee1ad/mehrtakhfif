@@ -146,7 +146,8 @@ class Search(AdminView):
 
     def get(self, request):
         model = request.GET.get('type', None)
-        switch = {'supplier': self.supplier, 'tag': self.tag, 'product': self.product, 'cat': self.category}
+        switch = {'supplier': self.supplier, 'tag': self.tag, 'product': self.product, 'cat': self.category,
+                  'media': self.media}
         params = get_request_params(request)
         username = request.user.username
         return JsonResponse(switch[model](**params, username=username))
@@ -164,6 +165,9 @@ class Search(AdminView):
 
     def tag(self, q, **kwargs):
         return self.multi_match(q, Tag, TagASchema, TagDocument, 'tags')
+
+    def media(self, q, **kwargs):
+        return self.multi_match(q, Media, MediaASchema, MediaDocument, 'media')
 
     def category(self, q, **kwargs):
         return self.multi_match(q, Category, CategoryASchema, CategoryDocument, 'categories')

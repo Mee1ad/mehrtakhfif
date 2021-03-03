@@ -3,7 +3,7 @@
 from django_elasticsearch_dsl import Document, fields
 from elasticsearch_dsl import analyzer, tokenizer
 from django_elasticsearch_dsl.registries import registry
-from .models import Product, User, Category, Tag
+from .models import Product, User, Category, Tag, Media
 
 ngram = analyzer('ngram', tokenizer=tokenizer('trigram', 'nGram', min_gram=3, max_gram=3), filter=["lowercase"])
 
@@ -100,3 +100,22 @@ class SupplierDocument(Document):
 
         # The fields of the model you want to be indexed in Elasticsearch
         fields = ['is_supplier']
+
+
+@registry.register_document
+class MediaDocument(Document):
+    name = fields.TextField(analyzer=ngram, attr='__str__')
+    id = fields.IntegerField()
+
+    class Index:
+        # Name of the Elasticsearch index
+        name = 'media'
+        # See Elasticsearch Indices API reference for available settings
+        settings = {'number_of_shards': 1,
+                    'number_of_replicas': 0}
+
+    class Django:
+        model = Media  # The model associated with this Document
+
+        # The fields of the model you want to be indexed in Elasticsearch
+        fields = []
