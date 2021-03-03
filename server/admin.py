@@ -471,7 +471,8 @@ class InvoiceAdmin(Base):
 
 
 class PaymentHistoryAdmin(Base):
-    list_display = ('id', 'get_invoice', 'reference_id', 'status', 'amount', 'description') + SafeDeleteAdmin.list_display
+    list_display = ('id', 'get_invoice', 'reference_id', 'status', 'amount',
+                    'description') + SafeDeleteAdmin.list_display
     list_filter = ('status',) + SafeDeleteAdmin.list_filter
     list_per_page = 10
 

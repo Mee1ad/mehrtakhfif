@@ -539,7 +539,7 @@ class MinProductSchema(BaseSchema):
 
 class ProductSchema(MinProductSchema):
     class Meta:
-        additional = MinProductSchema.Meta.additional + ('gender',)
+        additional = MinProductSchema.Meta.additional + ('gender', 'permalink')
 
     default_storage = fields.Function(lambda o: None)
     address = fields.Method("get_address")
@@ -562,6 +562,10 @@ class ProductSchema(MinProductSchema):
     max_shipping_time = fields.Int()
     review_count = fields.Method("get_review_count")
     storages = fields.Method("get_storages")
+    shortlink = fields.Method("get_shortlink")
+
+    def get_shortlink(self, obj):
+        return f"{SHORTLINK}/p/{obj.pk}"
 
     def get_storages(self, obj):
         storages = StorageSchema(only=['id', 'discount_price', 'max_count_for_sale']).dump(obj.storages.all(),

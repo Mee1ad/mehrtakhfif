@@ -2,7 +2,7 @@ from os import listdir
 from time import sleep
 
 from django.core.mail import send_mail
-from django.http import HttpResponseBadRequest, HttpResponse, HttpResponseRedirect
+from django.http import HttpResponseBadRequest, HttpResponse, HttpResponseRedirect, HttpResponseNotFound
 from django.shortcuts import render_to_response, render
 from django.utils.crypto import get_random_string
 from django_telegram_login.authentication import verify_telegram_authentication
@@ -172,7 +172,6 @@ class PSearch(AdminView):
 
 
 class Search(AdminView):
-
     def get(self, request):
         model = request.GET.get('type', None)
         switch = {'supplier': self.supplier, 'tag': self.tag, 'product': self.product, 'cat': self.category,

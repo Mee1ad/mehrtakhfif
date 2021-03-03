@@ -245,8 +245,7 @@ def send_invoice(self, invoice_id, lang="fa", **kwargs):
                     all_renders += rendered
                     # sms_content += f'\n{storage.invoice_title[lang]}\n{SHORTLINK}/{product.key}'
                 send_sms(user.username, "user-order", {invoice_id}, {invoice_id})
-
-                email_content = f"سفارش شما با شماره {invoice_id} با موفقیت ثبت شد. برای مشاهده صورتحساب و جزئیات خرید به پنل کاربری خود مراجعه کنید \nhttps://mhrt.ir/invoice/{invoice_id}"
+                email_content = f"سفارش شما با شماره {invoice_id} با موفقیت ثبت شد. برای مشاهده صورتحساب و جزئیات خرید به پنل کاربری خود مراجعه کنید \nhttps://mhrt.ir/i{invoice_id}"
 
                 send_email("صورتحساب خرید", user.email, message=email_content)
                 # if sms_content:
