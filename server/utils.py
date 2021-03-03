@@ -2,6 +2,7 @@ import hashlib
 import string
 import uuid
 from datetime import datetime
+from hashlib import sha3_512
 from math import ceil
 from operator import add, sub
 
@@ -12,6 +13,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.postgres.fields.jsonb import KeyTextTransform
 from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
 from django.core import serializers
+from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
 from django.core.mail import EmailMultiAlternatives
 from django.core.paginator import Paginator
@@ -21,15 +23,16 @@ from django.views import View
 from django_celery_beat.models import IntervalSchedule
 from kavenegar import *
 
-from mehr_takhfif.settings import CSRF_SALT, TOKEN_SALT, DEFAULT_COOKIE_DOMAIN, DEBUG, SMS_KEY, color_feature_id
+from mehr_takhfif.settings import CSRF_SALT, TOKEN_SALT, DEFAULT_COOKIE_DOMAIN, DEBUG, SMS_KEY, color_feature_id,\
+    SHORTLINK
 from server.models import *
 from server.serialize import get_tax, BoxCategoriesSchema, BasketSchema, MinProductSchema, ProductFeatureSchema, \
     BasketProductSchema, UserSchema, InvoiceSchema
 # from barcode import generate
 # from barcode.base import Barcode
 from server.views.post import get_shipping_cost_temp
-from django.core.cache import cache
-from hashlib import sha3_512
+from django.utils.crypto import get_random_string
+from django.db.utils import IntegrityError
 
 random_data = string.ascii_lowercase + string.ascii_uppercase + string.digits
 default_step = 18
@@ -333,7 +336,7 @@ def send_sms(to, template, token, token2=None):
         print(e)
 
 
-def send_pm(tg_id, message):  #312145983  -550039210
+def send_pm(tg_id, message):  # 312145983  -550039210
     url = "https://mtmessenger.herokuapp.com/send_message"
     data = {"tg_id": tg_id, "message": message}
     r = requests.post(url, json=data)
@@ -709,20 +712,33 @@ def get_colors_hex(products=None, with_price=False):
     return colors
 
 
+def make_short(link):
+    url = None
+    while not url:
+        try:
+            shortlink = f"l{get_random_string(4)}"
+            url, created = URL.objects.get_or_create(url=link, default={'shortlink': shortlink})
+        except IntegrityError:
+            pass
+    return f"{SHORTLINK}/{url.shortlink}"
+
+
 # Security
-def get_access_token(user, model=None, pk=None, try_again=None):
+def get_access_token(user, model=None, pk=None, try_again=None, data=''):
     pk = 0 if pk is None else pk
     time = add_minutes(0).strftime("%Y-%m-%d-%H") if try_again is None else add_minutes(-60).strftime("%Y-%m-%d-%H")
-    data = f'{user.pk}{pk}{time}'
+    data = f'{data}{user.pk}{pk}{time}{TOKEN_SALT}'
     data = model.__name__.lower() + data if model else data
-    token = hashlib.sha3_224(data.encode()).hexdigest()
+    token = hashlib.sha3_512(data.encode()).hexdigest()
     return token
 
 
-def check_access_token(token, user, model=None, pk=None):
-    if token == get_access_token(user, model, pk):
+def check_access_token(new_token, user, model=None, pk=None, data=''):
+    token = get_access_token(user, model, pk, data=data)
+    if new_token == token:
         return True
-    if token == get_access_token(user, model, pk, try_again=1):
+    token = get_access_token(user, model, pk, try_again=1, data=data)
+    if new_token == token:
         return True
     return False
 

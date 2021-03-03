@@ -7,7 +7,7 @@ import pytz
 from PIL import Image, ImageFilter
 from django.contrib.auth.models import AbstractUser
 from django.contrib.postgres.fields import JSONField
-from django.contrib.postgres.indexes import GinIndex, HashIndex, BrinIndex, BTreeIndex
+from django.contrib.postgres.indexes import GinIndex
 from django.contrib.sessions.models import Session
 from django.core.exceptions import FieldDoesNotExist
 from django.core.validators import *
@@ -529,11 +529,6 @@ class User(AbstractUser):
     class Meta:
         db_table = 'user'
         ordering = ['-id']
-
-
-class Supplier(User):
-    class Meta:
-        proxy = True
 
 
 class VipType(Base):
@@ -1384,8 +1379,8 @@ class Storage(Base):
 
     def is_available(self, count=1):
         max_count_for_sale = self.get_max_count()
-        return self.available_count_for_sale >= count and max_count_for_sale >= count and\
-            self.disable is False and self.product.disable is False
+        return self.available_count_for_sale >= count and max_count_for_sale >= count and \
+               self.disable is False and self.product.disable is False
 
     product = models.ForeignKey(Product, on_delete=CASCADE, related_name='storages')
     # features = models.ManyToManyField(ProductFeature, through='StorageFeature', related_name="storages")
@@ -1853,6 +1848,18 @@ class SpecialProduct(Base):
         ordering = ['-id']
 
 
+class URL(models.Model):
+    def __str__(self):
+        return f"{self.shortlink}"
+
+    url = models.URLField()
+    shortlink = models.CharField(max_length=7, unique=True)
+
+    class Meta:
+        db_table = 'url'
+        ordering = ['-id']
+
+
 class WishList(Base):
     select = ['user', 'product'] + Base.select
 
@@ -1988,6 +1995,12 @@ class Holiday(MyModel):
     class Meta:
         db_table = 'holiday'
         ordering = ['-id']
+
+
+# ---------- Proxy Models ---------- #
+class Supplier(User):
+    class Meta:
+        proxy = True
 
 
 @receiver(post_softdelete, sender=Media)
