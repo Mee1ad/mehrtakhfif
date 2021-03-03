@@ -15,6 +15,13 @@ from server.utils import View, get_pagination, load_data, get_preview_permission
 
 class ProductView(View):
     def get(self, request, permalink):
+        identifier = {'permalink': permalink}
+        product_identifier = {'product__permalink': permalink}
+        storage_product_identifier = {'storages__product__permalink': permalink}
+        if permalink.isdecimal():
+            identifier = {'id': permalink}
+            product_identifier = {'product_id': permalink}
+            storage_product_identifier = {'storages__product_id': permalink}
         # user = User.objects.get(pk=1)
         # login(request, user)
         params = request.GET
@@ -35,16 +42,16 @@ class ProductView(View):
         #                       f'{p}features', f'{p}feature_groups')
         # product_obj = product_tag.first().product
         try:
-            product_obj = Product.objects.filter(permalink=permalink, **product_preview). \
+            product_obj = Product.objects.filter(**identifier, **product_preview). \
                 annotate(review_count=Count('reviews'),
-                         wish=Exists(WishList.objects.filter(user=user, wish=True, product__permalink=permalink)),
-                         notify=Exists(WishList.objects.filter(user=user, notify=True, product__permalink=permalink)),
+                         wish=Exists(WishList.objects.filter(user=user, wish=True, **product_identifier)),
+                         notify=Exists(WishList.objects.filter(user=user, notify=True, **product_identifier)),
                          purchased=Exists(
-                             Invoice.objects.filter(user=user, status=2, storages__product__permalink=permalink))). \
+                             Invoice.objects.filter(user=user, status=2, **storage_product_identifier))). \
                 select_related('thumbnail', 'box', 'brand'). \
                 prefetch_related('product_tags__tag', 'tag_groups__tag_group_tags__tag', 'categories__parent').first()
         except TypeError:
-            product_obj = Product.objects.filter(permalink=permalink, **product_preview). \
+            product_obj = Product.objects.filter(**identifier, **product_preview). \
                 annotate(review_count=Count('reviews')). \
                 select_related('thumbnail', 'box', 'brand'). \
                 prefetch_related('product_tags__tag', 'tag_groups__tag_group_tags__tag', 'categories__parent').first()
@@ -223,9 +230,12 @@ class CommentView(View):
 
 
 class FeatureView(View):
-
     def get(self, request, permalink):
-        product = Product.objects.filter(permalink=permalink).select_related('default_storage'). \
+        identifier = {'permalink': permalink}
+        if permalink.isdecimal():
+            identifier = {'id': permalink}
+
+        product = Product.objects.filter(**identifier).select_related('default_storage'). \
             annotate(storages_count=Count('storages'),
                      active_storages_count=Count('storages', filter=Q(storages__unavailable=False,
                                                                       storages__disable=False,
@@ -257,9 +267,9 @@ class FeatureView(View):
         # product_features = product_features.filter(feature_id__in=multi_select_features)
         product_features = [pf for pf in product_features if pf.feature_id in multi_select_features]
         all_pfs = ProductFeatureStorage.objects.filter(product_feature__in=product_features,
-                                                          # storage__available_count_for_sale__gt=0,
-                                                          # storage__unavailable=False,
-                                                          storage__disable=False) \
+                                                       # storage__available_count_for_sale__gt=0,
+                                                       # storage__unavailable=False,
+                                                       storage__disable=False) \
             .select_related('storage', 'product_feature').order_by('product_feature_id')
         product_feature_storages = [pfs for pfs in all_pfs
                                     if pfs.storage.available_count_for_sale > 0 and pfs.storage.unavailable is False]
@@ -285,7 +295,8 @@ class FeatureView(View):
             # selected = list(product_feature_storages.filter(storage=default_storage).values_list('product_feature_id',
             #                                                                                      flat=True))
             selected = [pfs.product_feature_id for pfs in product_feature_storages if pfs.storage == default_storage]
-        features_list = self.get_features(product_features, product_feature_storages, all_pfs, default_storage, selected)
+        features_list = self.get_features(product_features, product_feature_storages, all_pfs, default_storage,
+                                          selected)
         return JsonResponse({'features': features_list,
                              'storage': StorageSchema(exclude=['features']).dump(default_storage)})
 
@@ -314,7 +325,7 @@ class FeatureView(View):
                                      if pfs.storage_id == pf.storage_id and pfs.storage.unavailable is False
                                      and pfs.storage.available_count_for_sale > 0])
             all_combos.append([pfs.product_feature_id for pfs in all_pfs
-                                     if pfs.storage_id == pf.storage_id])
+                               if pfs.storage_id == pf.storage_id])
 
             # combo = []
             # for pfs in all_pfs:
