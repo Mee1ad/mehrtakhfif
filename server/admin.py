@@ -5,11 +5,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import Permission
 from django.contrib.postgres.fields.jsonb import KeyTextTransform
-from django.core.exceptions import FieldError
-from django.urls import reverse
 from django.utils.html import escape
-from django.utils.http import urlencode
-from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 from prettyjson import PrettyJSONWidget
 from safedelete.admin import SafeDeleteAdmin
@@ -38,6 +34,13 @@ UserAdmin.list_per_page = 10
 UserAdmin.fieldsets[2][1]['fields'] = ('is_supplier',) + UserAdmin.fieldsets[2][1]['fields'] + ('box_permission',
                                                                                                 'vip_types')
 UserAdmin.filter_horizontal += ('box_permission',)
+
+from django.core.exceptions import (
+    FieldError, )
+from django.urls import reverse
+from django.utils.http import urlencode
+from django.utils.safestring import mark_safe
+from django.utils.translation import gettext as _
 
 
 class Base(SafeDeleteAdmin):

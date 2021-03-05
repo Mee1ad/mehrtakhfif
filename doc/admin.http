@@ -215,9 +215,9 @@ PUT {{admin_host}}/product
 Content-Type: application/json
 
 {
+  "notif": false,
   "id": 61,
   "box_id": 3,
-  "priority": 0,
   "brand_id": 26,
   "categories": [
     234,

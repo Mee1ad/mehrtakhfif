@@ -23,12 +23,10 @@ class Cache(TableView):
         step = request.step
         q = request.GET.get('q', '')
         data = cache.keys(f'*{q}*')[(page - 1) * step:(page - 1) * step + step]
-        return JsonResponse({'data': data})
-
-    def delete(self, request, key):
-        key = key.strip().replace('*', '')
+        key = q.strip().replace('*', '')
         if len(key) < 3:
-            return HttpResponseNotFound()
+            delete_url = ''
+            return JsonResponse({'data': data, 'delete': delete_url})
         caches = cache.keys(f'*{key}*')
         token = request.GET.get('token', None)
         if token:
@@ -40,8 +38,9 @@ class Cache(TableView):
         token = get_access_token(request.user, data=caches)
         delete_url = ""
         if caches:
-            delete_url = HOST + f"/admin/cache/{key}?token={token}"
-        return JsonResponse({'caches': caches, 'delete': delete_url})
+            delete_url = HOST + f"/admin/cache?q={key}&token={token}"
+        return JsonResponse({'data': data, 'delete': delete_url})
+
 
 
 class Token(AdminView):
