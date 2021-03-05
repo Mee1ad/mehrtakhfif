@@ -10,7 +10,7 @@ from server.utils import *
 
 class Test(View):
     def get(self, request):
-        return JsonResponse({"message": "test 1"})
+        return JsonResponse({"message": "pong"})
         # request.user = None
         # res = JsonResponse({})
         # login = request.GET.get('login')
