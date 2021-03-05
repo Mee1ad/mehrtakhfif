@@ -43,7 +43,7 @@ home = [
     cache_proxy(GetMenu.as_view(), 'menu', lvl[9]),
     cache_proxy(Suggest.as_view(), 'suggest', lvl[9]),
     cache_proxy(ElasticSearch.as_view(), 'search', lvl[9]),
-    cache_proxy(GetAds.as_view(), 'ads/<str:ads_type>', lvl[9]),
+    cache_proxy(GetAds.as_view(), 'ads/<str:ads_type>', lvl[9], False),
     cache_proxy(get_favicon, 'favicon', lvl[10]),
     cache_proxy(PermalinkToId.as_view(), 'permalink_id/<str:permalink>', lvl[10]),
 ]
