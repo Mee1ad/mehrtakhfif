@@ -340,9 +340,6 @@ class FeatureView(View):
             for pfs in all_pfs:
                 if pfs.storage_id == pf.storage_id:
                     feature_value_combo.append((pfs.product_feature.feature_id, pfs.product_feature.feature_value_id))
-        print(all_combos)
-        print(available_combos)
-        print(feature_value_combo)
         # print(available_combos)
         # print('first selected:', selected)
         # print(selected_feature)
@@ -388,5 +385,5 @@ class FeatureView(View):
                 values.append(feature_dict)
             features_list.append(
                 {'id': product_f.feature_id, 'name': product_f.feature.name['fa'], 'values': values,
-                 'selected': select})
+                 'selected': select, 'settings': product_f.feature.settings})
         return features_list

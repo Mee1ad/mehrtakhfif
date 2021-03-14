@@ -430,6 +430,7 @@ class ParentSchema(BaseSchema):
 
 class FeatureSchema(BaseSchema):
     name = fields.Method('get_name')
+    settings = fields.Dict()
 
 
 class FeatureGroupSchema(BaseSchema):
@@ -457,8 +458,11 @@ class ProductFeatureSchema(BaseSchema):
 
     feature = fields.Method('get_feature')
     feature_value = fields.Method('get_feature_value')
-    settings = fields.Method('get_settings')
+    feature_settings = fields.Method('get_feature_settings')
     feature_groups = fields.Method("get_feature_groups")
+
+    def get_feature_settings(self, obj):
+        return obj.feature.settings.get('ui', {})
 
     def get_feature_groups(self, obj):
         try:

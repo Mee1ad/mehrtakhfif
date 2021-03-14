@@ -878,6 +878,7 @@ class FeatureASchema(BaseAdminSchema):
     list_filter = [FeatureGroup]
 
     name = fields.Dict()
+    settings = fields.Dict()
     type = fields.Function(lambda o: o.get_type_display())
     values = fields.Method("get_values")  # 7 + 19 (selected)
     groups = fields.Method("get_feature_groups")  # 8

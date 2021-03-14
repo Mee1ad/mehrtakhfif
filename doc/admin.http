@@ -495,7 +495,7 @@ Content-Type: application/json
 > res.js
 
 ###
-GET {{admin_host}}/feature?id=31
+GET {{admin_host}}/feature?id=35
 
 > res.js
 

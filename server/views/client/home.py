@@ -6,10 +6,12 @@ from django.http import JsonResponse, HttpResponseNotFound
 from server.documents import *
 from server.serialize import *
 from server.utils import *
-
+'mtcRYN@6JEUcb-v_5H5=kbNC&3v^*=rsT?+yQxYNsY5=dK^2s#vM^AJf9nAMuYee=df@dxpGJ@bcny8-U-*fsvBTJ2P^uK9p=LuNV?F3RnK_r4m5-wXp8v6n7Vh7n#8yYUgZRUb&kP!'
 
 class Test(View):
     def get(self, request):
+        product = Product.objects.filter(pk=1).values('name')
+        print(product)
         return JsonResponse({"message": "pong"})
         # request.user = None
         # res = JsonResponse({})

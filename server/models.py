@@ -7,7 +7,8 @@ import pytz
 from PIL import Image, ImageFilter
 from django.contrib.auth.models import AbstractUser
 from django.contrib.postgres.fields import JSONField
-from django.contrib.postgres.indexes import GinIndex
+from django.contrib.postgres.indexes import GinIndex, BTreeIndex, HashIndex, BrinIndex
+from django.contrib.postgres.search import SearchVectorField
 from django.contrib.sessions.models import Session
 from django.core.exceptions import FieldDoesNotExist
 from django.core.validators import *
@@ -443,7 +444,7 @@ class Ad(Base):
 
     class Meta:
         db_table = 'ad'
-        ordering = ['-id']
+        indexes = [BTreeIndex(fields=['priority', 'type'])]
 
 
 class User(AbstractUser):
@@ -528,7 +529,7 @@ class User(AbstractUser):
 
     class Meta:
         db_table = 'user'
-        ordering = ['-id']
+        indexes = [BTreeIndex(fields=['is_staff'])]
 
 
 class VipType(Base):
@@ -551,7 +552,6 @@ class VipType(Base):
 
     class Meta:
         db_table = 'vip_type'
-        ordering = ['-id']
 
 
 class Client(MyModel):
@@ -563,7 +563,7 @@ class Client(MyModel):
 
     class Meta:
         db_table = 'client'
-        ordering = ['-id']
+        indexes = [HashIndex(fields=['device_id'])]
 
 
 class Charity(Base):
@@ -572,7 +572,6 @@ class Charity(Base):
 
     class Meta:
         db_table = 'charity'
-        ordering = ['-id']
 
 
 class State(MyModel):
@@ -583,7 +582,6 @@ class State(MyModel):
 
     class Meta:
         db_table = 'state'
-        ordering = ['-id']
 
 
 class City(MyModel):
@@ -597,7 +595,6 @@ class City(MyModel):
 
     class Meta:
         db_table = 'city'
-        ordering = ['-id']
 
 
 class Address(MyModel):
@@ -631,7 +628,6 @@ class Address(MyModel):
 
     class Meta:
         db_table = 'address'
-        ordering = ['-id']
 
 
 class Box(Base):
@@ -657,14 +653,8 @@ class Box(Base):
 
     class Meta:
         db_table = 'box'
-        ordering = ['-id']
         permissions = [("has_access", "Can manage that box")]
-        # indexes = [
-        #     models.Index(
-        #         name="core_book_status_title_6099efdb_idx",
-        #         fields=["permalink", "title"],
-        #     )
-        # ]
+        indexes = [HashIndex(fields=['permalink'])]
 
 
 class Media(Base):
@@ -707,7 +697,7 @@ class Media(Base):
 
     class Meta:
         db_table = 'media'
-        ordering = ['-id']
+        indexes = [BrinIndex(fields=['type'])]
 
 
 class Category(Base):
@@ -768,8 +758,7 @@ class Category(Base):
 
     class Meta:
         db_table = 'category'
-        ordering = ['-id']
-        indexes = [GinIndex(fields=['name'])]
+        indexes = [HashIndex(fields=['permalink'])]
 
 
 class CategoryGroupFeature(MyModel):
@@ -779,7 +768,6 @@ class CategoryGroupFeature(MyModel):
 
     class Meta:
         db_table = 'category_group_feature'
-        ordering = ['-id']
 
 
 class FeatureValue(Base):
@@ -797,7 +785,6 @@ class FeatureValue(Base):
 
     class Meta:
         db_table = 'feature_value'
-        ordering = ['-id']
 
 
 class Feature(Base):
@@ -833,10 +820,10 @@ class Feature(Base):
     # group = models.ForeignKey("FeatureGroup", on_delete=CASCADE, related_name="features", null=True, blank=True)
     type = models.PositiveSmallIntegerField(default=1, choices=types)
     layout_type = models.PositiveSmallIntegerField(default=1, choices=layout_types)
+    settings = JSONField(default=dict, blank=True)
 
     class Meta:
         db_table = 'feature'
-        ordering = ['-id']
 
 
 class FeatureGroupFeature(MyModel):
@@ -847,7 +834,6 @@ class FeatureGroupFeature(MyModel):
 
     class Meta:
         db_table = 'feature_group_feature'
-        ordering = ['-id']
 
 
 class FeatureGroup(Base):
@@ -868,7 +854,6 @@ class FeatureGroup(Base):
 
     class Meta:
         db_table = 'feature_group'
-        ordering = ['-id']
 
 
 class Tag(Base):
@@ -896,8 +881,7 @@ class Tag(Base):
 
     class Meta:
         db_table = 'tag'
-        ordering = ['-id']
-        indexes = [GinIndex(fields=['name'])]
+        indexes = [HashIndex(fields=['permalink'])]
 
 
 class TagGroupTag(MyModel):
@@ -908,7 +892,6 @@ class TagGroupTag(MyModel):
 
     class Meta:
         db_table = 'tag_group_tags'
-        ordering = ['-id']
 
 
 class TagGroup(Base):
@@ -926,7 +909,6 @@ class TagGroup(Base):
 
     class Meta:
         db_table = 'tag_group'
-        ordering = ['-id']
 
 
 class Brand(Base):
@@ -953,7 +935,7 @@ class Brand(Base):
 
     class Meta:
         db_table = 'brand'
-        ordering = ['-id']
+        # indexes = [GinIndex(fields=['permalink'])]
 
 
 # from django.db.models.signals import pre_init
@@ -974,7 +956,6 @@ class ProductTag(MyModel):
 
     class Meta:
         db_table = 'product_tag'
-        ordering = ['-id']
 
 
 class ProductMedia(MyModel):
@@ -990,7 +971,6 @@ class ProductMedia(MyModel):
 
     class Meta:
         db_table = 'product_media'
-        ordering = ['-id']
 
 
 class ProductFeature(Base):
@@ -999,15 +979,15 @@ class ProductFeature(Base):
     def __str__(self):
         return f"{self.id}"
 
-    product = models.ForeignKey("Product", on_delete=CASCADE, related_name="product_features")
-    feature = models.ForeignKey(Feature, on_delete=CASCADE)
+    product = models.ForeignKey("Product", on_delete=CASCADE, related_name="product_features", db_index=False)
+    feature = models.ForeignKey(Feature, on_delete=CASCADE, db_index=False)
     feature_value = models.ForeignKey(FeatureValue, on_delete=CASCADE, null=True, related_name='product_features')
     settings = JSONField(default=dict)
     priority = models.PositiveSmallIntegerField(default=0)
 
     class Meta:
         db_table = 'product_feature'
-        ordering = ['-id']
+        indexes = [BTreeIndex(fields=['product', 'feature'])]
 
 
 class ProductFeatureStorage(MyModel):
@@ -1016,13 +996,14 @@ class ProductFeatureStorage(MyModel):
     def __str__(self):
         return f"{self.id}"
 
-    product_feature = models.ForeignKey(ProductFeature, on_delete=CASCADE, related_name="product_feature_storages")
-    storage = models.ForeignKey("Storage", on_delete=CASCADE)
+    product_feature = models.ForeignKey(ProductFeature, on_delete=CASCADE, related_name="product_feature_storages",
+                                        db_index=False)
+    storage = models.ForeignKey("Storage", on_delete=CASCADE, db_index=False)
     extra_data = JSONField(default=dict)
 
     class Meta:
         db_table = 'product_feature_storage'
-        ordering = ['-id']
+        indexes = [BTreeIndex(fields=['product_feature', 'storage'])]
 
 
 class Product(Base):
@@ -1124,13 +1105,13 @@ class Product(Base):
     #     super(Post, self).save()
 
     categories = models.ManyToManyField(Category, related_name="products")
-    box = models.ForeignKey(Box, on_delete=PROTECT)
+    box = models.ForeignKey(Box, on_delete=PROTECT, db_index=False)
     brand = models.ForeignKey(Brand, on_delete=SET_NULL, null=True, blank=True, related_name="products")
     thumbnail = models.ForeignKey(Media, on_delete=PROTECT, related_name='products', null=True, blank=True)
     cities = models.ManyToManyField(City)
     states = models.ManyToManyField(State)
     default_storage = models.OneToOneField(null=True, blank=True, to="Storage", on_delete=SET_NULL,
-                                           related_name='product_default_storage')
+                                           related_name='product_default_storage', db_index=False)
     tags = models.ManyToManyField(Tag, through="ProductTag", related_name='products')
     tag_groups = models.ManyToManyField(TagGroup, related_name='products')
     media = models.ManyToManyField(Media, through='ProductMedia')
@@ -1145,7 +1126,7 @@ class Product(Base):
     booking_type = models.PositiveSmallIntegerField(choices=booking_types, default=1)
     breakable = models.BooleanField(default=False)
     type = models.PositiveSmallIntegerField(choices=types, validators=[validate_product_type])
-    permalink = models.CharField(max_length=255, db_index=True, unique=True)
+    permalink = models.CharField(max_length=255, db_index=False, unique=True)
 
     name = JSONField(default=multilanguage)
     # name = pg_search.SearchVectorField(null=True)
@@ -1161,13 +1142,16 @@ class Product(Base):
     # review = models.TextField(null=True, blank=True)
     review = JSONField(default=default_review, help_text="{chats: [], state: reviewed/request_review/ready}")
 
+
     # check_review = models.BooleanField(default=False)
 
     # home_buissiness =
     # support_description =
     class Meta:
         db_table = 'product'
-        ordering = ['-updated_at']
+        # ordering = ['-updated_at']
+        indexes = [BTreeIndex(fields=['box', 'default_storage', 'updated_at', 'created_at']),
+                   HashIndex(fields=['permalink'])]
 
 
 class Package(Base):
@@ -1187,7 +1171,6 @@ class Package(Base):
 
     class Meta:
         db_table = 'package'
-        ordering = ['-id']
 
 
 class VipPrice(MyModel):
@@ -1205,7 +1188,6 @@ class VipPrice(MyModel):
 
     class Meta:
         db_table = 'vip_price'
-        ordering = ['-id']
 
 
 class Storage(Base):
@@ -1411,6 +1393,7 @@ class Storage(Base):
     deadline = models.DateTimeField(null=True, blank=True)
     start_time = models.DateTimeField(auto_now_add=True)
     title = JSONField(default=multilanguage)
+    search = SearchVectorField(null=True)
     supplier = models.ForeignKey(User, on_delete=PROTECT, null=True, blank=True)
     invoice_description = JSONField(default=multilanguage)
     invoice_title = JSONField(default=multilanguage)
@@ -1423,7 +1406,8 @@ class Storage(Base):
 
     class Meta:
         db_table = 'storage'
-        ordering = ['-id']
+        # ordering = ['-id']
+        indexes = [BTreeIndex(fields=['deadline'])]
 
 
 class Basket(Base):
@@ -1443,7 +1427,6 @@ class Basket(Base):
 
     class Meta:
         db_table = 'basket'
-        ordering = ['-id']
 
 
 class BasketProduct(MyModel):
@@ -1460,8 +1443,9 @@ class BasketProduct(MyModel):
         self.validation()
         super().save(*args, **kwargs)
 
-    storage = models.ForeignKey(Storage, on_delete=CASCADE)
-    basket = models.ForeignKey(Basket, on_delete=CASCADE, null=True, blank=True, related_name="basket_storages")
+    storage = models.ForeignKey(Storage, on_delete=CASCADE, db_index=False)
+    basket = models.ForeignKey(Basket, on_delete=CASCADE, null=True, blank=True, related_name="basket_storages",
+                               db_index=False)
     count = models.PositiveIntegerField(default=1)
     box = models.ForeignKey(Box, on_delete=PROTECT)
     features = JSONField(default=dict, help_text="{'name': 'feature name', 'value': 'feature value'}")
@@ -1469,7 +1453,7 @@ class BasketProduct(MyModel):
 
     class Meta:
         db_table = 'basket_product'
-        ordering = ['-id']
+        indexes = [BTreeIndex(fields=['basket', 'storage'])]
 
 
 class Blog(Base):
@@ -1485,7 +1469,6 @@ class Blog(Base):
 
     class Meta:
         db_table = 'blog'
-        ordering = ['-id']
 
 
 class BlogPost(Base):
@@ -1502,7 +1485,6 @@ class BlogPost(Base):
 
     class Meta:
         db_table = 'blog_post'
-        ordering = ['-id']
 
 
 class Comment(Base):
@@ -1538,7 +1520,6 @@ class Comment(Base):
 
     class Meta:
         db_table = 'comments'
-        ordering = ['-id']
 
 
 class Invoice(Base):
@@ -1606,7 +1587,7 @@ class Invoice(Base):
 
     class Meta:
         db_table = 'invoice'
-        ordering = ['-id']
+        indexes = [BTreeIndex(fields=['payed_at']), BTreeIndex(fields=['created_at']), BTreeIndex(fields=['expire'])]
 
 
 class PaymentHistory(SafeDeleteModel):
@@ -1625,13 +1606,13 @@ class PaymentHistory(SafeDeleteModel):
 # todo remove
 class InvoiceSuppliers(MyModel):
     select = ['invoice', 'supplier'] + MyModel.select
-    invoice = models.ForeignKey(Invoice, on_delete=CASCADE)
-    supplier = models.ForeignKey(User, on_delete=CASCADE)
+    invoice = models.ForeignKey(Invoice, on_delete=CASCADE, db_index=False)
+    supplier = models.ForeignKey(User, on_delete=CASCADE, db_index=False)
     amount = models.PositiveIntegerField()
 
     class Meta:
         db_table = 'supplier_invoice'
-        ordering = ['-id']
+        indexes = [BTreeIndex(fields=['invoice', 'supplier'])]
 
 
 class InvoiceStorage(Base):
@@ -1662,7 +1643,7 @@ class InvoiceStorage(Base):
         return f"{self.storage}"
 
     id = models.BigAutoField(auto_created=True, primary_key=True)
-    key = models.CharField(max_length=31, unique=True, null=True, db_index=True)
+    key = models.CharField(max_length=31, unique=True, null=True, db_index=False)
     filename = models.CharField(max_length=255, null=True, blank=True)
     box = models.ForeignKey(Box, on_delete=PROTECT)
     tax = models.PositiveIntegerField(default=0)
@@ -1689,7 +1670,7 @@ class InvoiceStorage(Base):
     # stodo change to invoice_storage
     class Meta:
         db_table = 'invoice_product'
-        ordering = ['-id']
+        indexes = [HashIndex(fields=['key'])]
 
 
 class DiscountCode(Base):
@@ -1708,7 +1689,6 @@ class DiscountCode(Base):
 
     class Meta:
         db_table = 'discount_code'
-        ordering = ['-id']
 
 
 class Menu(Base):
@@ -1729,7 +1709,6 @@ class Menu(Base):
 
     class Meta:
         db_table = 'menu'
-        ordering = ['-id']
 
 
 class Rate(MyModel):
@@ -1745,7 +1724,6 @@ class Rate(MyModel):
 
     class Meta:
         db_table = 'rate'
-        ordering = ['-id']
 
 
 class Slider(Base):
@@ -1771,7 +1749,6 @@ class Slider(Base):
 
     class Meta:
         db_table = 'slider'
-        ordering = ['-id']
 
 
 class SpecialOffer(Base):
@@ -1809,7 +1786,6 @@ class SpecialOffer(Base):
 
     class Meta:
         db_table = 'special_offer'
-        ordering = ['-id']
 
 
 class SpecialProduct(Base):
@@ -1845,7 +1821,6 @@ class SpecialProduct(Base):
 
     class Meta:
         db_table = 'special_products'
-        ordering = ['-id']
 
 
 class URL(models.Model):
@@ -1857,7 +1832,6 @@ class URL(models.Model):
 
     class Meta:
         db_table = 'url'
-        ordering = ['-id']
 
 
 class WishList(Base):
@@ -1874,7 +1848,6 @@ class WishList(Base):
 
     class Meta:
         db_table = 'wishList'
-        ordering = ['-id']
 
 
 class NotifyUser(MyModel):
@@ -1890,7 +1863,6 @@ class NotifyUser(MyModel):
 
     class Meta:
         db_table = 'notify_user'
-        ordering = ['-id']
 
 
 # ---------- Tourism ---------- #
@@ -1898,7 +1870,6 @@ class NotifyUser(MyModel):
 class ResidenceType(Base):
     class Meta:
         db_table = 'residence_type'
-        ordering = ['-id']
 
     def __str__(self):
         return self.name['fa']
@@ -1929,7 +1900,6 @@ class HousePrice(Base):
 
     class Meta:
         db_table = 'house_price'
-        ordering = ['-id']
 
 
 class House(Base):
@@ -1961,7 +1931,6 @@ class House(Base):
 
     class Meta:
         db_table = 'house'
-        ordering = ['-id']
 
 
 class Booking(Base):
@@ -1980,7 +1949,6 @@ class Booking(Base):
 
     class Meta:
         db_table = 'book'
-        ordering = ['-id']
 
 
 class Holiday(MyModel):
@@ -1994,7 +1962,6 @@ class Holiday(MyModel):
 
     class Meta:
         db_table = 'holiday'
-        ordering = ['-id']
 
 
 # ---------- Proxy Models ---------- #

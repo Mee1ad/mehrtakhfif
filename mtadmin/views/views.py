@@ -4,7 +4,6 @@ from time import sleep
 from django.core.mail import send_mail
 from django.http import HttpResponseBadRequest, HttpResponse, HttpResponseRedirect, HttpResponseNotFound
 from django.shortcuts import render_to_response, render
-from django.utils.crypto import get_random_string
 from django_telegram_login.authentication import verify_telegram_authentication
 from django_telegram_login.errors import TelegramDataIsOutdatedError, NotTelegramDataError
 
@@ -40,7 +39,6 @@ class Cache(TableView):
         if caches:
             delete_url = HOST + f"/admin/cache?q={key}&token={token}"
         return JsonResponse({'data': data, 'delete': delete_url})
-
 
 
 class Token(AdminView):

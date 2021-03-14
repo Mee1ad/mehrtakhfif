@@ -18,12 +18,13 @@ from django.core.exceptions import PermissionDenied
 from django.core.mail import EmailMultiAlternatives
 from django.core.paginator import Paginator
 from django.db.models import Sum
+from django.utils.crypto import get_random_string
 from django.utils.translation import gettext_lazy as _
 from django.views import View
 from django_celery_beat.models import IntervalSchedule
 from kavenegar import *
 
-from mehr_takhfif.settings import CSRF_SALT, TOKEN_SALT, DEFAULT_COOKIE_DOMAIN, DEBUG, SMS_KEY, color_feature_id,\
+from mehr_takhfif.settings import CSRF_SALT, TOKEN_SALT, DEFAULT_COOKIE_DOMAIN, DEBUG, SMS_KEY, color_feature_id, \
     SHORTLINK
 from server.models import *
 from server.serialize import get_tax, BoxCategoriesSchema, BasketSchema, MinProductSchema, ProductFeatureSchema, \
@@ -31,8 +32,6 @@ from server.serialize import get_tax, BoxCategoriesSchema, BasketSchema, MinProd
 # from barcode import generate
 # from barcode.base import Barcode
 from server.views.post import get_shipping_cost_temp
-from django.utils.crypto import get_random_string
-from django.db.utils import IntegrityError
 
 random_data = string.ascii_lowercase + string.ascii_uppercase + string.digits
 default_step = 18
@@ -721,6 +720,13 @@ def make_short(link):
         except IntegrityError:
             pass
     return f"{SHORTLINK}/{url.shortlink}"
+
+
+def esearch(q, document, field=("name",)):
+    s = document.search()
+    r = s.query("multi_match", query=q, fields=field)
+    ids = [item.id for item in r]
+    return ids
 
 
 # Security
