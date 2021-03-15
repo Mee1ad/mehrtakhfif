@@ -234,7 +234,11 @@ class FeatureView(View):
         identifier = {'permalink': permalink}
         if permalink.isdecimal():
             identifier = {'id': permalink}
-
+        product = Product.objects.filter(**identifier).first()
+        if product.type == 1:
+            storages = product.storages.all().prefetch_related('vip_prices')
+            storages = StorageSchema(exclude=['features']).dump(storages, many=True)
+            return JsonResponse({'storage': storages})
         product = Product.objects.filter(**identifier).select_related('default_storage'). \
             annotate(storages_count=Count('storages'),
                      active_storages_count=Count('storages', filter=Q(storages__unavailable=False,
