@@ -7,7 +7,7 @@ import pytz
 from PIL import Image, ImageFilter
 from django.contrib.auth.models import AbstractUser
 from django.contrib.postgres.fields import JSONField
-from django.contrib.postgres.indexes import GinIndex, BTreeIndex, HashIndex, BrinIndex
+from django.contrib.postgres.indexes import BTreeIndex, HashIndex, BrinIndex, GinIndex
 from django.contrib.postgres.search import SearchVectorField
 from django.contrib.sessions.models import Session
 from django.core.exceptions import FieldDoesNotExist
@@ -21,16 +21,21 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django_celery_beat.models import PeriodicTask
 from django_celery_results.models import TaskResult
+from funcy import project
 from push_notifications.models import APNSDevice, GCMDevice
 from push_notifications.models import GCMDevice
 from safedelete.config import DELETED_INVISIBLE
 from safedelete.managers import SafeDeleteQueryset
 from safedelete.models import SafeDeleteModel, SOFT_DELETE_CASCADE
 from safedelete.signals import post_softdelete
+from mehr_takhfif.settings import ELASTICSEARCH_DSL
+import requests
+# from django.contrib.sites.models import Site
 
 from mehr_takhfif.settings import HOST, MEDIA_ROOT
 from mtadmin.exception import *
 from server.field_validation import *
+from django.urls import reverse
 
 deliver_status = [(1, 'pending'), (2, 'packing'), (3, 'sending'), (4, 'delivered'), (5, 'referred')]
 
@@ -189,6 +194,25 @@ def default_review():
 
 def next_half_hour(minutes=30):
     return timezone.now() + timezone.timedelta(minutes=minutes)
+
+
+def esearch(q, document, fields=("name_fa",), exact_match=False, only=None):
+    s = document.search()
+    # r = s.query("multi_match", query=q, fields=fields)
+    r = s.query({"dis_max": {"queries": [{"match": {"name_fa": q}}, {"wildcard": {"name_fa": f"*{q}*"}}]}}).sort("_score")
+    # r = s.query("wildcard", name_fa=f"{q}*")
+    # r = s.query(Q("bool", must=[Q('match', name_fa=q)]))
+    # s = Search(index='product')
+    # r = s.query(Q('bool', must=[Q('match', name_fa='python'), Q('match', name_fa='best')]))
+    [print(hit.to_dict(), hit.meta) for hit in r]
+    if exact_match:
+        r = r.execute()[0].to_dict()
+        if q not in project(r, fields).values():
+            return []
+        return r
+    if only:
+        return [project(hit.to_dict(), only)[only[0]] for hit in r]
+    return [hit.to_dict() for hit in r]
 
 
 class MyQuerySet(SafeDeleteQueryset):
@@ -665,6 +689,12 @@ class Media(Base):
                    'mobile_ads': (500, 384), 'slider': (1920, 504), 'mobile_slider': (980, 860)}
     select = ['box'] + Base.select
 
+    def get_absolute_url(self):
+        return self.image.url
+
+    def get_urls(self):
+        return "/test/"
+
     def __str__(self):
         try:
             return self.title['fa']
@@ -709,6 +739,9 @@ class Category(Base):
     required_m2m = []
     fields = {}
     select = ['parent', 'box', 'media'] + Base.select
+
+    def get_absolute_url(self):
+        return "/search/" + self.permalink
 
     def clean(self):
         if self.products.count() <= 10:
@@ -859,17 +892,29 @@ class FeatureGroup(Base):
 class Tag(Base):
     objects = MyQuerySet.as_manager()
 
+    def get_absolute_url(self):
+        return "/search?tags=" + self.permalink
+
     def __str__(self):
         return f"{self.name['fa']}"
 
     def validation(self, kwargs):
         permalink_validation(kwargs.get('permalink', 'pass'))
-        if kwargs.get('name', None):
-            name = kwargs['name']
-            if Tag.objects.filter((Q(name__en=name['en']) & ~Q(name__en="") & ~Q(id=kwargs['id'])) |
-                                  (Q(name__fa=name['fa']) & ~Q(name__fa="") & ~Q(id=kwargs['id'])) |
-                                  (Q(name__ar=name['ar']) & ~Q(name__ar="") & ~Q(id=kwargs['id']))).count() > 0:
-                raise IntegrityError("DETAIL:  Key (name)=() already exists.")
+        name = kwargs.get('name', None)
+        name_fa = name['fa']
+        es = f"http://{ELASTICSEARCH_DSL['default']['hosts']}"
+        r = requests.get(f"{es}/tag/_search?q=name_fa:{name_fa}&size=1")
+        try:
+            if name_fa == r.json()['hits']['hits'][0]['_source']['name_fa']:
+                raise ValidationError("نام تگ تکراریه")
+        except (IndexError, KeyError):
+            pass
+        # if esearch(name, Tag):
+        #
+        #     if Tag.objects.filter((Q(name__en=name['en']) & ~Q(name__en="") & ~Q(id=kwargs['id'])) |
+        #                           (Q(name__fa=name['fa']) & ~Q(name__fa="") & ~Q(id=kwargs['id'])) |
+        #                           (Q(name__ar=name['ar']) & ~Q(name__ar="") & ~Q(id=kwargs['id']))).count() > 0:
+        #         raise IntegrityError("DETAIL:  Key (name)=() already exists.")
         return kwargs
 
     def save(self, *args, **kwargs):
@@ -881,7 +926,7 @@ class Tag(Base):
 
     class Meta:
         db_table = 'tag'
-        indexes = [HashIndex(fields=['permalink'])]
+        indexes = [HashIndex(fields=['permalink']), GinIndex(fields=['name'])]
 
 
 class TagGroupTag(MyModel):
@@ -919,11 +964,20 @@ class Brand(Base):
 
     def validation(self, kwargs):
         self.permalink = self.permalink.lower()
-        name = kwargs['name']
-        if Brand.objects.filter((Q(name__en=name['en']) & ~Q(name__en="") & ~Q(id=kwargs['id'])) |
-                                (Q(name__fa=name['fa']) & ~Q(name__fa="") & ~Q(id=kwargs['id'])) |
-                                (Q(name__ar=name['ar']) & ~Q(name__ar="") & ~Q(id=kwargs['id']))).count() > 0:
-            raise IntegrityError("DETAIL:  Key (name)=() already exists.")
+        name = kwargs.get('name', None)
+        name_fa = name['fa']
+        es = f"http://{ELASTICSEARCH_DSL['default']['hosts']}"
+        r = requests.get(f"{es}/brand/_search?q=name_fa:{name_fa}&size=1")
+        try:
+            if name_fa == r.json()['hits']['hits'][0]['_source']['name_fa']:
+                raise ValidationError("نام برند تکراریه")
+        except (IndexError, KeyError):
+            pass
+
+        # if Brand.objects.filter((Q(name__en=name['en']) & ~Q(name__en="") & ~Q(id=kwargs['id'])) |
+        #                         (Q(name__fa=name['fa']) & ~Q(name__fa="") & ~Q(id=kwargs['id'])) |
+        #                         (Q(name__ar=name['ar']) & ~Q(name__ar="") & ~Q(id=kwargs['id']))).count() > 0:
+        #     raise IntegrityError("DETAIL:  Key (name)=() already exists.")
         return kwargs
 
     def save(self, *args, **kwargs):
@@ -1031,6 +1085,9 @@ class Product(Base):
     booking_types = [(1, 'unbookable'), (2, 'datetime'), (3, 'range')]
     choices = ('type', 'booking_type')
     exclude_fields = ['feature_groups', 'storages', 'default_storage', 'available']
+
+    def get_absolute_url(self):
+        return f"/product/{self.permalink}"
 
     def pre_process(self, my_dict):
         # if (self.review['chat'] != []) and (my_dict.get('review') != self.review):
@@ -1141,7 +1198,7 @@ class Product(Base):
     settings = JSONField(default=dict, blank=True)
     # review = models.TextField(null=True, blank=True)
     review = JSONField(default=default_review, help_text="{chats: [], state: reviewed/request_review/ready}")
-
+    # site = models.ForeignKey(Site, on_delete=models.CASCADE, default=1)
 
     # check_review = models.BooleanField(default=False)
 
@@ -1454,6 +1511,7 @@ class BasketProduct(MyModel):
     class Meta:
         db_table = 'basket_product'
         indexes = [BTreeIndex(fields=['basket', 'storage'])]
+        unique_together = ('basket', 'storage')
 
 
 class Blog(Base):
