@@ -15,7 +15,7 @@ from .sitemap import *
 try:
     from .urls_test import urls
 except ModuleNotFoundError:
-    pass
+    urls = []
 
 app_name = 'server'
 
