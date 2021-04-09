@@ -10,7 +10,12 @@ from server.views.client.product import *
 from server.views.client.shopping import *
 from server.views.client.user import *
 from server.views.payment import *
-from .urls_test import urls
+from django.contrib.sitemaps.views import sitemap
+from .sitemap import *
+try:
+    from .urls_test import urls
+except ModuleNotFoundError:
+    pass
 
 app_name = 'server'
 
@@ -106,4 +111,12 @@ auth = [
     path('set_password', try_except(SetPassword.as_view()), name='set_password'),
 ]
 
-urlpatterns = [*home, *box, *user, *shopping, *product, *tourism, *auth, *pay, *urls]
+sitemap = [path('sitemap.xml', sitemap, {'sitemaps': {'sitemaps': BaseSitemap}},
+                name='django.contrib.sitemaps.views.sitemap'),
+           path('product-sitemap.xml', sitemap, {'sitemaps': {'product': ProductSitemap}},
+                name='django.contrib.sitemaps.views.sitemap'),
+           path('category-sitemap.xml', sitemap, {'sitemaps': {'category': CategorySitemap}},
+                name='django.contrib.sitemaps.views.sitemap'),
+           path('tag-sitemap.xml', sitemap, {'sitemaps': {'tag': TagSitemap}},
+                name='django.contrib.sitemaps.views.sitemap')]
+urlpatterns = [*home, *box, *user, *shopping, *product, *tourism, *auth, *pay, *urls, *sitemap]
