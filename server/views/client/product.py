@@ -55,6 +55,8 @@ class ProductView(View):
                 annotate(review_count=Count('reviews')). \
                 select_related('thumbnail', 'box', 'brand'). \
                 prefetch_related('product_tags__tag', 'tag_groups__tag_group_tags__tag', 'categories__parent').first()
+            if product_obj is None:
+                return JsonResponse({'message': 'محصول موقتا غیرفعال میباشد', 'variant': 'error'}, status=404)
             product_obj.purchased = False
             product_obj.notify = False
             product_obj.wish = False
