@@ -1450,7 +1450,7 @@ class Storage(Base):
     deadline = models.DateTimeField(null=True, blank=True)
     start_time = models.DateTimeField(auto_now_add=True)
     title = JSONField(default=multilanguage)
-    search = SearchVectorField(null=True)
+    # search = SearchVectorField(null=True)
     supplier = models.ForeignKey(User, on_delete=PROTECT, null=True, blank=True)
     invoice_description = JSONField(default=multilanguage)
     invoice_title = JSONField(default=multilanguage)
