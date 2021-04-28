@@ -6,12 +6,11 @@ from django.http import JsonResponse, HttpResponseNotFound
 from server.documents import *
 from server.serialize import *
 from server.utils import *
-'mtcRYN@6JEUcb-v_5H5=kbNC&3v^*=rsT?+yQxYNsY5=dK^2s#vM^AJf9nAMuYee=df@dxpGJ@bcny8-U-*fsvBTJ2P^uK9p=LuNV?F3RnK_r4m5-wXp8v6n7Vh7n#8yYUgZRUb&kP!'
+
 
 class Test(View):
     def get(self, request):
         product = Product.objects.filter(pk=1).values('name')
-        print(product)
         return JsonResponse({"message": "pong"})
         # request.user = None
         # res = JsonResponse({})
@@ -198,34 +197,62 @@ class Suggest(View):
 class ElasticSearch(View):
     def get(self, request):
         q = request.GET.get('q', '')
-        # lang = request.lang
         p = ProductDocument.search()
         c = CategoryDocument.search()
         t = TagDocument.search()
-        p = p.query("multi_match", query=q, fields=['name_fa', 'category_fa']).query('match', disable=False)
-        c = c.query("multi_match", query=q, fields=['name_fa', 'permalink']).query('match', disable=False)
-        t = t.query("match", name_fa=q)
+        p = p.query({"bool": {"should": [{"match": {"name_fa": {"query": q, "boost": 1}}},
+                                         {"wildcard": {"name_fa": f"{q}*"}},
+                                         {"match": {"name_fa2": {"query": q, "boost": 0.5}}}]}}).query('match',
+                                                                                                       disable=False)
+        c = c.query({"bool": {"should": [{"match": {"name_fa": {"query": q, "boost": 1}}},
+                                         {"wildcard": {"name_fa": f"{q}*"}}]}}).query('match', disable=False)
+        t = t.query({"bool": {"should": [{"match": {"name_fa": {"query": q, "boost": 1}}},
+                                         {"wildcard": {"name_fa": f"{q}*"}},
+                                         {"match": {"name_fa2": {"query": q, "boost": 0.5}}}]}})
         products, categories, tags = [], [], []
-        removed_products, removed_tags = [], []
         for hit in p[:3]:
+            print(hit.name_fa, hit.meta.score)
             product = {'name': hit.name_fa, 'permalink': hit.permalink, 'thumbnail': hit.thumbnail}
-            if q not in hit.name_fa:
-                removed_products.append(product)
-                continue
             products.append(product)
         for hit in c[:3]:
             category = {'name': hit.name_fa, 'permalink': hit.permalink, 'media': hit.media, 'parent': hit.parent}
-            if q in hit.name_fa and not re.search(f".+{q}.+", hit.name_fa):
-                categories.append(category)
+            categories.append(category)
         for hit in t[:3]:
             tag = {'name': hit.name_fa, 'permalink': hit.permalink}
-            if q not in hit.name_fa:
-                removed_tags.append(tag)
-                continue
             tags.append(tag)
-        if not products:
-            products = removed_products
-        if not tags:
-            tags = removed_tags
         categories = sorted(categories, key=lambda i: 1 if i['parent'] else 0)
         return JsonResponse({'categories': categories, 'tags': tags, 'products': products})
+
+    def get2(self, request):
+        q = request.GET.get('q', '')
+        # lang = request.lang
+        s = Search()
+        p = s.from_dict({"query": {"dis_max": {"queries": [{"match": {"name_fa": q}},
+                                                           {"wildcard": {"name_fa": f"{q}*"}}]}},
+                         "size": 10, "sort": [{"_score": {"order": "desc"}}]}).query("match", disable=False)
+        products, categories, tags = [], [], []
+        removed_products, removed_tags = [], []
+        for hit in p:
+            print(hit.__dict__)
+            # product = {'name': hit.name_fa, 'permalink': hit.permalink, 'thumbnail': hit.thumbnail}
+            # if q not in hit.name_fa:
+            #     removed_products.append(product)
+            #     continue
+            # products.append(product)
+        return JsonResponse({})
+        # for hit in c[:3]:
+        #     category = {'name': hit.name_fa, 'permalink': hit.permalink, 'media': hit.media, 'parent': hit.parent}
+        #     if q in hit.name_fa and not re.search(f".+{q}.+", hit.name_fa):
+        #         categories.append(category)
+        # for hit in t[:3]:
+        #     tag = {'name': hit.name_fa, 'permalink': hit.permalink}
+        #     if q not in hit.name_fa:
+        #         removed_tags.append(tag)
+        #         continue
+        #     tags.append(tag)
+        # if not products:
+        #     products = removed_products
+        # if not tags:
+        #     tags = removed_tags
+        # categories = sorted(categories, key=lambda i: 1 if i['parent'] else 0)
+        # return JsonResponse({'categories': categories, 'tags': tags, 'products': products})
