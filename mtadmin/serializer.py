@@ -579,7 +579,7 @@ class ProductESchema(ProductASchema, ProductSchema):
 
     media = fields.Method("get_media")
     tags = ProductTagField()
-    box = fields.Nested(BoxASchema(only=['id', 'name']))
+    box = fields.Nested(BoxASchema(only=['id', 'name', 'settings']))
     tag_groups = fields.Method("get_tag_groups")
     brand = fields.Nested(BrandASchema)
     properties = fields.Dict()
@@ -890,7 +890,7 @@ class FeatureASchema(BaseAdminSchema):
         values = obj.values.all()
         if getattr(obj, 'get_type_display')() == "text":
             # fv = values.order_by('id').first()
-            fv = min(values, key=attrgetter('id'))
+            fv = min(values, key=attrgetter('id'), default="اطلاعاتی برای نمایش وجود ندارد")
             if fv:
                 return [FeatureValueASchema(product=self.product).dump(fv)]
             return []
