@@ -890,7 +890,7 @@ class FeatureASchema(BaseAdminSchema):
         values = obj.values.all()
         if getattr(obj, 'get_type_display')() == "text":
             # fv = values.order_by('id').first()
-            fv = min(values, key=attrgetter('id'), default="اطلاعاتی برای نمایش وجود ندارد")
+            fv = min(values, key=attrgetter('id'), default={"fa": "اطلاعاتی برای نمایش وجود ندارد"})
             if fv:
                 return [FeatureValueASchema(product=self.product).dump(fv)]
             return []
