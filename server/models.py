@@ -1451,7 +1451,7 @@ class Storage(Base):
     start_time = models.DateTimeField(auto_now_add=True)
     title = JSONField(default=multilanguage)
     # search = SearchVectorField(null=True)
-    supplier = models.ForeignKey(User, on_delete=PROTECT, null=True, blank=True)
+    supplier = models.ForeignKey(User, on_delete=PROTECT, null=True, blank=True, related_name="products")
     invoice_description = JSONField(default=multilanguage)
     invoice_title = JSONField(default=multilanguage)
     vip_types = models.ManyToManyField(VipType, through='VipPrice', related_name="storages")
