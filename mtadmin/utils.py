@@ -574,7 +574,7 @@ def get_supplier_info_excel(box_id):
             storages = product.storages.all()
             storages = distinct_list_of_dict(storages, 'discount_price')
             categories = product.categories.all().values_list('name__fa', flat=True)
-            categories = ''.join(categories)
+            categories = ', '.join(categories)
             for storage in storages:
                 supplier_sheet.write(f'A{index + 2}', index)
                 supplier_sheet.write(f'B{index + 2}', product.id)
