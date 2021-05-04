@@ -12,6 +12,7 @@ from mtadmin.serializer import *
 from mtadmin.utils import *
 from server.documents import *
 from server.utils import *
+from server.views.client.product import ProductView
 
 
 class Cache(TableView):
@@ -367,19 +368,10 @@ class SetOrder(View):
         return JsonResponse({**responses['priority']}, status=202)
 
 
-class Test(View):
+class SupplierData(View):
     def get(self, request):
-        pk = request.GET.get('pk')
-        product = Product.objects.filter(pk=pk).select_related('brand', 'house', 'box', 'thumbnail',
-                                                               ). \
-            prefetch_related().first()
-        product = ProductESchema(only=['fg']).dump(product)
-        return JsonResponse({**product})
+        return JsonResponse(get_supplier_info_excel())
 
 
-class Test2(View):
-    def get(self, request):
-        pk = request.GET.get('pk')
-        storage = Storage.objects.filter(pk=pk).first()
-        storage = StorageESchema(only=['items']).dump(storage)
-        return JsonResponse({**storage})
+class ProductPreview(ProductView):
+    pass

@@ -52,6 +52,8 @@ path('generate_code', error_handler(GenerateCode.as_view()), name='generate_code
     path('user', error_handler(UserView.as_view()), name='user'),
     path('cache', error_handler(Cache.as_view()), name='cache'),
     path('cache/<str:key>', error_handler(Cache.as_view()), name='cache'),
+    path('supplier_data', error_handler(SupplierData.as_view()), name='supplier_data'),
+    path('product/<str:permalink>', error_handler(ProductPreview.as_view()), name='product'),
 
     path('tg_login', error_handler(TelegramLogin.as_view()), name='tg_login'),
     path('tg_register', error_handler(TelegramRegister.as_view()), name='tg_register'),
