@@ -12,7 +12,7 @@ from mtadmin.serializer import *
 from mtadmin.utils import *
 from server.documents import *
 from server.utils import *
-from server.views.client.product import ProductView
+from server.views.client.product import ProductView as ClientProductView  # conflict with client product
 
 
 class Cache(TableView):
@@ -373,5 +373,5 @@ class SupplierData(View):
         return JsonResponse(get_supplier_info_excel())
 
 
-class ProductPreview(ProductView):
+class ProductPreview(ClientProductView):
     pass
