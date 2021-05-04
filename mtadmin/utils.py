@@ -1,5 +1,6 @@
 import json
 
+import xlsxwriter
 from django.contrib.admin.utils import NestedObjects
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib.postgres.fields.jsonb import KeyTextTransform
@@ -542,4 +543,96 @@ def generate_post_discount_code(username):
     code = get_random_string(10, random_data)
     user = User.objects.get(username=username)
     DiscountCode.objects.create(code=code, type=3, created_by=user, updated_by=user)
-    print(code)
+
+
+def distinct_list_of_dict(l, k):  # list, key
+    distinct_list = []
+    for item in l:
+        if next((v for i, v in enumerate(distinct_list) if getattr(v, k) == getattr(item, k)), None) is None:
+            distinct_list.append(item)
+    return distinct_list
+
+
+def get_supplier_info_excel(box_id):
+    suppliers = User.objects.filter(is_supplier=True, products__product__box_id=box_id).order_by('id').distinct(
+        'id').prefetch_related('products')
+    for supplier in suppliers:
+        supplier_book = xlsxwriter.Workbook(f'report/supplier/{supplier.first_name} {supplier.last_name}.xlsx')
+        supplier_sheet = supplier_book.add_worksheet()
+        storages = supplier.products.all()
+        products = Product.objects.filter(storages__in=storages)
+        supplier_sheet.set_column('C:C', 50)
+        supplier_sheet.set_column('D:D', 50)
+        supplier_sheet.write(f'A1', "ردیف")
+        supplier_sheet.write(f'B1', "کد محصول")
+        supplier_sheet.write(f'C1', "دسته بندی")
+        supplier_sheet.write(f'D1', "نام محصول")
+        supplier_sheet.write(f'E1', "قیمت خرید")
+        supplier_sheet.write(f'F1', "قیمت فروش")
+        supplier_sheet.write(f'G1', "زمان آماده سازی")
+        for index, product in enumerate(products):
+            storages = product.storages.all()
+            storages = distinct_list_of_dict(storages, 'discount_price')
+            categories = product.categories.all().values_list('name__fa', flat=True)
+            categories = ''.join(categories)
+            for storage in storages:
+                supplier_sheet.write(f'A{index + 2}', index)
+                supplier_sheet.write(f'B{index + 2}', product.id)
+                supplier_sheet.write(f'C{index + 2}', categories)
+                supplier_sheet.write(f'D{index + 2}', storage.title['fa'])
+                supplier_sheet.write(f'E{index + 2}', storage.start_price)
+                supplier_sheet.write(f'F{index + 2}', storage.discount_price)
+                supplier_sheet.write(f'G{index + 2}', storage.max_shipping_time)
+        supplier_book.close()
+
+    return {"data": "ok"}
+    products = Product.objects.filter(box_id=3)
+    for product in products:
+        storages = product
+        products = Product.objects.filter(box=box)
+        categories = Category.objects.filter(box=box)
+        products_book = xlsxwriter.Workbook(f'محصول {box.name["fa"]}.xlsx')
+        products_sheet = products_book.add_worksheet()
+        category_book = xlsxwriter.Workbook(f'دسته بندی {box.name["fa"]}.xlsx')
+        category_sheet = category_book.add_worksheet()
+        products_sheet.set_column('B:B', 70)
+        products_sheet.set_column('C:C', 10)
+        category_sheet.set_column('B:B', 40)
+        products_sheet.write(f'A1', "ID")
+        products_sheet.write(f'B1', "name")
+        products_sheet.write(f'C1', "thumbnail")
+        products_sheet.write(f'D1', "deleted media count")
+        category_sheet.write(f'A1', "ID")
+        category_sheet.write(f'B1', "name")
+        category_sheet.write(f'C1', "image")
+        row = 2
+        for product in products:
+            thumbnail = None
+            deleted_media_count = 0
+            try:
+                if os.path.exists(product.thumbnail.image.path) is False:
+                    thumbnail = "حذف شده"
+            except AttributeError:
+                pass
+            medias = product.media.all()
+            for media in medias:
+                if os.path.exists(media.image.path) is False:
+                    deleted_media_count += 1
+            if thumbnail or deleted_media_count:
+                products_sheet.write(f'A{row}', product.id)
+                products_sheet.write(f'B{row}', product.get_name_fa())
+                products_sheet.write(f'C{row}', thumbnail)
+                products_sheet.write(f'D{row}', deleted_media_count)
+                row += 1
+        row = 2
+        for category in categories:
+            try:
+                if os.path.exists(category.media.image.path) is False:
+                    category_sheet.write(f'A{row}', category.id)
+                    category_sheet.write(f'B{row}', category.get_name_fa())
+                    category_sheet.write(f'C{row}', "حذف شده")
+                    row += 1
+            except AttributeError:
+                pass
+        products_book.close()
+        category_book.close()
