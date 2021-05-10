@@ -294,7 +294,8 @@ Content-Type: application/json
       "show": false
     }
   ],
-  "thumbnail_id": 1186
+  "thumbnail_id": 1186,
+  "accessory_type": "can_be"
 }
 
 > res.js
@@ -401,7 +402,7 @@ PUT {{admin_host}}/storage
 Content-Type: application/json
 
 {
-  "id": 232,
+  "id": 41,
   "available_count": 4,
   "available_count_for_sale": 3,
   "deadline": null,
@@ -447,7 +448,19 @@ Content-Type: application/json
     "en": "",
     "ar": ""
   },
-  "vip_prices": []
+  "vip_prices": [],
+  "accessories": [
+    {
+      "accessory_product_id": 1270,
+      "accessory_storage_id": 845,
+      "discount_price": 2000
+    },
+    {
+      "accessory_product_id": 1277,
+      "accessory_storage_id": 845,
+      "discount_price": 3000
+    }
+  ]
 }
 
 > res.js
@@ -724,7 +737,7 @@ Content-Type: application/json
 
 {
   "name": {
-    "fa": "api-test55",
+    "fa": "چای سیاه4",
     "en": "",
     "ar": ""
   },

@@ -15,8 +15,14 @@ Content-Type: Application/json
 {
   "products": [
     {
-      "storage_id": 41,
-      "count": 2
+      "storage_id": 838,
+      "count": 2,
+      "accessories": [
+        {
+          "id": 1,
+          "count": 1
+        }
+      ]
     }
   ]
 }
@@ -39,7 +45,7 @@ POST {{host}}/discount_code
 Content-Type: application/json
 
 {
-  "code": "123456"
+  "code": "asBCM3JceT"
 }
 
 > res.js
