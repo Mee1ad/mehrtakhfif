@@ -6,18 +6,20 @@ $TTL 120        ; 2 minutes default TTL
 
 
 ; Machine Names - 8
-@                  IN        A      37.152.182.220
-www                IN        A      37.152.182.220
-api                IN        A      37.152.182.220
-admin              IN        A      37.152.182.220
-kibana             IN        A      37.152.182.220
-flower             IN        A      37.152.182.220
-goaccess           IN        A      37.152.182.220
-box                IN        A      193.176.241.44
-autoconfig         IN        A      193.176.241.44
-autodiscover       IN        A      193.176.241.44
-autoconfig.box     IN        A      193.176.241.44
-autodiscover.box   IN        A      193.176.241.44
+@                  IN        A      185.97.118.171
+www                IN        A      185.97.118.171
+api                IN        A      185.97.118.171
+admin              IN        A      185.97.118.171
+kibana             IN        A      185.97.118.171
+flower             IN        A      185.97.118.171
+goaccess           IN        A      185.97.118.171
+box                IN        A      37.152.180.115
+autoconfig         IN        A      37.152.180.115
+autodiscover       IN        A      37.152.180.115
+autoconfig.box     IN        A      37.152.180.115
+autodiscover.box   IN        A      37.152.180.115
+mta-sts.box        IN        A      37.152.180.115
+mta-sts            IN        A      37.152.180.115
 
 
 
