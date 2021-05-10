@@ -27,6 +27,9 @@ from server.utils import sync_storage, send_sms, send_email, send_pm, random_dat
 
 logger = logging.getLogger(__name__)
 LOCK_EXPIRE = 60 * 10  # Lock expires in 10 minutes
+from django.conf import settings
+from django.core.management import call_command
+import datetime
 
 
 @contextmanager
@@ -289,6 +292,30 @@ def pm_task(self, tg_id, message, **kwargs):
                 logger.exception(e)
                 self.retry(countdown=3 ** self.request.retries)
     return "This task is duplicate"
+
+
+@shared_task
+def backup():
+    if settings.DEBUG is True:
+        return f"Could not be backed up: Debug is True"
+    else:
+        try:
+            call_command("dbbackup")
+            return f"Backed up successfully: {datetime.datetime.now()}"
+        except Exception:
+            return f"Could not be backed up: {datetime.datetime.now()}"
+
+
+@shared_task
+def mediabackup():
+    if settings.DEBUG is True:
+        return f"Could not be backed up: Debug is True"
+    else:
+        try:
+            call_command("mediabackup")
+            return f"Backed up successfully: {datetime.datetime.now()}"
+        except Exception:
+            return f"Could not be backed up: {datetime.datetime.now()}"
 
 
 def get_snapshots(self, name=None):
