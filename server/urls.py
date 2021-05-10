@@ -66,6 +66,7 @@ product = [
     cache_proxy(ProductView.as_view(), 'product/<str:permalink>', lvl[10]),
     cache_proxy(CommentView.as_view(), 'comment', lvl[1]),
     path('features/<str:permalink>', try_except(FeatureView.as_view()), name='features'),  # no cache
+    path('product_userdata/<str:permalink>', try_except(ProductUserData.as_view()), name='features'),  # no cache
     cache_proxy(RelatedProduct.as_view(), 'related_products/<str:permalink>', lvl[7]),
 ]
 

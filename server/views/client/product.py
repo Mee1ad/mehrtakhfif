@@ -6,10 +6,12 @@ from operator import itemgetter
 
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import Exists
+from django.db.models import Prefetch
 from django.http import JsonResponse
 from toolz import unique
 
 from server.serialize import *
+from server.utils import LoginRequired
 from server.utils import View, get_pagination, load_data, get_preview_permission
 
 
@@ -32,15 +34,6 @@ class ProductView(View):
         user = request.user
         product_preview = get_preview_permission(user)
         storage_preview = get_preview_permission(user, box_check=False, category_check=False)
-        # product_obj = Product.objects.filter(permalink=permalink, **product_preview).prefetch_related(
-        #     *Product.prefetch).select_related(*Product.select)
-
-        # p = 'product__'
-        # product_tag = ProductTag.objects.filter(product__permalink=permalink) \
-        #     .select_related('tag', 'product', f'{p}brand', f'{p}thumbnail') \
-        #     .prefetch_related(f'{p}categories', f'{p}cities', f'{p}states', f'{p}media', f'{p}tag_groups',
-        #                       f'{p}features', f'{p}feature_groups')
-        # product_obj = product_tag.first().product
         try:
             product_obj = Product.objects.filter(**identifier, **product_preview). \
                 annotate(review_count=Count('reviews'),
@@ -60,7 +53,6 @@ class ProductView(View):
             product_obj.purchased = False
             product_obj.notify = False
             product_obj.wish = False
-
         features = self.get_features(product_obj, request.lang)
         # features = []
         if product_obj is None:
@@ -91,7 +83,7 @@ class ProductView(View):
         if not product:
             return {'group_features': [], 'features': []}
         category_feature_groups = FeatureGroup.objects.filter(
-            categories__in=product.categories.values_list('id', flat=True), settings__show_title=True)
+            categories__in=list(product.categories.values_list('id', flat=True)), settings__ui__show_title=True)
         category_feature_groups = FeatureGroupSchema().dump(category_feature_groups, many=True)
         # product_feature_groups = product.feature_groups.all()
         # feature_groups = category_feature_groups | product_feature_groups
@@ -155,6 +147,29 @@ class ProductView(View):
             category['parent_id'] = None
             del category['parent']
             return category
+
+
+class ProductUserData(LoginRequired):
+    def get(self, request, permalink):
+        data = {"wish": False, "notify": False, "purchased": False}
+        if request.user.is_authenticated:
+            identifier = {'permalink': permalink}
+            product_identifier = {'product__permalink': permalink}
+            storage_product_identifier = {'storages__product__permalink': permalink}
+            if permalink.isdecimal():
+                identifier = {'id': permalink}
+                product_identifier = {'product_id': permalink}
+                storage_product_identifier = {'storages__product_id': permalink}
+            user = request.user
+            product_preview = get_preview_permission(user)
+            product = Product.objects.filter(**identifier, **product_preview). \
+                annotate(wish=Exists(WishList.objects.filter(user=user, wish=True, **product_identifier)),
+                         notify=Exists(WishList.objects.filter(user=user, notify=True, **product_identifier)),
+                         purchased=Exists(Invoice.objects.filter(user=user, status=2, **storage_product_identifier)))\
+                .values('wish', 'notify', 'purchased')
+            if product:
+                data = list(product)[0]
+        return JsonResponse(data)
 
 
 class RelatedProduct(View):
@@ -238,7 +253,17 @@ class FeatureView(View):
             identifier = {'id': permalink}
         product = Product.objects.filter(**identifier).first()
         if product.type == 1:
-            storages = product.storages.all().prefetch_related('vip_prices')
+            print('1')
+            all_storages = product.storages.all()
+            print(all_storages.values('id'))
+            print(StorageAccessories.objects.filter(storage__in=all_storages))
+            storages = all_storages.prefetch_related('vip_prices', Prefetch('storage_accessories',
+                                                                            queryset=StorageAccessories.objects.filter(
+                                                                                storage__in=all_storages)
+                                                                            .select_related(
+                                                                                'accessory_product__thumbnail',
+                                                                                'accessory_storage'),
+                                                                            to_attr='accessory'))
             storages = StorageSchema(exclude=['features']).dump(storages, many=True)
             return JsonResponse({'storage': storages})
         product = Product.objects.filter(**identifier).select_related('default_storage'). \
