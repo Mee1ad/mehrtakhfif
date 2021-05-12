@@ -751,11 +751,69 @@ def make_short(link):
     return f"{SHORTLINK}/{url.shortlink}"
 
 
-def esearch(q, document, field=("name",)):
-    s = document.search()
-    r = s.query("multi_match", query=q, fields=field)
-    ids = [item.id for item in r]
-    return ids
+def get_removed_media_info():
+    boxes = Box.objects.all()
+    for box in boxes:
+        products = Product.objects.filter(box=box)
+        categories = Category.objects.filter(box=box)
+        products_book = xlsxwriter.Workbook(f'محصول {box.name["fa"]}.xlsx')
+        products_sheet = products_book.add_worksheet()
+        category_book = xlsxwriter.Workbook(f'دسته بندی {box.name["fa"]}.xlsx')
+        category_sheet = category_book.add_worksheet()
+        products_sheet.set_column('B:B', 70)
+        products_sheet.set_column('C:C', 10)
+        category_sheet.set_column('B:B', 40)
+        products_sheet.write(f'A1', "ID")
+        products_sheet.write(f'B1', "name")
+        products_sheet.write(f'C1', "thumbnail")
+        products_sheet.write(f'D1', "deleted media count")
+        category_sheet.write(f'A1', "ID")
+        category_sheet.write(f'B1', "name")
+        category_sheet.write(f'C1', "image")
+        row = 2
+        for product in products:
+            thumbnail = None
+            deleted_media_count = 0
+            try:
+                if os.path.exists(product.thumbnail.image.path) is False:
+                    thumbnail = "حذف شده"
+            except AttributeError:
+                pass
+            medias = product.media.all()
+            for media in medias:
+                if os.path.exists(media.image.path) is False:
+                    deleted_media_count += 1
+            if thumbnail or deleted_media_count:
+                products_sheet.write(f'A{row}', product.id)
+                products_sheet.write(f'B{row}', product.get_name_fa())
+                products_sheet.write(f'C{row}', thumbnail)
+                products_sheet.write(f'D{row}', deleted_media_count)
+                row += 1
+        row = 2
+        for category in categories:
+            try:
+                if os.path.exists(category.media.image.path) is False:
+                    category_sheet.write(f'A{row}', category.id)
+                    category_sheet.write(f'B{row}', category.get_name_fa())
+                    category_sheet.write(f'C{row}', "حذف شده")
+                    row += 1
+            except AttributeError:
+                pass
+        products_book.close()
+        category_book.close()
+
+
+def disable_no_thumbnail_products():
+    i = 0
+    products = Product.objects.all()
+    for product in products:
+        try:
+            if os.path.exists(product.thumbnail.image.path) is False:
+                product.disable = True
+                product.save()
+                i += 1
+        except AttributeError:
+            pass
 
 
 # Security
