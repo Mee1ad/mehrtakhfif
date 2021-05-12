@@ -4,7 +4,6 @@ from django.http import JsonResponse
 
 from server.serialize import BoxSchema, FeatureSchema, BrandSchema, SpecialProductSchema
 from server.utils import *
-from mtadmin.utils import translate_params
 
 
 class GetSpecialOffer(View):
@@ -86,7 +85,7 @@ class FilterDetail(View):
 
 class Filter(View):
     def get(self, request):
-        new_params = {'fv': 'product_features__feature_value_id', 'q': 'text__contains', 'b': 'box__permalink',
+        new_params = {'fv': 'product_features__feature_value_id', 'b': 'box__permalink',
                       'cat': 'categories__permalink', 'tag': 'tags__permalink',
                       'available': 'storages__available_count_for_sale__gte', 'brand': 'brand__in'}
         params = filter_params(request.GET, new_params, request.lang)
@@ -94,18 +93,22 @@ class Filter(View):
         disable = get_product_filter_params(request.user.is_staff)
         if params['related']:
             query = Q(verify=True, **params['filter']) | Q(verify=True, **params['related'])
-        products = list(Product.objects.annotate(**params['annotate']).filter(query, Q(**disable), ~Q(type=5)). \
-                        prefetch_related('default_storage__vip_prices__vip_type', 'storages',
-                                         Prefetch('product_features',
-                                                  queryset=ProductFeature.objects.filter(feature_id=35)
-                                                  .prefetch_related('product_feature_storages__storage__media'),
-                                                  to_attr='colors')) \
-                        .select_related('thumbnail', 'default_storage'). \
-                        order_by(params['order'], '-id').distinct('id', params['order'].replace('-', '')))
+        products = Product.objects.filter(query, Q(**disable), ~Q(type=5)). \
+            prefetch_related('default_storage__vip_prices__vip_type', 'storages',
+                             Prefetch('product_features',
+                                      queryset=ProductFeature.objects.filter(feature_id=color_feature_id)
+                                      .prefetch_related('product_feature_storages__storage__media'),
+                                      to_attr='colors')) \
+            .select_related('thumbnail', 'default_storage')
+        if params['order']:
+            products = products.order_by(params['order'], '-id').distinct('id', params['order'].replace('-', ''))
+        if 'id__in' in 'filter' in params:
+            products = sorted(products, key=lambda x: params['filter']['id__in'].index(x['id']))
+        products = list(products)
         colors = cache.get('colors', None)
         if colors is None:
             colors = get_colors_hex(products)
-            cache.set('colors', colors)
+        cache.set('colors', colors)
         # params['order']).order_by('-id').distinct('id')
         pg = get_pagination(request, products, MinProductSchema, serializer_args={'colors': colors})
         return JsonResponse(pg)
