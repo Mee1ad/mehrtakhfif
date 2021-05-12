@@ -368,10 +368,6 @@ class SetOrder(View):
         return JsonResponse({**responses['priority']}, status=202)
 
 
-class SupplierData(View):
-    def get(self, request):
-        return JsonResponse(get_supplier_info_excel())
-
 
 class ProductPreview(ClientProductView):
     pass

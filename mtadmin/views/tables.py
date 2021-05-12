@@ -1,7 +1,6 @@
 from statistics import mean, StatisticsError
 
 from django.shortcuts import render_to_response
-from django.utils.crypto import get_random_string
 
 from mtadmin.serializer import *
 from mtadmin.utils import *
@@ -190,7 +189,6 @@ class ProductView(TableView):
             params['filter'].pop('only_id')
             return JsonResponse({'data': list(Product.objects.filter(**params['filter']).order_by('id').distinct('id')
                                               .values_list('id', flat=True))})
-
         return JsonResponse(serialized_objects(request, Product, ProductASchema, ProductESchema, params=params,
                                                **required_box))
 

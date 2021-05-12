@@ -1,10 +1,10 @@
 import os
 import sys
 from re import compile
-
 from django.utils.timezone import activate
 
 from .settings_var import *
+
 
 TESTING = 'test' in sys.argv
 
@@ -47,6 +47,8 @@ INSTALLED_APPS = \
         'django.contrib.admindocs',
         # 'django.contrib.postgres',
         'prettyjson',
+        'django.contrib.sitemaps',
+        # 'django.contrib.sites'
     ] + MY_INSTALLED_APPS
 
 MIDDLEWARE = [
@@ -187,6 +189,7 @@ USE_L10N = True
 
 USE_TZ = True
 
+SITE_ID = 1
 # activate(TIME_ZONE)
 
 # CELERY_ENABLE_UTC = True

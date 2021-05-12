@@ -36,7 +36,7 @@ lvl = {0: 1, 1: 5, 2: 10, 3: 15, 4: 30, 5: 60, 6: 120, 7: 180, 8: 360, 9: 720, 1
 
 home = [
     cache_proxy(Test.as_view(), 'ping', lvl[9]),
-    path('n/<int:pk>', try_except(NotifTest.as_view()), name='n'),
+    # path('n/<int:pk>', try_except(NotifTest.as_view()), name='n'),
     path('init', try_except(Init.as_view()), name='init'),  # no cache
     cache_proxy(GetSlider.as_view(), 'slider/<str:slider_type>', lvl[6], False),
     cache_proxy(GetSpecialOffer.as_view(), 'special_offer', lvl[6]),
