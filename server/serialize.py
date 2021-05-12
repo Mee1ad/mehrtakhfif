@@ -501,6 +501,20 @@ class BrandSchema(BaseSchema):
     permalink = fields.Str()
 
 
+class AccessorySchema(BaseSchema):
+    class Meta:
+        # additional = ('id', 'name', 'price', 'thumbnail')
+        additional = ('id', 'discount_price')
+
+    storage_id = fields.Function(lambda o: o.accessory_storage_id)
+    name = fields.Function(lambda o: o.accessory_storage.title['fa'])
+    thumbnail = fields.Function(lambda o: HOST + o.accessory_product.thumbnail.image.url)
+    final_price = fields.Method("get_final_price")
+
+    def get_final_price(self, obj):
+        return obj.accessory_storage.final_price
+
+
 class MinProductSchema(BaseSchema):
     def __init__(self, colors=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -676,11 +690,20 @@ class StorageSchema(MinStorageSchema):
     class Meta:
         additional = ('shipping_cost', 'priority', 'gender', 'disable')
 
+    # todo optimize
     default = fields.Function(lambda o: o == o.product.default_storage)
     features = FeatureField()
     least_booking_time = fields.Method("get_least_booking_time")
     booking_cost = fields.Method("get_booking_cost")
     invoice_title = fields.Method('get_invoice_title')
+    accessories = fields.Method("get_accessories")
+
+    def get_accessories(self, obj):
+        try:
+            return AccessorySchema().dump(obj.accessory, many=True)
+        except AttributeError:
+            return AccessorySchema().dump(obj.storage_accessories.all().select_related('accessory_product__thumbnail',
+                                                                                       'accessory_storage'), many=True)
 
     def get_least_booking_time(self, obj):
         if obj.product.booking_type == 1:  # unbookable
@@ -720,6 +743,12 @@ class BasketProductSchema(BaseSchema):
 
     product = fields.Method("get_min_product")
     features = fields.Method("get_feature")
+    accessories = fields.Method("get_accessories")
+
+    def get_accessories(self, obj):
+        if hasattr(obj, 'accessories'):
+            return BasketProductSchema(exclude=['accessories']).dump(obj.accessories, many=True)
+        return None
 
     def get_feature(self, obj):
         features = obj.storage.features.all()
@@ -733,7 +762,28 @@ class BasketSchema(BaseSchema):
     class Meta:
         additional = ('id', 'description')
 
-    products = fields.Function(lambda o: BasketProductSchema().dump(o.basket_products, many=True))
+    def __init__(self, nested_accessories=False, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.nested_accessories = nested_accessories
+
+    products = fields.Method("get_basket_products")
+
+    def get_basket_products(self, obj):
+        basket_products = list(obj.basket_products)
+        if self.nested_accessories:
+            for bp in basket_products:
+                if bp.accessory_id:
+                    storage = next((item for item in basket_products
+                                    if item.storage_id == bp.accessory.storage_id
+                                    and bp.storage_id == bp.accessory.accessory_storage_id), None)
+                    if storage:
+                        if hasattr(storage, 'accessories') is False:
+                            storage.accessories = []
+                        basket_products[basket_products.index(storage)].accessories.append(bp)
+                        # storage.accessories.append(bp)
+                        basket_products.remove(bp)
+
+        return BasketProductSchema().dump(basket_products, many=True)
 
 
 class InvoiceSchema(BaseSchema):

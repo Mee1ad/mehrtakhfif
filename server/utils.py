@@ -8,6 +8,7 @@ from operator import add, sub
 
 import jdatetime
 import magic
+import xlsxwriter
 from MyQR import myqr
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.postgres.fields.jsonb import KeyTextTransform
@@ -26,9 +27,10 @@ from kavenegar import *
 
 from mehr_takhfif.settings import CSRF_SALT, TOKEN_SALT, DEFAULT_COOKIE_DOMAIN, DEBUG, SMS_KEY, color_feature_id, \
     SHORTLINK
+from server.documents import ProductDocument
 from server.models import *
-from server.serialize import get_tax, BoxCategoriesSchema, BasketSchema, MinProductSchema, ProductFeatureSchema, \
-    BasketProductSchema, UserSchema, InvoiceSchema
+from server.serialize import get_tax, BoxCategoriesSchema, BasketSchema, MinProductSchema, BasketProductSchema, \
+    UserSchema, InvoiceSchema, AccessorySchema
 # from barcode import generate
 # from barcode.base import Barcode
 from server.views.post import get_shipping_cost_temp
@@ -123,8 +125,7 @@ def upload(request, titles, media_type, box=None):
 
 
 def filter_params(params, new_params=(), lang='fa'):
-    filters = {'filter': {'default_storage__isnull': False}, 'rank': {}, 'related': {}, 'query': {}, 'annotate': {},
-               'order': '-created_at'}
+    filters = {'filter': {'default_storage__isnull': False}, 'related': {}, 'query': {}, 'order': ''}
     if not params:
         return filters
     ds = 'default_storage__'
@@ -137,13 +138,16 @@ def filter_params(params, new_params=(), lang='fa'):
         if params[k] in ['false', 'true']:
             value = json.loads(params[k].lower())
         try:
+            if k == "q":
+                value = esearch(value, ProductDocument, only=['id'])
+                new_params[k] = "id__in"
             filters['filter'][new_params[k]] = value
         except KeyError:
             pass
     box_permalink = params.get('b', None)
-    q = params.get('q', None)
+    # q = params.get('q', None)
     # todo test and fix s
-    sa = params.get('sa', None)  # search advanced
+    # sa = params.get('sa', None)  # search advanced
     orderby = params.get('o', '-created_at')
     min_price = params.get('min_price', None)
     max_price = params.get('max_price', None)
@@ -157,12 +161,12 @@ def filter_params(params, new_params=(), lang='fa'):
     if orderby != '-created_at':
         valid_key = valid_orders[orderby]
         filters['order'] = valid_key
-    if sa:
-        filters['annotate']['rank'] = get_rank(q, lang)
-        filters['order'] = '-rank'
-    if q:
-        filters['annotate']['text'] = KeyTextTransform(lang, 'name')
-        filters['order'] = 'text'
+    # if sa:
+    #     filters['annotate']['rank'] = get_rank(q, lang)
+    #     filters['order'] = '-rank'
+    # if q:
+    #     filters['annotate']['text'] = KeyTextTransform(lang, 'name')
+    #     filters['order'] = 'text'
     if min_price and max_price:
         filters['filter'][f'{ds}{dis}_price__range'] = (min_price, max_price)
     return filters
@@ -397,7 +401,7 @@ def get_pagination(request, query, serializer, select=(), prefetch=(), show_all=
         items = serializer(**request.schema_params, **serializer_args).dump(query, many=True)
     except TypeError:
         items = serializer(**serializer_args).dump(query, many=True)
-    return {'pagination': {'last_page': ceil(count / step), 'count': count},
+    return {'pagination': {'last_page': ceil(count / step), 'count': count, 'step': step},
             'data': items}
 
 
@@ -428,23 +432,31 @@ def get_discount_percent(storage):
 
 def check_basket(request, basket):
     if isinstance(basket, Basket):
-        basket_products = basket.basket_storages.all()
+        basket_products = basket.basket_storages.all().select_related('storage')
     else:
         basket = request.session.get('basket', [])
+        # todo optimize cant select related storage
         basket_products = [BasketProduct(**basket_product, id=index) for index, basket_product in enumerate(basket)]
-
     # todo test
     deleted_items = []
     changed_items = []
+    removed_count = 0
     for basket_product in basket_products:
         if basket_product.storage.available_count_for_sale == 0:
             deleted_items.append(BasketProductSchema().dump(basket_product))
+            removed_count += basket_product.count + (len(basket_product.accessories) * basket_product.count)
             basket_product.delete()
         elif basket_product.count > basket_product.storage.available_count_for_sale:
             changed_items.append({'product_name': basket_product.storage.title['fa'], 'old_count': basket_product.count,
                                   'new_count': basket_product.storage.available_count_for_sale})
+            removed_count += basket_product.count - basket_product.storage.available_count_for_sale
             basket_product.count = basket_product.storage.available_count_for_sale
             basket_product.save()
+    try:
+        basket.count -= removed_count
+        basket.save()
+    except Exception as e:
+        pass
     return {'deleted': deleted_items, 'changed': changed_items}
 
 
@@ -482,9 +494,13 @@ def get_basket(request, basket_id=None, basket=None, basket_products=None, retur
     address_required = False
     summary['max_shipping_time'] = 0
     for basket_product in basket_products:
+        storage = basket_product.storage
+        if basket_product.accessory:
+            basket_product.item_discount_price = basket_product.accessory.discount_price
+            basket_product.discount_price = basket_product.accessory.discount_price
+            storage.discount_price = basket_product.accessory.discount_price
         if summary['max_shipping_time'] < basket_product.storage.max_shipping_time:
             summary['max_shipping_time'] = basket_product.storage.max_shipping_time
-        storage = basket_product.storage
         basket_product.product = storage.product
         basket_product.product.default_storage = storage
         # basket_product.supplier = storage.supplier
@@ -508,6 +524,7 @@ def get_basket(request, basket_id=None, basket=None, basket_products=None, retur
             # basket_product.tax = get_tax(storage.tax_type, storage.discount_price, storage.start_price)
             # summary['tax'] += basket_product.tax
         count = basket_product.count
+
         basket_product.final_price = basket_product.item_final_price * count
         summary['total_price'] += basket_product.final_price
         # basket_product.discount_price = (basket_product.item_discount_price - basket_product.tax) * count
@@ -521,7 +538,7 @@ def get_basket(request, basket_id=None, basket=None, basket_products=None, retur
         # charity = (basket_product.discount_price - basket_product.start_price - tax) * 0.05
         charity = round(basket_product.discount_price * 0.005)
         summary['charity'] += charity
-        summary['mt_profit'] += basket_product.discount_price - basket_product.start_price - charity
+        summary['mt_profit'] += (basket_product.discount_price - basket_product.start_price) - charity
     try:
         basket.basket_products = basket_products
     except AttributeError:
@@ -540,7 +557,7 @@ def get_basket(request, basket_id=None, basket=None, basket_products=None, retur
     if require_profit is False:
         summary.pop('mt_profit', None)
         summary.pop('charity', None)
-    basket = BasketSchema(language=lang).dump(basket)
+    basket = BasketSchema(language=lang, nested_accessories=True).dump(basket)
     summary['invoice_discount'] = summary['total_price'] - summary['discount_price']
     summary['total_price'] += shipping_cost
     summary['discount_price'] += shipping_cost
@@ -672,19 +689,31 @@ def get_preview_permission(user, category_check=True, box_check=True, box_key='b
 def add_to_basket(basket, products):
     for product in products:
         count = int(product['count'])
-        storage = Storage.objects.get(pk=product['storage_id'])
+        storage_id = product['storage_id']
+        storage = Storage.objects.get(pk=storage_id)
+        accessories = product.get("accessories", [])
+        accessories_ids = [accessory['id'] for accessory in accessories]
+        storage_accessories = StorageAccessories.objects.filter(id__in=accessories_ids)
+        accessory_id = product.get("accessory_id", None)
+        for accessory in accessories:
+            accessory_storage = next(sa.accessory_storage for sa in storage_accessories if sa.id == accessory['id'])
+            accessory['storage_id'] = accessory_storage.id
+            accessory['accessory_id'] = accessory['id']
+            # accessory['parent_id'] = storage
+        products += accessories
         if storage.is_available(count) is False:
             raise ValidationError(_('متاسفانه این محصول ناموجود میباشد'))
         try:
-            basket_product = BasketProduct.objects.filter(basket=basket, storage=storage)
+            basket_product = BasketProduct.objects.filter(basket=basket, storage=storage, accessory_id=accessory_id)
             assert basket_product.exists()
             basket_product.update(count=count)
         except AssertionError:
             box = storage.product.box
-            features = storage.features.all()
-            features = ProductFeatureSchema().dump(features, many=True)
+            # features = storage.features.all()
+            # features = ProductFeatureSchema().dump(features, many=True)
+            # accessory =
             BasketProduct.objects.create(basket=basket, storage=storage, count=count, box=box,
-                                         features=features)
+                                         accessory_id=accessory_id)
 
     basket.count = basket.basket_storages.aggregate(count=Sum('count'))['count']
     basket.save()

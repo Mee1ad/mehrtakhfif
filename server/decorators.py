@@ -35,7 +35,7 @@ def try_except(func):
         except (AssertionError, ObjectDoesNotExist, StopIteration, AttributeError, KeyError, ValueError, TypeError):
             traceback.print_exc()
             return HttpResponseBadRequest()
-        # except Exception as e:  handeled by sentry
+        # except Exception as e:  handled by sentry
             # exc_type, exc_obj, exc_tb = sys.exc_info()
             # error_type = exc_type.__name__
             # fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]

@@ -52,7 +52,6 @@ urlpatterns = [
     path('user', error_handler(UserView.as_view()), name='user'),
     path('cache', error_handler(Cache.as_view()), name='cache'),
     path('cache/<str:key>', error_handler(Cache.as_view()), name='cache'),
-    path('supplier_data', error_handler(SupplierData.as_view()), name='supplier_data'),
     path('product_preview/<str:permalink>', error_handler(ProductPreview.as_view()), name='product_preview'),
 
     path('tg_login', error_handler(TelegramLogin.as_view()), name='tg_login'),

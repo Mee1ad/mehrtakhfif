@@ -4,11 +4,11 @@ from operator import attrgetter
 from random import randint
 
 import pytz
+import requests
 from PIL import Image, ImageFilter
 from django.contrib.auth.models import AbstractUser
 from django.contrib.postgres.fields import JSONField
 from django.contrib.postgres.indexes import BTreeIndex, HashIndex, BrinIndex, GinIndex
-from django.contrib.postgres.search import SearchVectorField
 from django.contrib.sessions.models import Session
 from django.core.exceptions import FieldDoesNotExist
 from django.core.validators import *
@@ -28,14 +28,13 @@ from safedelete.config import DELETED_INVISIBLE
 from safedelete.managers import SafeDeleteQueryset
 from safedelete.models import SafeDeleteModel, SOFT_DELETE_CASCADE
 from safedelete.signals import post_softdelete
-from mehr_takhfif.settings import ELASTICSEARCH_DSL
-import requests
-# from django.contrib.sites.models import Site
 
+from mehr_takhfif.settings import ELASTICSEARCH_DSL
 from mehr_takhfif.settings import HOST, MEDIA_ROOT
 from mtadmin.exception import *
 from server.field_validation import *
-from django.urls import reverse
+
+# from django.contrib.sites.models import Site
 
 deliver_status = [(1, 'pending'), (2, 'packing'), (3, 'sending'), (4, 'delivered'), (5, 'referred')]
 
@@ -199,7 +198,8 @@ def next_half_hour(minutes=30):
 def esearch(q, document, fields=("name_fa",), exact_match=False, only=None):
     s = document.search()
     # r = s.query("multi_match", query=q, fields=fields)
-    r = s.query({"dis_max": {"queries": [{"match": {"name_fa": q}}, {"wildcard": {"name_fa": f"*{q}*"}}]}}).sort("_score")
+    r = s.query({"dis_max": {"queries": [{"match": {"name_fa": q}}, {"wildcard": {"name_fa": f"*{q}*"}}]}}).sort(
+        "_score")
     # r = s.query("wildcard", name_fa=f"{q}*")
     # r = s.query(Q("bool", must=[Q('match', name_fa=q)]))
     # s = Search(index='product')
@@ -713,7 +713,7 @@ class Media(Base):
         except ValueError:
             pass
         super().save(*args, **kwargs)
-        if self.type < 100:
+        if self.type < 100 and self.image:
             ph = reduce_image_quality(self.image.path)
             name = self.image.name.replace('has-ph', 'ph')
             ph.save(f'{MEDIA_ROOT}/{name}', optimize=True, quality=80)
@@ -881,7 +881,7 @@ class FeatureGroup(Base):
     # custom_m2m = {'features': Feature}
 
     name = JSONField(default=multilanguage)
-    settings = JSONField(default=dict, help_text="{show_title: false}")
+    settings = JSONField(default=dict, help_text="{ui: {show_title: true}}")
     box = models.ForeignKey(Box, on_delete=PROTECT)
     features = models.ManyToManyField("Feature", through="FeatureGroupFeature", related_name='groups')
 
@@ -1060,6 +1060,31 @@ class ProductFeatureStorage(MyModel):
         indexes = [BTreeIndex(fields=['product_feature', 'storage'])]
 
 
+class StorageAccessories(MyModel):
+    # related = ['storage']
+    # select = ['storage', 'basket', 'vip_price', 'box'] + MyModel.select
+
+    def __str__(self):
+        return f"{self.id}"
+
+    def validation(self):
+        pass
+
+    def save(self, *args, **kwargs):
+        self.validation()
+        super().save(*args, **kwargs)
+
+    storage = models.ForeignKey("Storage", on_delete=CASCADE, related_name="storage_accessories")
+    accessory_product = models.ForeignKey("Product", on_delete=CASCADE, related_name="accessory_products")
+    accessory_storage = models.ForeignKey("Storage", on_delete=CASCADE, related_name="accessory_storage_storages")
+    discount_price = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = 'storage_accessories'
+        # indexes = [BTreeIndex(fields=['basket', 'storage'])]
+        # unique_together = ('basket', 'storage')
+
+
 class Product(Base):
     objects = MyQuerySet.as_manager()
     table_select = ['thumbnail']
@@ -1083,7 +1108,8 @@ class Product(Base):
               'description': 'توضیحات'}
     types = [(1, 'service'), (2, 'product'), (3, 'tourism'), (4, 'package'), (5, 'package_item')]
     booking_types = [(1, 'unbookable'), (2, 'datetime'), (3, 'range')]
-    choices = ('type', 'booking_type')
+    accessory_types = [(1, 'not'), (2, 'can_be'), (3, 'only')]
+    choices = ('type', 'booking_type', 'accessory_type')
     exclude_fields = ['feature_groups', 'storages', 'default_storage', 'available']
 
     def get_absolute_url(self):
@@ -1181,6 +1207,8 @@ class Product(Base):
     verify = models.BooleanField(default=False)
     manage = models.BooleanField(default=True)
     booking_type = models.PositiveSmallIntegerField(choices=booking_types, default=1)
+    accessory_type = models.PositiveSmallIntegerField(choices=accessory_types, default=1)
+    # accessories = models.ManyToManyField("self", through='ProductAccessories', symmetrical=False)
     breakable = models.BooleanField(default=False)
     type = models.PositiveSmallIntegerField(choices=types, validators=[validate_product_type])
     permalink = models.CharField(max_length=255, db_index=False, unique=True)
@@ -1198,6 +1226,7 @@ class Product(Base):
     settings = JSONField(default=dict, blank=True)
     # review = models.TextField(null=True, blank=True)
     review = JSONField(default=default_review, help_text="{chats: [], state: reviewed/request_review/ready}")
+
     # site = models.ForeignKey(Site, on_delete=models.CASCADE, default=1)
 
     # check_review = models.BooleanField(default=False)
@@ -1256,7 +1285,7 @@ class Storage(Base):
     related_fields = []
     m2m = []
     remove_fields = ['vip_prices', 'items']  # handle in post_process
-    custom_m2m = {'features': ProductFeatureStorage}
+    custom_m2m = {'features': ProductFeatureStorage, 'accessories': StorageAccessories}
     required_m2m = []
     fields = {'supplier': 'تامین کننده', 'dimensions': 'ابعاد'}
     tax_types = [(1, 'has_not'), (2, 'from_total_price'), (3, 'from_profit')]
@@ -1424,15 +1453,17 @@ class Storage(Base):
     product = models.ForeignKey(Product, on_delete=CASCADE, related_name='storages')
     # features = models.ManyToManyField(ProductFeature, through='StorageFeature', related_name="storages")
     features = models.ManyToManyField(ProductFeature, through='ProductFeatureStorage', related_name="storages")
-    items = models.ManyToManyField("self", through='Package', symmetrical=False)
+    accessories = models.ManyToManyField("self", through='StorageAccessories', symmetrical=False,
+                                         related_name="accessory_storages")
+    items = models.ManyToManyField("self", through='Package', symmetrical=False, related_name="item_storages")
     features_percent = models.PositiveSmallIntegerField(default=0)
-    available_count = models.PositiveIntegerField(default=0, verbose_name='Available count')
-    sold_count = models.IntegerField(default=0, verbose_name='Sold count')
-    start_price = models.PositiveIntegerField(default=0, verbose_name='Start price')
+    available_count = models.PositiveIntegerField(default=0)
+    sold_count = models.IntegerField(default=0)
+    start_price = models.PositiveIntegerField(default=0)
     qty = models.CharField(max_length=255, null=True, blank=True, help_text="quantity")
     sku = models.CharField(max_length=255, null=True, blank=True, help_text="stock keeping unit")
-    final_price = models.PositiveIntegerField(default=0, verbose_name='Final price')
-    discount_price = models.PositiveIntegerField(default=0, verbose_name='Discount price')
+    final_price = models.PositiveIntegerField(default=0)
+    discount_price = models.PositiveIntegerField(default=0)
     shipping_cost = models.PositiveIntegerField(blank=True, null=True)
     booking_cost = models.PositiveIntegerField(default=0, blank=True)
     least_booking_time = models.PositiveIntegerField(default=48, blank=True)
@@ -1477,7 +1508,8 @@ class Basket(Base):
     user = models.ForeignKey(User, on_delete=CASCADE, null=True, blank=True, related_name="baskets")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
     count = models.PositiveIntegerField(default=0)
-    products = models.ManyToManyField(Storage, through='BasketProduct')
+    products = models.ManyToManyField(Storage, through='BasketProduct', through_fields=('basket',
+                                                                                        'storage'), symmetrical=False)
     description = models.TextField(blank=True, null=True)
     # active = models.BooleanField(default=True)
     sync = models.PositiveSmallIntegerField(choices=sync_levels, default=0)
@@ -1500,7 +1532,13 @@ class BasketProduct(MyModel):
         self.validation()
         super().save(*args, **kwargs)
 
-    storage = models.ForeignKey(Storage, on_delete=CASCADE, db_index=False)
+    storage = models.ForeignKey(Storage, on_delete=CASCADE, db_index=False, related_name="basket_products")
+    # parent = models.ForeignKey("self", on_delete=CASCADE, db_index=False, related_name="accessories",
+    #                            null=True, blank=True)
+    accessory = models.ForeignKey(StorageAccessories, on_delete=CASCADE, db_index=False,
+                                  related_name="basket_accessories",
+                                  null=True, blank=True)
+    # accessories = ArrayField(models.IntegerField(), size=5, default=list)
     basket = models.ForeignKey(Basket, on_delete=CASCADE, null=True, blank=True, related_name="basket_storages",
                                db_index=False)
     count = models.PositiveIntegerField(default=1)
@@ -1510,8 +1548,8 @@ class BasketProduct(MyModel):
 
     class Meta:
         db_table = 'basket_product'
-        indexes = [BTreeIndex(fields=['basket', 'storage'])]
-        unique_together = ('basket', 'storage')
+        indexes = [BTreeIndex(fields=['basket', 'storage', 'accessory'])]
+        unique_together = ('basket', 'storage', 'accessory')
 
 
 class Blog(Base):
@@ -1721,7 +1759,6 @@ class InvoiceStorage(Base):
     discount_price_without_tax = models.PositiveIntegerField()
     # vip_discount_price = models.PositiveIntegerField(null=True, blank=True)
     deliver_status = models.PositiveSmallIntegerField(choices=deliver_status, default=1)
-
     details = JSONField(null=True, help_text="package/storage/product details")
     features = JSONField(default=list)
 

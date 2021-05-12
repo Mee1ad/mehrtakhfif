@@ -5,7 +5,7 @@ from django.http import JsonResponse, HttpResponseRedirect
 from django.utils.translation import gettext_lazy as _
 
 from mehr_takhfif.settings import CLIENT_HOST
-from server.serialize import BasketProductSchema, ProductFeatureSchema, AddressSchema, MediaSchema
+from server.serialize import AddressSchema, MediaSchema
 from server.utils import *
 from server.views.payment import PaymentRequest, CallBack
 from server.views.post import *
@@ -91,7 +91,7 @@ class BasketView(View):
             except TypeError:
                 session = request.session
                 products = session.get('basket', {})
-                products.pop(int(basket_product_id), None)
+                products.pop(int(basket_product_id))
                 session.save()
             res = {}
             if summary:
@@ -105,25 +105,37 @@ class BasketView(View):
             count = int(product['count'])
             storage = Storage.objects.get(pk=product['storage_id'])
             if storage.is_available(count) is False:
-                print('count:', count, 'available_count_for_sale:', storage.available_count_for_sale,
-                      'max_count_for_sale:', storage.max_count_for_sale, 'storage.disable:', storage.disable,
-                      'storage.product.disable:', storage.product.disable)
+                # print('count:', count, 'available_count_for_sale:', storage.available_count_for_sale,
+                #       'max_count_for_sale:', storage.max_count_for_sale, 'storage.disable:', storage.disable,
+                #       'storage.product.disable:', storage.product.disable)
                 raise ValidationError(_('متاسفانه این محصول ناموجود میباشد'))
             basket = request.session.get('basket', [])
             duplicate_basket_product_index = [basket.index(basket_product) for basket_product in basket if
                                               basket_product['storage_id'] == storage.pk]
-            features = storage.features.all()
-            product['features'] = ProductFeatureSchema().dump(features, many=True)
+            # features = storage.features.all()
+            # product['features'] = ProductFeatureSchema().dump(features, many=True)
             product['box_id'] = storage.product.box_id
+            accessories = product.pop('accessories', [])
+            if accessories:
+                accessories_ids = [accessory['id'] for accessory in accessories]
+                storage_accessories = StorageAccessories.objects.filter(id__in=accessories_ids) \
+                    .values('id', 'accessory_storage_id', 'accessory_storage__product__box_id')
+
+                for accessory in accessories:
+                    accessory_storage = next(sa for sa in storage_accessories if sa['id'] == accessory['id'])
+                    accessory['storage_id'] = accessory_storage['accessory_storage_id']
+                    accessory['accessory_id'] = accessory.pop('id')
+                    accessory['box_id'] = accessory_storage['accessory_storage__product__box_id']
+                products += accessories
             if duplicate_basket_product_index:
                 request.session['basket'][duplicate_basket_product_index[0]] = product
                 request.session.save()
-                return len(request.session['basket'])
+                return sum([basket_product['count'] for basket_product in request.session['basket']])
             if not basket:
                 request.session['basket'] = []
             request.session['basket'].append(product)
             request.session.save()
-            return len(request.session['basket'])
+            return sum([basket_product['count'] for basket_product in request.session['basket']])
 
 
 class GetProducts(View):
@@ -175,7 +187,7 @@ class DiscountCodeView(View):
         try:
             discount_code = DiscountCode.objects.exclude(basket__invoice__expire__gte=timezone.now()) \
                 .get(code=code, invoice_storage__isnull=True, basket__isnull=True)
-            discount_code.basket = Basket.objects.order_by('-id').first()
+            discount_code.basket = request.user.baskets.order_by('-id').first()
             discount_code.save()
             if discount_code.type == 3:  # post
                 return JsonResponse({'message': 'هزینه پست شما رایگان شد', 'variant': 'success'})

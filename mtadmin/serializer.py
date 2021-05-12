@@ -597,6 +597,7 @@ class ProductESchema(ProductASchema, ProductSchema):
     feature_groups = fields.Method("get_feature_groups")  # 2
     booking_type = fields.Function(lambda o: o.get_booking_type_display())
     storages = fields.Method("get_storages", load_only=True, dump_only=False)
+    accessory_type = fields.Function(lambda o: o.get_accessory_type_display())
 
     def get_storages(self, obj):
         if self.include_storage:
@@ -725,6 +726,16 @@ class HouseESchema(BaseAdminSchema, HouseSchema):
     price = fields.Nested(PriceSchema)
 
 
+class AccessoryASchema(BaseSchema):
+    class Meta:
+        additional = ('id', 'discount_price')
+
+    storage_id = fields.Function(lambda o: o.accessory_storage_id)
+    product_id = fields.Function(lambda o: o.accessory_product_id)
+    title = fields.Function(lambda o: o.accessory_storage.title['fa'])
+    thumbnail = fields.Function(lambda o: HOST + o.accessory_product.thumbnail.image.url)
+
+
 class StorageASchema(BaseAdminSchema):
     class Meta:
         additional = ('title', 'start_price', 'final_price', 'discount_price', 'discount_percent',
@@ -734,6 +745,11 @@ class StorageASchema(BaseAdminSchema):
     least_booking_time = fields.Method("get_least_booking_time")
     booking_cost = fields.Method("get_booking_cost")
     media = fields.Nested("MediaASchema")
+    accessory = fields.Method("get_accessory")
+
+    def get_accessory(self, obj):
+        accessories = obj.storage_accessories.all()
+        return AccessoryASchema().dump(accessories, many=True)
 
     def get_least_booking_time(self, obj):
         if obj.product.booking_type == 1:  # unbookable
