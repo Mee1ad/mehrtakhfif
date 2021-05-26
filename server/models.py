@@ -1548,8 +1548,8 @@ class BasketProduct(MyModel):
 
     class Meta:
         db_table = 'basket_product'
-        # indexes = [BTreeIndex(fields=['basket', 'storage', 'accessory'])]
-        # unique_together = ('basket', 'storage', 'accessory')
+        indexes = [BTreeIndex(fields=['basket', 'storage', 'accessory'])]
+        unique_together = ('basket', 'storage', 'accessory')
 
 
 class Blog(Base):
