@@ -12,14 +12,6 @@ class Test(View):
     def get(self, request):
         product = Product.objects.filter(pk=1).values('name')
         return JsonResponse({"message": "pong"})
-        # request.user = None
-        # res = JsonResponse({})
-        # login = request.GET.get('login')
-        # if login == 'true':
-        #     res = set_custom_signed_cookie(res, 'is_login', True)
-        # else:
-        #     res = set_custom_signed_cookie(res, 'is_login', False)
-        # return res
 
     def delete(self, request):
         res = JsonResponse({})
@@ -33,7 +25,11 @@ class Test(View):
         return set_custom_signed_cookie(res, 'is_login', not is_login)
 
     def post(self, request):
-        return JsonResponse({"message": "test 1"})
+        request.user = None
+        res = JsonResponse({})
+        basket_count = int(request.GET.get('basket_count', get_custom_signed_cookie(request, 'basket_count')))
+        res = set_custom_signed_cookie(res, 'basket_count', basket_count+1)
+        return res
 
 
 class NotifTest(View):
@@ -150,6 +146,15 @@ class BoxWithCategory(View):
             boxes = Box.objects.filter(**disable)
             res = {'boxes': BoxSchema(**request.schema_params).dump(boxes, many=True)}
         return JsonResponse(res)
+
+
+class AllCategories(View):
+    def get(self, request):
+        all_category = cache.get('categories', None)
+        if not all_category:
+            all_category = sort_categories()
+            cache.set('categories', all_category, 3000000)  # about 1 month
+        return JsonResponse({'data': all_category})
 
 
 class GetMenu(View):

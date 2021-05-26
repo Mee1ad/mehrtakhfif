@@ -30,7 +30,7 @@ from mehr_takhfif.settings import CSRF_SALT, TOKEN_SALT, DEFAULT_COOKIE_DOMAIN, 
 from server.documents import ProductDocument
 from server.models import *
 from server.serialize import get_tax, BoxCategoriesSchema, BasketSchema, MinProductSchema, BasketProductSchema, \
-    UserSchema, InvoiceSchema, AccessorySchema
+    UserSchema, InvoiceSchema, CategorySchema, BoxSchema
 # from barcode import generate
 # from barcode.base import Barcode
 from server.views.post import get_shipping_cost_temp
@@ -358,6 +358,55 @@ def send_email(subject, to, from_email='notification@mehrtakhfif.com', message=N
         msg.content_subtype = "html"
         [msg.attach_file(a) for a in attach]
     msg.send()
+
+
+# info category by moji
+# todo check for possible duplicates in category
+
+
+def sort_categories(is_admin=None):
+    cat = Category.objects.all().filter(disable=False).select_related('parent', 'media', 'box')
+    categories = CategorySchema().dump(cat, many=True)
+    b = Box.objects.all().filter(disable=False).select_related('media')
+    boxes = BoxSchema().dump(b, many=True)
+    # cat = [*categories]
+    ans = []
+    for i in categories:
+        ans.append(category_child(i, categories))
+
+    cats = [i for i in ans if i['parent'] is None]
+    res = []
+    for box in boxes:
+        res.append({**box,'isRoot':True,'children':[{**i,'parent':{'id':box['id'],'name':box['name']}} for i in cats if i['box']['id'] == box['id']]})
+
+    return res
+
+
+def category_child(param, categories):
+    children = {**param}
+    try:
+        r = []
+        pk = param['id']
+
+        for category in categories:
+            if category['parent'] is not None:
+                if pk == category['parent']['id']:
+                    r.append(category)
+            else:
+                # print(i)
+                pass
+
+        children['children'] = []
+
+        for row in r:
+            children['children'].append(category_child(row))
+
+    except Exception as e:
+        pass
+
+    return children
+
+# endregion
 
 
 def get_categories(language, box_id=None, categories=None, is_admin=None, disable={}):
