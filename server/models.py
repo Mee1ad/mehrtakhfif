@@ -47,8 +47,7 @@ def get_activation_warning_msg(field_name):
 
 def multilanguage():
     return {"fa": "",
-            "en": "",
-            "ar": ""}
+            "en": ""}
 
 
 def feature_value():
@@ -382,21 +381,22 @@ class Base(SafeDeleteModel):
             pass
 
     def clean(self):
-        for field in self.required_fields:
-            if not getattr(self, field):
-                self.make_item_disable(self)
-                raise ActivationError(get_activation_warning_msg(self.fields[field]))
-        for field in self.related_fields:
-            if not hasattr(self, field):
-                self.make_item_disable(self)
-                raise ActivationError(get_activation_warning_msg(self.fields[field]))
-        for field in self.required_m2m:
-            if not getattr(self, field).all():
-                self.make_item_disable(self)
-                raise ActivationError(get_activation_warning_msg(self.fields[field]))
-        for field in self.required_multi_lang:
-            if not getattr(self, field)['fa']:
-                raise ActivationError(get_activation_warning_msg(self.fields[field]))
+        if hasattr(self, 'disable'):
+            for field in self.required_fields:
+                if not getattr(self, field):
+                    self.make_item_disable(self)
+                    raise ActivationError(get_activation_warning_msg(self.fields[field]))
+            for field in self.related_fields:
+                if not hasattr(self, field):
+                    self.make_item_disable(self)
+                    raise ActivationError(get_activation_warning_msg(self.fields[field]))
+            for field in self.required_m2m:
+                if not getattr(self, field).all():
+                    self.make_item_disable(self)
+                    raise ActivationError(get_activation_warning_msg(self.fields[field]))
+            for field in self.required_multi_lang:
+                if not getattr(self, field)['fa']:
+                    raise ActivationError(get_activation_warning_msg(self.fields[field]))
 
     def make_item_disable(self, obj, warning=True):
         obj.__class__.objects.filter(pk=obj.pk).update(disable=True, warning=warning)
@@ -571,7 +571,7 @@ class VipType(Base):
     def __str__(self):
         return self.name['fa']
 
-    name = JSONField()
+    name = JSONField(default=multilanguage)
     media = models.CharField(max_length=255, null=True, blank=True)
 
     class Meta:
@@ -1187,19 +1187,19 @@ class Product(Base):
     #     self.slug = slugify(self.title)
     #     super(Post, self).save()
 
-    categories = models.ManyToManyField(Category, related_name="products")
+    categories = models.ManyToManyField(Category, related_name="products", blank=True)
     box = models.ForeignKey(Box, on_delete=PROTECT, db_index=False)
     brand = models.ForeignKey(Brand, on_delete=SET_NULL, null=True, blank=True, related_name="products")
     thumbnail = models.ForeignKey(Media, on_delete=PROTECT, related_name='products', null=True, blank=True)
-    cities = models.ManyToManyField(City)
-    states = models.ManyToManyField(State)
+    cities = models.ManyToManyField(City, blank=True)
+    states = models.ManyToManyField(State, blank=True)
     default_storage = models.OneToOneField(null=True, blank=True, to="Storage", on_delete=SET_NULL,
                                            related_name='product_default_storage', db_index=False)
-    tags = models.ManyToManyField(Tag, through="ProductTag", related_name='products')
-    tag_groups = models.ManyToManyField(TagGroup, related_name='products')
-    media = models.ManyToManyField(Media, through='ProductMedia')
-    features = models.ManyToManyField(Feature, through='ProductFeature', related_name='products')
-    feature_groups = models.ManyToManyField("FeatureGroup", related_name='products')
+    tags = models.ManyToManyField(Tag, through="ProductTag", related_name='products', blank=True)
+    tag_groups = models.ManyToManyField(TagGroup, related_name='products', blank=True)
+    media = models.ManyToManyField(Media, through='ProductMedia', blank=True)
+    features = models.ManyToManyField(Feature, through='ProductFeature', related_name='products', blank=True)
+    feature_groups = models.ManyToManyField("FeatureGroup", related_name='products', blank=True)
     income = models.BigIntegerField(default=0)
     profit = models.PositiveIntegerField(default=0)
     rate = models.PositiveSmallIntegerField(default=0)
@@ -1486,7 +1486,7 @@ class Storage(Base):
     invoice_description = JSONField(default=multilanguage)
     invoice_title = JSONField(default=multilanguage)
     vip_types = models.ManyToManyField(VipType, through='VipPrice', related_name="storages")
-    dimensions = JSONField(help_text="{'weight': '', 'height: '', 'width': '', 'length': ''}",
+    dimensions = JSONField(help_text="{'weight': '', 'height': '', 'width': '', 'length': ''}",
                            validators=[validate_vip_price], default=dict, blank=True)
     max_shipping_time = models.PositiveIntegerField(default=0)
     settings = JSONField(default=dict, blank=True)
@@ -1900,12 +1900,13 @@ class SpecialProduct(Base):
     def save(self, *args, **kwargs):
         storage = self.storage
         storage.clean()
+        print(self.storage.disable)
         if storage.disable and not self.deleted_by:
             raise ActivationError('اول باید انبار رو فعال کنی')
         super().save(*args)
         if self.deleted_by:
             return {'variant': 'warning',
-                    'message': 'این انبار محصول ویژه هم داشت که دیگه نداره، چون غیرفعالش کردی تقصیر خودته :)'}
+                    'message': 'محصول ویژه این انبار غیرفعال شد :)'}
 
     storage = models.ForeignKey(Storage, on_delete=CASCADE, null=True, blank=True, related_name='special_products')
     thumbnail = models.ForeignKey(Media, on_delete=PROTECT, related_name='special_product_thumbnail', null=True,
