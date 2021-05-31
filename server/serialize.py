@@ -149,13 +149,13 @@ class BaseSchema(Schema):
         return self.get(obj.details)
 
     def get_box(self, obj):
-        if obj.box is not None:
+        if obj.box_id is not None:
             return BoxSchema(self.lang, exclude=['media']).dump(obj.box)
         return None
 
     def get_parent(self, obj):
         if obj.parent is not None:
-            return CategorySchema(self.lang, exclude=['media']).dump(obj.parent)
+            return CategorySchema(self.lang, exclude=['media', 'box']).dump(obj.parent)
         return None
 
     def get_category(self, obj):
@@ -397,6 +397,7 @@ class CategorySchema(BaseSchema):
     name = fields.Method('get_name')
     parent = fields.Method('get_parent')
     media = fields.Method('get_media')
+    box = fields.Method('get_box')
 
 
 class BoxCategoriesSchema(BaseSchema):
