@@ -883,6 +883,7 @@ class FeatureGroup(Base):
     name = JSONField(default=multilanguage)
     settings = JSONField(default=dict, help_text="{ui: {show_title: true}}")
     box = models.ForeignKey(Box, on_delete=PROTECT)
+    priority = models.PositiveIntegerField(default=0)
     features = models.ManyToManyField("Feature", through="FeatureGroupFeature", related_name='groups')
 
     class Meta:

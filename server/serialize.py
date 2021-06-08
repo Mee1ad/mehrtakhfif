@@ -435,6 +435,7 @@ class FeatureSchema(BaseSchema):
 
 
 class FeatureGroupSchema(BaseSchema):
+    priority = fields.Int()
     name = fields.Method('get_name')
     settings = fields.Method('get_settings')
     features = fields.Function(lambda o: [])
