@@ -1317,9 +1317,9 @@ class Storage(Base):
                 if self.deadline < timezone.now() and self.deadline is not None and self.disable is False:
                     self.make_item_disable(self)
                     raise ActivationError(get_activation_warning_msg('ددلاین'))
-            if (not self.dimensions.get('width') or not self.dimensions.get('height') or not self.dimensions.get(
-                    'length') or not self.dimensions.get('weight')) and self.product.type in [2,
-                                                                                              5]:  # product, package_item
+            # if (not self.dimensions.get('width') or not self.dimensions.get('height') or not self.dimensions.get(
+            #         'length') or not self.dimensions.get('weight')) and self.product.type in [2,
+            #                                                                                   5]:  # product, package_item
                 self.make_item_disable(self, warning=False)
                 raise ActivationError(get_activation_warning_msg('ابعاد'))
         else:
