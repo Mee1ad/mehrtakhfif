@@ -93,7 +93,7 @@ class GenerateCode(AdminView):
         data = json.loads(request.body)
         storage_id = data['storage_id']
         count = data['count']
-        code_len = data.get('len', 5)
+        code_len = len(data['count'])
         storage = Storage.objects.get(pk=storage_id)
         prefix = data.get('prefix', storage.title['fa'][:2])
         codes = [prefix + '-' + get_random_string(code_len, random_data) for c in range(count)]
