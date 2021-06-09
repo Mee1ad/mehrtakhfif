@@ -14,7 +14,7 @@ from server.serialize import *
 from server.utils import LoginRequired
 from server.utils import View, get_pagination, load_data, get_preview_permission
 
-
+import pysnooper
 class ProductView(View):
     def get(self, request, permalink):
         identifier = {'permalink': permalink}
@@ -79,6 +79,7 @@ class ProductView(View):
         return JsonResponse({'product': product, 'purchased': product_obj.purchased, 'features': features,
                              'wish': product_obj.wish, 'notify': product_obj.notify})
 
+    @pysnooper.snoop()
     def get_features(self, product, lang):
         if not product:
             return {'group_features': [], 'features': []}
