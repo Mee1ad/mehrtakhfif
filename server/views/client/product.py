@@ -79,7 +79,7 @@ class ProductView(View):
         return JsonResponse({'product': product, 'purchased': product_obj.purchased, 'features': features,
                              'wish': product_obj.wish, 'notify': product_obj.notify})
 
-    @pysnooper.snoop()
+
     def get_features(self, product, lang):
         if not product:
             return {'group_features': [], 'features': []}
@@ -110,13 +110,22 @@ class ProductView(View):
                     dfs[0]['feature_value'] += feature['feature_value']
                     product_features.pop(product_features.index(feature))
 
-        product_features_copy = product_features # cant remove item from "list in for"
-        for cfg in category_feature_groups:
-            # product_feature = next((pf for pf in product_features if cfg['id'] in pf['feature_groups']), None)
-            for pf in product_features:
+        product_features_copy = product_features.copy()  # cant remove item from "list in for"
+        for pf in product_features:
+            is_grouped_pf = False
+            for cfg in category_feature_groups:
                 if cfg['id'] in pf['feature_groups']:
-                    # cfg['features'].append(product_features.pop(product_features.index(pf)))
-                    cfg['features'].append(product_features_copy.pop(product_features_copy.index(pf)))
+                    cfg['features'].append(pf)
+                    is_grouped_pf = True
+            if is_grouped_pf:
+                product_features_copy.pop(product_features_copy.index(pf))
+
+        # for cfg in category_feature_groups:
+        #     # product_feature = next((pf for pf in product_features if cfg['id'] in pf['feature_groups']), None)
+        #     for pf in product_features:
+        #         if cfg['id'] in pf['feature_groups']:
+        #             # cfg['features'].append(product_features.pop(product_features.index(pf)))
+        #             cfg['features'].append(product_features_copy.pop(product_features_copy.index(pf)))
 
             # if product_feature:
             #     cfg['features'].append(product_features.pop(product_features.index(product_feature)))
@@ -140,7 +149,7 @@ class ProductView(View):
         #             duplicate_features.append({'id': f['id'], 'settings': f['settings'], 'name': f['feature_value'],
         #                                        'priority': f['priority']})
         #     feature_list.append({'feature': feature['feature'], 'feature_value': duplicate_features})
-        return {'group_features': category_feature_groups, 'features': product_features}
+        return {'group_features': category_feature_groups, 'features': product_features_copy}
 
     def get_category(self, category):
         try:
