@@ -110,11 +110,13 @@ class ProductView(View):
                     dfs[0]['feature_value'] += feature['feature_value']
                     product_features.pop(product_features.index(feature))
 
+        product_features_copy = product_features # cant remove item from "list in for"
         for cfg in category_feature_groups:
             # product_feature = next((pf for pf in product_features if cfg['id'] in pf['feature_groups']), None)
             for pf in product_features:
                 if cfg['id'] in pf['feature_groups']:
-                    cfg['features'].append(product_features.pop(product_features.index(pf)))
+                    # cfg['features'].append(product_features.pop(product_features.index(pf)))
+                    cfg['features'].append(product_features_copy.pop(product_features_copy.index(pf)))
 
             # if product_feature:
             #     cfg['features'].append(product_features.pop(product_features.index(product_feature)))
