@@ -109,12 +109,16 @@ class ProductView(View):
                 for feature in dfs[1:]:
                     dfs[0]['feature_value'] += feature['feature_value']
                     product_features.pop(product_features.index(feature))
-        print('test 1', category_feature_groups)
+
         for cfg in category_feature_groups:
-            product_feature = next((pf for pf in product_features if cfg['id'] in pf['feature_groups']), None)
-            if product_feature:
-                cfg['features'].append(product_features.pop(product_features.index(product_feature)))
-        print('test 2', category_feature_groups)
+            # product_feature = next((pf for pf in product_features if cfg['id'] in pf['feature_groups']), None)
+            for pf in product_features:
+                if cfg['id'] in pf['feature_groups']:
+                    cfg['features'].append(product_features.pop(product_features.index(pf)))
+
+            # if product_feature:
+            #     cfg['features'].append(product_features.pop(product_features.index(product_feature)))
+
         # for feature_group in category_feature_groups:
         #     # group features
         #     gf = product_features.filter(feature__groups__in=[feature_group.pk])
