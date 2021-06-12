@@ -38,12 +38,12 @@ class FilterDetail(View):
         if box_permalink:
             filter_by['box'] = Box.objects.get(permalink=box_permalink, **disable)
             cat_filter_by['box'] = filter_by['box']
-            res['box'] = BoxSchema(**request.schema_params).dump(filter_by['box'])
+            res['box'] = BoxSchema(**request.schema_params, exclude=['children']).dump(filter_by['box'])
         if category_permalink:
             category = Category.objects.get(permalink=category_permalink, **disable)
             filter_by['categories'] = category
             cat_filter_by['box'] = category.box
-            res['box'] = BoxSchema(**request.schema_params).dump(category.box)
+            res['box'] = BoxSchema(**request.schema_params, exclude=['children']).dump(category.box)
         categories = Category.objects.filter(**cat_filter_by, **disable).select_related('media', 'parent')
         if q:
             rank = get_rank(q, request.lang)

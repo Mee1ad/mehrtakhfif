@@ -18,6 +18,7 @@ from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
 from django.core.mail import EmailMultiAlternatives
 from django.core.paginator import Paginator
+from django.db.models import Prefetch
 from django.db.models import Sum
 from django.utils.crypto import get_random_string
 from django.utils.translation import gettext_lazy as _
@@ -364,7 +365,23 @@ def send_email(subject, to, from_email='notification@mehrtakhfif.com', message=N
 # todo check for possible duplicates in category
 
 
-def sort_categories(is_admin=None):
+def get_categories_new():
+    prefetch_categories_level2 = Prefetch('children', to_attr='prefetched_children',
+                                          queryset=Category.objects.filter(disable=False))
+    prefetch_categories_level1 = Prefetch('children', to_attr='prefetched_children',
+                                          queryset=Category.objects.filter(disable=False)
+                                          .prefetch_related(prefetch_categories_level2))
+    prefetch_box_categories = Prefetch('categories', to_attr='prefetched_categories',
+                                       queryset=Category.objects.filter(disable=False, parent=None)
+                                       .prefetch_related(prefetch_categories_level1))
+    boxes = Box.objects.filter(disable=False).prefetch_related(prefetch_box_categories)
+    boxes = BoxSchema(exclude=['media']).dump(boxes, many=True)
+    for box in boxes:
+        box['isRoot'] = True
+    return boxes
+
+
+def sort_categories_old(is_admin=None):
     cat = Category.objects.all().filter(disable=False).select_related('parent', 'media', 'box')
     categories = CategorySchema().dump(cat, many=True)
     b = Box.objects.all().filter(disable=False).select_related('media')
@@ -372,22 +389,24 @@ def sort_categories(is_admin=None):
     # cat = [*categories]
     ans = []
     for i in categories:
-        ans.append(category_child(i, categories))
+        ans.append(category_child(i))
 
     cats = [i for i in ans if i['parent'] is None]
     res = []
     for box in boxes:
-        res.append({**box,'isRoot':True,'children':[{**i,'parent':{'id':box['id'],'name':box['name']}} for i in cats if i['box']['id'] == box['id']]})
+        res.append({**box, 'isRoot': True,
+                    'children': [{**i, 'parent': {'id': box['id'], 'name': box['name']}} for i in cats if
+                                 i['box']['id'] == box['id']]})
 
     return res
 
 
-def category_child(param, categories):
+def category_child_old(param, categories):
+    print(param)
     children = {**param}
     try:
         r = []
         pk = param['id']
-
         for category in categories:
             if category['parent'] is not None:
                 if pk == category['parent']['id']:
@@ -395,16 +414,13 @@ def category_child(param, categories):
             else:
                 # print(i)
                 pass
-
         children['children'] = []
-
         for row in r:
             children['children'].append(category_child(row))
-
     except Exception as e:
         pass
-
     return children
+
 
 # endregion
 

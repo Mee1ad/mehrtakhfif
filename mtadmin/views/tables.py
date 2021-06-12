@@ -46,7 +46,9 @@ class CategoryView(TableView):
         return create_object(request, Category, serializer=CategoryASchema, return_item=True)
 
     def put(self, request):
-        return update_object(request, Category, return_item=True, serializer=CategoryASchema)
+        category = update_object(request, Category, return_item=True, serializer=CategoryASchema)
+        cache.set('categories', get_categories_new(), 3000000)
+        return category
 
     def delete(self, request):
         return delete_base(request, Category)

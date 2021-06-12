@@ -10,7 +10,6 @@ from server.utils import *
 
 class Test(View):
     def get(self, request):
-        product = Product.objects.filter(pk=1).values('name')
         return JsonResponse({"message": "pong"})
 
     def delete(self, request):
@@ -140,19 +139,19 @@ class BoxWithCategory(View):
             disable = {'disable': False} if not request.user.is_staff else {}
             box = Box.objects.get(**box_filter, **disable)
             categories = get_categories(request.lang, box.pk, is_admin=is_admin, disable=disable)
-            box = BoxSchema(**request.schema_params).dump(box)
+            box = BoxSchema(**request.schema_params, exclude=['children']).dump(box)
             res = {'categories': categories, 'box': box}
         except Box.DoesNotExist:
             boxes = Box.objects.filter(**disable)
-            res = {'boxes': BoxSchema(**request.schema_params).dump(boxes, many=True)}
+            res = {'boxes': BoxSchema(**request.schema_params, exclude=['children']).dump(boxes, many=True)}
         return JsonResponse(res)
 
 
-class AllCategories(View):
+class Categories(View):
     def get(self, request):
         all_category = cache.get('categories', None)
         if not all_category:
-            all_category = sort_categories()
+            all_category = get_categories_new()
             cache.set('categories', all_category, 3000000)  # about 1 month
         return JsonResponse({'data': all_category})
 
@@ -216,7 +215,6 @@ class ElasticSearch(View):
                                          {"match": {"name_fa2": {"query": q, "boost": 0.5}}}]}})
         products, categories, tags = [], [], []
         for hit in p[:3]:
-            print(hit.name_fa, hit.meta.score)
             product = {'name': hit.name_fa, 'permalink': hit.permalink, 'thumbnail': hit.thumbnail}
             products.append(product)
         for hit in c[:3]:

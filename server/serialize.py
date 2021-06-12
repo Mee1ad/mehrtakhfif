@@ -150,18 +150,18 @@ class BaseSchema(Schema):
 
     def get_box(self, obj):
         if obj.box_id is not None:
-            return BoxSchema(self.lang, exclude=['media']).dump(obj.box)
+            return BoxSchema(self.lang, exclude=['media', 'children']).dump(obj.box)
         return None
 
     def get_parent(self, obj):
         if obj.parent is not None:
-            return CategorySchema(self.lang, exclude=['media', 'box']).dump(obj.parent)
+            return CategorySchema(self.lang, exclude=['media', 'box', 'children']).dump(obj.parent)
         return None
 
     def get_category(self, obj):
         categories = obj.categories.all()
         if categories:
-            return CategorySchema(self.lang, exclude=['media']).dump(categories, many=True)
+            return CategorySchema(self.lang, exclude=['media', 'children']).dump(categories, many=True)
         return []
 
     def get_product(self, obj):
@@ -373,6 +373,10 @@ class BoxSchema(BaseSchema):
     id = fields.Int()
     name = fields.Method("get_name")
     media = fields.Method('get_media')
+    children = fields.Method('get_categories')
+
+    def get_categories(self, obj):
+        return CategorySchema(exclude=['box', 'media', 'parent']).dump(obj.prefetched_categories, many=True)
 
 
 class MediaSchema(BaseSchema):
@@ -398,6 +402,13 @@ class CategorySchema(BaseSchema):
     parent = fields.Method('get_parent')
     media = fields.Method('get_media')
     box = fields.Method('get_box')
+    children = fields.Method('get_children')
+
+    def get_children(self, obj):
+        try:
+            return CategorySchema(exclude=['parent', 'media', 'box']).dump(obj.prefetched_children, many=True)
+        except Exception:
+            return []
 
 
 class BoxCategoriesSchema(BaseSchema):

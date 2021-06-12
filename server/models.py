@@ -779,8 +779,8 @@ class Category(Base):
     def get_box_name(self):
         return self.box.name['fa']
 
-    parent = models.ForeignKey("self", on_delete=CASCADE, null=True, blank=True)
-    box = models.ForeignKey(Box, on_delete=CASCADE)
+    parent = models.ForeignKey("self", on_delete=CASCADE, null=True, blank=True, related_name='children')
+    box = models.ForeignKey(Box, on_delete=CASCADE, related_name="categories")
     # features = models.ManyToManyField("Feature")
     feature_groups = models.ManyToManyField("FeatureGroup", through="CategoryGroupFeature", related_name='categories')
     name = JSONField(default=multilanguage)
@@ -1701,10 +1701,12 @@ class PaymentHistory(SafeDeleteModel):
 
 # todo disable value_added type (half)
 # todo remove
+
+# todo if possible replace with invoicestorage new field supplier (carefully)
 class InvoiceSuppliers(MyModel):
     select = ['invoice', 'supplier'] + MyModel.select
     invoice = models.ForeignKey(Invoice, on_delete=CASCADE, db_index=False)
-    supplier = models.ForeignKey(User, on_delete=CASCADE, db_index=False)
+    supplier = models.ForeignKey(User, on_delete=CASCADE, db_index=False, related_name="invoice_suppliers")
     amount = models.PositiveIntegerField()
 
     class Meta:

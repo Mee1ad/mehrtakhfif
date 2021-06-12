@@ -368,6 +368,7 @@ class BoxASchema(BoxSchema):
     name = fields.Dict()
     disable = fields.Boolean()
     is_owner = fields.Method("get_is_owner")
+    children = None
 
     def get_is_owner(self, obj):
         if obj.owner == self.user:
@@ -875,6 +876,7 @@ class CategoryASchema(BaseAdminSchema, CategorySchema):
 
     parent = fields.Nested("CategoryASchema")
     box = fields.Nested(BoxASchema)
+    children = None
 
 
 class CategoryESchema(CategoryASchema, BaseAdminSchema):

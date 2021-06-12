@@ -44,7 +44,7 @@ home = [
     cache_proxy(GetSpecialProduct.as_view(), 'special_product', lvl[6]),
     cache_proxy(BestSeller.as_view(), 'best_seller', lvl[6]),
     path('box_with_category', try_except(BoxWithCategory.as_view()), name='box_with_category'),  # not for admin
-    path('categories', try_except(AllCategories.as_view()), name='categories'),  # not for admin
+    path('categories', try_except(Categories.as_view()), name='categories'),  # not for admin
     # path('menu', cache_page(60 * 5)(try_except(GetMenu.as_view())), name='menu'),
     cache_proxy(GetMenu.as_view(), 'menu', lvl[9]),
     cache_proxy(Suggest.as_view(), 'suggest', lvl[9]),
