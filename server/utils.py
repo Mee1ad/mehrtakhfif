@@ -159,6 +159,8 @@ def filter_params(params, new_params=(), lang='fa'):
                                                                                                         flat=True)}
         except Box.DoesNotExist:
             pass
+    if params.get('available', None):
+        filters['filter']['default_storage__unavailable'] = False
     if orderby != '-created_at':
         valid_key = valid_orders[orderby]
         filters['order'] = valid_key
