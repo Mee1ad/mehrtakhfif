@@ -792,7 +792,7 @@ def get_colors_hex(products=None, with_price=False):
     if colors:
         return colors
     if products:
-        product_features = list(ProductFeature.objects.filter(feature_id=35, product__in=products).annotate(
+        product_features = list(ProductFeature.objects.filter(feature_id=color_feature_id, product__in=products).annotate(
             color=KeyTextTransform('hex', 'feature_value__settings'),
             name=KeyTextTransform('fa', 'feature_value__value')).order_by('feature_value_id').distinct(
             'feature_value_id').values('feature_value_id', 'color', 'name'))

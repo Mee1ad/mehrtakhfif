@@ -1,3 +1,4 @@
+import json
 from statistics import mean, StatisticsError
 
 from django.shortcuts import render_to_response
@@ -115,6 +116,8 @@ class FeatureView(TableView):
         return create_object(request, Feature, error_null_box=False)
 
     def put(self, request):
+        if json.loads(request.body)['id'] == color_feature_id:
+            return JsonResponse({'message': "برای تغییر این فیچر با پشتیبان تماس بگیرید", 'variant': 'Error'})
         return update_object(request, Feature, serializer=FeatureASchema, require_box=False, return_item=True,
                              restrict_m2m=['features'])
 
