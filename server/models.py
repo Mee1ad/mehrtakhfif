@@ -203,7 +203,6 @@ def esearch(q, document, fields=("name_fa",), exact_match=False, only=None):
     # r = s.query(Q("bool", must=[Q('match', name_fa=q)]))
     # s = Search(index='product')
     # r = s.query(Q('bool', must=[Q('match', name_fa='python'), Q('match', name_fa='best')]))
-    [print(hit.to_dict(), hit.meta) for hit in r]
     if exact_match:
         r = r.execute()[0].to_dict()
         if q not in project(r, fields).values():
