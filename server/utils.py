@@ -383,47 +383,6 @@ def get_categories_new():
     return boxes
 
 
-def sort_categories_old(is_admin=None):
-    cat = Category.objects.all().filter(disable=False).select_related('parent', 'media', 'box')
-    categories = CategorySchema().dump(cat, many=True)
-    b = Box.objects.all().filter(disable=False).select_related('media')
-    boxes = BoxSchema().dump(b, many=True)
-    # cat = [*categories]
-    ans = []
-    for i in categories:
-        ans.append(category_child(i))
-
-    cats = [i for i in ans if i['parent'] is None]
-    res = []
-    for box in boxes:
-        res.append({**box, 'isRoot': True,
-                    'children': [{**i, 'parent': {'id': box['id'], 'name': box['name']}} for i in cats if
-                                 i['box']['id'] == box['id']]})
-
-    return res
-
-
-def category_child_old(param, categories):
-    print(param)
-    children = {**param}
-    try:
-        r = []
-        pk = param['id']
-        for category in categories:
-            if category['parent'] is not None:
-                if pk == category['parent']['id']:
-                    r.append(category)
-            else:
-                # print(i)
-                pass
-        children['children'] = []
-        for row in r:
-            children['children'].append(category_child(row))
-    except Exception as e:
-        pass
-    return children
-
-
 # endregion
 
 
@@ -789,7 +748,7 @@ def add_to_basket(basket, products):
 
 
 def get_colors_hex(products=None, with_price=False):
-    key = sha3_512(f"colors{products}".encode()).hexdigest()
+    key = 'colors' + sha3_512(f"colors{products}".encode()).hexdigest()
     colors = cache.get(key, None)
     if colors:
         return colors
