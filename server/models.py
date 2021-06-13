@@ -258,8 +258,8 @@ class MyQuerySet(SafeDeleteQueryset):
         parent_id = kwargs.get('parent_id')
         if (pk == parent_id and pk is not None) or Category.objects.filter(pk=parent_id, parent_id=pk).exists():
             raise ValidationError(_("والد نامعتبر است"))
-        if not category.media and kwargs.get('disable') is False:
-            raise ValidationError(_('قبل از فعالسازی تصویر دسته بندی را مشخص کنید'))
+        # if not category.media and kwargs.get('disable') is False:
+        #     raise ValidationError(_('قبل از فعالسازی تصویر دسته بندی را مشخص کنید'))
         # features = Feature.objects.filter(pk__in=kwargs.get('features', []))
         # category.feature_set.clear()
         # category.feature_set.add(*features)
@@ -743,9 +743,9 @@ class Category(Base):
         return "/search/" + self.permalink
 
     def clean(self):
-        if self.products.count() <= 10:
-            self.make_item_disable(self)
-            raise ActivationError('حداقل تعداد محصولات باید 10 عدد باشد')
+        # if self.products.count() <= 10:
+        #     self.make_item_disable(self)
+        #     raise ActivationError('حداقل تعداد محصولات باید 10 عدد باشد')
         if getattr(getattr(self, 'parent', None), 'disable', None) is True:
             self.make_item_disable(self)
             raise ActivationError('لطفا ابتدا دسته بندی والد را فعال نمایید')
