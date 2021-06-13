@@ -85,7 +85,7 @@ class FilterDetail(View):
 
 class Filter(View):
     def get(self, request):
-        new_params = {'fv': 'product_features__feature_value_id', 'b': 'box__permalink',
+        new_params = {'colors': 'product_features__feature_value_id', 'b': 'box__permalink',
                       'cat': 'categories__permalink', 'tag': 'tags__permalink',
                       'available': 'storages__available_count_for_sale__gte', 'brand': 'brand__in'}
         params = filter_params(request.GET, new_params, request.lang)
