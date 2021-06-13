@@ -370,7 +370,6 @@ class BoxSchema(BaseSchema):
     class Meta:
         additional = ('id', 'permalink', 'priority')
 
-    id = fields.Int()
     name = fields.Method("get_name")
     media = fields.Method('get_media')
     children = fields.Method('get_categories')

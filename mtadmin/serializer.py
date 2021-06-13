@@ -370,6 +370,9 @@ class BoxASchema(BoxSchema):
     is_owner = fields.Method("get_is_owner")
     children = None
 
+    def get_categories(self, obj):  # for overwrite parent attribute
+        pass
+
     def get_is_owner(self, obj):
         if obj.owner == self.user:
             return True
