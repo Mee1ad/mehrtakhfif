@@ -367,13 +367,13 @@ def send_email(subject, to, from_email='notification@mehrtakhfif.com', message=N
 # todo check for possible duplicates in category
 
 
-def get_categories_new():
-    prefetch_categories_level2 = Prefetch('children', to_attr='prefetched_children',
-                                          queryset=Category.objects.filter(disable=False))
-    prefetch_categories_level1 = Prefetch('children', to_attr='prefetched_children',
-                                          queryset=Category.objects.filter(disable=False)
-                                          .prefetch_related(prefetch_categories_level2))
-    prefetch_box_categories = Prefetch('categories', to_attr='prefetched_categories',
+def get_categories_with_box(filters):
+    prefetch_grand_children = Prefetch('children', to_attr='prefetched_children',
+                                       queryset=Category.objects.filter(disable=False))
+    prefetch_children = Prefetch('children', to_attr='prefetched_children',
+                                 queryset=Category.objects.filter(disable=False)
+                                 .prefetch_related(prefetch_grand_children))
+    prefetch_box_categories = Prefetch('children', to_attr='prefetched_categories',
                                        queryset=Category.objects.filter(disable=False, parent=None)
                                        .prefetch_related(prefetch_categories_level1))
     boxes = Box.objects.filter(disable=False).prefetch_related(prefetch_box_categories)
@@ -383,10 +383,27 @@ def get_categories_new():
     return boxes
 
 
-# endregion
+def get_categories_with_children(filters):
+    active_categories = {'disable': False, 'box__disable': False}
+    prefetch_children = Prefetch('children', to_attr='prefetched_children',
+                                 queryset=Category.objects.filter(**active_categories))
+    category = Category.objects.filter(**active_categories, **filters).prefetch_related(prefetch_children)
+    categories = CategorySchema(only=['id', 'name', 'children']).dump(category, many=True)
+    return categories
 
 
-def get_categories(language, box_id=None, categories=None, is_admin=None, disable={}):
+def get_categories(filters=None):
+    if not filters:
+        filters = {}
+    if Category.objects.filter(disable=False, box__disable=False, **filters).exists():
+        return get_categories_with_children(filters)
+    filters.pop('products__in', None)
+    if Box.objects.filter(disable=False, **filters).exists():
+        return get_categories_with_box(filters)
+    return []
+
+
+def get_categories_old(language, box_id=None, categories=None, is_admin=None, disable={}):
     if box_id:
         categories = Category.objects.filter(box_id=box_id, **disable)
     if categories is None:

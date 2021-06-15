@@ -138,7 +138,7 @@ class BoxWithCategory(View):
         try:
             disable = {'disable': False} if not request.user.is_staff else {}
             box = Box.objects.get(**box_filter, **disable)
-            categories = get_categories(request.lang, box.pk, is_admin=is_admin, disable=disable)
+            categories = get_categories_old(request.lang, box.pk, is_admin=is_admin, disable=disable)
             box = BoxSchema(**request.schema_params, exclude=['children']).dump(box)
             res = {'categories': categories, 'box': box}
         except Box.DoesNotExist:
@@ -151,7 +151,7 @@ class Categories(View):
     def get(self, request):
         all_category = cache.get('categories', None)
         if not all_category:
-            all_category = get_categories_new()
+            all_category = get_categories()
             cache.set('categories', all_category, 3000000)  # about 1 month
         return JsonResponse({'data': all_category})
 
@@ -225,37 +225,3 @@ class ElasticSearch(View):
             tags.append(tag)
         categories = sorted(categories, key=lambda i: 1 if i['parent'] else 0)
         return JsonResponse({'categories': categories, 'tags': tags, 'products': products})
-
-    def get2(self, request):
-        q = request.GET.get('q', '')
-        # lang = request.lang
-        s = Search()
-        p = s.from_dict({"query": {"dis_max": {"queries": [{"match": {"name_fa": q}},
-                                                           {"wildcard": {"name_fa": f"{q}*"}}]}},
-                         "size": 10, "sort": [{"_score": {"order": "desc"}}]}).query("match", disable=False)
-        products, categories, tags = [], [], []
-        removed_products, removed_tags = [], []
-        for hit in p:
-            print(hit.__dict__)
-            # product = {'name': hit.name_fa, 'permalink': hit.permalink, 'thumbnail': hit.thumbnail}
-            # if q not in hit.name_fa:
-            #     removed_products.append(product)
-            #     continue
-            # products.append(product)
-        return JsonResponse({})
-        # for hit in c[:3]:
-        #     category = {'name': hit.name_fa, 'permalink': hit.permalink, 'media': hit.media, 'parent': hit.parent}
-        #     if q in hit.name_fa and not re.search(f".+{q}.+", hit.name_fa):
-        #         categories.append(category)
-        # for hit in t[:3]:
-        #     tag = {'name': hit.name_fa, 'permalink': hit.permalink}
-        #     if q not in hit.name_fa:
-        #         removed_tags.append(tag)
-        #         continue
-        #     tags.append(tag)
-        # if not products:
-        #     products = removed_products
-        # if not tags:
-        #     tags = removed_tags
-        # categories = sorted(categories, key=lambda i: 1 if i['parent'] else 0)
-        # return JsonResponse({'categories': categories, 'tags': tags, 'products': products})

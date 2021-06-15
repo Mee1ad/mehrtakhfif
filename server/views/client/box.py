@@ -1,8 +1,7 @@
 from django.db.models import Max, Min
-from django.db.models import Prefetch
 from django.http import JsonResponse
 
-from server.serialize import BoxSchema, FeatureSchema, BrandSchema, SpecialProductSchema
+from server.serialize import FeatureSchema, BrandSchema, SpecialProductSchema
 from server.utils import *
 
 
@@ -26,61 +25,52 @@ class GetSpecialProduct(View):
 class FilterDetail(View):
 
     def get(self, request):
-        box_permalink = request.GET.get('b', None)
         q = request.GET.get('q', {})
-        category_permalink = request.GET.get('cat', None)
+        permalink = request.GET.get('cat', None)
         filter_by = {}
-        rank = {}
-        res = {'box': None}
-        order_by = []
         disable = {'disable': False} if not request.user.is_staff else {}
-        cat_filter_by = {}
-        if box_permalink:
-            filter_by['box'] = Box.objects.get(permalink=box_permalink, **disable)
-            cat_filter_by['box'] = filter_by['box']
-            res['box'] = BoxSchema(**request.schema_params, exclude=['children']).dump(filter_by['box'])
-        if category_permalink:
-            category = Category.objects.get(permalink=category_permalink, **disable)
-            filter_by['categories'] = category
-            cat_filter_by['box'] = category.box
-            res['box'] = BoxSchema(**request.schema_params, exclude=['children']).dump(category.box)
-        categories = Category.objects.filter(**cat_filter_by, **disable).select_related('media', 'parent')
+        category_filters = {}
+        if permalink:
+            category_filters = {'permalink': permalink}
         if q:
-            rank = get_rank(q, request.lang)
-            rank = {'rank': rank}
-            order_by = ['-rank']
-        products = Product.objects.annotate(**rank).filter(**filter_by, **disable).order_by(*order_by). \
+            p = ProductDocument.search()
+            p = p.query({"bool": {"should": [{"match": {"name_fa": {"query": q}}},
+                                             {"wildcard": {"name_fa": f"{q}*"}},
+                                             {"match": {"name_fa2": {"query": q}}}]}}).query('match', disable=False)
+            product_ids = []
+            for hit in p:
+                product_ids.append(hit.id)
+
+            category_filters['products__in'] = product_ids
+            filter_by['id__in'] = product_ids
+        products = Product.objects.filter(**filter_by, **disable).order_by(). \
             select_related('brand', 'default_storage').only('brand', 'categories', 'default_storage', 'name')
         if not products:
             return JsonResponse({'max_price': 0, 'min_price': 0, 'brands': [],
                                  'categories': [], 'breadcrumb': [], 'colors': []})
-        if q:
-            categories = Category.objects.filter(
-                pk__in=list(filter(None, set(products.values_list('categories', flat=True)))),
-                **disable).select_related('media', 'parent')
         prices = products.aggregate(max=Max('default_storage__discount_price'),
                                     min=Min('default_storage__discount_price'))
-        categories = get_categories(request.lang, categories=categories)
         brands = [product.brand for product in products.order_by('brand_id').distinct('brand_id') if product.brand]
-        breadcrumb = self.get_breadcrumb(category_permalink)
+        breadcrumb = self.get_breadcrumb(permalink)
         colors = get_colors_hex(products)
-        return JsonResponse({'max_price': prices['max'], 'min_price': prices['min'], **res,
+        categories = get_categories(category_filters)
+        return JsonResponse({'max_price': prices['max'], 'min_price': prices['min'],
                              'brands': BrandSchema(**request.schema_params).dump(brands, many=True),
                              'categories': categories, 'breadcrumb': breadcrumb, 'colors': colors})
 
-    def get_breadcrumb(self, category_permalink, lang='fa'):
-        breadcrumb = []
-        if not category_permalink:
+    def get_breadcrumb(self, permalink):
+        category = Category.objects.filter(disable=False, box__disable=False, permalink=permalink)\
+            .select_related('parent', 'box').first()
+        if category:
+            breadcrumb = [{'name': category.box.get_name_fa(), 'permalink': category.box.permalink}]
+            if category.parent_id:
+                breadcrumb.append({'name': category.parent.get_name_fa(), 'permalink': category.parent.permalink})
+            breadcrumb.append({'name': category.get_name_fa(), 'permalink': category.permalink})
             return breadcrumb
-        category = None
-        while True:
-            if not breadcrumb:
-                category = Category.objects.get(permalink=category_permalink)
-            try:
-                breadcrumb.insert(0, {'permalink': category.permalink, 'name': category.name[lang]})
-                category = category.parent
-            except AttributeError:
-                return breadcrumb
+        box = Box.objects.filter(disable=False, permalink=permalink).first()
+        if box:
+            return [{'name': box.get_name_fa(), 'permalink': box.permalink}]
+        return []
 
 
 class Filter(View):
