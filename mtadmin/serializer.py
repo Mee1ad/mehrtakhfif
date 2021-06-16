@@ -782,6 +782,13 @@ class StorageESchema(StorageASchema):
     vip_prices = VipPriceField()
     start_time = fields.Function(lambda o: o.start_time.timestamp())
     vip_max_count_for_sale = fields.Function(lambda o: None)
+    deadline = fields.Method("get_deadline")
+
+    def get_deadline(self, obj):
+        try:
+            return obj.deadline.timestamp()
+        except Exception:
+            pass
 
     def get_items(self, obj):
         # items = Package.objects.filter(package_id=obj)
