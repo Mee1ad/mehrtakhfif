@@ -779,7 +779,7 @@ class Category(Base):
         return self.box.name['fa']
 
     parent = models.ForeignKey("self", on_delete=CASCADE, null=True, blank=True, related_name='children')
-    box = models.ForeignKey(Box, on_delete=CASCADE, related_name="categories")
+    box = models.ForeignKey(Box, on_delete=CASCADE, related_name="children")
     # features = models.ManyToManyField("Feature")
     feature_groups = models.ManyToManyField("FeatureGroup", through="CategoryGroupFeature", related_name='categories')
     name = JSONField(default=multilanguage)
@@ -1319,10 +1319,11 @@ class Storage(Base):
             # if (not self.dimensions.get('width') or not self.dimensions.get('height') or not self.dimensions.get(
             #         'length') or not self.dimensions.get('weight')) and self.product.type in [2,
             #                                                                                   5]:  # product, package_item
-                self.make_item_disable(self, warning=False)
-                raise ActivationError(get_activation_warning_msg('ابعاد'))
+            #     self.make_item_disable(self, warning=False)
+            #     raise ActivationError(get_activation_warning_msg('ابعاد'))
         else:
-            self.required_fields = ['dimensions']
+            # self.required_fields = ['dimensions']
+            self.required_fields = []
             items = self.items.filter(Q(disable=True) | Q(available_count_for_sale=0))
             if items.exists():
                 self.make_item_disable(self)
