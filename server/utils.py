@@ -31,7 +31,7 @@ from mehr_takhfif.settings import CSRF_SALT, TOKEN_SALT, DEFAULT_COOKIE_DOMAIN, 
 from server.documents import ProductDocument
 from server.models import *
 from server.serialize import get_tax, BoxCategoriesSchema, BasketSchema, MinProductSchema, BasketProductSchema, \
-    UserSchema, InvoiceSchema, CategorySchema, BoxSchema
+    UserSchema, InvoiceSchema, BoxSchema, CategorySchema
 # from barcode import generate
 # from barcode.base import Barcode
 from server.views.post import get_shipping_cost_temp
@@ -367,7 +367,9 @@ def send_email(subject, to, from_email='notification@mehrtakhfif.com', message=N
 # todo check for possible duplicates in category
 
 
-def get_categories_with_box(filters):
+def get_categories_with_box(filters=None):
+    if not filters:
+        filters = {}
     prefetch_grand_children = Prefetch('children', to_attr='prefetched_children',
                                        queryset=Category.objects.filter(disable=False))
     prefetch_children = Prefetch('children', to_attr='prefetched_children',
@@ -375,8 +377,8 @@ def get_categories_with_box(filters):
                                  .prefetch_related(prefetch_grand_children))
     prefetch_box_categories = Prefetch('children', to_attr='prefetched_categories',
                                        queryset=Category.objects.filter(disable=False, parent=None)
-                                       .prefetch_related(prefetch_categories_level1))
-    boxes = Box.objects.filter(disable=False).prefetch_related(prefetch_box_categories)
+                                       .prefetch_related(prefetch_children))
+    boxes = Box.objects.filter(disable=False, **filters).prefetch_related(prefetch_box_categories)
     boxes = BoxSchema(exclude=['media']).dump(boxes, many=True)
     for box in boxes:
         box['isRoot'] = True
@@ -770,10 +772,11 @@ def get_colors_hex(products=None, with_price=False):
     if colors:
         return colors
     if products:
-        product_features = list(ProductFeature.objects.filter(feature_id=color_feature_id, product__in=products).annotate(
-            color=KeyTextTransform('hex', 'feature_value__settings'),
-            name=KeyTextTransform('fa', 'feature_value__value')).order_by('feature_value_id').distinct(
-            'feature_value_id').values('feature_value_id', 'color', 'name'))
+        product_features = list(
+            ProductFeature.objects.filter(feature_id=color_feature_id, product__in=products).annotate(
+                color=KeyTextTransform('hex', 'feature_value__settings'),
+                name=KeyTextTransform('fa', 'feature_value__value')).order_by('feature_value_id').distinct(
+                'feature_value_id').values('feature_value_id', 'color', 'name'))
         for item in product_features:
             item['id'] = item.pop('feature_value_id')
         cache.set(key, product_features, timeout=60 * 60 * 24 * 30)
@@ -857,6 +860,23 @@ def disable_no_thumbnail_products():
                 i += 1
         except AttributeError:
             pass
+
+
+# incomplete
+def supplier_sale_report(supplier):
+    book = xlsxwriter.Workbook(f'book.xlsx')
+    sheet = book.add_worksheet()
+    sheet.write(f'A1', "name")
+    sheet.write(f'B1', "date")
+    sheet.write(f'C1', "description")
+    sheet.write(f'D1', "price")
+    invoice_storages = InvoiceStorage.objects.filter(invoice__payed_at__isnull=False, storage__supplier=supplier)
+    for index, invoice_storage in enumerate(invoice_storages):
+        sheet.write(f'A{index + 2}', invoice_storage.storage.title['fa'])
+        sheet.write(f'B{index + 2}', invoice_storage.invoice.payed_at.strftime("%Y-%m-%d"))
+        sheet.write(f'C{index + 2}', "بلا بلا بلا")
+        sheet.write(f'D{index + 2}', invoice_storage.discount_price)
+    book.close()
 
 
 # Security
