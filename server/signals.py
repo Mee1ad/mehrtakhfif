@@ -1,11 +1,11 @@
+from django.core.cache import cache
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from django.core.cache import cache
 from mehr_takhfif.settings import color_feature_id
-from server.models import Invoice, Storage, FeatureValue, Category, Box, User
+from server.models import Invoice, Storage, FeatureValue, Category, Box, User, Product
 from server.utils import add_one_off_job, get_colors_hex
-from server.utils import get_categories_new
+from server.utils import get_categories_with_box
 
 
 @receiver(post_save, sender=Invoice, dispatch_uid="invoice_job_handler")
@@ -50,7 +50,7 @@ def update_colors_in_cache(sender, instance, **kwargs):
 
 @receiver(post_save, sender=Category, dispatch_uid="update_categories_in_cache")
 def update_categories_in_cache(sender, instance, **kwargs):
-    cache.set('categories', get_categories_new(), 3000000)
+    cache.set('categories', get_categories_with_box(), 3000000)
 
 
 @receiver(post_save, sender=Box, dispatch_uid="update_superuser_permissions")
