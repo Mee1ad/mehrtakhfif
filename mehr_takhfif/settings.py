@@ -21,6 +21,24 @@ IPRESTRICT_GEOIP_ENABLED = False
 
 DATA_UPLOAD_MAX_MEMORY_SIZE = 1024000
 
+MIDDLEWARE = [
+    *EARLY_MY_MIDDLEWARE,
+    'django.middleware.security.SecurityMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    # 'iprestrict.middleware.IPRestrictMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+    # 'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.admindocs.middleware.XViewMiddleware',  # docadmin
+    # 'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'server.authentication.MyAuthenticationMiddleware',
+    'server.middleware.AuthMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
+    'django_user_agents.middleware.UserAgentMiddleware',
+    *MY_MIDDLEWARE
+]
 INSTALLED_APPS = \
     [
         'jet.dashboard',
@@ -51,25 +69,6 @@ INSTALLED_APPS = \
         # 'django.contrib.sites'
     ] + MY_INSTALLED_APPS
 
-MIDDLEWARE = [
-    *EARLY_MY_MIDDLEWARE,
-    'django.middleware.security.SecurityMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    # 'iprestrict.middleware.IPRestrictMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    # 'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.admindocs.middleware.XViewMiddleware',  # docadmin
-    # 'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'server.authentication.MyAuthenticationMiddleware',
-    'server.middleware.AuthMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'debug_toolbar.middleware.DebugToolbarMiddleware',
-    'django_user_agents.middleware.UserAgentMiddleware',
-    *MY_MIDDLEWARE
-]
 
 DEBUG_TOOLBAR_PANELS = [
     'debug_toolbar.panels.versions.VersionsPanel',

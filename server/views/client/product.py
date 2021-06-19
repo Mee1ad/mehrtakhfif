@@ -308,7 +308,6 @@ class FeatureView(View):
                              'storage': StorageSchema(exclude=['features']).dump(default_storage)})
 
     def get_features(self, product_features, product_feature_storages, all_pfs, default_storage=None, selected=None):
-
         if not selected:
             selected = []
         features_list = []

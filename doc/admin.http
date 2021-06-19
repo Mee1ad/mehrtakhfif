@@ -91,7 +91,7 @@ POST {{admin_host}}/discount_code
 Content-Type: application/json
 
 {
-  "storage_id": 3,
+  "storage_id": 852,
   "count": 10,
   "len": 6,
   "prefix": "test"
@@ -123,7 +123,7 @@ Content-Type: application/json
 
 {
   "box_id": 3,
-  "type": "product",
+  "type": "service",
   "brand_id": 26,
   "categories": [
     234,
@@ -371,7 +371,7 @@ Content-Type: application/json
   },
   "max_count_for_sale": 3,
   "min_count_alert": 0,
-  "product_id": 61,
+  "product_id": 1285,
   "shipping_cost": 0,
   "start_price": 270000,
   "start_time": 1591004832,

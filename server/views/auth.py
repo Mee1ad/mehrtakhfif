@@ -179,9 +179,6 @@ class SendCode(View):
             traceback.print_exc()
             return JsonResponse({'message': 'token not found'}, status=res_code['bad_request'])
 
-    import pysnooper
-
-    @pysnooper.snoop()
     def send_activation(self, user, request=None):
         resend_timeout = 1
         activation_expire = 2

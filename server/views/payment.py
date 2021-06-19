@@ -65,6 +65,7 @@ class PaymentRequest(LoginRequired):
         #     raise ValidationError(_('سبد خرید باید فعال باشد'))
 
         if DEBUG and request.user.pk in permitted_user:
+            from server.tasks import send_invoice
             # if DEBUG:
             invoice = self.create_invoice(request)
             self.reserve_storage(basket, invoice)
@@ -83,6 +84,7 @@ class PaymentRequest(LoginRequired):
             # CallBack.notification_admin(invoice)
             # return JsonResponse({'invoice_id': invoice.id})
             # return HttpResponseRedirect(f"http://mt.com:3002/invoice/{invoice.id}")
+            send_invoice(invoice.id, lang="fa")
             return JsonResponse({'url': f"{CLIENT_HOST}/invoice/{invoice.id}"})
 
         user = request.user
@@ -246,7 +248,7 @@ class PaymentRequest(LoginRequired):
         # basket.active = False
         # basket.sync = 1  # reserved
         # basket.save()
-        invoice.save()
+        # invoice.save()
 
     def submit_invoice_storages(self, request, invoice_id):
         invoice = Invoice.objects.filter(pk=invoice_id).select_related(*Invoice.select).first()
@@ -323,9 +325,6 @@ class CallBack(View):
     def get(self, request):
         return HttpResponseRedirect(f"{CLIENT_HOST}/profile/all-order")
 
-    import pysnooper
-
-    @pysnooper.snoop()
     def post(self, request):
         # todo redirect to site anyway
         data = request.body.decode().split('&')

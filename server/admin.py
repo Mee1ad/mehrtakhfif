@@ -468,7 +468,7 @@ class DiscountCodeAdmin(Base):
 class FeatureAdmin(Base):
     list_display = ('id', 'name_fa', 'type', 'layout_type', 'values') + SafeDeleteAdmin.list_display
     list_filter = ('type', 'layout_type') + SafeDeleteAdmin.list_filter
-    search_fields = ['name']
+    search_fields = ['name__fa']
     list_per_page = 10
     ordering = ('-created_at',)
 
@@ -479,7 +479,7 @@ class FeatureAdmin(Base):
 
 class FeatureValueAdmin(Base):
     list_display = ('id', 'feature', 'value_fa', 'priority') + SafeDeleteAdmin.list_display
-    search_fields = ['feature', 'value_fa']
+    search_fields = ['value__fa']
     list_per_page = 10
     ordering = ('-created_at',)
 
