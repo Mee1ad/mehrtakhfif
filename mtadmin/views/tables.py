@@ -48,7 +48,7 @@ class CategoryView(TableView):
 
     def put(self, request):
         category = update_object(request, Category, return_item=True, serializer=CategoryASchema)
-        cache.set('categories', get_categories_new(), 3000000)
+        cache.set('categories', get_categories_with_box(), 3000000)
         return category
 
     def delete(self, request):
