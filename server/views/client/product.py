@@ -14,7 +14,7 @@ from server.serialize import *
 from server.utils import LoginRequired
 from server.utils import View, get_pagination, load_data, get_preview_permission
 
-import pysnooper
+
 class ProductView(View):
     def get(self, request, permalink):
         identifier = {'permalink': permalink}
@@ -79,19 +79,12 @@ class ProductView(View):
         return JsonResponse({'product': product, 'purchased': product_obj.purchased, 'features': features,
                              'wish': product_obj.wish, 'notify': product_obj.notify})
 
-
     def get_features(self, product, lang):
         if not product:
             return {'group_features': [], 'features': []}
         category_feature_groups = FeatureGroup.objects.filter(
             categories__in=list(product.categories.values_list('id', flat=True)), settings__ui__show_title=True)
         category_feature_groups = FeatureGroupSchema().dump(category_feature_groups, many=True)
-        # product_feature_groups = product.feature_groups.all()
-        # feature_groups = category_feature_groups | product_feature_groups
-        # feature_groups_id = list(feature_groups.values_list('id', flat=True))
-        # product_features = ProductFeature.objects.annotate(pfs=Count('product_feature_storages')).filter(Q(
-        #     product=product), Q(feature__type__in=[1, 2]) | Q(pfs=1, feature__type=3)) \
-        #     .select_related('feature', 'feature_value')
         product_features = ProductFeature.objects.filter(Q(product=product), Q(feature__type__in=[1, 2]) |
                                                          Q(feature__type=3)) \
             .select_related('feature', 'feature_value'). \
@@ -119,36 +112,6 @@ class ProductView(View):
                     is_grouped_pf = True
             if is_grouped_pf:
                 product_features_copy.pop(product_features_copy.index(pf))
-
-        # for cfg in category_feature_groups:
-        #     # product_feature = next((pf for pf in product_features if cfg['id'] in pf['feature_groups']), None)
-        #     for pf in product_features:
-        #         if cfg['id'] in pf['feature_groups']:
-        #             # cfg['features'].append(product_features.pop(product_features.index(pf)))
-        #             cfg['features'].append(product_features_copy.pop(product_features_copy.index(pf)))
-
-            # if product_feature:
-            #     cfg['features'].append(product_features.pop(product_features.index(product_feature)))
-
-        # for feature_group in category_feature_groups:
-        #     # group features
-        #     gf = product_features.filter(feature__groups__in=[feature_group.pk])
-        #     gf = ProductFeatureSchema().dump(gf, many=True)
-        #     group_features.append({'id': feature_group.pk, 'title': feature_group.name[lang],
-        #                            'settings': feature_group.settings.get('ui', {}), 'features': gf})
-
-        # non_group_features = product_features.exclude(feature__groups__in=category_feature_groups)
-        # features = ProductFeatureSchema().dump(non_group_features, many=True)
-        # unique_features = unique(features, key=lambda o: o['feature'])
-        # features.append(ProductFeatureSchema().dump(non_group_features, many=True))
-        # feature_list = []
-        # for feature in unique_features:
-        #     duplicate_features = []
-        #     for f in features:
-        #         if f['feature'] == feature['feature']:
-        #             duplicate_features.append({'id': f['id'], 'settings': f['settings'], 'name': f['feature_value'],
-        #                                        'priority': f['priority']})
-        #     feature_list.append({'feature': feature['feature'], 'feature_value': duplicate_features})
         return {'group_features': category_feature_groups, 'features': product_features_copy}
 
     def get_category(self, category):
@@ -181,7 +144,7 @@ class ProductUserData(LoginRequired):
             product = Product.objects.filter(**identifier, **product_preview). \
                 annotate(wish=Exists(WishList.objects.filter(user=user, wish=True, **product_identifier)),
                          notify=Exists(WishList.objects.filter(user=user, notify=True, **product_identifier)),
-                         purchased=Exists(Invoice.objects.filter(user=user, status=2, **storage_product_identifier)))\
+                         purchased=Exists(Invoice.objects.filter(user=user, status=2, **storage_product_identifier))) \
                 .values('wish', 'notify', 'purchased')
             if product:
                 data = list(product)[0]
@@ -269,10 +232,7 @@ class FeatureView(View):
             identifier = {'id': permalink}
         product = Product.objects.filter(**identifier).first()
         if product.type == 1:
-            print('1')
             all_storages = product.storages.all()
-            print(all_storages.values('id'))
-            print(StorageAccessories.objects.filter(storage__in=all_storages))
             storages = all_storages.prefetch_related('vip_prices', Prefetch('storage_accessories',
                                                                             queryset=StorageAccessories.objects.filter(
                                                                                 storage__in=all_storages)
@@ -353,7 +313,11 @@ class FeatureView(View):
             selected = []
         features_list = []
         # product_features_distinct = product_features.order_by('feature_id').distinct('feature_id')
-        product_features_distinct = [next(g) for k, g in groupby(product_features, key=ga('feature_id'))]
+        # product_features_distinct = [next(g) for k, g in groupby(product_features, key=ga('feature_id'))]
+        product_features_distinct = []
+        for product_feature in product_features:
+            if not next((pf for pf in product_features_distinct if pf.feature_id == product_feature.feature_id), None):
+                product_features_distinct.append(product_feature)
         all_pfs_distinct = [next(g) for k, g in groupby(all_pfs, key=ga('storage_id'))]
         # selected_feature = list(
         #     product_feature_storages.filter(storage=default_storage).values_list('product_feature_id', flat=True))
