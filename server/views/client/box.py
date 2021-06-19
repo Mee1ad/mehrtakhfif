@@ -89,7 +89,7 @@ class Filter(View):
                                       queryset=ProductFeature.objects.filter(feature_id=color_feature_id)
                                       .prefetch_related('product_feature_storages__storage__media'),
                                       to_attr='colors')) \
-            .select_related('thumbnail', 'default_storage').order_by('-id').distinct('id')
+            .select_related('thumbnail', 'default_storage').order_by('-available', '-id').distinct('available', 'id')
         if params['order']:
             products = products.order_by(params['order']).distinct(params['order'].replace('-', ''))
         if 'id__in' in 'filter' in params:
