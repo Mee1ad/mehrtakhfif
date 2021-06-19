@@ -1145,12 +1145,11 @@ class Product(Base):
 
     def assign_default_value(self):
         storages = self.storages.filter(available_count_for_sale__gt=0, unavailable=False, disable=False)
-        if not storages:
-            storages = self.storages.all()
-        try:
-            Product.objects.filter(pk=self.pk).update(default_storage=min(storages, key=attrgetter('discount_price')))
-        except ValueError:
-            print(f'product {self.id} has not any storage, cant assign default storage')
+        self.available = False
+        if storages:
+            self.default_storage = min(storages, key=attrgetter('discount_price'))
+            self.available = True
+        self.save()
 
     def save(self, *args, **kwargs):
         self.pre_process(self.__dict__)
@@ -1206,6 +1205,7 @@ class Product(Base):
     disable = models.BooleanField(default=True)
     verify = models.BooleanField(default=False)
     manage = models.BooleanField(default=True)
+    available = models.BooleanField(default=False, help_text="managed with signals")
     booking_type = models.PositiveSmallIntegerField(choices=booking_types, default=1)
     accessory_type = models.PositiveSmallIntegerField(choices=accessory_types, default=1)
     # accessories = models.ManyToManyField("self", through='ProductAccessories', symmetrical=False)

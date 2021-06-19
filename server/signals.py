@@ -33,7 +33,6 @@ def inventory_alert(sender, instance, **kwargs):
                 kwargs = {"tg_id": owner.email, 'message': subject + '\n\n' + message}
                 add_one_off_job(name=task_name, kwargs=kwargs, interval=0, task='server.tasks.pm_task')
 
-
         elif instance.available_count_for_sale <= instance.min_count_alert:
             subject = "هشدار اتمام موجودی انبار"
             message = f"نام محصول: {instance.title['fa']}\nتعداد باقی مانده: {instance.available_count_for_sale}"
@@ -57,3 +56,11 @@ def update_categories_in_cache(sender, instance, **kwargs):
 def update_superuser_permissions(sender, instance, **kwargs):
     if kwargs.get('created', True):
         [user.box_permission.add(instance) for user in User.objects.filter(is_superuser=True)]
+
+
+@receiver(post_save, sender=Storage, dispatch_uid="manage_product_availability")
+def manage_product_availability(sender, instance, **kwargs):
+    print('signal is running')
+    instance.product.assign_default_value()
+
+

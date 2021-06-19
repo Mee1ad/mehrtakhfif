@@ -206,8 +206,8 @@ class ElasticSearch(View):
         t = TagDocument.search()
         p = p.query({"bool": {"should": [{"match": {"name_fa": {"query": q, "boost": 1}}},
                                          {"wildcard": {"name_fa": f"{q}*"}},
-                                         {"match": {"name_fa2": {"query": q, "boost": 0.5}}}]}}).query('match',
-                                                                                                       disable=False)
+                                         {"match": {"name_fa2": {"query": q, "boost": 0.5}}}],
+                              "must": [{"match": {"disable": False}}, {"match": {"available": True}}]}})
         c = c.query({"bool": {"should": [{"match": {"name_fa": {"query": q, "boost": 1}}},
                                          {"wildcard": {"name_fa": f"{q}*"}}]}}).query('match', disable=False)
         t = t.query({"bool": {"should": [{"match": {"name_fa": {"query": q, "boost": 1}}},

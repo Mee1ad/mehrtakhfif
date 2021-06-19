@@ -535,12 +535,11 @@ class MinProductSchema(BaseSchema):
         self.colors = colors
 
     class Meta:
-        additional = ('id', 'permalink', 'rate', 'disable')
+        additional = ('id', 'permalink', 'rate', 'disable', 'available')
 
     name = fields.Method("get_name")
     thumbnail = fields.Method("get_thumbnail")
     default_storage = fields.Method("get_min_storage")
-    available = fields.Method('is_available')
     colors = fields.Method('get_colors')
 
     def get_colors(self, obj):
@@ -558,13 +557,6 @@ class MinProductSchema(BaseSchema):
                 colors.append({'id': item.feature_value_id, 'color': color_hex, 'name': color_name, 'image': image})
                 distinct.append(item.feature_value_id)
         return colors
-
-    def is_available(self, obj):
-        storages = obj.storages.all()
-        for storage in storages:
-            if storage.available_count_for_sale > 0 and storage.disable is False and storage.unavailable is False:
-                return True
-        return False
 
 
 class ProductSchema(MinProductSchema):

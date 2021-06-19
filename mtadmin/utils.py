@@ -219,11 +219,6 @@ def get_roll(user):
         raise PermissionDenied
 
 
-def assign_default_value(product_id):
-    storages = Storage.objects.filter(product_id=product_id)
-    Product.objects.filter(pk=product_id).update(default_storage=min(storages, key=attrgetter('discount_price')))
-
-
 def get_m2m_fields(model, data):
     m2m = {}
     custom_m2m = {}
