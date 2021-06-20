@@ -1147,7 +1147,8 @@ class Product(Base):
         storages = self.storages.filter(available_count_for_sale__gt=0, unavailable=False, disable=False)
         self.available = False
         if storages:
-            self.default_storage = min(storages, key=attrgetter('discount_price'))
+            if self.manage:
+                self.default_storage = min(storages, key=attrgetter('discount_price'))
             self.available = True
         self.save()
 

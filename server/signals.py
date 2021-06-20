@@ -60,7 +60,6 @@ def update_superuser_permissions(sender, instance, **kwargs):
 
 @receiver(post_save, sender=Storage, dispatch_uid="manage_product_availability")
 def manage_product_availability(sender, instance, **kwargs):
-    print('signal is running')
     instance.product.assign_default_value()
 
 
