@@ -395,7 +395,7 @@ class MediaSchema(BaseSchema):
 
 class CategorySchema(BaseSchema):
     class Meta:
-        additional = ('id', 'permalink', 'disable')
+        additional = ('id', 'permalink')
 
     name = fields.Method('get_name')
     parent = fields.Method('get_parent')

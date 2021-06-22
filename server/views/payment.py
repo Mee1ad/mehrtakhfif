@@ -306,18 +306,15 @@ class RePayInvoice(LoginRequired):
 
 class EditInvoice(LoginRequired):
     def patch(self, request, invoice_id):
-        invoice = Invoice.objects.filter(pk=invoice_id, user=request.user, status=1, expire__gt=timezone.now()) \
-            .prefetch_related('invoice_storages').first()
-        self.restore_products(invoice)
+        products = InvoiceStorage.objects.filter(invoice_id=invoice_id, invoice__user=request.user, invoice__status=1,
+                                                 invoice__expire__gt=timezone.now()).select_related('invoice__basket')\
+            .only('invoice__basket', 'storage_id', 'count')
+        basket = products[0].invoice.basket
+        products = list(products.values('storage_id', 'count'))
+        add_to_basket(basket, products)
+        cancel_reservation(invoice_id)
         return JsonResponse({"message": "محصولات خریداری شده برای ایجاد تغییرات به سبد خرید افزوده شدند",
                              "variant": "success"})
-
-    @staticmethod
-    def restore_products(invoice):
-        invoice_storages = invoice.invoice_storages.all()
-        new_basket_products = [{'storage_id': invoice_storage.storage_id, 'count': invoice_storage.count}
-                               for invoice_storage in invoice_storages]
-        add_to_basket(invoice.basket, new_basket_products)
 
 
 class CallBack(View):

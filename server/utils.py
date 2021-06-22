@@ -390,7 +390,7 @@ def get_categories_with_children(filters):
     prefetch_children = Prefetch('children', to_attr='prefetched_children',
                                  queryset=Category.objects.filter(**active_categories))
     category = Category.objects.filter(**active_categories, **filters).prefetch_related(prefetch_children)
-    categories = CategorySchema(only=['id', 'name', 'children']).dump(category, many=True)
+    categories = CategorySchema(only=['id', 'name', 'children', 'permalink']).dump(category, many=True)
     return categories
 
 
