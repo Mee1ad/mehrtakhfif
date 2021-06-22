@@ -64,20 +64,10 @@ class AuthMiddleware:
         # except Exception:
         #     pass
         request.schema_params = {'language': request.lang, 'user': request.user}
-
-        new_basket_count = None
         if app_name == 'server':
             request = self.attach_pagination(request, 'server')
             request.params = {}
             # sync user basket count
-            try:
-                db_basket_count = request.user.basket_count
-            except AttributeError:
-                db_basket_count = get_basket_count(session=request.session)
-            user_basket_count = get_custom_signed_cookie(request, 'basket_count', -1)
-            # new_basket_count = int(user_basket_count)
-            if not db_basket_count == int(user_basket_count):
-                new_basket_count = db_basket_count
 
         # else:
         #     new_basket_count = 0
@@ -101,11 +91,7 @@ class AuthMiddleware:
             user = request.user
             if user.is_authenticated:
                 scope.user = {"email": user.email, 'first_name': user.first_name, 'last_name': user.last_name}
-
         response = self.get_response(request)
-        if app_name == 'server' and new_basket_count is not None and 200 <= response.status_code <= 299 and\
-                request.method == 'GET':
-            response = set_custom_signed_cookie(response, 'basket_count', new_basket_count)
         if request.method in token_requests and app_name != 'admin':
             # return set_csrf_cookie(response)
             pass

@@ -21,7 +21,8 @@ def try_except(func):
             return func(*args, **kwargs)
         except (PermissionDenied, PermissionError):
             traceback.print_exc()
-            return Init.get(args[0])
+            user = args[0].user
+            return Init.set_login_cookie(user)
         except json.decoder.JSONDecodeError:
             traceback.print_exc()
             return HttpResponseServerError()

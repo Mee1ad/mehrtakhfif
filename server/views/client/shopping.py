@@ -7,6 +7,7 @@ from django.utils.translation import gettext_lazy as _
 from mehr_takhfif.settings import CLIENT_HOST
 from server.serialize import AddressSchema, MediaSchema
 from server.utils import *
+from server.views.client.home import Init
 from server.views.payment import PaymentRequest, CallBack
 from server.views.post import *
 
@@ -33,8 +34,9 @@ class BasketView(View):
                     .dump(invoices, many=True)
             except TypeError:  # AnonymousUser
                 pass
-        return JsonResponse({**get_basket(request, basket=basket, tax=True, with_changes=True),
-                             'active_invoice': list(invoices)})
+        res = JsonResponse({**get_basket(request, basket=basket, tax=True, with_changes=True),
+                            'active_invoice': list(invoices)})
+        return Init.set_basket_count_cookie(request, res)
 
     def post(self, request):
         data = load_data(request)
@@ -52,8 +54,7 @@ class BasketView(View):
         res = {'basket_count': basket_count, **get_basket(request, use_session=use_session),
                'message': 'محصول با موفقیت به سبد خرید افزوده شد'}
         res = JsonResponse(res)
-        res = set_custom_signed_cookie(res, 'basket_count', basket_count)
-        return res
+        return set_custom_signed_cookie(res, 'basket_count', basket_count)
 
     def patch(self, request):
         data = load_data(request)
@@ -88,15 +89,17 @@ class BasketView(View):
                 basket = Basket.objects.filter(user=request.user).order_by('-id').first()
                 BasketProduct.objects.filter(basket=basket, id=basket_product_id).delete()
                 basket.discount_code.update(basket=None)
+                basket_count = get_basket_count(request.user, basket_id=basket.id)
             except TypeError:
                 session = request.session
                 products = session.get('basket', {})
                 products.pop(int(basket_product_id))
                 session.save()
+                basket_count = get_basket_count(request.user, session=session)
             res = {}
             if summary:
-                res = get_basket(request)
-            return JsonResponse(res)
+                res = JsonResponse(get_basket(request))
+            return set_custom_signed_cookie(res, 'basket_count', basket_count)
         except (AssertionError, Basket.DoesNotExist):
             return JsonResponse(res_code['bad_request'], status=400)
 

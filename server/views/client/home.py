@@ -46,10 +46,36 @@ class NotifTest(View):
 
 
 class Init(View):
+    def get(self, request):
+        res = self.set_basket_count_cookie(request)
+        res = self.set_login_cookie(request.user, res)
+        return res
+
     @staticmethod
-    def get(request):
-        res = JsonResponse({})
-        if request.user.is_authenticated:
+    def set_basket_count_cookie(request, res=None):
+        if res is None:
+            res = JsonResponse({})
+        new_basket_count = None
+        user_basket_count = get_custom_signed_cookie(request, 'basket_count', -1)
+        user_basket_count = int(user_basket_count)
+
+        try:
+            db_basket_count = request.user.basket_count
+        except AttributeError:
+            db_basket_count = get_basket_count(session=request.session)
+
+        if db_basket_count != user_basket_count:
+            new_basket_count = db_basket_count
+
+        if new_basket_count:
+            return set_custom_signed_cookie(res, 'basket_count', new_basket_count)
+        return res
+
+    @staticmethod
+    def set_login_cookie(user, res=None):
+        if res is None:
+            res = JsonResponse({})
+        if user.is_authenticated:
             return set_custom_signed_cookie(res, 'is_login', True)
         return set_custom_signed_cookie(res, 'is_login', False)
 
