@@ -567,7 +567,7 @@ class ProductTagASchema(Schema):
     id = fields.Function(lambda o: o.tag_id)
     permalink = fields.Function(lambda o: o.tag.permalink)
     name = fields.Function(lambda o: o.tag.name)
-    show = fields.Boolean()
+    show = fields.Function(lambda o: True)
 
 
 class ProductESchema(ProductASchema, ProductSchema):
@@ -1019,7 +1019,7 @@ class TagGroupTagASchema(Schema):
     name = fields.Function(lambda o: o.tag.name)
     permalink = fields.Function(lambda o: o.tag.permalink)
     id = fields.Function(lambda o: o.tag.pk)
-    show = fields.Boolean()
+    show = fields.Function(lambda o: True)
 
 
 class TagGroupASchema(BaseAdminSchema):
