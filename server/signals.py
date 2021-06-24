@@ -16,6 +16,7 @@ def invoice_job_maker(sender, instance, **kwargs):
         if instance.final_price:
             instance.sync_task = add_one_off_job(name=task_name, kwargs=kwargs, interval=30,
                                                  task='server.tasks.cancel_reservation')
+            instance.save()
 
 
 @receiver(post_save, sender=Storage, dispatch_uid="inventory_alert_handler")
