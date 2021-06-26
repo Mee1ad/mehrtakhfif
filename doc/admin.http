@@ -266,7 +266,7 @@ Content-Type: application/json
     1183
   ],
   "name": {
-    "fa": "کفش ورزشی زنانه Adidas مدل MTS-1",
+    "fa": "اپدیت جدید",
     "en": "",
     "ar": ""
   },
@@ -291,6 +291,10 @@ Content-Type: application/json
     },
     {
       "tag_id": 157,
+      "show": false
+    },
+    {
+      "tag_id": 156,
       "show": false
     }
   ],

@@ -27,7 +27,7 @@ class Test(View):
         request.user = None
         res = JsonResponse({})
         basket_count = int(request.GET.get('basket_count', get_custom_signed_cookie(request, 'basket_count')))
-        res = set_custom_signed_cookie(res, 'basket_count', basket_count+1)
+        res = set_custom_signed_cookie(res, 'basket_count', basket_count + 1)
         return res
 
 

@@ -12,7 +12,8 @@ from django_celery_beat.models import IntervalSchedule
 from mehr_takhfif.settings import DEBUG, CLIENT_HOST
 from server.serialize import *
 from server.tasks import cancel_reservation
-from server.utils import LoginRequired, get_basket, add_one_off_job, sync_storage, add_minutes, get_share, add_to_basket
+from server.utils import LoginRequired, get_basket, add_one_off_job, sync_storage, add_minutes, get_share,\
+    add_to_basket, set_custom_signed_cookie
 import pysnooper
 
 ipg = {'data': [{'id': 1, 'key': 'mellat', 'name': 'ملت', 'hide': False, 'disable': False},
@@ -98,7 +99,8 @@ class PaymentRequest(LoginRequired):
         self.reserve_storage(basket, invoice)
         url = self.get_payment_url(invoice)
         basket.products.clear()
-        return JsonResponse({"url": url})
+        res = JsonResponse({"url": url})
+        return set_custom_signed_cookie(res, 'basket_count', 0)
 
     @staticmethod
     def behpardakht_api(invoice_id, invoice=None, retried_times=10, charity_id=1, booking=False):
@@ -311,8 +313,8 @@ class EditInvoice(LoginRequired):
             .only('invoice__basket', 'storage_id', 'count')
         basket = products[0].invoice.basket
         products = list(products.values('storage_id', 'count'))
+        cancel_reservation(invoice_id, force=True)
         add_to_basket(basket, products)
-        cancel_reservation(invoice_id)
         return JsonResponse({"message": "محصولات خریداری شده برای ایجاد تغییرات به سبد خرید افزوده شدند",
                              "variant": "success"})
 
@@ -331,6 +333,8 @@ class CallBack(View):
             data_dict[val[0]] = val[1]
         invoice_id = data_dict['SaleOrderId'][2:]  # data_dict['SaleOrderId'][:2] = retried times
         invoice = PaymentHistory.objects.get(invoice_id=invoice_id, reference_id=data_dict['RefId']).invoice
+        if invoice.status in [3, 4]:
+            return HttpResponseRedirect(f"{CLIENT_HOST}/invoice/{invoice_id}?error=true")
         invoice.sale_reference_id = data_dict.get('SaleReferenceId', None)
         invoice.sale_order_id = data_dict['SaleOrderId']
         invoice.ipg_res_code = data_dict['ResCode']

@@ -51,7 +51,7 @@ def task_lock(lock_id, oid):
 
 
 @shared_task(bind=True, max_retries=3)
-def cancel_reservation(self, invoice_id, **kwargs):
+def cancel_reservation(self, invoice_id, force=False, **kwargs):
     hashcode = md5(f"cancel_reservation{invoice_id}".encode()).hexdigest()
     lock_id = '{0}-lock-{1}'.format(self.name, hashcode)
     with task_lock(lock_id, self.app.oid) as acquired:
@@ -61,7 +61,7 @@ def cancel_reservation(self, invoice_id, **kwargs):
                 url = f"https://bpm.shaparak.ir/pgwchannel/startpay.mellat?RefId={invoice.reference_id}"
                 r = requests.get(url)
                 task = invoice.sync_task
-                if re.search(r'<form.*>', r.text):
+                if re.search(r'<form.*>', r.text) and force is False:
                     print("ok, i`ll try it later")
                     task.description = f"{task.description} - delay for 3 minutes"
                     schedule, created = IntervalSchedule.objects.get_or_create(every=3,
