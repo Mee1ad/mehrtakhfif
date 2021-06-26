@@ -613,9 +613,9 @@ def get_basket_count(user=None, basket_id=None, session=None):
     if session:
         return sum([product['count'] for product in session.get('basket', [])])
     if basket_id:
-        return BasketProduct.objects.filter(basket_id=basket_id).aggregate(count=Sum('count'))['count']
+        return BasketProduct.objects.filter(basket_id=basket_id).aggregate(count=Sum('count'))['count'] or 0
     return user.baskets.order_by('id').prefetch_related('basket_products').last().basket_storages \
-        .aggregate(count=Sum('count'))['count']
+        .aggregate(count=Sum('count'))['count'] or 0
 
 
 def sync_session_basket(request):
