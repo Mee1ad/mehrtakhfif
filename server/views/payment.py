@@ -314,9 +314,10 @@ class EditInvoice(LoginRequired):
         basket = products[0].invoice.basket
         products = list(products.values('storage_id', 'count'))
         cancel_reservation(invoice_id, force=True)
-        add_to_basket(basket, products)
-        return JsonResponse({"message": "محصولات خریداری شده برای ایجاد تغییرات به سبد خرید افزوده شدند",
-                             "variant": "success"})
+        basket_count = add_to_basket(basket, products)
+        res = JsonResponse({"message": "محصولات خریداری شده برای ایجاد تغییرات به سبد خرید افزوده شدند",
+                            "variant": "success"})
+        return set_custom_signed_cookie(res, 'basket_count', basket_count)
 
 
 class CallBack(View):
