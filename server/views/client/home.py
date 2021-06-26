@@ -57,7 +57,6 @@ class Init(View):
             res = JsonResponse({})
         new_basket_count = None
         user_basket_count = get_custom_signed_cookie(request, 'basket_count', -1)
-        user_basket_count = int(user_basket_count)
 
         try:
             db_basket_count = request.user.basket_count
