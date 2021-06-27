@@ -27,7 +27,10 @@ class FilterDetail(View):
     def get(self, request):
         q = request.GET.get('q', {})
         permalink = request.GET.get('cat', None)
-        filter_by = {}
+        new_params = {'colors': 'product_features__feature_value_id', 'b': 'box__permalink',
+                      'cat': 'categories__permalink', 'tag': 'tags__permalink',
+                      'available': 'storages__available_count_for_sale__gte', 'brand': 'brand__in'}
+        params = filter_params(request.GET, new_params, request.lang)
         disable = {'disable': False} if not request.user.is_staff else {}
         category_filters = {}
         if permalink:
@@ -42,9 +45,10 @@ class FilterDetail(View):
                 product_ids.append(hit.id)
 
             category_filters['products__in'] = product_ids
-            filter_by['id__in'] = product_ids
-        products = Product.objects.filter(**filter_by, **disable).order_by(). \
+            params['id__in'] = product_ids
+        products = Product.objects.filter(**params['filter'], **disable).order_by(). \
             select_related('brand', 'default_storage').only('brand', 'categories', 'default_storage', 'name')
+
         if not products:
             return JsonResponse({'max_price': 0, 'min_price': 0, 'brands': [],
                                  'categories': [], 'breadcrumb': [], 'colors': []})
