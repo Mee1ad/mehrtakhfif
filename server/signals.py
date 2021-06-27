@@ -44,7 +44,9 @@ def inventory_alert(sender, instance, **kwargs):
 
 @receiver(post_save, sender=FeatureValue, dispatch_uid="update_colors_in_cache")
 def update_colors_in_cache(sender, instance, **kwargs):
+    print('signal is running')
     if instance.feature_id == color_feature_id:
+        print('colors updated')
         cache.set('colors', get_colors_hex())
 
 
