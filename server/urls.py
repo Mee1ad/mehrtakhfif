@@ -26,9 +26,9 @@ def get_favicon(request):
 
 def cache_proxy(func, key, minutes=5, cached=True):
     name = re.match(r'(?P<route>\w+/?\w+)/?(?P<var><.*)?', key).group('route')
-    if DEBUG or not cached:
-        return path(key, (try_except(func)), name=name)
-    return path(key, cache_page(60 * minutes, key_prefix=name)(try_except((vary_on_headers())(func))), name=name)
+    # if DEBUG or not cached:
+    return path(key, (try_except(func)), name=name)
+    # return path(key, cache_page(60 * minutes, key_prefix=name)(try_except((vary_on_headers())(func))), name=name)
 
 
 #  10: day, 20: month
