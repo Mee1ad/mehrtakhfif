@@ -101,7 +101,11 @@ class Login(View):
                 return JsonResponse({'message': 'user is banned'}, status=res_code['banned'])
             if code:
                 return self.check_code(request, code)
-            if password is None or not user.is_active:
+            if user.password[0] == '!':
+                request.session['login_with_password'] = False
+                res = JsonResponse({'status': 'otp_required'})
+                return set_token(user, res)
+            if (password is None and user.password) or not user.is_active:
                 res = JsonResponse({'status': 'registered_user'})
                 return set_token(user, res)
             if not user.check_password(password):
