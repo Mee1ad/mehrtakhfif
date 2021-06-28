@@ -47,6 +47,7 @@ class FilterDetail(View):
 
             category_filters['products__in'] = product_ids
             params['id__in'] = product_ids
+        print(params)
         products = Product.objects.filter(**params['filter'], **disable).order_by(). \
             select_related('brand', 'default_storage').only('brand', 'categories', 'default_storage', 'name')
 
@@ -79,7 +80,6 @@ class FilterDetail(View):
 
 
 class Filter(View):
-    @pysnooper.snoop()
     def get(self, request):
         new_params = {'colors': 'product_features__feature_value_id', 'b': 'box__permalink',
                       'cat': 'categories__permalink', 'tag': 'tags__permalink',
@@ -89,6 +89,7 @@ class Filter(View):
         disable = get_product_filter_params(request.user.is_staff)
         if params['related']:
             query = Q(verify=True, **params['filter']) | Q(verify=True, **params['related'])
+        print(query)
         products = Product.objects.filter(query, Q(**disable), ~Q(type=5)). \
             prefetch_related('default_storage__vip_prices__vip_type', 'storages',
                              Prefetch('product_features',
