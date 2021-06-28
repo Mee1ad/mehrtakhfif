@@ -1131,9 +1131,9 @@ class Product(Base):
 
     def clean(self):
         super().clean()
-        if not self.tags.all() and not self.tag_groups.all():
-            self.make_item_disable(self)
-            raise ActivationError('نه تگ داری نه گروه تک، نمیشه ک اینجوری میشه؟')
+        # if not self.tags.all() and not self.tag_groups.all():
+        #     self.make_item_disable(self)
+        #     raise ActivationError('نه تگ داری نه گروه تک، نمیشه ک اینجوری میشه؟')
         if not self.storages.filter(disable=False):
             self.make_item_disable(self)
             raise ActivationError(get_activation_warning_msg('انبار فعال'))
