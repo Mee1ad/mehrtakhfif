@@ -27,14 +27,17 @@ class FilterDetail(View):
     def get(self, request):
         q = request.GET.get('q', {})
         permalink = request.GET.get('cat', None)
-        new_params = {'colors': 'product_features__feature_value_id', 'b': 'box__permalink',
-                      'cat': 'categories__permalink', 'tag': 'tags__permalink',
+        new_params = {'colors': 'product_features__feature_value_id', 'tag': 'tags__permalink',
                       'available': 'storages__available_count_for_sale__gte', 'brand': 'brand__in'}
         params = filter_params(request.GET, new_params, request.lang)
         disable = {'disable': False} if not request.user.is_staff else {}
         category_filters = {}
+        category_filter = {}
         if permalink:
             category_filters = {'permalink': permalink}
+            category_filter = {'categories__permalink': permalink}
+            if Box.objects.filter(permalink=permalink).exists():
+                category_filter = {'box__permalink': permalink}
         if q:
             p = ProductDocument.search()
             p = p.query({"bool": {"should": [{"match": {"name_fa": {"query": q}}},
@@ -46,7 +49,7 @@ class FilterDetail(View):
 
             category_filters['products__in'] = product_ids
             params['id__in'] = product_ids
-        products = Product.objects.filter(**params['filter'], **disable).order_by(). \
+        products = Product.objects.filter(**params['filter'], **category_filter, **disable).order_by(). \
             select_related('brand', 'default_storage').only('brand', 'categories', 'default_storage', 'name')
 
         if not products:
@@ -80,15 +83,20 @@ class FilterDetail(View):
 
 class Filter(View):
     def get(self, request):
-        new_params = {'colors': 'product_features__feature_value_id', 'b': 'box__permalink',
-                      'cat': 'categories__permalink', 'tag': 'tags__permalink',
+        new_params = {'colors': 'product_features__feature_value_id', 'tag': 'tags__permalink',
                       'available': 'storages__available_count_for_sale__gte', 'brand': 'brand__in'}
         params = filter_params(request.GET, new_params, request.lang)
+        permalink = request.GET.get('cat', None)
+        category_filter = {}
+        if permalink:
+            category_filter = {'categories__permalink': permalink}
+            if Box.objects.filter(permalink=permalink).exists():
+                category_filter = {'box__permalink': permalink}
         query = Q(verify=True, **params['filter'])
         disable = get_product_filter_params(request.user.is_staff)
         if params['related']:
             query = Q(verify=True, **params['filter']) | Q(verify=True, **params['related'])
-        products = Product.objects.filter(query, Q(**disable), ~Q(type=5)). \
+        products = Product.objects.filter(query, Q(**category_filter), Q(**disable), ~Q(type=5)). \
             prefetch_related('default_storage__vip_prices__vip_type', 'storages',
                              Prefetch('product_features',
                                       queryset=ProductFeature.objects.filter(feature_id=color_feature_id)
