@@ -3,6 +3,7 @@ from django.http import JsonResponse
 
 from server.serialize import FeatureSchema, BrandSchema, SpecialProductSchema
 from server.utils import *
+import pysnooper
 
 
 class GetSpecialOffer(View):
@@ -23,7 +24,7 @@ class GetSpecialProduct(View):
 
 
 class FilterDetail(View):
-
+    @pysnooper.snoop()
     def get(self, request):
         q = request.GET.get('q', {})
         permalink = request.GET.get('cat', None)
@@ -78,6 +79,7 @@ class FilterDetail(View):
 
 
 class Filter(View):
+    @pysnooper.snoop()
     def get(self, request):
         new_params = {'colors': 'product_features__feature_value_id', 'b': 'box__permalink',
                       'cat': 'categories__permalink', 'tag': 'tags__permalink',
