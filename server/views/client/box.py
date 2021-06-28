@@ -24,7 +24,6 @@ class GetSpecialProduct(View):
 
 
 class FilterDetail(View):
-    @pysnooper.snoop()
     def get(self, request):
         q = request.GET.get('q', {})
         permalink = request.GET.get('cat', None)
@@ -47,7 +46,6 @@ class FilterDetail(View):
 
             category_filters['products__in'] = product_ids
             params['id__in'] = product_ids
-        print(params)
         products = Product.objects.filter(**params['filter'], **disable).order_by(). \
             select_related('brand', 'default_storage').only('brand', 'categories', 'default_storage', 'name')
 
@@ -58,7 +56,8 @@ class FilterDetail(View):
                                     min=Min('default_storage__discount_price'))
         brands = [product.brand for product in products.order_by('brand_id').distinct('brand_id') if product.brand]
         breadcrumb = self.get_breadcrumb(permalink)
-        colors = get_colors_hex(products)
+        product_list = products.values_list('id')
+        colors = get_colors_hex(product_list)
         categories = get_categories(category_filters)
         return JsonResponse({'max_price': prices['max'], 'min_price': prices['min'],
                              'brands': BrandSchema(**request.schema_params).dump(brands, many=True),
@@ -89,7 +88,6 @@ class Filter(View):
         disable = get_product_filter_params(request.user.is_staff)
         if params['related']:
             query = Q(verify=True, **params['filter']) | Q(verify=True, **params['related'])
-        print(query)
         products = Product.objects.filter(query, Q(**disable), ~Q(type=5)). \
             prefetch_related('default_storage__vip_prices__vip_type', 'storages',
                              Prefetch('product_features',
@@ -101,8 +99,8 @@ class Filter(View):
             products = products.order_by(params['order']).distinct(params['order'].replace('-', ''))
         if 'id__in' in 'filter' in params:
             products = sorted(products, key=lambda x: params['filter']['id__in'].index(x['id']))
-        products = list(products)
-        colors = get_colors_hex(products)
+        product_list = products.values_list('id')
+        colors = get_colors_hex(product_list)
         # params['order']).order_by('-id').distinct('id')
         pg = get_pagination(request, products, MinProductSchema, serializer_args={'colors': colors})
         return JsonResponse(pg)
