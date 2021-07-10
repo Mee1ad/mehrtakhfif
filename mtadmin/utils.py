@@ -259,7 +259,9 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
         if not Product.objects.filter(pk=data['product_id'], box__in=boxes).exists():
             raise PermissionDenied
     data, m2m, custom_m2m, ordered_m2m, remove_fields = get_m2m_fields(model, data)
-    obj = model(**data, created_by=user, updated_by=user)
+    # obj = model(**data, created_by=user, updated_by=user)
+    data = {**data, 'created_by': user, 'updated_by': user}
+    obj = serializer(user=user).load(data)
     save_data = {}
     if model == Storage:
         save_data = {'admin': True}
@@ -290,11 +292,6 @@ def get_m2m_field(obj, field, m2m, used_product_feature_ids=(), clear=True):
             getattr(obj, field).all().delete()
     m2m_class = obj.__class__.__name__ + field[0].upper() + field[1:-1]
     if m2m_class == 'ProductFeature':
-        # print(m2m_class)
-        # print("used_product_feature_ids:", used_product_feature_ids)
-        # print("getattr(obj, field):", ProductFeature.objects.filter(product=obj))
-        # print("exclude:", ProductFeature.objects.filter(Q(product=obj), ~Q(id__in=used_product_feature_ids)))
-        # print("exclude:", getattr(obj, field).exclude(id__in=used_product_feature_ids))
         ProductFeature.objects.filter(Q(product=obj), ~Q(id__in=used_product_feature_ids)).delete()
     return many_to_many_model
 
@@ -367,20 +364,11 @@ def add_custom_m2m(obj, field, item_list, user, m2m_type, restrict_m2m, used_pro
             if type(item) != dict:  # because simple ordered m2m is int
                 related = {getattr(obj, field).model.__name__.lower() + '_id': item}
                 item = {}
-            # print(item)
-            # print(extra_fields)
-            # print(user)
-            # print(priority)
-            # print(related)
-            # print(many_to_many_model)
-            # print('------------------')
             items.append(many_to_many_model(**item, **extra_fields, **user, **priority, **related))
         many_to_many_model.objects.bulk_create(items)
 
 
 def add_m2m(user, obj, m2m, custom_m2m, ordered_m2m, restrict_m2m, used_product_feature_ids):
-    if isinstance(obj, QuerySet):
-        obj = obj.first()
     if m2m:
         [getattr(obj, field).set(m2m[field]) for field in m2m]
     if custom_m2m:
@@ -407,27 +395,34 @@ def update_object(request, model, box_key='box', return_item=False, serializer=N
     pk = data['id']
     box_check = get_box_permission(request, box_key) if require_box else {}
     footprint = {'updated_by': user, 'updated_at': timezone.now()}
-    items = model.objects.filter(pk=pk, **box_check)
+    # items = model.objects.filter(pk=pk, **box_chqeck)
+    item = model.objects.get(pk=pk, **box_check)
+    data = serializer(user=user, return_dict=True).load(data)
     try:
-        items.update(**data, remove_fields=remove_fields, **footprint)
+        # items.update(**data, remove_fields=remove_fields, **footprint)
+        item.__dict__.update(**data, remove_fields=remove_fields, **footprint)
     except FieldDoesNotExist:
         try:
-            items.update(**data, **footprint)
+            # items.update(**data, **footprint)
+            item.__dict__.update(**data, **footprint)
         except FieldDoesNotExist:
-            items.update(**data)
-    add_m2m(user, items, m2m, custom_m2m, ordered_m2m, restrict_m2m, used_product_feature_ids)
+            # items.update(**data)
+            item.__dict__.update(**data)
+    # item = items.first()
+    add_m2m(user, item, m2m, custom_m2m, ordered_m2m, restrict_m2m, used_product_feature_ids)
     try:
-        item = items.first()
         if item.disable is False:
-            items.first().full_clean()
+            item.full_clean()
+            item.validation()
     except AttributeError:
         pass
+    item.save()
     message = {}
     if notif:
         message = responses['202']
     if return_item:
         request.GET._mutable = True
-        request.GET['id'] = items.first().pk
+        request.GET['id'] = item.pk
         items = serialized_objects(request, model, single_serializer=serializer, error_null_box=require_box)
         return JsonResponse({"data": items, **extra_response, **message}, status=res_code['updated'])
     return JsonResponse({**extra_response, **message}, status=res_code['updated'])

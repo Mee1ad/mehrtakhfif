@@ -151,14 +151,6 @@ def default_meals():
     return {'Breakfast': False, 'Lunch': False, 'Dinner': False}
 
 
-def permalink_validation(permalink):
-    pattern = '^[A-Za-z0-9\u0591-\u07FF\uFB1D-\uFDFD\uFE70-\uFEFC][A-Za-z0-9-\u0591-\u07FF\uFB1D-\uFDFD\uFE70-\uFEFC]*$'
-    permalink = permalink
-    if permalink and not re.match(pattern, permalink):
-        raise ValidationError(_("پیوند یکتا نامعتبر است"))
-    return permalink.lower()
-
-
 def get_name(name, self):
     try:
         return name['fa']
@@ -220,97 +212,15 @@ class MyQuerySet(SafeDeleteQueryset):
 
     def update(self, *args, **kwargs):
         warning = kwargs.pop('warning', True)
-        # todo say if enabled or disabled
-        if not self:
-            return True
         remove_list = ['id', 'box_id', 'remove_fields']
-        validations = {'storage': self.storage_validation, 'category': self.category_validation,
-                       'product': self.product_validation, 'ad': self.ad_validation, 'slider': self.ad_validation,
-                       'invoicestorage': self.invoice_storage_validation, 'invoice': self.invoice_validation}
         model = self[0].__class__.__name__.lower()
-        validations.update(dict.fromkeys(['feature', 'brand', 'tag'], self.default_validation))
         # noinspection PyArgumentList
-        kwargs = validations[model](**kwargs)
         remove_fields = kwargs.get('remove_fields', None)
         [kwargs.pop(item, None) for item in remove_list]
         is_updated = super().update(**kwargs)
-        if model == 'storage' and self:
-            storage = self.first()
-            storage.post_process(remove_fields)
-            storage.update_price()
-            if kwargs.get('disable') is True:
-                if storage.product.storages.count() <= 1:
-                    storage.product.disable = True
-                # storage.related_packages.update(package__disable=True)
-                storage.cascade_disabling(storage, warning)
-
-        elif model == 'product':
-            product = self.first()
-            # storages = product.storages.all()
-            # todo fix in add product
-            # storages.first().cascade_disabling(storages)
         return is_updated
 
-    def category_validation(self, **kwargs):
-        category = self.first()
-        permalink_validation(kwargs.get('permalink', 'pass'))
-        pk = kwargs.get('id')
-        parent_id = kwargs.get('parent_id')
-        if (pk == parent_id and pk is not None) or Category.objects.filter(pk=parent_id, parent_id=pk).exists():
-            raise ValidationError(_("والد نامعتبر است"))
-        # if not category.media and kwargs.get('disable') is False:
-        #     raise ValidationError(_('قبل از فعالسازی تصویر دسته بندی را مشخص کنید'))
-        # features = Feature.objects.filter(pk__in=kwargs.get('features', []))
-        # category.feature_set.clear()
-        # category.feature_set.add(*features)
-        return kwargs
-
-    def storage_validation(self, **kwargs):
-        # for storage and invoice_storage
-        storage = self.first()
-        kwargs = storage.pre_process(kwargs, storage.product.box_id)
-        return kwargs
-
-    def invoice_validation(self, **kwargs):
-        invoice = self.first()
-        kwargs = invoice.pre_process(kwargs)
-        return kwargs
-
-    def invoice_storage_validation(self, **kwargs):
-        invoice = self.first()
-        kwargs = invoice.pre_process(kwargs)
-        return kwargs
-
-    def product_validation(self, **kwargs):
-        product = self.first()
-        kwargs = product.pre_process(kwargs)
-        storages_id = kwargs.get('storages_id', [])
-        if storages_id:
-            [Storage.objects.filter(pk=pk).update(priority=kwargs['storages_id'].index(pk))
-             for pk in storages_id]
-            kwargs.pop('storages_id')
-            return kwargs
-        default_storage_id = kwargs.get('default_storage_id')
-        pk = kwargs.get('id')
-        if default_storage_id:
-            new_default_storage = Storage.objects.filter(pk=default_storage_id)
-            Storage.objects.filter(product_id=pk, priority__lt=new_default_storage.first().priority) \
-                .order_by('priority').update(priority=F('priority') + 1)
-            new_default_storage.update(priority=0)
-        if kwargs.get('manage', None):
-            item = self.first()
-            item.assign_default_value()
-        return kwargs
-
-    def ad_validation(self, **kwargs):
-        self.full_clean()
-        return kwargs
-
     # todo advance disabler for product storage category
-
-    def default_validation(self, **kwargs):
-        item = self.first()
-        return item.validation(kwargs)
 
 
 # noinspection PyUnresolvedReferences
@@ -379,7 +289,7 @@ class Base(SafeDeleteModel):
         except Exception:
             pass
 
-    def clean(self):
+    def validation(self):
         if hasattr(self, 'disable'):
             for field in self.required_fields:
                 if not getattr(self, field):
@@ -398,7 +308,8 @@ class Base(SafeDeleteModel):
                     raise ActivationError(get_activation_warning_msg(self.fields[field]))
 
     def make_item_disable(self, obj, warning=True):
-        obj.__class__.objects.filter(pk=obj.pk).update(disable=True, warning=warning)
+        # obj.__class__.objects.filter(pk=obj.pk).update(disable=True, warning=warning)
+        obj.__class__.objects.filter(pk=obj.pk).update(disable=True)
 
     def cascade_disabling(self, storages=None, warning=True):
         if type(storages) != list and storages is not None:
@@ -475,6 +386,7 @@ class User(AbstractUser):
     prefetch = ['vip_types', 'box_permission']
     serializer_exclude = ()
     required_fields = []
+    exclude_fields = []
     required_multi_lang = []
     related_fields = []
     m2m = []
@@ -700,7 +612,7 @@ class Media(Base):
         except KeyError:
             return self.title['user_id']
 
-    def save(self, *args, **kwargs):
+    def validation(self):
         try:
             with Image.open(self.image) as im:
                 try:
@@ -711,11 +623,17 @@ class Media(Base):
                     print(e)
         except ValueError:
             pass
-        super().save(*args, **kwargs)
+
+    def post_save(self):
         if self.type < 100 and self.image:
             ph = reduce_image_quality(self.image.path)
             name = self.image.name.replace('has-ph', 'ph')
             ph.save(f'{MEDIA_ROOT}/{name}', optimize=True, quality=80)
+
+    def save(self, *args, **kwargs):
+        self.validation()
+        super().save(*args, **kwargs)
+        self.post_save()
 
     image = models.FileField(upload_to=upload_to, null=True, blank=True)
     video = models.URLField(null=True, blank=True)
@@ -730,7 +648,7 @@ class Media(Base):
 
 
 class Category(Base):
-    objects = MyQuerySet.as_manager()
+    # objects = MyQuerySet.as_manager()
     serializer_exclude = ('box',)
     required_fields = []
     related_fields = []
@@ -742,7 +660,7 @@ class Category(Base):
     def get_absolute_url(self):
         return "/search/" + self.permalink
 
-    def clean(self):
+    def validation(self):
         # if self.products.count() <= 10:
         #     self.make_item_disable(self)
         #     raise ActivationError('حداقل تعداد محصولات باید 10 عدد باشد')
@@ -752,7 +670,7 @@ class Category(Base):
         if self.parent is None and self.permalink is None:
             self.make_item_disable(self)
             raise ActivationError('این دسته بندی که ساختی بدرد نمیخوره')
-        super().clean()
+        super().validation()
 
     def __str__(self):
         return f"{self.name['fa']}"
@@ -761,7 +679,7 @@ class Category(Base):
         super().save(*args, **kwargs)
         pk = self.id
         parent_id = self.parent_id
-        if Category.objects.filter(pk=parent_id, parent_id=pk).exists():
+        if (pk == parent_id) or Category.objects.filter(pk=parent_id, parent_id=pk).exists():
             self.parent = None
             self.save()
             raise ValidationError(_("والد نامعتبر است"))
@@ -820,8 +738,6 @@ class FeatureValue(Base):
 
 
 class Feature(Base):
-    objects = MyQuerySet.as_manager()
-
     m2m = ['groups']
     ordered_m2m = {'values': FeatureValue}
     keep_m2m_data = ['values']
@@ -833,20 +749,6 @@ class Feature(Base):
 
     def __str__(self):
         return get_name(self.name, self)
-
-    def validation(self, kwargs):
-        # [kwargs.pop(item, None) for item in kwargs.get('remove_fields', [])]
-        # if kwargs['type'] in [1, 3]:
-        #     if len(kwargs['values']) < 2:
-        #         raise ValidationError(_('حداقل دوتا آیتم باید وارد کنی'))
-        # if kwargs['type'] == 2:
-        #     if len(kwargs['values']) < 1:
-        #         raise ValidationError(_('مقدار پیشفرض رو باید وارد کنی'))
-        return kwargs
-
-    def save(self, *args, **kwargs):
-        self.validation(self.__dict__)
-        super().save(*args, **kwargs)
 
     name = JSONField(default=multilanguage)
     # group = models.ForeignKey("FeatureGroup", on_delete=CASCADE, related_name="features", null=True, blank=True)
@@ -890,7 +792,6 @@ class FeatureGroup(Base):
 
 
 class Tag(Base):
-    objects = MyQuerySet.as_manager()
 
     def get_absolute_url(self):
         return "/search?tags=" + self.permalink
@@ -898,10 +799,8 @@ class Tag(Base):
     def __str__(self):
         return f"{self.name['fa']}"
 
-    def validation(self, kwargs):
-        permalink_validation(kwargs.get('permalink', 'pass'))
-        name = kwargs.get('name', None)
-        name_fa = name['fa']
+    def validation(self):
+        name_fa = self.name['fa']
         es = f"http://{ELASTICSEARCH_DSL['default']['hosts']}"
         r = requests.get(f"{es}/tag/_search?q=name_fa:{name_fa}&size=1")
         try:
@@ -909,16 +808,9 @@ class Tag(Base):
                 raise ValidationError("نام تگ تکراریه")
         except (IndexError, KeyError):
             pass
-        # if esearch(name, Tag):
-        #
-        #     if Tag.objects.filter((Q(name__en=name['en']) & ~Q(name__en="") & ~Q(id=kwargs['id'])) |
-        #                           (Q(name__fa=name['fa']) & ~Q(name__fa="") & ~Q(id=kwargs['id'])) |
-        #                           (Q(name__ar=name['ar']) & ~Q(name__ar="") & ~Q(id=kwargs['id']))).count() > 0:
-        #         raise IntegrityError("DETAIL:  Key (name)=() already exists.")
-        return kwargs
 
     def save(self, *args, **kwargs):
-        self.__dict__ = self.validation(self.__dict__)
+        self.validation()
         super().save(*args, **kwargs)
 
     permalink = models.CharField(max_length=255, db_index=True, unique=True)
@@ -940,8 +832,6 @@ class TagGroupTag(MyModel):
 
 
 class TagGroup(Base):
-    # objects = MyQuerySet.as_manager()
-
     custom_m2m = {'tags': TagGroupTag}
     select = ['box'] + Base.select
 
@@ -957,15 +847,12 @@ class TagGroup(Base):
 
 
 class Brand(Base):
-    objects = MyQuerySet.as_manager()
-
     def __str__(self):
         return f"{self.name['fa']}"
 
-    def validation(self, kwargs):
-        self.permalink = self.permalink.lower()
-        name = kwargs.get('name', None)
-        name_fa = name['fa']
+    def validation(self):
+
+        name_fa = self.name.get('fa')
         es = f"http://{ELASTICSEARCH_DSL['default']['hosts']}"
         r = requests.get(f"{es}/brand/_search?q=name_fa:{name_fa}&size=1")
         try:
@@ -973,15 +860,10 @@ class Brand(Base):
                 raise ValidationError("نام برند تکراریه")
         except (IndexError, KeyError):
             pass
-
-        # if Brand.objects.filter((Q(name__en=name['en']) & ~Q(name__en="") & ~Q(id=kwargs['id'])) |
-        #                         (Q(name__fa=name['fa']) & ~Q(name__fa="") & ~Q(id=kwargs['id'])) |
-        #                         (Q(name__ar=name['ar']) & ~Q(name__ar="") & ~Q(id=kwargs['id']))).count() > 0:
-        #     raise IntegrityError("DETAIL:  Key (name)=() already exists.")
-        return kwargs
+        super().validation()
 
     def save(self, *args, **kwargs):
-        self.validation(self.__dict__)
+        self.validation()
         super().save(*args, **kwargs)
 
     name = JSONField(default=multilanguage)
@@ -990,16 +872,6 @@ class Brand(Base):
     class Meta:
         db_table = 'brand'
         # indexes = [GinIndex(fields=['permalink'])]
-
-
-# from django.db.models.signals import pre_init
-#
-#
-# @receiver(pre_init, sender=Brand)
-# def blog_pre_init_signal(sender, *args, **kwargs):
-#     print("sender:", sender)
-#     print("kwargs is:", kwargs['kwargs'])
-#     kwargs['kwargs']['name'] = {'fa': 'haha', 'en': '', 'ar': ''}
 
 
 class ProductTag(MyModel):
@@ -1086,7 +958,6 @@ class StorageAccessories(MyModel):
 
 
 class Product(Base):
-    objects = MyQuerySet.as_manager()
     table_select = ['thumbnail']
     select = ['box', 'default_storage', 'brand'] + Base.select + table_select
     table_prefetch = ['storages', 'categories']
@@ -1115,22 +986,8 @@ class Product(Base):
     def get_absolute_url(self):
         return f"/product/{self.permalink}"
 
-    def pre_process(self, my_dict):
-        # if (self.review['chat'] != []) and (my_dict.get('review') != self.review):
-        #     my_dict['check_review'] = False
-        try:
-            my_dict['type'] = {'service': 1, 'product': 2, 'tourism': 3, 'package': 4, 'package_item': 5}[
-                my_dict['type']]
-        except KeyError:
-            pass
-        try:
-            my_dict['booking_type'] = {'unbookable': 1, 'datetime': 2, 'range': 3}[my_dict['booking_type']]
-        except KeyError:
-            pass
-        return my_dict
-
-    def clean(self):
-        super().clean()
+    def validation(self):
+        super().validation()
         # if not self.tags.all() and not self.tag_groups.all():
         #     self.make_item_disable(self)
         #     raise ActivationError('نه تگ داری نه گروه تک، نمیشه ک اینجوری میشه؟')
@@ -1143,18 +1000,40 @@ class Product(Base):
         # todo for now
         Product.objects.filter(pk=self.pk).update(verify=True)
 
-    def assign_default_value(self):
-        storages = self.storages.filter(available_count_for_sale__gt=0, unavailable=False, disable=False)
-        self.available = False
-        if storages:
-            if self.manage:
-                self.default_storage = min(storages, key=attrgetter('discount_price'))
-            self.available = True
-        self.save()
+    def pre_save(self):
+        storages_id = getattr(self, 'storages_id', None)
+        if storages_id:
+            for pk in storages_id:
+                Storage.objects.filter(pk=pk).update(priority=storages_id.index(pk))
+            delattr(self, 'storages_id')
+
+    def post_save(self):
+        default_storage_id = getattr(self, 'default_storage_id', None)
+        if default_storage_id:
+            new_default_storage = Storage.objects.filter(pk=default_storage_id)
+            Storage.objects.filter(product_id=self.pk, priority__lt=new_default_storage.first().priority) \
+                .order_by('priority').update(priority=F('priority') + 1)
+            new_default_storage.update(priority=0)
+        if getattr(self, 'manage', True):
+            self.assign_default_value()
+        # storages = product.storages.all()
+        # todo fix in add product
+        # storages.first().cascade_disabling(storages)
 
     def save(self, *args, **kwargs):
-        self.pre_process(self.__dict__)
+        self.pre_save()
         super().save(*args, **kwargs)
+        self.post_save()
+
+    def assign_default_value(self):
+        storages = self.storages.filter(available_count_for_sale__gt=0, unavailable=False, disable=False)
+        available = False
+        default_storage = self.default_storage
+        if storages:
+            if self.manage:
+                default_storage = min(storages, key=attrgetter('discount_price'))
+            available = True
+        Product.objects.filter(pk=self.pk).update(available=available, default_storage=default_storage)
 
     def __str__(self):
         return getattr(self.name, 'fa', '')
@@ -1278,7 +1157,6 @@ class VipPrice(MyModel):
 
 
 class Storage(Base):
-    objects = MyQuerySet.as_manager()
     select = ['product__thumbnail', 'supplier'] + Base.select
     prefetch = []
 
@@ -1298,7 +1176,15 @@ class Storage(Base):
         else:
             super().full_clean(exclude=None, validate_unique=True)
 
-    def clean(self):
+    def validation(self):
+        if self.discount_price:
+            self.discount_percent = int(100 - int(self.discount_price) / int(self.final_price) * 100)
+            if self.discount_percent < 0:
+                raise ValidationError(_('تخفیف داری میدی؟ درصد تخفیف منفیه ک!'))
+        if self.priority == 0 and self.disable:
+            self.manage = True
+        if self.disable is True:
+            self.cascade_disabling([self], warning=False)
         if self.product.type != 4:
             super().clean()
             if self.available_count < self.available_count_for_sale:
@@ -1323,39 +1209,12 @@ class Storage(Base):
             #     self.make_item_disable(self, warning=False)
             #     raise ActivationError(get_activation_warning_msg('ابعاد'))
         else:
-            # self.required_fields = ['dimensions']
             self.required_fields = []
             items = self.items.filter(Q(disable=True) | Q(available_count_for_sale=0))
             if items.exists():
                 self.make_item_disable(self)
                 raise ActivationError(get_activation_warning_msg(f'انبار: {items[0]}'))
             super().clean()
-
-    def __str__(self):
-        return f"{self.product}"
-
-    def pre_process(self, my_dict, box_id=None):
-        [my_dict.pop(field, None) for field in self.remove_fields]
-        if type(my_dict.get('start_time')) is int or type(my_dict.get('start_time')) is float:
-            my_dict['start_time'] = timestamp_to_datetime(my_dict['start_time'])
-        if type(my_dict.get('deadline', None)) is int or type(my_dict.get('deadline')) is float:
-            my_dict['deadline'] = timestamp_to_datetime(my_dict['deadline'])
-        if not my_dict.get('deadline', None):
-            my_dict['deadline'] = None
-        if type(my_dict.get('tax_type')) is str:
-            my_dict['tax_type'] = {'has_not': 1, 'from_total_price': 2, 'from_profit': 3}[my_dict['tax_type']]
-        if my_dict.get('discount_price'):
-            my_dict['discount_percent'] = int(100 - int(my_dict['discount_price']) / int(my_dict['final_price']) * 100)
-            if my_dict['discount_percent'] < 0:
-                raise ValidationError(_('تخفیف داری میدی؟ درصد تخفیف منفیه ک!'))
-        if my_dict.get('features', None) and not my_dict.get('features_percent', None):
-            # todo debug
-            # todo feature: add default_selected_value for feature
-            pass
-            # raise ValidationError('درصد ویژگی ها نامعتبر است')
-
-        if my_dict.get('priority', None) == 0 and my_dict.get('disable', None):
-            my_dict['manage'] = True
         no_profit_boxes = [14]  # home jobs
         # todo free post recommended profit
         # if my_dict.get('discount_price', None) and box_id not in no_profit_boxes:
@@ -1366,9 +1225,11 @@ class Storage(Base):
         #     recommended_price = ceil(my_dict.get('start_price', self.start_price) * recommended_profit * tax_factor)
         #     if recommended_price > my_dict.get('discount_price'):
         #         raise ValidationError(_(f'قیمت فروش باید بیشتر از {recommended_price} باشد'))
-        return my_dict
 
-    def post_process(self, my_dict):
+    def __str__(self):
+        return f"{self.product}"
+
+    def post_save(self, my_dict=None):
         if my_dict is None:
             return True
         ds = getattr(self.product, 'default_storage', None)
@@ -1376,7 +1237,7 @@ class Storage(Base):
                 or getattr(ds, 'disable', None) is True or getattr(ds, 'unavailable', None) is True:
             self.product.assign_default_value()
         if my_dict.get('vip_prices', None):
-            self.vip_prices.clear()
+            VipPrice.objects.filter(storage_id=self.id).delete()
             dper = int(100 - (my_dict.get('discount_price') or self.discount_price) / (
                     my_dict.get('final_price') or self.final_price) * 100)
             vip_prices = [VipPrice(vip_type_id=item['vip_type_id'], discount_price=item['discount_price'],
@@ -1412,6 +1273,7 @@ class Storage(Base):
             except Exception as e:
                 print(e)
             self.save()
+        self.update_price()
 
     def update_price(self):
         packages = list(self.packages.all().order_by('package_id').distinct('package_id')) + \
@@ -1433,12 +1295,14 @@ class Storage(Base):
 
     def save(self, *args, **kwargs):
         admin = kwargs.get('admin', None)
+        post_save_data = {}
+        for field in self.remove_fields:
+            post_save_data[field] = kwargs.pop(field, None)
         if admin:
-            self.__dict__ = self.pre_process(self.__dict__, self.product.box_id)
             self.priority = Product.objects.filter(pk=self.product_id).count() - 1
         super().save()
         if admin:
-            self.post_process(kwargs)
+            self.post_save(post_save_data)
 
     def get_max_count(self):
         if (self.available_count_for_sale >= self.max_count_for_sale) and (self.max_count_for_sale != 0):
@@ -1570,7 +1434,6 @@ class Blog(Base):
 
 
 class BlogPost(Base):
-    objects = MyQuerySet.as_manager()
     select = ['blog', 'media'] + Base.select
 
     def __str__(self):
@@ -1621,7 +1484,6 @@ class Comment(Base):
 
 
 class Invoice(Base):
-    objects = MyQuerySet.as_manager()
     select = ['basket', 'suspended_by', 'user', 'charity', 'post_invoice'] + Base.select
     statuss = ((1, 'pending'), (2, 'payed'), (3, 'canceled'), (4, 'rejected'), (5, 'sent'), (6, 'ready'))
     choices = ('status',)
@@ -1631,13 +1493,6 @@ class Invoice(Base):
     def __str__(self):
         return f"{self.user}"
 
-    def pre_process(self, my_dict):  # only for update
-        if type(my_dict.get('status', None)) is str:
-            try:
-                my_dict['status'] = {'payed': 2, 'sent': 5, 'ready': 6}[my_dict['status']]
-            except KeyError:
-                pass
-        return my_dict
 
     suspended_at = models.DateTimeField(blank=True, null=True, verbose_name='Suspended at')
     suspended_by = models.ForeignKey(User, on_delete=CASCADE, blank=True, null=True, verbose_name='Suspended by',
@@ -1716,27 +1571,14 @@ class InvoiceSuppliers(MyModel):
 
 
 class InvoiceStorage(Base):
-    objects = MyQuerySet.as_manager()
     select = ['box', 'storage', 'invoice'] + Base.select
     table_select = ['storage', 'storage__product', 'invoice__user', 'invoice', 'storage__product__thumbnail',
                     'storage__supplier']
     table_prefetch = []
     prefetch = []
 
-    def pre_process(self, my_dict):
-        if my_dict.get('deliver_status'):
-            try:
-                my_dict['deliver_status'] = {'pending': 1, 'packing': 2, 'sending': 3, 'delivered': 4, 'referred': 5}[
-                    my_dict['deliver_status']]
-            except KeyError:
-                pass
-        return my_dict
-
-    def post_process(self, my_dict):
-        pass
-
     def save(self, *args, **kwargs):
-        self.pre_process(self.__dict__)
+        self.validation()
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -1901,16 +1743,21 @@ class SpecialProduct(Base):
     def __str__(self):
         return f"{self.storage}"
 
-    def save(self, *args, **kwargs):
+    def validation(self):
         storage = self.storage
         storage.clean()
-        print(self.storage.disable)
         if storage.disable and not self.deleted_by:
             raise ActivationError('اول باید انبار رو فعال کنی')
-        super().save(*args)
+
+    def post_save(self):
         if self.deleted_by:
             return {'variant': 'warning',
                     'message': 'محصول ویژه این انبار غیرفعال شد :)'}
+
+    def save(self, *args, **kwargs):
+        self.validation()
+        super().save(*args)
+        self.post_save()
 
     storage = models.ForeignKey(Storage, on_delete=CASCADE, null=True, blank=True, related_name='special_products')
     thumbnail = models.ForeignKey(Media, on_delete=PROTECT, related_name='special_product_thumbnail', null=True,

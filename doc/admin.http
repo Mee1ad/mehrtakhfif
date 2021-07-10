@@ -1,6 +1,6 @@
 ### CRUD = Create Read Update Delete
 
-GET {{host}}/test
+GET {{host}}/ping
 
 ############# Tables #############
 
@@ -9,24 +9,19 @@ POST {{admin_host}}/category
 Content-Type: application/json
 
 {
-  "id": 54,
-  "parent": null,
+  "parent_id": null,
   "box_id": 3,
-  "features": [
-    29,
-    43
-  ],
   "name": {
-    "fa": "category-test15"
+    "fa": "category-test16"
   },
-  "permalink": "permalink-test3",
-  "media": null
+  "permalink": "permalink-test19",
+  "media_id": null
 }
 
 > res.js
 
 ###
-GET {{admin_host}}/category?id=54
+GET {{admin_host}}/category?id=3
 
 > res.js
 
@@ -51,19 +46,9 @@ Content-Type: application/json
     1
   ],
   "permalink": "permalink-test3",
-  "media": 1
-}
-> res.js
-
-###
-PUT {{admin_host}}/category
-Content-Type: application/json
-
-{
-  "id": 171,
+  "media": 1,
   "disable": false
 }
-
 > res.js
 
 ###
@@ -170,7 +155,7 @@ Content-Type: application/json
     "en": "",
     "ar": ""
   },
-  "permalink": "testhehe2",
+  "permalink": "testhehe3",
   "settings": {
     "adminNote": "انبار ندارد↵اصلاح اسم محصول",
     "productStatus": 2
@@ -266,7 +251,7 @@ Content-Type: application/json
     1183
   ],
   "name": {
-    "fa": "اپدیت جدید",
+    "fa": "محصول خوب",
     "en": "",
     "ar": ""
   },
@@ -311,7 +296,7 @@ Content-Type: application/json
 {
   "id": 1237,
   "name": {
-    "fa": "test"
+    "fa": "test5"
   },
   "tags": [
     {
@@ -406,10 +391,9 @@ PUT {{admin_host}}/storage
 Content-Type: application/json
 
 {
-  "id": 41,
+  "id": 908,
   "available_count": 4,
   "available_count_for_sale": 3,
-  "deadline": null,
   "dimensions": {
     "weight": 5,
     "height": 5,
@@ -607,11 +591,10 @@ PUT {{admin_host}}/feature_value
 Content-Type: application/json
 
 {
-  "id": 64,
+  "id": 2,
   "value": {
     "fa": "یک متن ساختگی پیشفرض برای توضیحات کفش"
-  },
-  "feature_id": 102
+  }
 }
 
 > res.js
@@ -688,11 +671,11 @@ Content-Type: application/json
 
 {
   "name": {
-    "fa": "api-test",
+    "fa": "api-test3",
     "en": "",
     "ar": ""
   },
-  "permalink": "api-test"
+  "permalink": "api-test3"
 }
 
 > res.js
@@ -882,7 +865,8 @@ Content-Type: application/json
   "username": "09015618439",
   "phone": "01333003033",
   "shaba": "IR123456789",
-  "meli_code": "2580859722"
+  "meli_code": "2580859722",
+  "settings": {}
 }
 
 > res.js

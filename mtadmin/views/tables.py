@@ -113,7 +113,7 @@ class FeatureView(TableView):
         feature = Feature.objects.filter(name__fa=data['name']['fa'], type=feature_type)
         if feature.exists():
             return JsonResponse({'data': FeatureASchema().dump(feature.first())}, status=200)
-        return create_object(request, Feature, error_null_box=False)
+        return create_object(request, Feature, serializer=FeatureASchema, error_null_box=False)
 
     def put(self, request):
         if json.loads(request.body)['id'] == color_feature_id:
@@ -164,10 +164,10 @@ class FeatureGroupView(TableView):
                                                **required_box))
 
     def post(self, request):
-        return create_object(request, FeatureGroup)
+        return create_object(request, FeatureGroup, serializer=FeatureGroupASchema)
 
     def put(self, request):
-        return update_object(request, FeatureGroup)
+        return update_object(request, FeatureGroup, serializer=FeatureGroupASchema)
 
     def delete(self, request):
         return delete_base(request, Feature)
@@ -225,7 +225,8 @@ class ProductView(TableView):
                 # data.pop('features')
         notif = data.pop('notif', True)
         return update_object(request, Product, data=data, extra_response=extra_response, restrict_objects=features,
-                             restrict_m2m=['features'], used_product_feature_ids=used_product_feature_ids, notif=notif)
+                             restrict_m2m=['features'], used_product_feature_ids=used_product_feature_ids, notif=notif,
+                             serializer=ProductESchema)
 
     def delete(self, request):
         return delete_base(request, Product)
@@ -269,7 +270,7 @@ class DiscountCodeView(AdminView):
             code = get_random_string(10, random_data)
             user = User.objects.get(username=data['username'])
             DiscountCode.objects.create(code=code, type=3, created_by=user, updated_by=user)
-            return JsonResponse({'code': code})
+            return JsonResponse({'code': code}, status=201)
         user = request.user
         storage_id = data['storage_id']
         count = data['count']
@@ -286,7 +287,7 @@ class DiscountCodeView(AdminView):
         storage.available_count_for_sale = DiscountCode.objects.filter(storage=storage, invoice__isnull=True).count()
         storage.available_count = storage.available_count_for_sale
         storage.save()
-        return JsonResponse({'data': DiscountASchema().dump(discount_codes, many=True)})
+        return JsonResponse({'data': DiscountASchema().dump(discount_codes, many=True)}, status=201)
 
 
 class HouseView(TableView):
@@ -364,11 +365,13 @@ class StorageView(TableView):
             storage.pk = None
             storage.save()
             return JsonResponse({"message": "انبارو برای تو کپی کردم :)", "variant": "success"})
-        return create_object(request, Storage, box_key='product__box', error_null_box=False, data=data)
+        return create_object(request, Storage, box_key='product__box', error_null_box=False, data=data,
+                             serializer=StorageASchema)
 
     def put(self, request):
         data = get_data(request, require_box=True)
-        return update_object(request, Storage, require_box=False, box_key='product__box', data=data)
+        return update_object(request, Storage, require_box=False, box_key='product__box', data=data,
+                             serializer=StorageASchema)
 
     def delete(self, request):
         return delete_base(request, Storage)
@@ -435,7 +438,7 @@ class InvoiceView(TableView):
 
     def put(self, request):
         # todo limit fields for update
-        return update_object(request, Invoice, require_box=False)
+        return update_object(request, Invoice, serializer=InvoiceASchema, require_box=False)
 
 
 class BookingView(TableView):
@@ -474,10 +477,10 @@ class MenuView(TableView):
         return JsonResponse(serialized_objects(request, Menu, MenuASchema, MenuESchema))
 
     def post(self, request):
-        return create_object(request, Menu)
+        return create_object(request, Menu, serializer=MenuASchema)
 
     def put(self, request):
-        return update_object(request, Menu)
+        return update_object(request, Menu, serializer=MenuASchema)
 
     def delete(self, request):
         return delete_base(request, Menu)

@@ -63,8 +63,7 @@ def fake_basket(**kwargs):
 
 
 def fake_brand(count=1, **kwargs):
-    obj = mixer.cycle(count).blend(Brand, name=fake_json(), **kwargs)
-    return clean_return_data(obj, count)
+    return mixer.blend(Brand, name=fake_json(), **kwargs)
 
 
 def fake_category(count=1, null=True, **kwargs):
@@ -73,7 +72,7 @@ def fake_category(count=1, null=True, **kwargs):
         if null:
             categories.append(mixer.blend(Category, name=fake_json(), disable=False, **kwargs))
         else:
-            categories.append(mixer.blend(Category, name=fake_json(), settings=fake_settings(), disable=False,
+            categories.append(mixer.blend(Category, name=fake_json(), disable=False,
                                           parent=fake_category(), permalink=permalink, **kwargs))
 
     return clean_return_data(categories, count)
@@ -82,12 +81,10 @@ def fake_category(count=1, null=True, **kwargs):
 def fake_comment(count=1, comment_type='rate', comment=None, **kwargs):
     product = fake_product(null=False)
     if comment_type == 'q-a':
-        obj = mixer.cycle(count).blend(Comment, text=fake.text(), approved=fake.boolean(), type=1,
-                                       reply_to=comment, product=product, **kwargs)
-        return clean_return_data(obj, count)
-    obj = mixer.cycle(count).blend(Comment, text=fake.text(), approved=fake.boolean(), type=2,
-                                   reply_to=comment, rate=fake.random_int(0, 10), product=product, **kwargs)
-    return clean_return_data(obj, count)
+        return mixer.blend(Comment, text=fake.text(), approved=fake.boolean(), type=1,
+                           reply_to=comment, product=product, **kwargs)
+    return mixer.blend(Comment, text=fake.text(), approved=fake.boolean(), type=2,
+                       reply_to=comment, rate=fake.random_int(0, 10), product=product, **kwargs)
 
 
 def fake_client(count=1, **kwargs):
@@ -122,19 +119,32 @@ def fake_feature(count=1, **kwargs):
     return clean_return_data(obj, count)
 
 
+def fake_feature_value(count=1, **kwargs):
+    return mixer.blend(FeatureValue, **kwargs)
+
+
 def fake_feature_group(count=1, **kwargs):
     obj = mixer.cycle(count).blend(FeatureGroup, **kwargs)
     return clean_return_data(obj, count)
 
 
 def fake_invoice(**kwargs):
-    invoice = mixer.blend(Invoice, **kwargs)
-    invoice.invoice_storages.set(fake_invoice_storage(5))
+    basket = fake_basket()
+    sync_task = mixer.blend(PeriodicTask)
+    invoice = mixer.blend(Invoice, basket=basket, sync_task=sync_task, **kwargs)
+    invoice.invoice_storages.set(fake_invoice_storage(5, invoice=invoice))
     return invoice
 
 
 def fake_invoice_storage(count=1, **kwargs):
-    return mixer.cycle(count).blend(InvoiceStorage, details=fake_json(), features=fake_json(), **kwargs)
+    invoice_storages = []
+    for i in range(count):
+        product = fake_product()
+        storage = fake_storage(product=product)
+        invoice_storages.append(mixer.blend(InvoiceStorage, details=fake_json(), features=fake_json(),
+                                            storage=storage, **kwargs))
+
+    return invoice_storages
 
 
 def fake_media(media_type, count=1, null=True, **kwargs):
@@ -151,31 +161,28 @@ def fake_media(media_type, count=1, null=True, **kwargs):
 
 
 def fake_menu(count=1, **kwargs):
-    return mixer.cycle(count).blend(Menu, **kwargs)
+    return mixer.blend(Menu, **kwargs)
 
 
-def fake_product(count=1, null=False, **kwargs):
-    products = []
-    if null:
-        products = mixer.cycle(count).blend(Product, disable=False, **kwargs)
-    else:
-        review = {
-            "chats": [{"id": 1, "text": "مشکل دارد", "user_id": 1, "question": True, "created_at": 1605884953},
-                      {"id": 2, "text": "بشو رررررر", "user_id": 1, "question": False, "created_at": 1605967167},
-                      {"id": 3, "text": "ایراد دارد", "user_id": 1, "question": True, "created_at": 1605967731},
-                      {"id": 4, "text": "میگم نداره", "user_id": 1, "question": False, "created_at": 1605967777},
-                      {"id": 5, "text": "وابدن", "user_id": 1, "question": False, "created_at": 1605967907}],
-            "state": "reviewed"}
-        thumbnail = fake_media(2)
-        obj = None
-        for storage in fake_storage(count):
-            products.append(mixer.blend(Product, brand=fake_brand(), thumbnail=thumbnail,
-                                        default_storage=storage, disable=False,
-                                        location=fake.location_on_land()[:2], address=fake.address,
-                                        properties=fake_json(),
-                                        short_address=fake.address, details=fake_json(), settings=fake_settings(),
-                                        review=review, **kwargs))
-    return clean_return_data(products, count)
+def fake_product(**kwargs):
+    review = {
+        "chats": [{"id": 1, "text": "مشکل دارد", "user_id": 1, "question": True, "created_at": 1605884953},
+                  {"id": 2, "text": "بشو رررررر", "user_id": 1, "question": False, "created_at": 1605967167},
+                  {"id": 3, "text": "ایراد دارد", "user_id": 1, "question": True, "created_at": 1605967731},
+                  {"id": 4, "text": "میگم نداره", "user_id": 1, "question": False, "created_at": 1605967777},
+                  {"id": 5, "text": "وابدن", "user_id": 1, "question": False, "created_at": 1605967907}],
+        "state": "reviewed"}
+    thumbnail = fake_media(2)
+    return mixer.blend(Product, brand=fake_brand(), thumbnail=thumbnail, disable=False,
+                       location=fake.location_on_land()[:2], address=fake.address,
+                       properties=fake_json(),
+                       short_address=fake.address, details=fake_json(), settings=fake_settings(),
+                       review=review, **kwargs)
+
+
+def fake_payment_history(count=1, **kwargs):
+    payment_histories = mixer.cycle(count).blend(PaymentHistory, **kwargs)
+    return clean_return_data(payment_histories, count)
 
 
 def fake_slider(count=1, **kwargs):
@@ -192,17 +199,13 @@ def fake_special_product(count=1, null=False, **kwargs):
     return clean_return_data(obj, count)
 
 
-def fake_storage(count=1, null=True, **kwargs):
-    if null:
-        obj = mixer.cycle(count).blend(Storage, title=fake_json(), disable=False, **kwargs)
-    else:
-        supplier = fake_user(is_verify=True)
-        obj = mixer.cycle(count).blend(Storage, title=fake_json(), disable=False, available_count=100,
-                                       available_count_for_sale=100, start_price=1000, discount_price=2000,
-                                       final_price=3000, shipping_cost=1000, max_count_for_sale=5, tax_type=1,
-                                       deadline=None, supplier=supplier, media=fake_media(2),
-                                       dimensions={'weight': 10, 'height': 10, 'width': 10, 'length': 10}, **kwargs)
-    return clean_return_data(obj, count)
+def fake_storage(**kwargs):
+    supplier = fake_user(is_verify=True)
+    return mixer.blend(Storage, title=fake_json(), disable=False, available_count=100,
+                       available_count_for_sale=100, start_price=1000, discount_price=2000,
+                       final_price=3000, shipping_cost=1000, max_count_for_sale=5, tax_type=1,
+                       deadline=None, supplier=supplier, media=fake_media(2),
+                       dimensions={'weight': 10, 'height': 10, 'width': 10, 'length': 10}, **kwargs)
 
 
 def fake_state(count=1, **kwargs):
@@ -216,8 +219,7 @@ def fake_tag(count=1, **kwargs):
 
 
 def fake_tag_group(count=1, **kwargs):
-    obj = mixer.cycle(count).blend(TagGroup, name=fake_json(), **kwargs)
-    return clean_return_data(obj, count)
+    return mixer.blend(TagGroup, name=fake_json(), **kwargs)
 
 
 def fake_vip_type(count=1, **kwargs):

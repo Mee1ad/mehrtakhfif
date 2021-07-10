@@ -2,8 +2,9 @@ import time
 from datetime import date
 from math import ceil
 
+from django.utils.translation import gettext_lazy as _
 from jdatetime import date, timedelta
-from marshmallow import Schema, fields
+from marshmallow import Schema, fields, INCLUDE, post_load
 
 from mehr_takhfif.settings import SHORTLINK
 from server.models import *
@@ -395,6 +396,7 @@ class MediaSchema(BaseSchema):
 
 class CategorySchema(BaseSchema):
     class Meta:
+        unknown = INCLUDE
         additional = ('id', 'permalink')
 
     name = fields.Method('get_name')
@@ -1106,9 +1108,14 @@ class StateSchema(BaseSchema):
 
 class CitySchema(Schema):
     class Meta:
+        unknown = INCLUDE
         additional = ('id', 'name')
 
     state = fields.Function(lambda o: o.state_id)
+
+    @post_load
+    def make_city(self, data, **kwargs):
+        return City(**data)
 
 
 class ResidenceTypeSchema(BaseSchema):
