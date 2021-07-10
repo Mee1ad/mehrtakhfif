@@ -4,7 +4,7 @@ from django.dispatch import receiver
 
 from mehr_takhfif.settings import color_feature_id
 from server.models import Invoice, Storage, FeatureValue, Category, Box, User, Product
-from server.utils import add_one_off_job, get_colors_hex
+from server.utils import add_one_off_job
 from server.utils import get_categories_with_box
 
 

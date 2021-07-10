@@ -49,7 +49,7 @@ GET {{host}}/suggest?id='test'
 > res.js
 
 ###
-GET {{host}}/search?id='test'
+GET {{host}}/search?q=محصول تست
 
 > res.js
 

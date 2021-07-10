@@ -12,6 +12,7 @@ from server.utils import res_code
 from django.core.exceptions import NON_FIELD_ERRORS
 import pysnooper
 from server.views.client.home import Init
+from django.core.paginator import EmptyPage
 
 
 def try_except(func):

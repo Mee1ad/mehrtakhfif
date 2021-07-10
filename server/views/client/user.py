@@ -39,7 +39,7 @@ class Profile(LoginRequired):
         user.meli_code = data.get('meli_code') or user.meli_code
         user.shaba = data.get('shaba') or user.shaba
         if data.get('birthday'):
-            user.birthday = datetime.utcfromtimestamp(data.get('birthday'))
+            user.birthday = timestamp_to_datetime(data.get('birthday'))
         user.subscribe = data.get('subscribe') or user.subscribe
         user.save()
         return JsonResponse({'user': UserSchema().dump(user)})
