@@ -353,6 +353,7 @@ def send_pm(tg_id, message):  # 312145983  -550039210
 
 
 def send_email(subject, to, from_email='notification@mehrtakhfif.com', message=None, html_content=None, attach=None):
+    return True
     if type(to) != list:
         to = [to]
     msg = EmailMultiAlternatives(subject, message, from_email, to)
