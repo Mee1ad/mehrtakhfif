@@ -887,7 +887,7 @@ class InvoiceStorageSchema(BaseSchema):
 
     def get_discount_file(self, obj):
         if obj.key:
-            return SHORTLINK + f"/{obj.key}"
+            return HOST + f"/invoice/{obj.key}"
 
     def get_amer(self, obj):
         return self.get_name(obj.storage.product.box)
