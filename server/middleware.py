@@ -42,7 +42,7 @@ class AuthMiddleware:
             # check_csrf_token(request)
             pass
         if HOST == 'http://api.mt.com':
-            request.user = self.get_user(ROLL_NAME)
+            # request.user = self.get_user(ROLL_NAME)
             delay = request.GET.get('delay', None)
             if delay:
                 time.sleep(float(delay))
