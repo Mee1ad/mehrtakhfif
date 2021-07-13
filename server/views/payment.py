@@ -86,6 +86,7 @@ class PaymentRequest(LoginRequired):
             # return JsonResponse({'invoice_id': invoice.id})
             # return HttpResponseRedirect(f"http://mt.com:3002/invoice/{invoice.id}")
             send_invoice(invoice.id, lang="fa")
+            basket.products.clear()
             return JsonResponse({'url': f"{CLIENT_HOST}/invoice/{invoice.id}"})
 
         user = request.user
