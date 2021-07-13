@@ -398,11 +398,11 @@ def get_categories_with_children(filters):
 def get_categories(filters=None):
     if not filters:
         filters = {}
+    if Box.objects.filter(disable=False, **filters).exists():
+        return get_categories_with_box(filters)
     if Category.objects.filter(disable=False, box__disable=False, **filters).exists():
         return get_categories_with_children(filters)
     filters.pop('products__in', None)
-    if Box.objects.filter(disable=False, **filters).exists():
-        return get_categories_with_box(filters)
     return []
 
 
