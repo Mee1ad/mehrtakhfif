@@ -631,10 +631,13 @@ def sync_session_basket(request):
             basket = Basket.objects.create(user=user, created_by=user, updated_by=user)
         session_basket = request.session['basket']
         for product in session_basket[::-1]:
-            BasketProduct.objects.create(basket=basket, **product)
+            is_updated = BasketProduct.objects.filter(basket=basket, storage_id=product['storage_id']).update(
+                count=product['count'])
+            if not is_updated:
+                BasketProduct.objects.create(basket=basket, **product)
         request.session['basket'] = []
         request.session.save()
-        basket_count = get_basket_count(session=request.session)
+        basket_count = get_basket_count(basket_id=basket.id)
     return basket_count
 
 
