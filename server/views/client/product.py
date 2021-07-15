@@ -373,6 +373,7 @@ class FeatureView(View):
                 feature_dict['id'] = pf.id
                 feature_dict['settings'] = pf.feature_value.settings.get('ui', {})
                 feature_dict['name'] = pf.feature_value.value['fa']
+                feature_dict['priority'] = pf.feature_value.priority
                 # feature_dict['selected'] = pf.id in selected_feature or pf.id in selected
                 feature_dict['available'] = False
                 feature_dict['selectable'] = True if {pf.pk}.issubset(set(sum(available_combos, []))) else False
@@ -393,6 +394,7 @@ class FeatureView(View):
                     if set(selected + [pf.pk]).issubset(l) or set(feature_combo + [pf.pk]).issubset(l):
                         feature_dict['available'] = True
                 values.append(feature_dict)
+            values = sorted(values, key = lambda i: i['priority'])
             features_list.append(
                 {'id': product_f.feature_id, 'name': product_f.feature.name['fa'], 'values': values,
                  'selected': select, 'settings': product_f.feature.settings})
