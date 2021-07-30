@@ -28,7 +28,7 @@ from kavenegar import *
 
 from mehr_takhfif.settings import CSRF_SALT, TOKEN_SALT, DEFAULT_COOKIE_DOMAIN, DEBUG, SMS_KEY, color_feature_id, \
     SHORTLINK
-from server.documents import ProductDocument
+from server.documents import ProductDocument, TagDocument
 from server.models import *
 from server.serialize import get_tax, BoxCategoriesSchema, BasketSchema, MinProductSchema, BasketProductSchema, \
     UserSchema, InvoiceSchema, BoxSchema, CategorySchema
@@ -126,7 +126,9 @@ def upload(request, titles, media_type, box=None):
 
 
 def filter_params(params, new_params=(), lang='fa'):
-    filters = {'filter': {'default_storage__isnull': False}, 'related': {}, 'query': {}, 'order': ''}
+    filters = {'filter': {'default_storage__isnull': False, 'verify': True},
+               'or_filter': {'default_storage__isnull': False, 'verify': True},
+               'related': {}, 'query': {}, 'order': ''}
     if not params:
         return filters
     ds = 'default_storage__'
@@ -140,9 +142,16 @@ def filter_params(params, new_params=(), lang='fa'):
             value = json.loads(params[k].lower())
         try:
             if k == "q":
+                tag_ids = esearch(value, TagDocument, only=['id'])
+                filters['or_filter']['tags__in'] = tag_ids
                 value = esearch(value, ProductDocument, only=['id'])
                 new_params[k] = "id__in"
-            filters['filter'][new_params[k]] = value
+            list_of_values = params.getlist(k)
+            if len(list_of_values) == 1:
+                filters['filter'][new_params[k]] = value
+            elif len(list_of_values) > 1:
+                filters['filter'][f'{new_params[k]}__in'] = list_of_values
+
         except KeyError:
             pass
     box_permalink = params.get('b', None)
@@ -390,7 +399,7 @@ def get_categories_with_children(filters):
     active_categories = {'disable': False, 'box__disable': False}
     prefetch_children = Prefetch('children', to_attr='prefetched_children',
                                  queryset=Category.objects.filter(**active_categories))
-    category = Category.objects.filter(**active_categories, **filters).prefetch_related(prefetch_children)
+    category = Category.objects.filter(filters, **active_categories).prefetch_related(prefetch_children)
     categories = CategorySchema(only=['id', 'name', 'children', 'permalink']).dump(category, many=True)
     return categories
 
@@ -398,10 +407,11 @@ def get_categories_with_children(filters):
 def get_categories(filters=None):
     if not filters:
         filters = {}
-    if Box.objects.filter(disable=False, **filters).exists():
-        return get_categories_with_box(filters)
-    if Category.objects.filter(disable=False, box__disable=False, **filters).exists():
+    if filters and Category.objects.filter(filters, disable=False, box__disable=False).exists():
+        print(filters)
         return get_categories_with_children(filters)
+    if Box.objects.filter(filters, disable=False).exists():
+        return get_categories_with_box(filters)
     filters.pop('products__in', None)
     return []
 
@@ -452,7 +462,7 @@ def get_pagination(request, query, serializer, select=(), prefetch=(), show_all=
 
 
 def user_data_with_pagination(model, serializer, request, show_all=False, extra={}, serializer_args={}):
-    query = model.objects.filter(user=request.user, **extra)
+    query = model.objects.filter(user=request.user, **extra).order_by('-id')
     return get_pagination(request, query, serializer, show_all=show_all, serializer_args=serializer_args)
 
 
@@ -616,7 +626,7 @@ def get_basket_count(user=None, basket_id=None, session=None):
     if basket_id:
         return BasketProduct.objects.filter(basket_id=basket_id).aggregate(count=Sum('count'))['count'] or 0
     return user.baskets.order_by('id').prefetch_related('basket_products').last().basket_storages \
-        .aggregate(count=Sum('count'))['count'] or 0
+               .aggregate(count=Sum('count'))['count'] or 0
 
 
 def sync_session_basket(request):
@@ -864,6 +874,10 @@ def disable_no_thumbnail_products():
                 i += 1
         except AttributeError:
             pass
+
+
+def sort_by_list(unsorted_list, list_of_id):
+    return [unsorted_list[x] for x in list_of_id]
 
 
 # incomplete

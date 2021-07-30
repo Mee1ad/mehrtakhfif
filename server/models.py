@@ -8,6 +8,7 @@ import requests
 from PIL import Image, ImageFilter
 from django.contrib.auth.models import AbstractUser
 from django.contrib.postgres.fields import JSONField
+from django.contrib.postgres.fields.jsonb import KeyTextTransform
 from django.contrib.postgres.indexes import BTreeIndex, HashIndex, BrinIndex, GinIndex
 from django.contrib.sessions.models import Session
 from django.core.exceptions import FieldDoesNotExist
@@ -31,6 +32,7 @@ from safedelete.signals import post_softdelete
 
 from mehr_takhfif.settings import ELASTICSEARCH_DSL
 from mehr_takhfif.settings import HOST, MEDIA_ROOT
+from mehr_takhfif.settings import color_feature_id
 from mtadmin.exception import *
 from server.field_validation import *
 
@@ -983,6 +985,12 @@ class Product(Base):
     choices = ('type', 'booking_type', 'accessory_type')
     exclude_fields = ['feature_groups', 'storages', 'default_storage', 'available']
 
+    def is_disable(self):
+        def is_all_categories_disabled():
+            return not self.categories.filter(disable=False).exists()
+
+        return self.disable or is_all_categories_disabled() or self.box.disable
+
     def get_absolute_url(self):
         return f"/product/{self.permalink}"
 
@@ -1046,7 +1054,7 @@ class Product(Base):
 
     def get_category_fa(self):
         try:
-            return self.categories.all().first().name['fa']
+            return self.categories.all().first().permalink
         except Exception:
             pass
 
@@ -1061,6 +1069,22 @@ class Product(Base):
             return HOST + self.thumbnail.image.url
         except Exception:
             pass
+
+    def get_tags(self):
+        return list(self.tags.all().values_list("name__fa", flat=True))
+
+    def get_colors(self):
+        colors = FeatureValue.objects.filter(
+            product_features__product_id=self.id, feature_id=color_feature_id).order_by('id').distinct('id').values(
+            'id', name=KeyTextTransform('fa', 'value'), color=KeyTextTransform('hex', 'settings'))
+        colors_obj = []
+        for color in colors:
+            colors_obj.append(type('ClassName', (), color)())
+        return colors_obj
+
+    def get_price(self):
+        storage = type('Storage', (), {"final_price": 0, 'discount_price': 0})()
+        return getattr(self, 'default_storage', storage)
 
     # def save(self):
     #     self.slug = slugify(self.title)
@@ -1227,7 +1251,7 @@ class Storage(Base):
         #         raise ValidationError(_(f'قیمت فروش باید بیشتر از {recommended_price} باشد'))
 
     def __str__(self):
-        return f"{self.product}"
+        return self.title.get('fa', None)
 
     def post_save(self, my_dict=None):
         if my_dict is None:
@@ -1492,7 +1516,6 @@ class Invoice(Base):
 
     def __str__(self):
         return f"{self.user}"
-
 
     suspended_at = models.DateTimeField(blank=True, null=True, verbose_name='Suspended at')
     suspended_by = models.ForeignKey(User, on_delete=CASCADE, blank=True, null=True, verbose_name='Suspended by',

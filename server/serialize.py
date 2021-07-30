@@ -2,7 +2,6 @@ import time
 from datetime import date
 from math import ceil
 
-from django.utils.translation import gettext_lazy as _
 from jdatetime import date, timedelta
 from marshmallow import Schema, fields, INCLUDE, post_load
 
@@ -559,6 +558,31 @@ class MinProductSchema(BaseSchema):
                 colors.append({'id': item.feature_value_id, 'color': color_hex, 'name': color_name, 'image': image})
                 distinct.append(item.feature_value_id)
         return colors
+
+
+class ColorsSchema(BaseSchema):
+    class Meta:
+        additional = ("id", "name", "color")
+
+
+class FilterProductSchema(BaseSchema):
+    class Meta:
+        additional = ('id', 'permalink', 'available', 'disable', 'thumbnail', 'colors')
+
+    thumbnail = fields.Method("get_thumbnail")
+    default_storage = fields.Function(lambda o: o.default_storage._d_)
+    colors = fields.Nested(ColorsSchema(many=True))
+
+    def get_default_storage(self, obj):
+        pass
+
+    def get_thumbnail(self, obj):
+        return {"image": obj.thumbnail, "title": obj.name_fa}
+
+
+class FilterColorSchema(BaseSchema):
+    class Meta:
+        additional = ('id', 'name', 'color')
 
 
 class ProductSchema(MinProductSchema):

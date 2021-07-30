@@ -1,9 +1,13 @@
+from itertools import chain
+
+from django.contrib.admin.utils import flatten
 from django.db.models import Max, Min
 from django.http import JsonResponse
+from elasticsearch_dsl import Search
 
-from server.serialize import FeatureSchema, BrandSchema, SpecialProductSchema
+from mehr_takhfif.settings import ES_CLIENT
+from server.serialize import *
 from server.utils import *
-import pysnooper
 
 
 class GetSpecialOffer(View):
@@ -24,50 +28,40 @@ class GetSpecialProduct(View):
 
 
 class FilterDetail(View):
-    def get(self, request):
-        q = request.GET.get('q', {})
-        permalink = request.GET.get('cat', None)
-        new_params = {'colors': 'product_features__feature_value_id', 'tag': 'tags__permalink',
-                      'available': 'storages__available_count_for_sale__gte', 'brand': 'brand__in'}
-        params = filter_params(request.GET, new_params, request.lang)
-        disable = {'disable': False} if not request.user.is_staff else {}
-        category_filters = {}
-        category_filter = {}
-        if permalink:
-            category_filters = {'permalink': permalink}
-            category_filter = {'categories__permalink': permalink}
-            if Box.objects.filter(permalink=permalink).exists():
-                category_filter = {'box__permalink': permalink}
-        if q:
-            p = ProductDocument.search()
-            p = p.query({"bool": {"should": [{"match": {"name_fa": {"query": q}}},
-                                             {"wildcard": {"name_fa": f"{q}*"}},
-                                             {"match": {"name_fa2": {"query": q}}}]}}).query('match', disable=False)
-            product_ids = []
-            for hit in p:
-                product_ids.append(hit.id)
+    query = None
+    params = None
+    category_permalink = None
 
-            category_filters['products__in'] = product_ids
-            params['id__in'] = product_ids
-        products = Product.objects.filter(**params['filter'], **category_filter, **disable).order_by(). \
-            select_related('brand', 'default_storage').only('brand', 'categories', 'default_storage', 'name')
+    def add_query_filter(self, ):
+        query = self.params.get('q', None)
+        if query:
+            self.query["query"]["bool"]["must"].append({"match": {"name_fa": {"query": query, "boost": 1}}})
+            self.query["query"]["bool"]["must"].append({"match": {"tags": {"query": query, "boost": 0.5}}})
 
-        if not products:
-            return JsonResponse({'max_price': 0, 'min_price': 0, 'brands': [],
-                                 'categories': [], 'breadcrumb': [], 'colors': []})
-        prices = products.aggregate(max=Max('default_storage__discount_price'),
-                                    min=Min('default_storage__discount_price'))
-        brands = [product.brand for product in products.order_by('brand_id').distinct('brand_id') if product.brand]
-        breadcrumb = self.get_breadcrumb(permalink)
-        product_list = products.values_list('id')
-        colors = get_colors_hex(product_list)
-        categories = get_categories(category_filters)
-        return JsonResponse({'max_price': prices['max'], 'min_price': prices['min'],
-                             'brands': BrandSchema(**request.schema_params).dump(brands, many=True),
-                             'categories': categories, 'breadcrumb': breadcrumb, 'colors': colors})
+    def add_brand_filter(self, ):
+        brands = self.params.getlist('brands', None)
+        if brands:
+            self.query["query"]["bool"]["must"].append({"terms": {"brand.name": brands}})
+
+    def add_color_filter(self, ):
+        colors = self.params.getlist('colors', None)
+        if colors:
+            self.query["query"]["bool"]["must"].append({"nested": {"query": {"terms": {"colors.name": colors}},
+                                                                   "path": "colors",
+                                                                   "inner_hits": {"_source": ["name"]}}})
+
+    def add_available_filter(self, ):
+        only_available = self.params.get('available', None)
+        if only_available:
+            self.query["query"]["bool"]["must"].append({"term": {"available": only_available}})
+
+    def add_category_filter(self, ):
+        self.category_permalink = self.params.get('cat', )
+        if self.category_permalink:
+            self.query["query"]["bool"]["must"].append({"match": {"category_fa": self.category_permalink}})
 
     def get_breadcrumb(self, permalink):
-        category = Category.objects.filter(disable=False, box__disable=False, permalink=permalink)\
+        category = Category.objects.filter(disable=False, box__disable=False, permalink=permalink) \
             .select_related('parent', 'box').first()
         if category:
             breadcrumb = [{'name': category.box.get_name_fa(), 'permalink': category.box.permalink}]
@@ -80,38 +74,113 @@ class FilterDetail(View):
             return [{'name': box.get_name_fa(), 'permalink': box.permalink}]
         return []
 
+    def get(self, request):
+        s = Search(using=ES_CLIENT, index="product")
+        self.params = request.GET
+        self.query = {"query": {"bool": {"must": [{"term": {"disable": False}}]}}, "min_score": 2}
+        self.add_query_filter()
+        self.add_category_filter()
+        products = s.from_dict(self.query)[:500]
+        # products = s.query("match_all")[:20]
+        products.aggs.metric('max_price', 'max', field='default_storage.discount_price') \
+            .metric('min_price', 'min', field='default_storage.discount_price')
+        products = products.execute()
+        if not products.hits or not self.query["query"]["bool"]["must"]:
+            return JsonResponse({"brands": [], "colors": [], "categories": [], "breadcrumb": [], 'min_price': 0,
+                                 'max_price': 0})
+        brands = s.from_dict({"_source": "brand", "collapse": {"field": "brand.id"}, **self.query})
+        brands = brands.execute()
+        brands = [hit.brand.to_dict() for hit in brands if hit.brand]
+        box_ids = s.from_dict({"_source": "box_id", "collapse": {"field": "box_id"}, **self.query})
+        box_ids = box_ids.execute()
+        box_ids = [hit.box_id for hit in box_ids]
+        box_ids = flatten(box_ids)
+        box_ids = [item for sublist in box_ids for item in sublist]
+        list_of_colors = [hit.colors for hit in products]
+        colors = list(chain.from_iterable(list_of_colors))
+        unique_colors = list({v['id']: v.to_dict() for v in colors}.values())
+        prices = products.aggregations.to_dict()
+        # products_id = [product.id for product in products]
+        # category_filters = Q(products__in=products_id)
+        # categories = get_categories(category_filters)
+        categories = get_categories_with_box({"id__in": box_ids})
+        breadcrumb = []
+        if self.category_permalink:
+            breadcrumb = self.get_breadcrumb(self.category_permalink)
+        return JsonResponse({"brands": brands, "colors": unique_colors, "categories": categories,
+                             "breadcrumb": breadcrumb, 'min_price': prices['min_price']['value'],
+                             'max_price': prices['max_price']['value']})
+
 
 class Filter(View):
+    query = None
+    params = None
+
+    def add_query_filter(self, ):
+        query = self.params.get('q', None)
+        if query:
+            self.query['query']["bool"]["should"] = [{"match": {"name_fa": {"query": query, "boost": 1}}},
+                                                     {"match": {"tags": {"query": query, "boost": 0.5}}}]
+
+    def add_brand_filter(self, ):
+        brands = self.params.getlist('brands', None)
+        if brands:
+            self.query['query']["bool"]["must"].append({"terms": {"brand.permalink": brands}})
+
+    def add_color_filter(self, ):
+        colors = self.params.getlist('colors', None)
+        if colors:
+            self.query['query']["bool"]["must"].append({"nested": {"query": {"terms": {"colors.id": colors}},
+                                                                   "path": "colors",
+                                                                   "inner_hits": {"_source": ["id"]}}})
+
+    def add_available_filter(self, ):
+        only_available = self.params.get('available', None)
+        if only_available:
+            self.query['query']["bool"]["must"].append({"term": {"available": only_available}})
+
+    def add_category_filter(self, ):
+        category_permalink = self.params.get('cat', )
+        if category_permalink:
+            self.query['query']["bool"]["must"].append({"term": {"category_fa": category_permalink}})
+
+    def add_price_filter(self, ):
+        min_price = self.params.get('min_price', )
+        max_price = self.params.get('max_price', )
+        if min_price and max_price:
+            self.query['query']["bool"]["must"].append({"range": {"default_storage.discount_price": {"gte": min_price,
+                                                                                                     "lte": max_price}}})
+
     def get(self, request):
-        new_params = {'colors': 'product_features__feature_value_id', 'tag': 'tags__permalink',
-                      'available': 'storages__available_count_for_sale__gte', 'brand': 'brand__in'}
-        params = filter_params(request.GET, new_params, request.lang)
-        permalink = request.GET.get('cat', None)
-        category_filter = {}
-        if permalink:
-            category_filter = {'categories__permalink': permalink}
-            if Box.objects.filter(permalink=permalink).exists():
-                category_filter = {'box__permalink': permalink}
-        query = Q(verify=True, **params['filter'])
-        disable = get_product_filter_params(request.user.is_staff)
-        if params['related']:
-            query = Q(verify=True, **params['filter']) | Q(verify=True, **params['related'])
-        products = Product.objects.filter(query, Q(**category_filter), Q(**disable), ~Q(type=5)). \
-            prefetch_related('default_storage__vip_prices__vip_type', 'storages',
-                             Prefetch('product_features',
-                                      queryset=ProductFeature.objects.filter(feature_id=color_feature_id)
-                                      .prefetch_related('product_feature_storages__storage__media'),
-                                      to_attr='colors')) \
-            .select_related('thumbnail', 'default_storage').order_by('-available', '-id').distinct('available', 'id')
-        if params['order']:
-            products = products.order_by(params['order']).distinct(params['order'].replace('-', ''))
-        if 'id__in' in 'filter' in params:
-            products = sorted(products, key=lambda x: params['filter']['id__in'].index(x['id']))
-        product_list = products.values_list('id')
-        colors = get_colors_hex(product_list)
-        # params['order']).order_by('-id').distinct('id')
-        pg = get_pagination(request, products, MinProductSchema, serializer_args={'colors': colors})
-        return JsonResponse(pg)
+        available_sorts = {'cheap': 'default_storage.discount_price', 'expensive': '-default_storage.discount_price',
+                           'best_seller': '-default_storage.sold_count',
+                           'discount': '-default_storage.discount_percent'}
+        self.params = request.GET
+        sort = self.params.get('o', None)
+        self.query = {"query": {"bool": {"must": [{"term": {"disable": False}}]}}, "min_score": 2}
+        self.add_query_filter()
+        self.add_color_filter()
+        self.add_brand_filter()
+        self.add_available_filter()
+        self.add_category_filter()
+        self.add_price_filter()
+
+        s = Search(using=ES_CLIENT, index="product")
+        products = s.from_dict(self.query)[:500]
+        products = products.execute()
+        count = products.hits.total['value']
+
+        # product = ProductDocument.search()
+        # products = product.query(self.query).extra(min_score=2)
+        # count = products.count()
+        # print(count)
+        pagination = {"count": count, "step": request.step, "last_page": ceil(count / request.step)}
+        if sort:
+            products = products.sort(available_sorts[sort])
+        products = products[request.step * (request.page - 1):request.step * request.page]
+        serialized_products = FilterProductSchema().dump(products, many=True)
+        # todo vip prices, to_json()
+        return JsonResponse({"data": serialized_products, "pagination": pagination})
 
 
 class GetFeature(View):
