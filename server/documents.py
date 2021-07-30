@@ -77,6 +77,8 @@ class ProductDocument(Document):
             return related_instance.products.all()
         elif isinstance(related_instance, Storage):
             return related_instance.product_default_storage
+        elif isinstance(related_instance, Category):
+            return related_instance.products.all()
 
 
 @registry.register_document
