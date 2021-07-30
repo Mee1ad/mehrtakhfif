@@ -87,7 +87,8 @@ class PaymentRequest(LoginRequired):
             # return HttpResponseRedirect(f"http://mt.com:3002/invoice/{invoice.id}")
             send_invoice(invoice.id, lang="fa")
             basket.products.clear()
-            return JsonResponse({'url': f"{CLIENT_HOST}/invoice/{invoice.id}"})
+            res = JsonResponse({'url': f"{CLIENT_HOST}/invoice/{invoice.id}"})
+            return set_custom_signed_cookie(res, 'basket_count', 0)
 
         user = request.user
         if not Basket.objects.filter(pk=basket_id, user=user).exists():
