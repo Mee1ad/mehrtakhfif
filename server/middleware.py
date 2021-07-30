@@ -4,10 +4,10 @@ from django.http import JsonResponse, HttpResponseNotFound
 from django.urls import resolve
 from sentry_sdk import configure_scope
 
-from mehr_takhfif.settings import ROLL_NAME, HOST
+from mehr_takhfif.settings import ROLL_NAME, HOST, MAINTENANCE
 from server.models import User, Basket
 from server.utils import default_step, admin_default_step, default_page, get_custom_signed_cookie,\
-    set_custom_signed_cookie, get_basket_count
+    set_custom_signed_cookie, get_basket_count, res_code
 
 
 class AuthMiddleware:
@@ -31,10 +31,11 @@ class AuthMiddleware:
         return request
 
     def __call__(self, request):
+        if MAINTENANCE:
+            return JsonResponse({}, status=res_code['maintenance_mode'])
         # print(request.META.get('REMOTE_ADDR') or request.META.get('HTTP_X_FORWARDED_FOR'))
         path = request.path_info
         route = resolve(path).route
-
         app_name = resolve(path).app_name
         token_requests = ['POST', 'PUT', 'PATCH']
         allow_without_token = ['login', 'activate', 'resend_code', 'reset_password', 'privacy_policy', 'test']
