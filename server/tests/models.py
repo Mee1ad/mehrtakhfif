@@ -15,70 +15,56 @@ def clean_return_data(data, count):
 
 
 def fake_json():
-    return {"fa": fake.name(), "en": ""}
+    return {"fa": fake.name(), "en": "", "data": ""}
 
 
 def fake_settings():
     return {"ui": {}}
 
 
-def fake_agent(is_mobile=False):
+def fake_mobile_agent():
     device = type('Device', (), {'family': 'Samsung', })()
-    if is_mobile:
-        return type('UserAgent', (), {'is_mobile': True, 'device': device})()
+    return type('UserAgent', (), {'is_mobile': True, 'device': device})()
+
+
+def fake_desktop_agent():
+    device = type('Device', (), {'family': 'Samsung', })()
     return type('UserAgent', (), {'is_mobile': False, 'device': device})()
 
 
-def fake_ad(count=1, null=True, **kwargs):
-    if null:
-        obj = mixer.cycle(count).blend(Ad, **kwargs)
-    else:
-        obj = mixer.cycle(count).blend(Ad, title=fake_json(), url=fake.url(), media=fake_media(media_type=5),
-                                       mobile_media=fake_media(media_type=6), storage=fake_storage(), **kwargs)
-    return clean_return_data(obj, count)
+def fake_phone_number():
+    return fake.phone_number().replace(' ', '').replace('+98', '0')
 
 
-def fake_address(count=1, null=True, user=None, **kwargs):
+def fake_ad(**kwargs):
+    return mixer.blend(Ad, title=fake_json(), url=fake.url(), media=fake_media(media_type=5),
+                       mobile_media=fake_media(media_type=6), storage=fake_storage(), **kwargs)
+
+
+def fake_address(user=None, **kwargs):
     state = fake_state()
     city = fake_city(state=state)
-    if null:
-        obj = mixer.cycle(count).blend(Address, city=city, state=state, **kwargs)
-    else:
-        obj = mixer.cycle(count).blend(Address, user=user, location=fake.location_on_land()[:2], city=city,
-                                       state=state, **kwargs)
-    return clean_return_data(obj, count)
+    location = fake.location_on_land()[:2]
+    return mixer.blend(Address, user=user, location={'lat': location[0], 'lng': location[1]}, city=city, state=state, **kwargs)
 
 
-def fake_box(count=1, null=True, **kwargs):
-    if null:
-        obj = mixer.cycle(count).blend(Box, name=fake_json(), settings=fake_settings(), disable=False, **kwargs)
-    else:
-        obj = mixer.cycle(count).blend(Box, name=fake_json(), settings=fake_settings(), disable=False,
-                                       media=fake_media(7), **kwargs)
-    return clean_return_data(obj, count)
+def fake_box(**kwargs):
+    return mixer.blend(Box, name=fake_json(), settings=fake_settings(), disable=False, media=fake_media(7), **kwargs)
 
 
 def fake_basket(**kwargs):
     return mixer.blend(Basket, **kwargs)
 
 
-def fake_brand(count=1, **kwargs):
+def fake_brand(**kwargs):
     return mixer.blend(Brand, name=fake_json(), **kwargs)
 
 
-def fake_category(count=1, null=True, **kwargs):
-    categories = []
-    for permalink in [fake.password() for i in range(count)]:
-        if null:
-            categories.append(mixer.blend(Category, name=fake_json(), disable=False, **kwargs))
-        else:
-            categories.append(mixer.blend(Category, name=fake_json(), disable=False,
-                                          parent=fake_category(), permalink=permalink, **kwargs))
-
-    return clean_return_data(categories, count)
+def fake_category(**kwargs):
+    return mixer.blend(Category, name=fake_json(), disable=False, permalink=fake.password(), **kwargs)
 
 
-def fake_comment(count=1, comment_type='rate', comment=None, **kwargs):
+def fake_comment(comment_type='rate', comment=None, **kwargs):
     product = fake_product(null=False)
     if comment_type == 'q-a':
         return mixer.blend(Comment, text=fake.text(), approved=fake.boolean(), type=1,
@@ -87,45 +73,34 @@ def fake_comment(count=1, comment_type='rate', comment=None, **kwargs):
                        reply_to=comment, rate=fake.random_int(0, 10), product=product, **kwargs)
 
 
-def fake_client(count=1, **kwargs):
-    obj = mixer.cycle(count).blend(Client, name=fake_json(), **kwargs)
-    return clean_return_data(obj, count)
+def fake_client(**kwargs):
+    return mixer.blend(Client, name=fake_json(), **kwargs)
 
 
-def fake_charity(count=1, **kwargs):
-    obj = mixer.cycle(count).blend(Charity, name=fake_json(), deposit_id=1, **kwargs)
-    return clean_return_data(obj, count)
+def fake_charity(**kwargs):
+    return mixer.blend(Charity, name=fake_json(), deposit_id=1, **kwargs)
 
 
-def fake_city(count=1, state=None, **kwargs):
-    obj = mixer.cycle(count).blend(City, name=fake.city(), state=state, **kwargs)
-    return clean_return_data(obj, count)
+def fake_city(state=None, **kwargs):
+    return mixer.blend(City, name=fake.city(), state=state, **kwargs)
 
 
-def fake_discount_code(count=1, null=True, **kwargs):
-    if null:
-        obj = mixer.cycle(count).blend(DiscountCode, type=3, **kwargs)
-    else:
-        user = fake_user()
-        invoice = fake_invoice()
-        obj = mixer.cycle(count).blend(DiscountCode, user=user, storage=fake_storage(), invoice=invoice,
-                                       invoice_storage=invoice.invoice_storages.all()[0].id,
-                                       basket=fake_basket(user=user), type=3, **kwargs)  # post
-    return clean_return_data(obj, count)
+def fake_discount_code(**kwargs):
+    user = fake_user()
+    invoice = fake_invoice()
+    return mixer.blend(DiscountCode, created_by=user, storage=fake_storage(), invoice=invoice, type=3, **kwargs)  # post
 
 
-def fake_feature(count=1, **kwargs):
-    obj = mixer.cycle(count).blend(Feature, **kwargs)
-    return clean_return_data(obj, count)
+def fake_feature(**kwargs):
+    return mixer.blend(Feature, **kwargs)
 
 
-def fake_feature_value(count=1, **kwargs):
+def fake_feature_value(**kwargs):
     return mixer.blend(FeatureValue, **kwargs)
 
 
-def fake_feature_group(count=1, **kwargs):
-    obj = mixer.cycle(count).blend(FeatureGroup, **kwargs)
-    return clean_return_data(obj, count)
+def fake_feature_group(**kwargs):
+    return mixer.blend(FeatureGroup, **kwargs)
 
 
 def fake_invoice(**kwargs):
@@ -147,20 +122,15 @@ def fake_invoice_storage(count=1, **kwargs):
     return invoice_storages
 
 
-def fake_media(media_type, count=1, null=True, **kwargs):
+def fake_media(media_type, **kwargs):
     file_name = next(item for item in Media.types if item[0] == media_type)[1]
     image_path = f"{MEDIA_ROOT}\\test\\{file_name}.jpg"
     image = SimpleUploadedFile(name='test_image.jpg', content=open(image_path, 'rb').read(),
                                content_type='image/jpeg')
-    if null:
-        obj = mixer.cycle(count).blend(Media, title=fake_json(), image=image, type=media_type, **kwargs)
-    else:
-        box = fake_box()
-        obj = mixer.cycle(count).blend(Media, title=fake_json(), image=image, box=box, type=media_type, **kwargs)
-    return clean_return_data(obj, count)
+    return mixer.blend(Media, title=fake_json(), image=image, type=media_type, **kwargs)
 
 
-def fake_menu(count=1, **kwargs):
+def fake_menu(**kwargs):
     return mixer.blend(Menu, **kwargs)
 
 
@@ -173,30 +143,26 @@ def fake_product(**kwargs):
                   {"id": 5, "text": "وابدن", "user_id": 1, "question": False, "created_at": 1605967907}],
         "state": "reviewed"}
     thumbnail = fake_media(2)
+    location = fake.location_on_land()[:2]
     return mixer.blend(Product, brand=fake_brand(), thumbnail=thumbnail, disable=False,
-                       location=fake.location_on_land()[:2], address=fake.address,
-                       properties=fake_json(),
+                       location={'lat': location[0], 'lng': location[1]}, address=fake.address,
+                       properties=fake_json(), name=fake_json(), description=fake_json(),
                        short_address=fake.address, details=fake_json(), settings=fake_settings(),
                        review=review, **kwargs)
 
 
-def fake_payment_history(count=1, **kwargs):
-    payment_histories = mixer.cycle(count).blend(PaymentHistory, **kwargs)
-    return clean_return_data(payment_histories, count)
+def fake_payment_history(**kwargs):
+    return mixer.blend(PaymentHistory, **kwargs)
 
 
-def fake_slider(count=1, **kwargs):
-    return mixer.cycle(count).blend(Slider, title=fake_json(), product=fake_product(), media=fake_media(4),
-                                    mobile_media=fake_media(8), type='home', url=fake.url, priority=0, **kwargs)
+def fake_slider(**kwargs):
+    return mixer.blend(Slider, title=fake_json(), product=fake_product(), media=fake_media(4),
+                       mobile_media=fake_media(8), type='home', url=fake.url, priority=0, **kwargs)
 
 
-def fake_special_product(count=1, null=False, **kwargs):
-    if null:
-        obj = mixer.blend(SpecialProduct, storage=fake_storage(null=False)).__dict__
-    else:
-        obj = mixer.blend(SpecialProduct, storage=fake_storage(null=False), thumbnail=fake_media(2), box=fake_box(),
-                          url=fake.url(), name=fake_json()).__dict__
-    return clean_return_data(obj, count)
+def fake_special_product(**kwargs):
+    return mixer.blend(SpecialProduct, storage=fake_storage(null=False), thumbnail=fake_media(2), box=fake_box(),
+                       url=fake.url(), name=fake_json(), **kwargs)
 
 
 def fake_storage(**kwargs):
@@ -208,37 +174,29 @@ def fake_storage(**kwargs):
                        dimensions={'weight': 10, 'height': 10, 'width': 10, 'length': 10}, **kwargs)
 
 
-def fake_state(count=1, **kwargs):
-    obj = mixer.cycle(count).blend(State, name=fake.state(), **kwargs)
-    return clean_return_data(obj, count)
+def fake_state(**kwargs):
+    return mixer.blend(State, name=fake.state(), **kwargs)
 
 
-def fake_tag(count=1, **kwargs):
-    obj = mixer.cycle(count).blend(Tag, **kwargs)
-    return clean_return_data(obj, count)
+def fake_tag(**kwargs):
+    return mixer.blend(Tag, **kwargs)
 
 
-def fake_tag_group(count=1, **kwargs):
+def fake_tag_group(**kwargs):
     return mixer.blend(TagGroup, name=fake_json(), **kwargs)
 
 
-def fake_vip_type(count=1, **kwargs):
-    obj = mixer.cycle(count).blend(VipType, **kwargs)
-    return clean_return_data(obj, count)
+def fake_vip_type(**kwargs):
+    return mixer.blend(VipType, **kwargs)
 
 
-def fake_user(count=1, null=True, **kwargs):
-    if null:
-        obj = mixer.cycle(count).blend(User, **kwargs)
-    else:
-        obj = mixer.cycle(count).blend(User, tg_id=fake.random_int(), tg_username=fake.name(),
-                                       tg_first_name=fake.name()
-                                       , avatar=fake.url(), first_name=fake.first_name(),
-                                       last_name=fake.last_name(),
-                                       default_address=fake_address(), **kwargs)
-    return clean_return_data(obj, count)
+def fake_user(**kwargs):
+    return mixer.blend(User, tg_id=fake.random_int(), tg_username=fake.name(),
+                       tg_first_name=fake.name()
+                       , avatar=fake.url(), first_name=fake.first_name(),
+                       last_name=fake.last_name(),
+                       default_address=fake_address(), **kwargs)
 
 
-def fake_wishlist(count=1, null=True, **kwargs):
-    obj = mixer.cycle(count).blend(WishList, **kwargs)
-    return clean_return_data(obj, count)
+def fake_wishlist(**kwargs):
+    return mixer.blend(WishList, **kwargs)

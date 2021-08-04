@@ -200,91 +200,9 @@ PUT {{admin_host}}/product
 Content-Type: application/json
 
 {
-  "notif": false,
   "id": 61,
-  "box_id": 3,
-  "brand_id": 26,
-  "categories": [
-    234,
-    216
-  ],
-  "features": [
-    {
-      "feature_id": 35,
-      "feature_value_id": 187,
-      "settings": {}
-    },
-    {
-      "feature_id": 35,
-      "feature_value_id": 10,
-      "settings": {}
-    },
-    {
-      "feature_id": 35,
-      "feature_value_id": 11,
-      "settings": {}
-    },
-    {
-      "feature_id": 35,
-      "feature_value_id": 12,
-      "settings": {}
-    }
-  ],
-  "description": {
-    "data": {
-      "ar": {},
-      "en": {},
-      "fa": {
-        "items": [
-          {
-            "key": "description",
-            "value": "دیسکریپشن محصول"
-          }
-        ]
-      }
-    }
-  },
-  "media": [
-    1184,
-    1185,
-    1182,
-    1183
-  ],
-  "name": {
-    "fa": "محصول خوب",
-    "en": "",
-    "ar": ""
-  },
-  "settings": {
-    "adminNote": "انبار ندارد↵اصلاح اسم محصول",
-    "productStatus": 2
-  },
-  "short_description": {
-    "ar": "",
-    "en": "",
-    "fa": "<p>کفش ورزشی زنانه Adidas مدل MTS-1 - Running</p>↵"
-  },
-  "tag_groups": [],
-  "tags": [
-    {
-      "tag_id": 159,
-      "show": false
-    },
-    {
-      "tag_id": 158,
-      "show": false
-    },
-    {
-      "tag_id": 157,
-      "show": false
-    },
-    {
-      "tag_id": 156,
-      "show": false
-    }
-  ],
-  "thumbnail_id": 1186,
-  "accessory_type": "can_be"
+  "notif": false,
+  "thumbnail_id": 19
 }
 
 > res.js
@@ -1041,3 +959,7 @@ DELETE {{admin_host}}/cache/*
 DELETE http://api.mt.com/admin/cache/a?token=ff5294ad781a23c32824ea9adbfc1521f771481cc95aecede421ed65
 
 > res.js
+
+###
+
+OPTIONS https://api.mehrtakhfif.com/basket

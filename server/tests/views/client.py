@@ -1,13 +1,13 @@
+from django.test import TestCase
+
 from server.views.auth import *
 from server.views.client.box import *
 from server.views.client.home import *
 from server.views.client.product import *
 from server.views.client.shopping import *
 from server.views.client.user import *
-from server.views.payment import *
-from server.tests.models import *
 from ..utils import *
-from rest_framework.test import RequestsClient, APIClient
+
 
 # Get an instance of a logger
 
@@ -18,174 +18,251 @@ from rest_framework.test import RequestsClient, APIClient
 class HomeTestCase(TestCase):
 
     def setUp(self):
-        pass
+        self.user = fake_user(is_superuser=False, is_active=False)
+        self.factory = RequestFactory()
 
     def test_test(self):
-        get('test', Test)
+        request = self.factory.get(f'/ping')
+        request = attach_request_default_attr(request, self.user)
+        res = Test.as_view()(request)
+        assert 200 <= res.status_code <= 299
 
     def test_init(self):
-        get('init', Init)
+        request = self.factory.get(f'/init')
+        request = attach_request_default_attr(request, self.user)
+        res = Init.as_view()(request)
+        assert 200 <= res.status_code <= 299
 
     def test_menu(self):
-        fake_menu(5)
-        get('menu', GetMenu)
+        fake_menu(), fake_menu(), fake_menu(), fake_menu()
+        request = self.factory.get(f'/menu')
+        request = attach_request_default_attr(request, self.user)
+        res = GetMenu.as_view()(request)
+        assert 200 <= res.status_code <= 299
 
     def test_slider(self):
-        fake_slider(5)
-        get('slider', GetSlider, slider_type='home')
+        fake_slider(), fake_slider(), fake_slider()
+        request = self.factory.get(f'/slider')
+        request = attach_request_default_attr(request, self.user)
+        res = GetSlider.as_view()(request, slider_type='home')
+        assert 200 <= res.status_code <= 299
 
     def test_box_special_product(self):
-        fake_special_product(5)
-        get('box_special_product', BoxesGetSpecialProduct)
+        fake_special_product(), fake_special_product(), fake_special_product()
+        request = self.factory.get(f'/box_special_product')
+        request = attach_request_default_attr(request, self.user)
+        res = BoxesGetSpecialProduct.as_view()(request)
+        assert 200 <= res.status_code <= 299
 
-    def test_box_with_category(self):
-        fake_category(5)
-        get('box_with_category', BoxWithCategory)
+    def test_categories(self):
+        fake_category(), fake_category(), fake_category(), fake_category()
+        request = self.factory.get(f'/categories')
+        request = attach_request_default_attr(request, self.user)
+        res = Categories.as_view()(request)
+        assert 200 <= res.status_code <= 299
 
     def test_suggest(self):
-        get('suggest?q=تست', Suggest)
+        request = self.factory.get(f'/suggest?q=تست')
+        request = attach_request_default_attr(request, self.user)
+        res = Suggest.as_view()(request)
+        assert 200 <= res.status_code <= 299
 
     def test_search(self):
-        get('suggest?q=تست', ElasticSearch)
+        request = self.factory.get(f'/search?q=تست')
+        request = attach_request_default_attr(request, self.user)
+        res = ElasticSearch.as_view()(request)
+        assert 200 <= res.status_code <= 299
 
     def test_ads(self):
-        fake_ad(5, null=False)
-        get('ads', GetAds, ads_type='home')
+        fake_ad(), fake_ad(), fake_ad(), fake_ad()
+        request = self.factory.get(f'/ads')
+        request = attach_request_default_attr(request, self.user)
+        res = GetAds.as_view()(request, ads_type='home')
+        assert 200 <= res.status_code <= 299
 
     # def test_favicon(self):
     #     get('favicon', get_favicon)
 
     def test_permalink_id(self):
         product = fake_product()
-        get('permalink_id', PermalinkToId, permalink=product.permalink)
+        request = self.factory.get(f'/permalink_id')
+        request = attach_request_default_attr(request, self.user)
+        res = PermalinkToId.as_view()(request, permalink=product.permalink)
+        assert 200 <= res.status_code <= 299
 
 
 class UserTestCase(TestCase):
 
     def setUp(self):
-        self.user = mixer.blend(User)
+        self.user = fake_user(is_superuser=False, is_active=False)
+        self.factory = RequestFactory()
 
     def test_profile(self):
-        get('profile', Profile)
+        request = self.factory.get(f'/profile')
+        request = attach_request_default_attr(request, self.user)
+        res = Profile.as_view()(request)
+        assert 200 <= res.status_code <= 299
 
     def test_states(self):
-        get('states', GetState, user=self.user)
+        request = self.factory.get(f'/states')
+        request = attach_request_default_attr(request, self.user)
+        res = GetState.as_view()(request)
+        assert 200 <= res.status_code <= 299
 
     def test_city(self):
         state = fake_state()
-        fake_city(5, state=state)
-        get(f'cities/{state.id}', GetCity, user=self.user, state_id=state.id)
+        fake_city(state=state)
+        request = self.factory.get(f'/cities')
+        request = attach_request_default_attr(request, self.user)
+        res = GetCity.as_view()(request, state_id=state.id)
+        assert 200 <= res.status_code <= 299
 
     def test_orders(self):
         invoice = fake_invoice(user=self.user)
-        get(f'orders?id={invoice.id}', Orders, self.user)
+        request = self.factory.get(f'orders?id={invoice.id}')
+        request = attach_request_default_attr(request, self.user)
+        res = Orders.as_view()(request)
+        assert 200 <= res.status_code <= 299
 
     def test_orders_product(self):
         invoice = fake_invoice(user=self.user)
         invoice_storages_id = list(invoice.invoice_storages.all().values_list('id', flat=True))
         for pk in invoice_storages_id:
-            get(f'order/product?id={pk}', OrderProduct, self.user)
+            request = self.factory.get(f'order/product?id={pk}')
+            request = attach_request_default_attr(request, self.user)
+            res = OrderProduct.as_view()(request)
+            assert 200 <= res.status_code <= 299
 
     def test_wishlist(self):
-        fake_wishlist(5, user=self.user)
-        get(f'wishlist', WishlistView, self.user)
+        fake_wishlist(user=self.user)
+        request = self.factory.get(f'/wishlist')
+        request = attach_request_default_attr(request, self.user)
+        res = WishlistView.as_view()(request)
+        assert 200 <= res.status_code <= 299
 
     def test_address(self):
-        fake_address(3, user=self.user)
-        get(f'address', AddressView, self.user)
+        fake_address(user=self.user)
+        request = self.factory.get(f'address')
+        request = attach_request_default_attr(request, self.user)
+        res = AddressView.as_view()(request)
+        assert 200 <= res.status_code <= 299
 
     def test_user_comments(self):
-        fake_comment(5, user=self.user)
-        get(f'user_comments', UserCommentView, self.user)
+        fake_comment(user=self.user), fake_comment(user=self.user), fake_comment(user=self.user)
+        request = self.factory.get(f'/user_comments')
+        request = attach_request_default_attr(request, self.user)
+        res = UserCommentView.as_view()(request)
+        assert 200 <= res.status_code <= 299
 
     def test_invoice_details(self):
         invoice = fake_invoice(user=self.user, status=2)
-        get(f'invoice_detail/{invoice.id}', InvoiceView, self.user, html=True, invoice_id=invoice.id)
+        request = self.factory.get(f'/invoice_detail')
+        request = attach_request_default_attr(request, self.user)
+        res = InvoiceView.as_view()(request, invoice_id=invoice.id)
+        assert 200 <= res.status_code <= 299
 
 
 class BoxTestCase(TestCase):
 
     def setUp(self):
-        self.user = mixer.blend(User)
+        self.user = fake_user(is_superuser=False, is_active=False)
+        self.factory = RequestFactory()
+        self.box = fake_box()
+        self.category = fake_category()
+        self.product1 = fake_product(box=self.box)
+        self.product2 = fake_product(box=self.box)
+        self.product1.categories.add(self.category)
+        self.product2.categories.add(self.category)
 
     def test_filter(self):
-        fake_product(10, null=False)
-        get('filter', Filter)
-        get('filter?q=رز', Filter)
+        request = get(f'/filter?q={self.product1.name["fa"]}')
+        res = Filter.as_view()(request)
+        res_data = json.loads(res.content)
+        assert len(res_data['data']) > 0
 
     def test_filter_detail(self):
-        fake_product(10, null=False)
-        get('filter_detail', FilterDetail)
-        get('filter_detail?q=رز', FilterDetail)
-
-    def test_category(self):
-        categories = fake_category(5, null=False)
-        products = fake_product(10, null=False)
-        for product in products:
-            product.categories.add(categories[0])
-        get(f'category', CategoryView, permalink=categories[0].permalink)
+        request = get(f'/filter_detail?q={self.product1.name["fa"]}')
+        res = FilterDetail.as_view()(request)
+        assert 200 <= res.status_code <= 299
 
 
 class ProductTestCase(TestCase):
 
     def setUp(self):
-        self.user = mixer.blend(User)
+        self.user = fake_user(is_superuser=False, is_active=False)
 
-    def test_filter(self):
-        product = fake_product(null=False)
-        get('product', ProductView, permalink=product.permalink)
-        get('product', ProductView, permalink=product.id)
+    def test_product(self):
+        box = fake_box()
+        category = fake_category()
+        product = fake_product(box=box)
+        product.categories.add(category)
+        request = get(f'/product/')
+        res = ProductView.as_view()(request, permalink=product.permalink)
+        res_data = json.loads(res.content)
+        assert 200 <= res.status_code <= 299, res_data
+        request = get(f'/product/')
+        res = ProductView.as_view()(request, permalink=product.id)
+        assert 200 <= res.status_code <= 299
 
     def test_comment(self):
         product = fake_product(null=False)
-        fake_comment(10, product=product)
+        fake_comment(), fake_comment(), fake_comment(), fake_comment()
         permalink = product.permalink
-        get(f'comment?prp={permalink}', ProductView)
+        request = get(f'/comment?prp={permalink}&type=1')
+        res = CommentView.as_view()(request)
+        assert 200 <= res.status_code <= 299
 
     def test_features(self):
         product = fake_product(null=False)
-        get(f'features', FeatureView, permalink=product.permalink)
+        request = get(f'/features')
+        res = FeatureView.as_view()(request, permalink=product.permalink)
+        assert 200 <= res.status_code <= 299
 
     def test_product_userdata(self):
         product = fake_product(null=False)
-        get(f'product_userdata', ProductUserData, permalink=product.permalink)
+        request = get(f'/product_userdata')
+        res = ProductUserData.as_view()(request, permalink=product.permalink)
+        assert 200 <= res.status_code <= 299
 
     def test_related_products(self):
         product = fake_product(null=False)
-        get('related_products', RelatedProduct, permalink=product.permalink)
+        request = get(f'/related_products')
+        res = RelatedProduct.as_view()(request, permalink=product.permalink)
+        assert 200 <= res.status_code <= 299
 
 
 class BookingTestCase(TestCase):
 
     def setUp(self):
-        self.user = mixer.blend(User)
+        self.user = fake_user(is_superuser=False, is_active=False)
 
     def test_booking(self):
         invoice = fake_invoice()
-        get('booking', BookingView, invoice_id=invoice.id)
+        request = get(f'/booking')
+        res = BookingView.as_view()(request, invoice_id=invoice.id)
+        assert res.status_code == 302, res.status_code
 
 
 class ShoppingTestCase(TestCase):
 
     def setUp(self):
-        self.user = mixer.blend(User)
+        self.user = fake_user(is_superuser=False, is_active=False)
 
     def test_basket(self):
         fake_basket(user=self.user)
-        get('basket', BasketView)
+        request = get(f'/basket')
+        res = BasketView.as_view()(request)
+        assert 200 <= res.status_code <= 299
 
     def test_edit_invoice(self):
-        invoice = fake_invoice(user=self.user)
-        get('edit_invoice', EditInvoice, invoice_id=invoice.id)
-
-    def test_product(self):
-        storages = fake_storage(5)
-        basket = [{"id": storage.id, "count": fake.random_int(1, 5)} for storage in storages]
-        post('product', {"basket": basket}, GetProducts)
+        pass
 
     def test_discount_code(self):
         discount_code = fake_discount_code()
-        post('product', {"code": discount_code.code}, DiscountCodeView)
+        request = post(f'/discount_code', {"code": discount_code.code})
+        res = DiscountCodeView.as_view()(request)
+        res_data = json.loads(res.content)
+        assert 200 <= res.status_code <= 299, res_data
 
 
 class AuthTestCase(TestCase):
@@ -193,26 +270,32 @@ class AuthTestCase(TestCase):
     def setUp(self):
         pass
 
-    def login(self):
-        factory = RequestFactory()
-        request = factory.post(f'/login', {"username": "09015518484"}, HTTP_USER_AGENT='Mozilla/5.0')
+    def test_login(self):
+        request = post(f'/login', {"username": fake_phone_number()})
         res = Login.as_view()(request)
-        print(res.status_code)
-        print(res.headers)
-        # post('login', {"username": "09015518484"}, Login, headers={"content_type": "test"})
+        res_data = json.loads(res.content)
+        assert 200 <= res.status_code <= 299, res_data
         # post('login', {'username': '', 'password': '', 'code': ''}, Login, content_type='test')
 
-    def add_device(self):
+    def test_add_device(self):
         token = fake.uuid4()
         device_id = fake.uuid4()
-        post('add_device', {'token': token, 'device_id': device_id}, AddDevice)
-        post('add_device', {'token': token, 'device_id': device_id}, AddDevice)  # test duplicate device_id
+        request = post(f'/add_device', {'token': token, 'device_id': device_id})
+        res = AddDevice.as_view()(request)
+        res_data = json.loads(res.content)
+        assert 200 <= res.status_code <= 299, res_data
+        # test duplicate device_id
 
-    def logout(self):
-        fake_basket(user=self.user)
-        get('basket', BasketView)
+    def test_logout(self):
+        request = post(f'/logout')
+        res = LogoutView.as_view()(request)
+        assert res.status_code == 403, res.status_code
 
-    def set_password(self):
-        fake_basket(user=self.user)
-        get('basket', BasketView)
+    def test_set_password(self):
+        pass
 
+
+class PaymentTestCase(TestCase):
+
+    def setUp(self):
+        self.user = mixer.blend(User)

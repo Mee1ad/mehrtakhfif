@@ -414,9 +414,9 @@ class User(AbstractUser):
     def clean(self):
         pass
 
-    def save(self, *args, **kwargs):
-        # self.full_clean()
-        super().save(*args, **kwargs)
+    # def save(self, *args, **kwargs):
+    #     # self.full_clean()
+    #     super().save(*args, **kwargs)
 
     tg_id = models.PositiveIntegerField(null=True, blank=True)
     tg_username = models.CharField(max_length=255, null=True, blank=True)

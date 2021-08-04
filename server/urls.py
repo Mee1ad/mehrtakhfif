@@ -79,7 +79,6 @@ tourism = [
 shopping = [
     path('basket', try_except(BasketView.as_view()), name='basket'),  # no cache
     path('edit_invoice/<str:invoice_id>', try_except(EditInvoice.as_view()), name='edit_invoice'),
-    cache_proxy(GetProducts.as_view(), 'product', lvl[5]),  # vary by group user
     # path('show_codes', ShowCodes.as_view(), name='show_codes'),
     path('discount_code', try_except(DiscountCodeView.as_view()), name='discount_code')
 ]

@@ -20,7 +20,7 @@ class ProductView(View):
         identifier = {'permalink': permalink}
         product_identifier = {'product__permalink': permalink}
         storage_product_identifier = {'storages__product__permalink': permalink}
-        if permalink.isdecimal():
+        if F"{permalink}".isdecimal():
             identifier = {'id': permalink}
             product_identifier = {'product_id': permalink}
             storage_product_identifier = {'storages__product_id': permalink}
@@ -165,6 +165,7 @@ class CommentView(View):
         post_permalink = request.GET.get('pop', None)
         comment_id = request.GET.get('comment_id', None)
         comment_type = request.GET.get('type', None)
+        filterby = {}
         if comment_id:
             comments = Comment.objects.filter(reply_to_id=comment_id)
             return JsonResponse(get_pagination(request, comments, CommentSchema))

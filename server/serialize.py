@@ -570,14 +570,20 @@ class FilterProductSchema(BaseSchema):
         additional = ('id', 'permalink', 'available', 'disable', 'thumbnail', 'colors')
 
     thumbnail = fields.Method("get_thumbnail")
-    default_storage = fields.Function(lambda o: o.default_storage._d_)
+    default_storage = fields.Method("get_default_storage")
     colors = fields.Nested(ColorsSchema(many=True))
 
     def get_default_storage(self, obj):
-        pass
+        try:
+            return obj.default_storage._d_
+        except AttributeError:
+            print(f"product {obj.id} has no default_storage")
 
     def get_thumbnail(self, obj):
-        return {"image": obj.thumbnail, "title": obj.name_fa}
+        try:
+            return {"image": obj.thumbnail, "title": obj.name_fa}
+        except AttributeError:
+            print(f"product {obj.id} has no thumbnail")
 
 
 class FilterColorSchema(BaseSchema):
