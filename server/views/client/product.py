@@ -128,6 +128,15 @@ class ProductView(View):
             return category
 
 
+class ProductWishlist(LoginRequired):
+    def get(self, request, product_id):
+        user = request.user
+        wishlist = WishList.objects.filter(user=user, product_id=product_id).values('wish', 'notify')
+        wishlist = list(wishlist)[0]
+        purchased = Invoice.objects.filter(user=user, status=2, storages__product_id=product_id).exists()
+        return JsonResponse({"purchased": purchased, **wishlist})
+
+
 class ProductUserData(LoginRequired):
     def get(self, request, permalink):
         data = {"wish": False, "notify": False, "purchased": False}
