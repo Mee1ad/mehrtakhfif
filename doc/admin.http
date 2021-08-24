@@ -10,7 +10,6 @@ Content-Type: application/json
 
 {
   "parent_id": null,
-  "box_id": 3,
   "name": {
     "fa": "category-test16"
   },
@@ -38,7 +37,6 @@ Content-Type: application/json
 {
   "id": 216,
   "parent": null,
-  "box_id": 3,
   "name": {
     "fa": "category-test15"
   },
@@ -67,6 +65,37 @@ Content-Type: application/json
   "start_price": 0,
   "final_price": 10000,
   "shipping_cost": 1000
+}
+
+> res.js
+
+
+### DateRange CRU
+POST {{admin_host}}/date_range
+Content-Type: application/json
+
+{
+  "title": "جمعه",
+  "start_date": 1629455843,
+  "end_date": 1629465843
+}
+
+> res.js
+
+###
+GET {{admin_host}}/date_range
+
+> res.js
+
+###
+PUT {{admin_host}}/date_range
+Content-Type: application/json
+
+{
+  "id": 1,
+  "title": "پنجشنبه",
+  "start_date": 1629355843,
+  "end_date": 1629656843
 }
 
 > res.js
@@ -107,7 +136,7 @@ POST {{admin_host}}/product
 Content-Type: application/json
 
 {
-  "box_id": 3,
+  "category_id": 3,
   "type": "service",
   "brand_id": 26,
   "categories": [
@@ -200,9 +229,8 @@ PUT {{admin_host}}/product
 Content-Type: application/json
 
 {
-  "id": 61,
-  "notif": false,
-  "thumbnail_id": 19
+  "id": 679,
+  "manage": true
 }
 
 > res.js
@@ -212,24 +240,10 @@ PUT {{admin_host}}/product
 Content-Type: application/json
 
 {
-  "id": 1237,
+  "id": 1731,
   "name": {
-    "fa": "test5"
-  },
-  "tags": [
-    {
-      "tag_id": 159,
-      "show": true
-    },
-    {
-      "tag_id": 158,
-      "show": false
-    },
-    {
-      "tag_id": 157,
-      "show": false
-    }
-  ]
+    "fa": "مرجان مینیاتوری قرمز"
+  }
 }
 
 > res.js
@@ -530,7 +544,7 @@ Content-Type: application/json
   "name": {
     "fa": "مشخصات فنی2"
   },
-  "box_id": 3,
+  "category_id": 3,
   "settings": {
     "ui": {
       "show_title": false
@@ -564,7 +578,7 @@ Content-Type: application/json
   "name": {
     "fa": "مشخصات فنی"
   },
-  "box_id": 3,
+  "category_id": 3,
   "show_title": true,
   "features": [
     87,
@@ -708,7 +722,7 @@ Content-Type: application/json
     "en": "",
     "ar": ""
   },
-  "box_id": 1,
+  "category_id": 1,
   "tags": [
     1,
     2,
@@ -741,7 +755,7 @@ Content-Type: application/json
     "en": "",
     "ar": ""
   },
-  "box_id": 1,
+  "category_id": 1,
   "tags": [
     {
       "tag_id": 1,
@@ -827,7 +841,7 @@ Content-Type: multipart/form-data; boundary=WebAppBoundary
 --WebAppBoundary
 Content-Disposition: form-data; name="data"
 
-{"box_id": 3, "type": 2, "titles": [{"fa": "نام دسته بندی"}, {"fa": "2نام دسته بندی"}]}
+{"category_id": 3, "type": 2, "titles": [{"fa": "نام دسته بندی"}, {"fa": "2نام دسته بندی"}]}
 --WebAppBoundary--
 Content-Disposition: form-data; name="file"; filename="takh1.jpg"
 

@@ -48,10 +48,6 @@ def fake_address(user=None, **kwargs):
     return mixer.blend(Address, user=user, location={'lat': location[0], 'lng': location[1]}, city=city, state=state, **kwargs)
 
 
-def fake_box(**kwargs):
-    return mixer.blend(Box, name=fake_json(), settings=fake_settings(), disable=False, media=fake_media(7), **kwargs)
-
-
 def fake_basket(**kwargs):
     return mixer.blend(Basket, **kwargs)
 
@@ -144,11 +140,12 @@ def fake_product(**kwargs):
         "state": "reviewed"}
     thumbnail = fake_media(2)
     location = fake.location_on_land()[:2]
+    types = {1: 1, 2: 2, 3: 4, 4: 5}
     return mixer.blend(Product, brand=fake_brand(), thumbnail=thumbnail, disable=False,
                        location={'lat': location[0], 'lng': location[1]}, address=fake.address,
                        properties=fake_json(), name=fake_json(), description=fake_json(),
                        short_address=fake.address, details=fake_json(), settings=fake_settings(),
-                       review=review, **kwargs)
+                       review=review, type=types[fake.random_int(1, 4)], **kwargs)
 
 
 def fake_payment_history(**kwargs):
@@ -161,12 +158,13 @@ def fake_slider(**kwargs):
 
 
 def fake_special_product(**kwargs):
-    return mixer.blend(SpecialProduct, storage=fake_storage(null=False), thumbnail=fake_media(2), box=fake_box(),
+    return mixer.blend(SpecialProduct, storage=fake_storage(null=False), thumbnail=fake_media(2), category=fake_category(),
                        url=fake.url(), name=fake_json(), **kwargs)
 
 
 def fake_storage(**kwargs):
     supplier = fake_user(is_verify=True)
+    product = fake_product()
     return mixer.blend(Storage, title=fake_json(), disable=False, available_count=100,
                        available_count_for_sale=100, start_price=1000, discount_price=2000,
                        final_price=3000, shipping_cost=1000, max_count_for_sale=5, tax_type=1,

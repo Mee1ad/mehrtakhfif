@@ -301,3 +301,6 @@ Content-Type: application/json
 }
 
 > res.js
+
+###
+GET {{host}}/limited_special_product

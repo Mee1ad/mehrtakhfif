@@ -5,8 +5,10 @@ from django.test import TestCase, RequestFactory, Client as TClient
 from mehr_takhfif.settings import BASE_DIR
 from mtadmin.views.tables import *
 from server.tests.models import *
+from mtadmin.views.views import *
 from server.utils import res_code
 
+#  todo add admin views
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -23,16 +25,14 @@ class PostModelTestCase(TestCase):
     def make_request(self, route, data):
         request = self.factory.post(route, data, **self.headers)
         request.user = self.user
-        request.allowed_boxes_id = list(request.user.box_permission.all().values_list('id', flat=True))
         return request
 
     def test_category(self):
-        box = fake_box()
+        category = fake_category()
         media = fake_media(media_type=7)
         category = fake_category()
         data = {
             "parent_id": category.id,
-            "box_id": box.id,
             "name": fake_json(),
             "permalink": fake.uuid4(),
             "media_id": media.id
@@ -52,14 +52,14 @@ class PostModelTestCase(TestCase):
 
     def test_menu(self):
         media = fake_media(media_type=4)
-        box = fake_box()
+        category = fake_category()
         data = {
             "type": 1,
             "name": fake_json(),
             "media_id": media.id,
             "url": fake.url(),
             "parent_id": None,
-            "box_id": box.id
+            "category_id": category.id
         }
         request = self.make_request('/admin/menu', data)
         res = MenuView.as_view()(request)
@@ -104,13 +104,13 @@ class PostModelTestCase(TestCase):
         self.assertEqual(res.status_code, 201, f"can't create")
 
     def test_feature_group(self):
-        box = fake_box()
+        category = fake_category()
         feature1 = fake_feature()
         feature2 = fake_feature()
         feature3 = fake_feature()
         data = {
             "name": fake_json(),
-            "box_id": box.id,
+            "category_id": category.id,
             "settings": fake_settings(),
             "features": [
                 feature1.id,
@@ -123,7 +123,7 @@ class PostModelTestCase(TestCase):
         self.assertEqual(res.status_code, 201, f"can't create")
 
     def test_product(self):
-        box = fake_box()
+        category = fake_category()
         brand = fake_brand()
         category1 = fake_category()
         category2 = fake_category()
@@ -140,7 +140,7 @@ class PostModelTestCase(TestCase):
         tag_group2 = fake_tag_group()
 
         data = {
-            "box_id": box.id,
+            "category_id": category.id,
             "type": "service",
             "brand_id": brand.id,
             "categories": [
@@ -215,8 +215,8 @@ class PostModelTestCase(TestCase):
         self.assertEqual(res.status_code, 201, res)
 
     def test_storage(self):
-        product_feature = mixer.blend(ProductFeature)
         product = fake_product()
+        product_feature = mixer.blend(ProductFeature, product=product)
         supplier = fake_user(is_supplier=True)
         vip_price1 = mixer.blend(VipPrice)
         vip_price2 = mixer.blend(VipPrice)
@@ -293,13 +293,13 @@ class PostModelTestCase(TestCase):
         # todo
 
     def test_tag_group(self):
-        box = fake_box()
+        category = fake_category()
         tag1 = fake_tag()
         tag2 = fake_tag()
         tag3 = fake_tag()
         data = {
             "name": fake_json(),
-            "box_id": box.id,
+            "category_id": category.id,
             "tags": [
                 tag1.id,
                 tag2.id,
@@ -319,14 +319,14 @@ class PostModelTestCase(TestCase):
         # todo
 
     def test_media(self):
-        box = fake_box()
+        category = fake_category()
         file = BASE_DIR + '/media/test/media.jpg'
 
         self.headers = {"content_type": "multipart/form-data"}
         c = TClient()
         with open(file) as fp:
             data = {
-                "box_id": box.id,
+                "category_id": category.id,
                 "type": 3,
                 "titles": [fake_json(), fake_json()],
                 "file": fp
@@ -360,15 +360,13 @@ class PostModelTestCase(TestCase):
 class PutModelTestCase(TestCase):
     def setUp(self):
         self.user = fake_user(is_superuser=True, is_active=True)
-        self.box = fake_box()
-        self.user.box_permission.add(self.box)
+        self.category = fake_category()
         self.factory = RequestFactory()
         self.headers = {"content_type": "application/json"}
 
     def make_request(self, route, data):
         request = self.factory.put(route, data, **self.headers)
         request.user = self.user
-        request.allowed_boxes_id = list(request.user.box_permission.all().values_list('id', flat=True))
         return request
 
     def test_category(self):
@@ -378,7 +376,7 @@ class PutModelTestCase(TestCase):
         data = {
             "id": category.id,
             "parent_id": parent_category.id,
-            "box_id": self.box.id,
+            "category_id": self.category.id,
             "name": fake_json(),
             "permalink": fake.uuid4(),
             "media_id": media.id
@@ -400,7 +398,7 @@ class PutModelTestCase(TestCase):
 
     def test_menu(self):
         media = fake_media(media_type=4)
-        menu = mixer.blend(Menu, box=self.box)
+        menu = mixer.blend(Menu, category=self.category)
         data = {
             "id": menu.id,
             "type": 1,
@@ -408,7 +406,7 @@ class PutModelTestCase(TestCase):
             "media_id": media.id,
             "url": fake.url(),
             "parent_id": None,
-            "box_id": self.box.id
+            "category_id": self.category.id
         }
         request = self.make_request('/admin/menu', data)
         res = MenuView.as_view()(request)
@@ -464,7 +462,7 @@ class PutModelTestCase(TestCase):
         data = {
             "id": feature_group.id,
             "name": fake_json(),
-            "box_id": self.box.id,
+            "category_id": self.category.id,
             "settings": fake_settings(),
             "features": [
                 feature1.id,
@@ -496,7 +494,7 @@ class PutModelTestCase(TestCase):
         product = default_storage.product
         data = {
             "id": product.id,
-            "box_id": self.box.id,
+            "category_id": self.category.id,
             "type": "service",
             "brand_id": brand.id,
             "categories": [
@@ -646,7 +644,7 @@ class PutModelTestCase(TestCase):
         data = {
             "id": tag_group.id,
             "name": fake_json(),
-            "box_id": self.box.id,
+            "category_id": self.category.id,
             "tags": [
                 tag1.id,
                 tag2.id,
@@ -673,3 +671,13 @@ class PutModelTestCase(TestCase):
     def test_slider(self):
         pass
         # todo
+
+    def test_promote_category(self):
+        category1 = fake_category()
+        category2 = fake_category()
+        data = {
+            "category_ids": [category1.id, category2.id]
+        }
+        request = self.make_request('/admin/promote_categories', data)
+        res = PromoteCategory.as_view()(request)
+        self.assertEqual(res.status_code, res_code['updated'], f"can't update")
