@@ -10,9 +10,8 @@ from django.contrib.admin.options import (
 from django.contrib.admin.utils import (
     model_ngettext, )
 from django.contrib.admin.views.main import ChangeList
-from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Permission
-from django.contrib.postgres.fields.jsonb import KeyTextTransform
 from django.core.exceptions import (
     PermissionDenied, )
 from django.core.paginator import Paginator
@@ -22,6 +21,7 @@ from django.utils.html import escape
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
 from django.utils.translation import ngettext
+from guardian.admin import GuardedModelAdmin
 from prettyjson import PrettyJSONWidget
 from safedelete.admin import SafeDeleteAdmin
 
@@ -118,13 +118,14 @@ class SessionAdmin(admin.ModelAdmin):
     }
 
 
-UserAdmin.list_display += ('updated_at',)
-UserAdmin.list_filter = ('groups', 'box_permission', 'is_staff')
-UserAdmin.ordering = ('-id',)
-UserAdmin.list_per_page = 10
-UserAdmin.fieldsets[2][1]['fields'] = ('is_supplier',) + UserAdmin.fieldsets[2][1]['fields'] + ('box_permission',
-                                                                                                'vip_types')
-UserAdmin.filter_horizontal += ('box_permission',)
+class UserAdmin(BaseUserAdmin):
+    BaseUserAdmin.list_display += ('updated_at',)
+    list_filter = ('groups', 'is_staff')
+    ordering = ('-id',)
+    list_per_page = 10
+    BaseUserAdmin.fieldsets[2][1]['fields'] = ('is_supplier',) + BaseUserAdmin.fieldsets[2][1]['fields'] + (
+        'vip_types', )
+
 
 from django.core.exceptions import (
     FieldError, )
@@ -344,32 +345,6 @@ class Base(SafeDeleteAdmin):
     }
 
 
-class BoxAdmin(Base):
-    list_display = ('name_fa', 'permalink', 'owner') + SafeDeleteAdmin.list_display
-    # list_filter = ('name',) + SafeDeleteAdmin.list_filter
-    search_fields = ['name']
-    # autocomplete_fields = ['owner']
-    list_per_page = 10
-    # ordering = ('-created_at',)
-
-    # def get_queryset(self, request):
-    #     queryset = super().get_queryset(request)
-    #     queryset = queryset.annotate(
-    #         _hero_count=Count("hero", distinct=True),
-    #         _villain_count=Count("villain", distinct=True),
-    #     )
-    #     return queryset
-
-    # list_select_related = (
-    #     'category',
-    # )
-
-    # raw_id_fields = (
-    #     'user',
-    # )
-    # show_full_result_count = False
-
-
 class AdAdmin(admin.ModelAdmin):
     list_display = ('id', 'title_fa', 'url', 'storage', 'get_media', 'get_mobile_media')
     # list_filter = ('name',) + SafeDeleteAdmin.list_filter
@@ -441,8 +416,8 @@ class BrandAdmin(Base):
     search_fields = ['name']
 
 
-class CategoryAdmin(Base):
-    list_display = ('id', 'parent_id', 'box_id', 'name_fa') + SafeDeleteAdmin.list_display
+class CategoryAdmin(Base, GuardedModelAdmin):
+    list_display = ('id', 'parent_id', 'name_fa') + SafeDeleteAdmin.list_display
     list_filter = SafeDeleteAdmin.list_filter
     list_display_links = ('name_fa',)
     search_fields = ['name', 'id']
@@ -488,8 +463,8 @@ class FeatureValueAdmin(Base):
 
 
 class FeatureGroupAdmin(Base):
-    list_display = ('name_fa', 'box', 'get_features') + SafeDeleteAdmin.list_display
-    list_filter = ('box',) + SafeDeleteAdmin.list_filter
+    list_display = ('name_fa', 'category', 'get_features') + SafeDeleteAdmin.list_display
+    list_filter = ('category',) + SafeDeleteAdmin.list_filter
     search_fields = ['name']
     list_per_page = 10
     ordering = ('-created_at',)
@@ -554,7 +529,7 @@ class SliderAdmin(Base):
 
 class SpecialOfferAdmin(Base):
     list_display = ('menu_name', 'code', 'category', 'start_date', 'end_date') + SafeDeleteAdmin.list_display
-    list_filter = ('name', 'code', 'box', 'product', 'category') + SafeDeleteAdmin.list_filter
+    list_filter = ('name', 'code', 'category', 'product', 'category') + SafeDeleteAdmin.list_filter
     # list_display_links = ('name',)
     search_fields = ['name', 'code']
     list_per_page = 10
@@ -567,8 +542,8 @@ class SpecialOfferAdmin(Base):
 
 
 class SpecialProductAdmin(Base):
-    list_display = ('url', 'storage', 'box') + SafeDeleteAdmin.list_display
-    list_filter = ('name', 'storage', 'box') + SafeDeleteAdmin.list_filter
+    list_display = ('url', 'storage', 'category') + SafeDeleteAdmin.list_display
+    list_filter = ('name', 'storage', 'category') + SafeDeleteAdmin.list_filter
     # list_display_links = ('name',)
     search_fields = ['name']
     list_per_page = 10
@@ -831,8 +806,8 @@ class InvoiceSupplierAdmin(admin.ModelAdmin):
 
 
 class MediaAdmin(admin.ModelAdmin):
-    list_display = ('type', 'box', 'url')
-    search_fields = ['name', 'box', 'type']
+    list_display = ('type', 'category', 'url')
+    search_fields = ['name', 'category', 'type']
     list_per_page = 10
     ordering = ('-id',)
 
@@ -907,7 +882,7 @@ class SupplierAdmin(admin.ModelAdmin):
         return self.paginator(queryset, per_page, orphans, allow_empty_first_page)
 
 
-register_list = [(Session, SessionAdmin), (User, UserAdmin), (Box, BoxAdmin), (Category, CategoryAdmin),
+register_list = [(Session, SessionAdmin), (User, UserAdmin), (Category, CategoryAdmin),
                  (Feature, FeatureAdmin), (FeatureValue, FeatureValueAdmin), (Address,), (Media, MediaAdmin),
                  (Product, ProductAdmin), (House, HouseAdmin), (FeatureGroup, FeatureGroupAdmin),
                  (HousePrice, HousePriceAdmin), (ResidenceType, ResidenceTypeAdmin),
