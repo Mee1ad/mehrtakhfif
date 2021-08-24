@@ -1,7 +1,7 @@
 from django.test import TestCase
 
 from server.views.auth import *
-from server.views.client.box import *
+from server.views.client.category import *
 from server.views.client.home import *
 from server.views.client.product import *
 from server.views.client.shopping import *
@@ -37,21 +37,21 @@ class HomeTestCase(TestCase):
         fake_menu(), fake_menu(), fake_menu(), fake_menu()
         request = self.factory.get(f'/menu')
         request = attach_request_default_attr(request, self.user)
-        res = GetMenu.as_view()(request)
+        res = ClientMenu.as_view()(request)
         assert 200 <= res.status_code <= 299
 
     def test_slider(self):
         fake_slider(), fake_slider(), fake_slider()
         request = self.factory.get(f'/slider')
         request = attach_request_default_attr(request, self.user)
-        res = GetSlider.as_view()(request, slider_type='home')
+        res = ClientSlider.as_view()(request, slider_type='home')
         assert 200 <= res.status_code <= 299
 
-    def test_box_special_product(self):
+    def test_category_special_product(self):
         fake_special_product(), fake_special_product(), fake_special_product()
-        request = self.factory.get(f'/box_special_product')
+        request = self.factory.get(f'/category_special_product')
         request = attach_request_default_attr(request, self.user)
-        res = BoxesGetSpecialProduct.as_view()(request)
+        res = ClientSpecialProduct.as_view()(request)
         assert 200 <= res.status_code <= 299
 
     def test_categories(self):
@@ -61,10 +61,11 @@ class HomeTestCase(TestCase):
         res = Categories.as_view()(request)
         assert 200 <= res.status_code <= 299
 
-    def test_suggest(self):
-        request = self.factory.get(f'/suggest?q=تست')
+    def test_promoted_categories(self):
+        fake_category(promote=True), fake_category(promote=True), fake_category(), fake_category()
+        request = self.factory.get(f'/promoted_categories')
         request = attach_request_default_attr(request, self.user)
-        res = Suggest.as_view()(request)
+        res = PromotedCategories.as_view()(request)
         assert 200 <= res.status_code <= 299
 
     def test_search(self):
@@ -77,7 +78,7 @@ class HomeTestCase(TestCase):
         fake_ad(), fake_ad(), fake_ad(), fake_ad()
         request = self.factory.get(f'/ads')
         request = attach_request_default_attr(request, self.user)
-        res = GetAds.as_view()(request, ads_type='home')
+        res = ClientAds.as_view()(request, ads_type='home')
         assert 200 <= res.status_code <= 299
 
     # def test_favicon(self):
@@ -167,10 +168,9 @@ class BoxTestCase(TestCase):
     def setUp(self):
         self.user = fake_user(is_superuser=False, is_active=False)
         self.factory = RequestFactory()
-        self.box = fake_box()
         self.category = fake_category()
-        self.product1 = fake_product(box=self.box)
-        self.product2 = fake_product(box=self.box)
+        self.product1 = fake_product(category=self.category)
+        self.product2 = fake_product(category=self.category)
         self.product1.categories.add(self.category)
         self.product2.categories.add(self.category)
 
@@ -192,9 +192,8 @@ class ProductTestCase(TestCase):
         self.user = fake_user(is_superuser=False, is_active=False)
 
     def test_product(self):
-        box = fake_box()
         category = fake_category()
-        product = fake_product(box=box)
+        product = fake_product(category=category)
         product.categories.add(category)
         request = get(f'/product/')
         res = ProductView.as_view()(request, permalink=product.permalink)
@@ -220,8 +219,8 @@ class ProductTestCase(TestCase):
 
     def test_product_userdata(self):
         product = fake_product(null=False)
-        request = get(f'/product_userdata')
-        res = ProductUserData.as_view()(request, permalink=product.permalink)
+        request = get(f'/product_wishlist')
+        res = ProductWishlist.as_view()(request, permalink=product.permalink)
         assert 200 <= res.status_code <= 299
 
     def test_related_products(self):
