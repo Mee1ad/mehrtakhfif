@@ -615,10 +615,7 @@ class Media(Base):
         return "/test/"
 
     def __str__(self):
-        try:
-            return self.title['fa']
-        except KeyError:
-            return self.title['user_id']
+        return self.title['fa']
 
     def validation(self):
         try:
