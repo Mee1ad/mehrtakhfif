@@ -46,19 +46,26 @@ class CategoryView(TableView):
     def delete(self, request):
         return delete_base(request, Category)
 
-    def get_child_count(self, category, sibling=0, childes=None):
-        sibling_categories = Category.objects.filter(parent_id=category.pk)
-        if not childes:
-            childes = list(sibling_categories)
-        childes += list(sibling_categories)
-        sibling_count = sibling_categories.count()
-        if sibling_count == 0:
-            return sibling
-        for sibl in sibling_categories:
-            new_childes = self.get_child_count(sibl, childes=childes)
-            if new_childes:
-                sibling_count += new_childes['count']
-        return {'count': sibling_count, 'childes': list(set(childes))}
+    def get_child_count(self, category):
+        return Category.objects.filter(parent=category).count()
+
+    def get_category_product_count(self, category):
+        return Product.objects.filter(categories=category).count()
+
+
+class DateRangeView(TableView):
+    permission_required = 'server.view_daterange'
+
+    def get(self, request):
+        return JsonResponse(
+            serialized_objects(request, DateRange, DateRangeASchema, error_null_category=False))
+
+    def post(self, request):
+        return create_object(request, DateRange, return_item=True, serializer=DateRangeASchema,
+                             error_null_category=False)
+
+    def put(self, request):
+        return update_object(request, DateRange, return_item=True, serializer=DateRangeASchema, require_category=False)
 
 
 class BrandView(TableView):

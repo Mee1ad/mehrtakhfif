@@ -399,3 +399,16 @@ class SetOrder(View):
 
 class ProductPreview(ClientProductView):
     pass
+
+
+class PromoteCategory(AdminView, PromotedCategories):
+
+    def put(self, request):
+        data = json.loads(request.body)
+        category_ids = data['category_ids']
+        user = request.user
+        if not user.is_superuser and not user.groups.filter(name="superuser").exists():
+            raise PermissionDenied
+        Category.objects.filter(promote=True).update(promote=False)
+        Category.objects.filter(pk__in=category_ids).update(promote=True)
+        return JsonResponse({**responses['202']}, status=202)
