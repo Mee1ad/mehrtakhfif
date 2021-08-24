@@ -9,6 +9,7 @@ from django.http import JsonResponse, HttpResponseForbidden, HttpResponseBadRequ
 
 from mtadmin.exception import *
 from server.utils import res_code
+from elasticsearch.exceptions import RequestError
 
 
 def error_handler(func):
@@ -16,7 +17,7 @@ def error_handler(func):
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except (FieldError, TypeError, KeyError, ValueError, AttributeError):
+        except (FieldError, TypeError, KeyError, ValueError, AttributeError, RequestError):
             traceback.print_exc()
             return JsonResponse({'message': 'مشکلی پیش آمده', 'variant': 'error'}, status=res_code['bad_request'])
         except ActivationError as e:

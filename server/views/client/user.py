@@ -1,4 +1,3 @@
-from django.db.models import Prefetch
 from django.http import JsonResponse, FileResponse
 from django.shortcuts import render_to_response
 
@@ -6,7 +5,6 @@ from mehr_takhfif.settings import INVOICE_ROOT
 from server.serialize import *
 from server.utils import *
 from server.utils import LoginRequired
-from django.shortcuts import render_to_response
 
 
 # from selenium import webdriver
@@ -43,31 +41,6 @@ class Profile(LoginRequired):
         user.subscribe = data.get('subscribe') or user.subscribe
         user.save()
         return JsonResponse({'user': UserSchema().dump(user)})
-
-
-class Avatar(LoginRequired):
-    # todo remove avatar view
-    def post(self, request):
-        user = request.user
-        pre_avatar_id = None
-        if user.avatar:
-            pre_avatar_id = user.avatar.id
-        title = {"user_id": f"{user.id}"}
-        media = upload(request, [title], 'avatar')
-        if media:
-            user.avatar = media[0]
-            user.save()
-            if pre_avatar_id:
-                Media.objects.filter(pk=pre_avatar_id).delete()
-            return JsonResponse({"media": MediaSchema().dump(media, many=True)}, status=201)
-        return JsonResponse({}, status=400)
-
-    def delete(self, request):
-        user = request.user
-        user.avatar.delete()
-        user.avatar = None
-        user.save()
-        return JsonResponse({})
 
 
 class Orders(LoginRequired):
@@ -217,9 +190,12 @@ class GetCity(LoginRequired):
 
 class WishlistView(LoginRequired):
     def get(self, request):
-        wishlists = WishList.objects.filter()
+        notify = request.GET.get('notify', None)
+        query = {'wish': True}
+        if notify:
+            query = {'notify': True}
+        wishlists = WishList.objects.filter(user=request.user, **query)
         pg = get_pagination(request, wishlists, WishListSchema)
-
         return JsonResponse(pg)
 
     def post(self, request):
@@ -240,23 +216,6 @@ class WishlistView(LoginRequired):
         wishlist_id = request.GET.get('id', None)
         WishList.objects.filter(pk=wishlist_id, user_id=request.user).delete()
         return JsonResponse({})
-
-
-class NotifyView(LoginRequired):
-    def get(self, request):
-        notify = WishList.objects.filter(user_id=request.user)
-        return JsonResponse({'wishlists': WishListSchema().dump(notify(notify))})
-
-    def post(self, request):
-        data = load_data(request)
-        NotifyUser(type=data['type'], notify=data['notify'], product_id=data['product_id'], user_id=request.user).save()
-        return JsonResponse({}, status=201)
-
-    def delete(self, request):
-        notify_id = request.GET.get('product_id', None)
-        address = WishList.objects.filter(pk=notify_id, user_id=request.user).first()
-        address.delete()
-        return JsonResponse({'message': 'ok'})
 
 
 class MyTransactions(LoginRequired):

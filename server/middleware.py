@@ -43,7 +43,7 @@ class AuthMiddleware:
             # check_csrf_token(request)
             pass
         if HOST == 'http://api.mt.com':
-            # request.user = self.get_user(ROLL_NAME)
+            request.user = self.get_user(ROLL_NAME)
             delay = request.GET.get('delay', None)
             if delay:
                 time.sleep(float(delay))
@@ -77,9 +77,10 @@ class AuthMiddleware:
             request = self.attach_pagination(request, 'mtadmin')
             request.token = request.headers.get('access-token', None)
             try:
-                request.allowed_boxes_id = list(request.user.box_permission.all().values_list('id', flat=True))
+                request.allowed_categories_id = list(request.user.category_permissions.all().values_list('id',
+                                                                                                         flat=True))
             except AttributeError:
-                request.allowed_boxes_id = []
+                request.allowed_categories_id = []
             if not request.user.is_staff:
                 # todo debug
                 pass

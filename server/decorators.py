@@ -3,9 +3,8 @@ import json
 import sys
 import traceback
 
-from django.core.exceptions import ObjectDoesNotExist
 from django.http import JsonResponse, HttpResponseServerError, HttpResponseForbidden, HttpResponseBadRequest
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
 
 from server.models import *
 from server.utils import res_code
@@ -13,6 +12,7 @@ from django.core.exceptions import NON_FIELD_ERRORS
 import pysnooper
 from server.views.client.home import Init
 from django.core.paginator import EmptyPage
+
 
 
 def try_except(func):
@@ -33,10 +33,13 @@ def try_except(func):
                 return JsonResponse({'message': e.messages[0], 'varaiant': 'error'}, status=res_code['bad_request'])
             except Exception:
                 return HttpResponseBadRequest()
-        except (AssertionError, ObjectDoesNotExist, StopIteration, AttributeError, KeyError, ValueError, TypeError,
+        except (AssertionError, StopIteration, AttributeError, KeyError, ValueError, TypeError,
                 EmptyPage):
             traceback.print_exc()
             return HttpResponseBadRequest()
+        except ObjectDoesNotExist:
+            traceback.print_exc()
+            return JsonResponse({}, status=404)
         # except Exception as e:  handled by sentry
             # exc_type, exc_obj, exc_tb = sys.exc_info()
             # error_type = exc_type.__name__

@@ -44,7 +44,6 @@ pecco = {'pin': '4MuVGr1FaB6P7S43Ggh5', 'terminal_id': '44481453',
 callback = HOST + "/callback"
 
 
-# todo clear basket after payment
 class IPG(View):
     def get(self, request):
         return JsonResponse({'ipg': ipg})
@@ -125,7 +124,6 @@ class PaymentRequest(LoginRequired):
         #                            basket.summary['shipping_cost'] - charity) * 10, 0],
         #                    [deposit['charity'], charity * 10, 0]]
         # bug '1,49000,0;1,16000,0'
-        # todo add feature price
         suppliers_invoice = InvoiceSuppliers.objects.filter(invoice_id=invoice_id)
         for supplier_invoice in suppliers_invoice:
             try:
@@ -212,7 +210,6 @@ class PaymentRequest(LoginRequired):
         user = request.user
         address = None
         basket = basket or get_basket(request, require_profit=True, with_changes=True)
-        # todo if changes
         if basket['address_required']:
             if user.default_address.state_id not in [8, 25]:
                 raise ValidationError('در حال حاضر محصولات فقط در گیلان قابل ارسال میباشد')
@@ -269,7 +266,7 @@ class PaymentRequest(LoginRequired):
             # charity = round(storage.discount_price * 0.005)
             # dev = round((storage.discount_price - storage.start_price - tax) * 0.069)
             # admin = round((storage.discount_price - storage.start_price - tax - charity - dev) *
-            #               storage.product.box.share)
+            #               storage.product.category.settings['share'])
             # mt_profit = storage.discount_price - storage.start_price - tax - charity - dev - admin
             storage.count = product.count
             storage.storage = storage
@@ -323,12 +320,10 @@ class EditInvoice(LoginRequired):
 
 
 class CallBack(View):
-    # todo dor debug
     def get(self, request):
         return HttpResponseRedirect(f"{CLIENT_HOST}/profile/all-order")
 
     def post(self, request):
-        # todo redirect to site anyway
         data = request.body.decode().split('&')
         data_dict = {}
         for param in data:
