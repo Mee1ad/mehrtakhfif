@@ -1,13 +1,11 @@
 import json
 
-import xlsxwriter
 from django.contrib.admin.utils import NestedObjects
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from django.contrib.postgres.fields.jsonb import KeyTextTransform
 from django.core.exceptions import FieldError, PermissionDenied
-from django.db.models.query import QuerySet
 from django.http import JsonResponse
 from django.views import View
+from guardian.models import UserObjectPermission
 
 from mtadmin.serializer import tables
 from server.models import *
@@ -32,26 +30,47 @@ class AdminView(LoginRequiredMixin, View):
     pass
 
 
-def serialized_objects(request, model, serializer=None, single_serializer=None, box_key='box_id', error_null_box=True,
-                       params=None, required_fields=[]):
-    pk = request.GET.get('id', None)
-    box_check = get_box_permission(request, box_key) if error_null_box and box_key else {}
+def has_access(user, category, error_null_category=True):
+    if type(category) is int:
+        category = Category.objects.get(pk=category)
+    if error_null_category:
+        permitted = user.has_perm('has_access', category)
+        if not permitted:
+            raise PermissionDenied
+
+
+def get_category_id(obj, category_key=None):
+    print(obj.__class__.__name__, category_key)
+    if category_key:
+        count = re.subn('__', '', category_key)[1]
+        category_key = category_key.split('__')
+        if count > 0:
+            if count > 1:
+                return getattr(getattr(getattr(obj, category_key[0]), category_key[1]), category_key[2])
+            return getattr(getattr(obj, category_key[0]), category_key[1])
+        return getattr(obj, category_key[0])
+
+
+def serialized_objects(request, model, serializer=None, single_serializer=None, category_key=None,
+                       error_null_category=True, params=None, required_fields=[]):
+    user = request.user
+    params = params or get_params(request, category_key)
+    print(params)
+    pk = params['filter'].get('id', None)
     if pk:
         sip = {}
         filter_fields = {'exclude': model.exclude_fields}
         try:
-            if params:
-                sip = params.get('sip', {})
-                if params.get('filter', []).get('debug', None) is True:
-                    params['filter'].pop('debug', None)
-                    obj = model.objects.select_related(*model.select).prefetch_related(*model.prefetch). \
-                        filter(pk=pk, **box_check).first()
-                else:
-                    obj = model.objects.select_related(*model.select).prefetch_related(*model.prefetch). \
-                        filter(pk=pk, **box_check).first()
+            sip = params.get('sip', {})
+            if params.get('filter', []).get('debug', None) is True:
+                params['filter'].pop('debug', None)
+                obj = model.objects.select_related(*model.select).prefetch_related(*model.prefetch). \
+                    filter(pk=pk).first()
             else:
                 obj = model.objects.select_related(*model.select).prefetch_related(*model.prefetch). \
-                    filter(pk=pk, **box_check).first()
+                    filter(pk=pk).first()
+            category = get_category_id(obj, category_key)
+            has_access(user, category, error_null_category)
             if params['exclude_fields']:
                 filter_fields = {'exclude': params['exclude_fields'] + model.exclude_fields}
             if params['only_fields']:
@@ -62,13 +81,13 @@ def serialized_objects(request, model, serializer=None, single_serializer=None, 
             raise PermissionDenied
         except TypeError:
             return {"data": single_serializer(**filter_fields, **sip).dump(obj)}
-    if not params:
-        params = get_params(request, box_key)
     try:
-        if error_null_box and not params['filter'].get(box_key) and not params['filter'].get(box_key[:-3]) and \
-                not set(required_fields).issubset(params['filter']):
+        category_id = params['filter'].get('category_id', None)
+        has_access(user, category_id, error_null_category)
+        if error_null_category and not params['filter'].get(category_key) and not params['filter'].get(
+                category_key[:-3]) and not set(required_fields).issubset(params['filter']):
             try:
-                if int(params['filter']['type']) not in model.no_box_type:
+                if int(params['filter']['type']) not in model.no_category_type:
                     raise PermissionDenied
             except KeyError:
                 raise PermissionDenied
@@ -85,7 +104,7 @@ def serialized_objects(request, model, serializer=None, single_serializer=None, 
         if params.get('aggregate', None):
             # todo tax
             pass
-        annotate_list = ['name__fa']  # http://localhost/admin/product?box_id=15&name__fa=نامیرا
+        annotate_list = ['name__fa']  # http://localhost/admin/product?category_id=15&name__fa=نامیرا
         common_items = list(set(params['filter']).intersection(annotate_list))
         if common_items or params['annotate']:
             for item in common_items:
@@ -107,7 +126,8 @@ def serialized_objects(request, model, serializer=None, single_serializer=None, 
                 return {**get_pagination(request, query, serializer, show_all=request.all), 'ignore_order': True}
         # print(query.explain())
         return get_pagination(request, query, serializer, show_all=request.all)
-    except (FieldError, ValueError):
+    except (FieldError, ValueError) as e:
+        print(e)
         raise FieldError
 
 
@@ -127,7 +147,7 @@ def translate_params(params, params_new_name, date_key='created_at'):
     return new_params
 
 
-def get_params(request, box_key=None, date_key='created_at'):
+def get_params(request, category_key=None, date_key='created_at'):
     remove_param = ['s', 'p', 'delay', 'error', 'all']
     serializer_init_params = ['only_selectable']
     sip = {}
@@ -156,13 +176,13 @@ def get_params(request, box_key=None, date_key='created_at'):
         if key == 'ed':
             filterby[f'{date_key}__lte'] = value[0]
             continue
-        if key == 'b':
-            # if int(value[0]) in request.user.box_permission.all().values_list('id', flat=True):
-            # if User.objects.filter(pk=request.user.id, box_permission=int(value[0])).exists():
-            if int(value[0]) in request.allowed_boxes_id:
-                filterby[f'{box_key}'] = value[0]
-                continue
-            raise PermissionDenied
+        # if key == 'b':
+        #     # if int(value[0]) in request.user.category_permission.all().values_list('id', flat=True):
+        #     # if User.objects.filter(pk=request.user.id, category_permission=int(value[0])).exists():
+        #     if int(value[0]) in request.allowed_categories_id:
+        #         filterby[f'{category_key}'] = value[0]
+        #         continue
+        #     raise PermissionDenied
         if key == 'o':
             orderby = value
             continue
@@ -182,16 +202,16 @@ def get_params(request, box_key=None, date_key='created_at'):
             'exclude_fields': exclude_fields, 'only_fields': only_fields, 'sip': sip}
 
 
-def get_data(request, require_box=True):
+def get_data(request, require_category=True):
     data = json.loads(request.body)
     remove = ['created_at', 'created_by', 'updated_at', 'updated_by', 'deleted_by', 'income', 'profit',
               'rate', 'default_storage', 'sold_count', 'is_superuser', 'is_staff',
-              'box_permission', 'wallet_credit', 'suspend_expire_date', 'activation_expire'] + ['feature', ]
+              'category_permissions', 'wallet_credit', 'suspend_expire_date', 'activation_expire'] + ['feature', ]
     if data.get('permalink'):
         data['permalink'] = clean_permalink(data['permalink'])
     [data.pop(k, None) for k in remove]
-    boxes = request.user.box_permission.all()
-    # if require_box and data.get('box_id') not in boxes.values_list('id', flat=True):
+    # categories = request.user.category_permissions.all()
+    # if require_category and data.get('category_id') not in categories.values_list('id', flat=True):
     #     raise PermissionDenied
     if request.method == "POST":
         data.pop('id', None)
@@ -247,21 +267,23 @@ def get_m2m_fields(model, data):
     return [data, m2m, custom_m2m, ordered_m2m, remove_fields]
 
 
-def create_object(request, model, box_key='box', return_item=False, serializer=None, error_null_box=True, data=None,
-                  return_obj=False, restrict_objects=(), restrict_m2m=(), used_product_feature_ids=()):
+def create_object(request, model, category_key=None, return_item=False, serializer=None, error_null_category=True,
+                  data=None, return_obj=False, restrict_objects=(), restrict_m2m=(), used_product_feature_ids=()):
     if not request.user.has_perm(f'server.add_{model.__name__.lower()}'):
         raise PermissionDenied
-    data = data or get_data(request, require_box=error_null_box)
+    data = data or get_data(request, require_category=error_null_category)
     data = translate_types(data, model)
     user = request.user
-    boxes = user.box_permission.all()
-    if box_key == 'product__box':
-        if not Product.objects.filter(pk=data['product_id'], box__in=boxes).exists():
-            raise PermissionDenied
+    # categories = user.category_permissions.all()
+    # if category_key == 'product__category':
+    #     if not Product.objects.filter(pk=data['product_id'], category__in=categories).exists():
+    #         raise PermissionDenied
     data, m2m, custom_m2m, ordered_m2m, remove_fields = get_m2m_fields(model, data)
     # obj = model(**data, created_by=user, updated_by=user)
     data = {**data, 'created_by': user, 'updated_by': user}
     obj = serializer(user=user).load(data)
+    category_id = data.get('category_id', None)
+    has_access(user, category_id, error_null_category)
     save_data = {}
     if model == Storage:
         save_data = {'admin': True}
@@ -274,8 +296,8 @@ def create_object(request, model, box_key='box', return_item=False, serializer=N
     if return_item:
         request.GET._mutable = True
         request.GET['id'] = obj.pk
-        items = serialized_objects(request, model, single_serializer=serializer, box_key=box_key,
-                                   error_null_box=error_null_box)
+        items = serialized_objects(request, model, single_serializer=serializer, category_key=category_key,
+                                   error_null_category=error_null_category)
         return JsonResponse({**items, **responses['201']}, status=201)
     if return_obj:
         obj.refresh_from_db()
@@ -381,23 +403,27 @@ def add_m2m(user, obj, m2m, custom_m2m, ordered_m2m, restrict_m2m, used_product_
                            used_product_feature_ids)
 
 
-def update_object(request, model, box_key='box', return_item=False, serializer=None, data=None, require_box=True,
+def update_object(request, model, category_key=None, return_item=False, serializer=None, data=None,
+                  require_category=True,
                   extra_response={}, restrict_objects=(), restrict_m2m=(), used_product_feature_ids=(), notif=True):
     user = request.user
     if not user.has_perm(f'server.change_{model.__name__.lower()}'):
         raise PermissionDenied
-    data = data or get_data(request, require_box=False)
+    data = data or get_data(request, require_category=False)
     data = translate_types(data, model)
     try:
         data, m2m, custom_m2m, ordered_m2m, remove_fields = get_m2m_fields(model, data)
     except AttributeError:
         m2m, custom_m2m, ordered_m2m, remove_fields = None, None, None, None
     pk = data['id']
-    box_check = get_box_permission(request, box_key) if require_box else {}
+    # category_check = get_category_permission(request, category_key) if require_category else {}
     footprint = {'updated_by': user, 'updated_at': timezone.now()}
-    # items = model.objects.filter(pk=pk, **box_chqeck)
-    item = model.objects.get(pk=pk, **box_check)
+    # items = model.objects.filter(pk=pk, **category_chqeck)
+    item = model.objects.get(pk=pk)
+    category = get_category_id(item, category_key)
+    has_access(user, category, error_null_category=require_category)
     data = serializer(user=user, return_dict=True).load(data)
+    settings = data.pop('settings', None)
     try:
         # items.update(**data, remove_fields=remove_fields, **footprint)
         item.__dict__.update(**data, remove_fields=remove_fields, **footprint)
@@ -408,6 +434,8 @@ def update_object(request, model, box_key='box', return_item=False, serializer=N
         except FieldDoesNotExist:
             # items.update(**data)
             item.__dict__.update(**data)
+    if settings:
+        item.settings['ui'].update(settings)
     # item = items.first()
     add_m2m(user, item, m2m, custom_m2m, ordered_m2m, restrict_m2m, used_product_feature_ids)
     try:
@@ -423,28 +451,28 @@ def update_object(request, model, box_key='box', return_item=False, serializer=N
     if return_item:
         request.GET._mutable = True
         request.GET['id'] = item.pk
-        items = serialized_objects(request, model, single_serializer=serializer, error_null_box=require_box)
+        items = serialized_objects(request, model, single_serializer=serializer, error_null_category=require_category)
         return JsonResponse({"data": items, **extra_response, **message}, status=res_code['updated'])
     return JsonResponse({**extra_response, **message}, status=res_code['updated'])
 
 
-def delete_base(request, model, require_box=False):
+def delete_base(request, model, require_category=False):
     pk = int(request.GET.get('id', None))
     if request.token:
         if delete_object(request, model, pk):
             return JsonResponse({})
         return JsonResponse({}, status=400)
-    return prepare_for_delete(model, pk, request.user, require_box=require_box)
+    return prepare_for_delete(model, pk, request.user, require_category=require_category)
 
 
-def get_box_permission(request, box_key='box', box_id=None):
-    allowed_boxes_id = request.allowed_boxes_id
-    if allowed_boxes_id:
-        if box_id:
-            if int(box_id) not in allowed_boxes_id:
+def get_category_permission(request, category_key='category', category_id=None):
+    allowed_categories_id = request.allowed_categories_id
+    if allowed_categories_id:
+        if category_id:
+            if int(category_id) not in allowed_categories_id:
                 raise PermissionDenied
-            return {f'{box_key}': box_id}
-        return {f'{box_key}__in': allowed_boxes_id}
+            return {f'{category_key}': category_id}
+        return {f'{category_key}__in': allowed_categories_id}
     raise PermissionDenied
 
 
@@ -453,12 +481,12 @@ def check_user_permission(user, permission):
         raise PermissionDenied
 
 
-def prepare_for_delete(model, pk, user, box_key='box', require_box=True):
+def prepare_for_delete(model, pk, user, category_key='category', require_category=True):
     if not user.has_perm(f'server.delete_{model.__name__.lower()}'):
         raise PermissionDenied
-    box_check = get_box_permission(request, box_key)
+    category_check = get_category_permission(request, category_key)
     try:
-        item = model.objects.get(pk=pk, **box_check)
+        item = model.objects.get(pk=pk, **category_check)
     except FieldError:
         item = model.objects.get(pk=pk)
     collector = NestedObjects(using='default')
@@ -496,8 +524,8 @@ def delete_object(request, model, pk):
     return False
 
 
-def get_model_filter(model, box):
-    filter_list = model.objects.filter(**box).extra(select={'name': "name->>'fa'"}).values('id', 'name')
+def get_model_filter(model):
+    filter_list = model.objects.extra(select={'name': "name->>'fa'"}).values('id', 'name')
     name = model.__name__.lower()
     try:
         name = {'category': 'categories', 'featuregroup': 'groups'}[name]
@@ -506,11 +534,11 @@ def get_model_filter(model, box):
     return {'name': name, 'filters': list(filter_list)}
 
 
-def get_table_filter(table, box):
+def get_table_filter(table):
     schema = tables.get(table, None)
     try:
         list_filter = schema.list_filter
-        filters = [get_model_filter(model, box) for model in list_filter]
+        filters = [get_model_filter(model) for model in list_filter]
         return filters
     except AttributeError:
         return {}
@@ -542,3 +570,7 @@ def distinct_list_of_dict(l, k):  # list, key
             distinct_list.append(item)
     return distinct_list
 
+
+def add_category_permission(user, objects):
+    for obj in objects:
+        UserObjectPermission.objects.assign_perm('manage_category', user, obj=obj)

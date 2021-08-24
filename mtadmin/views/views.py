@@ -6,12 +6,16 @@ from django.http import HttpResponseBadRequest, HttpResponse, HttpResponseRedire
 from django.shortcuts import render_to_response, render
 from django_telegram_login.authentication import verify_telegram_authentication
 from django_telegram_login.errors import TelegramDataIsOutdatedError, NotTelegramDataError
+from elasticsearch_dsl import Search
+from guardian.shortcuts import get_objects_for_user
 
 from mehr_takhfif.settings import ARVAN_API_KEY, TELEGRAM_BOT_TOKEN
+from mehr_takhfif.settings import ES_CLIENT
 from mtadmin.serializer import *
 from mtadmin.utils import *
 from server.documents import *
 from server.utils import *
+from server.views.client.home import PromotedCategories
 from server.views.client.product import ProductView as ClientProductView  # conflict with client product
 
 
@@ -51,7 +55,7 @@ class Token(AdminView):
 
 class ReviewPrice(AdminView):
     def post(self, request):
-        data = get_data(request, require_box=False)
+        data = get_data(request, require_category=False)
 
         # fp = data['final_price']
         # dp = data.get('discount_price', None)
@@ -65,13 +69,13 @@ class ReviewPrice(AdminView):
         # elif dper and vdper:
         #     dp = int(fp - fp * dper / 100)
 
-        box = Box.objects.only('share', 'pk').get(pk=data['b'])
+        category = Category.objects.only('settings', 'pk').get(pk=data['category_id'])
         data = translate_types(data, Storage)
         storage = {'count': 1, 'storage': '', 'tax_type': data['tax_type'], 'discount_price': data['discount_price'],
                    'start_price': data['start_price'], 'final_price': data['final_price']}
         storage = type('Storage', (), {**storage})()
         storage.product = type('Product', (), {})()
-        storage.product.box = type('Box', (), {'share': box.share, 'pk': box.pk})()
+        storage.product.category = type('Category', (), {'share': category.settings['share'], 'pk': category.pk})()
         storage.storage = storage
         share = get_share(storage)
         profit = share['charity'] + share['dev'] + share['admin'] + share['mt_profit']
@@ -118,30 +122,55 @@ class MailView(AdminView):
 
 
 class TableFilter(AdminView):
+    def __init__(self):
+        super().__init__()
+        self.category_id = None
+        self.user = None
+
     def get(self, request, table):
-        box_id = request.GET.get('b')
-        user = request.user
-        no_box = ['tag', 'invoice', 'invoice_storage', 'comment']
-        check_user_permission(user, f'view_{table}')
-        box = get_box_permission(request, 'box_id', box_id)
         # todo filter per month for invoice
-        monthes = []
-        if table in no_box:
-            box = {}
-        if table == 'storage':
-            box = {'product__box_id': box_id}
-            return JsonResponse({'disable': [{'id': 0, 'name': False}, {'id': 1, 'name': True}]})
-        if table == 'media':
-            types = Media.objects.order_by('type').distinct('type')
-            return JsonResponse({'types': [{'id': item.type, 'name': item.get_type_display()} for item in types]})
-        elif table == 'invoice':
-            invoice_status = Invoice.objects.order_by('status').distinct('status')
-            return JsonResponse(
-                {'data': {'name': 'types',
-                          'filters': [{'id': item.status, 'name': item.get_status_display()} for item in
-                                      invoice_status]}})
-        filters = get_table_filter(table, box)
-        return JsonResponse({'data': filters})
+        self.category_id = request.GET.get('category_id', None)
+        self.user = request.user
+        check_user_permission(self.user, f'view_{table}')
+        filters = {'feature': self.get_feature_filters, 'product': self.get_product_filters,
+                   'invoice': self.get_invoice_filters}.get(table, self.get_default_filters)
+        return JsonResponse({"data": filters()})
+
+    def get_default_filters(self):
+        return []
+
+    def get_feature_filters(self):
+        types = Feature.types
+        types = map(lambda t: {"id": t[0], "name": t[1]}, types)
+        types = list(types)
+        return [{"name": "type", "filters": types}]
+
+    def get_product_filters(self):
+        categories = self.get_categories()
+        brands = self.get_brands()
+        return [{"name": "categories", "filters": categories}, {"name": "brand", "filters": brands}]
+
+    def get_invoice_filters(self):
+        statuses = Invoice.statuss
+        statuses = map(lambda t: {"id": t[0], "name": t[1]}, statuses)
+        statuses = list(statuses)
+        return [{"name": "status", "filters": statuses}]
+
+    def get_categories(self):
+        category_id = self.category_id
+        has_access(self.user, category_id)
+        categories = Category.objects.filter(Q(parent_id=category_id) | Q(parent__parent_id=category_id)) \
+            .values('id', 'name__fa')
+        categories = map(lambda d: {"id": d['id'], "name": d["name__fa"]}, categories)
+        return list(categories)
+
+    def get_brands(self):
+        s = Search(using=ES_CLIENT, index="product")
+        query = {"query": {"term": {"category_id": self.category_id}}}
+        brands = s.from_dict({"_source": "brand", "collapse": {"field": "brand.id"}, **query})
+        brands = brands.execute()
+        brands = [hit.brand.to_dict() for hit in brands if hit.brand]
+        return brands
 
 
 class CheckLoginToken(AdminView):
@@ -150,12 +179,12 @@ class CheckLoginToken(AdminView):
 
     def get(self, request):
         user = request.user
-        permissions = user.box_permission.all().select_related('owner')
-        boxes = BoxASchema(user=request.user, exclude=['media']).dump(permissions, many=True)
+        permissions = get_objects_for_user(user, 'server.manage_category').filter(parent=None)
+        categories = CategoryASchema(user=request.user, exclude=['media']).dump(permissions, many=True)
         roll = get_roll(user)
         user = UserASchema(exclude=['default_address']).dump(user)
         user['roll'] = roll
-        res = {'user': user, 'boxes': boxes}
+        res = {'user': user, 'categories': categories}
         return JsonResponse(res)
 
 
@@ -169,7 +198,7 @@ class PSearch(AdminView):
         return JsonResponse({"media": medias})
 
 
-class Search(AdminView):
+class SearchView(AdminView):
     def get(self, request):
         model = request.GET.get('type', None)
         switch = {'supplier': self.supplier, 'tag': self.tag, 'product': self.product, 'cat': self.category,
@@ -199,23 +228,23 @@ class Search(AdminView):
         return self.multi_match(q, Category, CategoryASchema, CategoryDocument, 'categories')
 
     def product(self, q, **kwargs):
-        box_id = kwargs.get('box_id')
+        category_id = kwargs.get('category_id')
         types = kwargs.get('types')
         products_id = []
         s = ProductDocument.search()
         # type_query = Q('bool', should=[Q("match", type=product_type) for product_type in types])
-        # r = s.query('match', box_id=box_id).query(must=[Q('match', name_fa=q), Q('match', disable=False)])
-        if box_id:
+        # r = s.query('match', category_id=category_id).query(must=[Q('match', name_fa=q), Q('match', disable=False)])
+        if category_id:
             only_fields = ['id', 'name', 'storages', 'thumbnail.id', 'thumbnail.title', 'thumbnail.image']
-            box_info = {'box_id': box_id}
-            s = s.query('match', **box_info).query('match', name_fa=q).query('match', disable=False)
-            # r = s.query('match', box_id=box_id).query(type_query).query('match', name_fa=q)
-            if s.count() == 0 and not q and box_info:
-                s = s.query('match', **box_info).query('match', disable=False)
+            category_info = {'category_id': category_id}
+            s = s.query('match', **category_info).query('match', name_fa=q).query('match', disable=False)
+            # r = s.query('match', category_id=category_id).query(type_query).query('match', name_fa=q)
+            if s.count() == 0 and not q and category_info:
+                s = s.query('match', **category_info).query('match', disable=False)
         else:
             s = s.query('match', name_fa=q).query('match', disable=False)
-            only_fields = ['id', 'name', 'box', 'categories']
-            # r = s.query('match', box_id=box_id).query('match_all')[:10]
+            only_fields = ['id', 'name', 'category', 'categories']
+            # r = s.query('match', category_id=category_id).query('match_all')[:10]
         [products_id.append(product.id) for product in s]
         products = Product.objects.select_related('thumbnail').prefetch_related('storages').in_bulk(products_id)
         products = [products[x] for x in products_id]
@@ -240,21 +269,21 @@ class Search(AdminView):
 
 
 class BoxSettings(AdminView):
-    models = {'box': Box, 'product': Product}
-    box_key = {'box': 'id', 'product': 'box_id'}
+    models = {'category': Category, 'product': Product}
+    category_key = {'category': 'id', 'product': 'category_id'}
 
     def get(self, request, model):
         pk = request.GET.get('id')
-        box_check = get_box_permission(request, self.box_key[model])
+        category_check = get_category_permission(request, self.category_key[model])
         model = self.models[model]
-        box_settings = model.objects.filter(pk=pk, **box_check).values('settings').first()
-        return JsonResponse({'data': box_settings})
+        category_settings = model.objects.filter(pk=pk, **category_check).values('settings').first()
+        return JsonResponse({'data': category_settings})
 
     def patch(self, request, model):
         data = json.loads(request.body)
-        box_check = get_box_permission(request, self.box_key[model])
+        category_check = get_category_permission(request, self.category_key[model])
         model = self.models[model]
-        if model.objects.filter(pk=data['id'], **box_check).update(settings=data['settings']):
+        if model.objects.filter(pk=data['id'], **category_check).update(settings=data['settings']):
             return JsonResponse({})
         return HttpResponseBadRequest()
 
@@ -356,7 +385,7 @@ class TelegramRegister(View):
 class SetOrder(View):
     def put(self, request):
         # check_user_permission(request.user, 'change_feature')
-        data = get_data(request, require_box=False)
+        data = get_data(request, require_category=False)
         data = to_obj(data)
         model = {'product_feature': ProductFeature, 'feature_value': FeatureValue,
                  'feature_group_feature': FeatureGroupFeature, 'category': Category}[data.model]
@@ -366,7 +395,6 @@ class SetOrder(View):
             obj.priority = ids.index(obj.pk)
         model.objects.bulk_update(objects, ['priority'])
         return JsonResponse({**responses['priority']}, status=202)
-
 
 
 class ProductPreview(ClientProductView):

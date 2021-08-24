@@ -4,8 +4,7 @@ from django.dispatch import receiver
 
 from mehr_takhfif.settings import color_feature_id
 from server.models import Invoice, Storage, FeatureValue, Category, Box, User, Product
-from server.utils import add_one_off_job
-from server.utils import get_categories_with_box
+from server.utils import add_one_off_job, get_categories
 
 
 @receiver(post_save, sender=Invoice, dispatch_uid="invoice_job_handler")
@@ -22,11 +21,11 @@ def invoice_job_maker(sender, instance, **kwargs):
 @receiver(post_save, sender=Storage, dispatch_uid="inventory_alert_handler")
 def inventory_alert(sender, instance, **kwargs):
     if kwargs.get('update_fields', None) and 'sold_count' in kwargs.get('update_fields', []):
+        owner = instance.product.category.owner
         if instance.special_products.all() and instance.available_count_for_sale == 0:
             subject = "هشدار اتمام موجودی محصول ویژه"
             message = f"موجودی {instance.title['fa']} به اتمام رسیده است"
             task_name = f'{instance.id} inventory_alert'
-            owner = instance.product.box.owner
             if owner.email_alert:
                 kwargs = {"to": owner.email, "subject": subject, 'message': message}
                 add_one_off_job(name=task_name, kwargs=kwargs, interval=0, task='server.tasks.email_task')
@@ -38,7 +37,7 @@ def inventory_alert(sender, instance, **kwargs):
             subject = "هشدار اتمام موجودی انبار"
             message = f"نام محصول: {instance.title['fa']}\nتعداد باقی مانده: {instance.available_count_for_sale}"
             task_name = f'{instance.id} inventory_alert'
-            kwargs = {"to": instance.product.box.owner.email, "subject": subject, 'message': message}
+            kwargs = {"to": owner.email, "subject": subject, 'message': message}
             add_one_off_job(name=task_name, kwargs=kwargs, interval=0, task='server.tasks.email_task')
 
 
@@ -51,13 +50,7 @@ def update_colors_in_cache(sender, instance, **kwargs):
 
 @receiver(post_save, sender=Category, dispatch_uid="update_categories_in_cache")
 def update_categories_in_cache(sender, instance, **kwargs):
-    cache.set('categories', get_categories_with_box(), 3000000)
-
-
-@receiver(post_save, sender=Box, dispatch_uid="update_superuser_permissions")
-def update_superuser_permissions(sender, instance, **kwargs):
-    if kwargs.get('created', True):
-        [user.box_permission.add(instance) for user in User.objects.filter(is_superuser=True)]
+    cache.set('categories', get_categories(), 3000000)
 
 
 @receiver(post_save, sender=Storage, dispatch_uid="manage_product_availability")

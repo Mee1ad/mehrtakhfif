@@ -1,4 +1,3 @@
-import json
 from statistics import mean, StatisticsError
 
 from django.shortcuts import render_to_response
@@ -15,40 +14,33 @@ class CategoryView(TableView):
     permission_required = 'server.view_category'
 
     def get(self, request):
-        params = get_params(request, 'box_id')
+        params = get_params(request, 'category_id')
         parent_id = params['filter'].get('parent_id')
         pk = request.GET.get('id', None)
         if pk:
-            data = serialized_objects(request, Category, single_serializer=CategoryESchema, box_key='box_id')
+            data = serialized_objects(request, Category, single_serializer=CategoryESchema, category_key='id')
             return JsonResponse(data)
-        if parent_id:
-            # params['filter'].pop('box_id', None)
-            box_id = Category.objects.get(pk=parent_id).box_id
-            box_permissions = request.user.box_permission.all().values_list('id', flat=True)
-            if box_id not in box_permissions:
-                raise PermissionDenied
-        else:
-            params['filter']['parent_id'] = None
-        categories = Category.objects.filter(
-            Q(**params['filter']) | Q(box_id=params['filter']['box_id'], permalink__isnull=True,
-                                      parent__isnull=False)).order_by(*params['order'])
+        # todo external categories, permalink__isnull=True,
+        categories = Category.objects.filter(**params['filter']).order_by(*params['order'])
+        has_access(request.user, categories[0].parent)
         for category in categories:
-            children = self.get_child_count(category)
-            if children == 0:
-                children = {'count': 0, 'childes': []}
-            category.child_count = children['count']
-            category.category_child_product_count = Product.objects.filter(categories__in=children['childes']).count()
+            category.child_count = self.get_child_count(category)
+            category.category_child_product_count = self.get_category_product_count(category)
             category.product_count = Product.objects.filter(categories=category).count()
-        test = {}
-        # test = {'html': "hello </br> world", 'variant': 'error', 'duration': 15000}
-        return JsonResponse({**get_pagination(request, categories, CategoryASchema, request.all), **test})
+        return JsonResponse(get_pagination(request, categories, CategoryASchema, request.all))
 
     def post(self, request):
-        return create_object(request, Category, serializer=CategoryASchema, return_item=True)
+        data = get_data(request)
+        data.pop('promote', None)
+        return create_object(request, Category, serializer=CategoryASchema, return_item=True, category_key='id',
+                             data=data)
 
     def put(self, request):
-        category = update_object(request, Category, return_item=True, serializer=CategoryASchema)
-        cache.set('categories', get_categories_with_box(), 3000000)
+        data = get_data(request)
+        data.pop('promote', None)
+        category = update_object(request, Category, return_item=True, serializer=CategoryASchema, category_key='id',
+                                 data=data)
+        cache.set('categories', get_categories(), 3000000)
         return category
 
     def delete(self, request):
@@ -73,57 +65,51 @@ class BrandView(TableView):
     permission_required = 'server.view_brand'
 
     def get(self, request):
-        params = get_params(request, 'box_id')
+        params = get_params(request, 'category_id')
         if params['annotate']:
-            params['filter'].pop('box_id', None)
+            params['filter'].pop('category_id', None)
             brands = Brand.objects.annotate(**params['annotate']).filter(**params['filter']).order_by(*params['order'])
-        elif 'box_id' in params['filter']:
-            products = Product.objects.filter(box_id=params['filter']['box_id'])
+        elif 'category_id' in params['filter']:
+            products = Product.objects.filter(category_id=params['filter']['category_id'])
             brands = [product.brand for product in products.order_by('brand_id').distinct('brand_id') if product.brand]
         else:
             brands = Brand.objects.all().order_by(*params['order'])
         return JsonResponse(get_pagination(request, brands, BrandASchema, show_all=request.all))
 
     def post(self, request):
-        return create_object(request, Brand, return_item=True, serializer=BrandASchema, error_null_box=False)
+        return create_object(request, Brand, return_item=True, serializer=BrandASchema, error_null_category=False)
 
     def put(self, request):
-        return update_object(request, Brand, return_item=True, serializer=BrandASchema, require_box=False)
+        return update_object(request, Brand, return_item=True, serializer=BrandASchema, require_category=False)
 
     def delete(self, request):
-        return delete_base(request, Brand, require_box=False)
-
-
-class BoxView(TableView):
-    permission_required = 'server.view_box'
-
-    def get(self, request):
-        return JsonResponse(serialized_objects(request, Box, BoxASchema, BoxASchema, error_null_box=False))
+        return delete_base(request, Brand, require_category=False)
 
 
 class FeatureView(TableView):
     permission_required = 'server.view_feature'
 
     def get(self, request):
-        return JsonResponse(serialized_objects(request, Feature, FeatureASchema, FeatureASchema, error_null_box=False))
+        return JsonResponse(
+            serialized_objects(request, Feature, FeatureASchema, FeatureASchema, error_null_category=False))
 
     def post(self, request):
-        data = get_data(request, require_box=True)
+        data = get_data(request, require_category=True)
         feature_type = [v[0] for i, v in enumerate(Feature.types) if v[1] == data['type']][0]
         feature = Feature.objects.filter(name__fa=data['name']['fa'], type=feature_type)
         if feature.exists():
             return JsonResponse({'data': FeatureASchema().dump(feature.first())}, status=200)
-        return create_object(request, Feature, serializer=FeatureASchema, error_null_box=False)
+        return create_object(request, Feature, serializer=FeatureASchema, error_null_category=False)
 
     def put(self, request):
         if json.loads(request.body)['id'] == color_feature_id:
             return JsonResponse({'message': "برای تغییر این فیچر با پشتیبان تماس بگیرید", 'variant': 'Error'})
-        return update_object(request, Feature, serializer=FeatureASchema, require_box=False, return_item=True,
+        return update_object(request, Feature, serializer=FeatureASchema, require_category=False, return_item=True,
                              restrict_m2m=['features'])
 
     def patch(self, request):
         check_user_permission(request.user, 'change_feature')
-        data = get_data(request, require_box=False)
+        data = get_data(request, require_category=False)
         ids = data['ids']
         features = FeatureValue.objects.filter(pk__in=ids)
         for feature in features:
@@ -140,14 +126,15 @@ class FeatureValueView(TableView):
 
     def get(self, request):
         return JsonResponse(serialized_objects(request, FeatureValue, FeatureValueASchema, FeatureValueASchema,
-                                               error_null_box=False))
+                                               error_null_category=False))
 
     def post(self, request):
-        return create_object(request, FeatureValue, serializer=FeatureValueASchema, error_null_box=False,
+        return create_object(request, FeatureValue, serializer=FeatureValueASchema, error_null_category=False,
                              return_item=True)
 
     def put(self, request):
-        return update_object(request, FeatureValue, serializer=FeatureValueASchema, require_box=False, return_item=True)
+        return update_object(request, FeatureValue, serializer=FeatureValueASchema, require_category=False,
+                             return_item=True)
 
     def delete(self, request):
         return delete_base(request, FeatureValue)
@@ -157,17 +144,17 @@ class FeatureGroupView(TableView):
     permission_required = 'server.view_featuregroup'
 
     def get(self, request):
-        required_box = {'error_null_box': True}
+        required_category = {'error_null_category': True}
         if request.GET.get('id', None) or request.GET.get('name__fa', None):
-            required_box = {'error_null_box': False}
+            required_category = {'error_null_category': False}
         return JsonResponse(serialized_objects(request, FeatureGroup, FeatureGroupASchema, FeatureGroupASchema,
-                                               **required_box))
+                                               category_key='category', **required_category))
 
     def post(self, request):
-        return create_object(request, FeatureGroup, serializer=FeatureGroupASchema)
+        return create_object(request, FeatureGroup, serializer=FeatureGroupASchema, category_key='category')
 
     def put(self, request):
-        return update_object(request, FeatureGroup, serializer=FeatureGroupASchema)
+        return update_object(request, FeatureGroup, serializer=FeatureGroupASchema, category_key='category')
 
     def delete(self, request):
         return delete_base(request, Feature)
@@ -180,29 +167,29 @@ class ProductView(TableView):
     def get(self, request):
         types = request.GET.getlist('type[]')
         types2 = []
-        params = get_params(request, 'box_id')
+        params = get_params(request, 'category_id')
         new_params = {'available': 'storages__available_count_for_sale__gt', 'state': 'review__state'}
         params['filter'] = translate_params(params['filter'], new_params)
-        required_box = {'error_null_box': True}
+        required_category = {'error_null_category': True}
         for t in types:
             types2.append({'service': 1, 'product': 2, 'tourism': 3, 'package': 4, 'package_item': 5}[t])
             params['filter'].pop('type__in')
             params['filter']['type__in'] = types2
         if 'review__isnull' in params['filter']:
-            required_box = {'error_null_box': False}
-        if params['filter'].get('only_id', False) and params['filter'].get('box_id', False):
+            required_category = {'error_null_category': False}
+        if params['filter'].get('only_id', False) and params['filter'].get('category_id', False):
             params['filter'].pop('only_id')
             return JsonResponse({'data': list(Product.objects.filter(**params['filter']).order_by('id').distinct('id')
                                               .values_list('id', flat=True))})
         return JsonResponse(serialized_objects(request, Product, ProductASchema, ProductESchema, params=params,
-                                               **required_box))
+                                               category_key='category', **required_category))
 
     def post(self, request):
-        # data = get_data(request, require_box=True)
-        return create_object(request, Product, serializer=ProductESchema, box_key='storage__product')
+        # data = get_data(request, require_category=True)
+        return create_object(request, Product, serializer=ProductESchema, category_key='category')
 
     def put(self, request):
-        data = get_data(request, require_box=True)
+        data = get_data(request, require_category=True)
         product = Product.objects.get(id=data['id'])
         extra_response = {}
         features = []
@@ -226,7 +213,7 @@ class ProductView(TableView):
         notif = data.pop('notif', True)
         return update_object(request, Product, data=data, extra_response=extra_response, restrict_objects=features,
                              restrict_m2m=['features'], used_product_feature_ids=used_product_feature_ids, notif=notif,
-                             serializer=ProductESchema)
+                             serializer=ProductESchema, category_key='category')
 
     def delete(self, request):
         return delete_base(request, Product)
@@ -242,12 +229,14 @@ class ProductFeatureView(TableView):
         if not request.GET.get('product_id', None):
             return JsonResponse({'data': []})
         return JsonResponse(serialized_objects(request, ProductFeature, ProductFeatureASchema, ProductFeatureASchema,
-                                               error_null_box=False, params=params))
+                                               error_null_category=False, params=params))
 
 
 class DiscountCodeView(AdminView):
+    permission_required = 'server.view_discountcode'
+
     def get(self, request):
-        params = get_params(request, box_key='storage__product__box_id')
+        params = get_params(request, category_key='storage__product__category')
         new_params = {'not_used': 'invoice__isnull'}
         params['filter'] = translate_params(params['filter'], new_params)
         if params['filter'].pop('html', None):
@@ -261,7 +250,8 @@ class DiscountCodeView(AdminView):
                 return render_to_response('discount_code.html', {'discount_codes': discount_codes})
             return JsonResponse({'url': HOST + request.get_full_path() + '&redirect=true'})
         return JsonResponse(serialized_objects(request, DiscountCode, DiscountASchema, DiscountASchema,
-                                               required_fields=['storage_id'], box_key='storage__product__box_id',
+                                               required_fields=['storage_id'],
+                                               category_key='storage__product__category',
                                                params=params))
 
     def post(self, request):
@@ -276,12 +266,13 @@ class DiscountCodeView(AdminView):
         count = data['count']
         code_len = data.get('len', 5)
         storage = Storage.objects.get(pk=storage_id)
+        category = storage.product.category
+        has_access(user, category)
         prefix = data.get('prefix', storage.title['fa'][:2])
         codes = [prefix + '-' + get_random_string(code_len, random_data) for c in range(count)]
         while len(set(codes)) < count:
             codes = list(set(codes))
             codes += [prefix + '-' + get_random_string(code_len, random_data) for c in range(count - len(set(codes)))]
-
         items = [DiscountCode(code=code, storage=storage, created_by=user, updated_by=user) for code in codes]
         discount_codes = DiscountCode.objects.bulk_create(items)
         storage.available_count_for_sale = DiscountCode.objects.filter(storage=storage, invoice__isnull=True).count()
@@ -295,13 +286,14 @@ class HouseView(TableView):
 
     # todo get single house like storage
     def get(self, request):
-        return JsonResponse(serialized_objects(request, House, HouseESchema, HouseESchema, box_key='product__box'))
+        return JsonResponse(
+            serialized_objects(request, House, HouseESchema, HouseESchema, category_key='product__category'))
 
     def post(self, request):
-        return create_object(request, House, HouseESchema)
+        return create_object(request, House, serializer=HouseESchema, category_key='product__category')
 
     def put(self, request):
-        return update_object(request, House)
+        return update_object(request, House, category_key='product__category')
 
     def delete(self, request):
         return delete_base(request, House)
@@ -318,30 +310,27 @@ class StorageView(TableView):
     def get(self, request):
         Storage.objects.filter(deadline__lt=timezone.now(), disable=False).update(disable=True)
         # required_fields = ['id', 'name', 'type', 'manage', 'default_storage_id', 'has_selectable_feature',
-        #                    'booking_type', 'thumbnail', 'storages', 'box', 'media']
+        #                    'booking_type', 'thumbnail', 'storages', 'category', 'media']
         required_fields = ['id', 'name', 'type', 'manage', 'default_storage_id', 'has_selectable_feature',
-                           'booking_type', 'box', 'media']
+                           'booking_type', 'category', 'media']
         extra_data = []
-        box_key = 'product__box'
-        params = get_params(request, box_key)
-        if not params['filter'].get(box_key):
-            box_check = get_box_permission(request, box_key)
-            params['filter'] = {**params['filter'], **box_check}
+        category_key = 'product__category'
+        params = get_params(request, category_key)
         params['order'] = ['-priority']
-        data = serialized_objects(request, Storage, StorageASchema, StorageESchema, box_key,
-                                  params=params, error_null_box=False)
+        data = serialized_objects(request, Storage, StorageASchema, StorageESchema, category_key,
+                                  params=params, error_null_category=False)
         # if not params['filter'].get('product_only', None):
         #     params['filter'].pop('product_only', None)
-        #     data = serialized_objects(request, Storage, StorageASchema, StorageESchema, box_key,
-        #                               params=params, error_null_box=False)
+        #     data = serialized_objects(request, Storage, StorageASchema, StorageESchema, category_key,
+        #                               params=params, error_null_category=False)
         #     return JsonResponse({**data})
         try:
             try:
                 product_id = int(request.GET.get('product_id', None) or data.get('data').get('product_id'))
             except AttributeError:
-                # extra_data.append('box')
+                # extra_data.append('category')
                 product_id = Storage.objects.filter(pk=params['filter']['id']).values_list('product__id', flat=True)[0]
-            product = Product.objects.filter(pk=product_id).select_related('thumbnail', 'box').first()
+            product = Product.objects.filter(pk=product_id).select_related('thumbnail', 'category').first()
 
             if params['filter'].get('id') or params['filter'].get('product_only'):
                 extra_data.append('features')
@@ -359,18 +348,18 @@ class StorageView(TableView):
         #     # product = Product.objects.get(pk=product_id)
 
     def post(self, request):
-        data = get_data(request, require_box=True)
+        data = get_data(request, require_category=True)
         if data.get('reference_id'):
             storage = Storage.objects.get(pk=data['reference_id'])
             storage.pk = None
             storage.save()
             return JsonResponse({"message": "انبارو برای تو کپی کردم :)", "variant": "success"})
-        return create_object(request, Storage, box_key='product__box', error_null_box=False, data=data,
+        return create_object(request, Storage, category_key='product__category', error_null_category=False, data=data,
                              serializer=StorageASchema)
 
     def put(self, request):
-        data = get_data(request, require_box=True)
-        return update_object(request, Storage, require_box=False, box_key='product__box', data=data,
+        data = get_data(request, require_category=True)
+        return update_object(request, Storage, require_category=False, category_key='product__category', data=data,
                              serializer=StorageASchema)
 
     def delete(self, request):
@@ -381,16 +370,16 @@ class PackageView(TableView):
     permission_required = 'server.view_package'
 
     def get(self, request):
-        params = get_params(request, box_key='product__box')
+        params = get_params(request, category_key='product__category')
         params['filter']['product__type'] = 4
-        return JsonResponse(serialized_objects(request, Storage, PackageASchema, box_key='product__box_id',
+        return JsonResponse(serialized_objects(request, Storage, PackageASchema, category_key='product__category',
                                                params=params))
 
     def post(self, request):
-        return create_object(request, Package, PackageASchema)
+        return create_object(request, Package, serializer=PackageASchema, category_key='package__product__category')
 
     def put(self, request):
-        return update_object(request, Package)
+        return update_object(request, Package, category_key='package__product__category')
 
     def delete(self, request):
         return delete_base(request, Package)
@@ -401,13 +390,13 @@ class VipPriceView(TableView):
 
     def get(self, request):
         return JsonResponse(serialized_objects(request, VipPrice, VipPriceASchema, VipPriceASchema,
-                                               box_key='storage__product__box'))
+                                               category_key='storage__product__category'))
 
     def post(self, request):
-        return create_object(request, VipPrice)
+        return create_object(request, VipPrice, category_key='storage__product__category')
 
     def put(self, request):
-        return update_object(request, VipPrice)
+        return update_object(request, VipPrice, category_key='storage__product__category')
 
     def delete(self, request):
         return delete_base(request, VipPrice)
@@ -417,14 +406,14 @@ class VipTypeView(TableView):
     permission_required = 'server.view_viptype'
 
     def get(self, request):
-        return JsonResponse(serialized_objects(request, VipType, VipTypeASchema, error_null_box=False))
+        return JsonResponse(serialized_objects(request, VipType, VipTypeASchema, error_null_category=False))
 
 
 class InvoiceView(TableView):
     permission_required = 'server.view_invoice'
 
     def get(self, request):
-        params = get_params(request, box_key='box_id')
+        params = get_params(request, category_key='category')
         if params['filter'].pop('only_booking', None):
             params['filter']['start_date__isnull'] = False
         params['filter']['final_price__isnull'] = False
@@ -433,12 +422,13 @@ class InvoiceView(TableView):
             params['filter']['status'] = {'pending': 1, 'payed': 2, 'canceled': 3, 'rejected': 4,
                                           'sent': 5, 'ready': 6}[status]
 
-        return JsonResponse(serialized_objects(request, Invoice, InvoiceASchema, InvoiceESchema, error_null_box=False,
-                                               params=params))
+        return JsonResponse(
+            serialized_objects(request, Invoice, InvoiceASchema, InvoiceESchema, error_null_category=False,
+                               params=params))
 
     def put(self, request):
         # todo limit fields for update
-        return update_object(request, Invoice, serializer=InvoiceASchema, require_box=False)
+        return update_object(request, Invoice, serializer=InvoiceASchema, require_category=False)
 
 
 class BookingView(TableView):
@@ -456,7 +446,7 @@ class InvoiceProductView(TableView):
     permission_required = 'server.view_invoicestorage'
 
     def get(self, request):
-        params = get_params(request, box_key='box_id')
+        params = get_params(request, category_key='category')
         params['filter']['invoice__status__in'] = Invoice.success_status
         if params['filter'].pop('only_booking', None):
             params['filter']['invoice__start_date__isnull'] = False
@@ -464,10 +454,10 @@ class InvoiceProductView(TableView):
         if request.user.is_superuser or get_group(request.user) in ['superuser', 'accountants']:
             serializer = InvoiceStorageFDSchema
         return JsonResponse(serialized_objects(request, InvoiceStorage, serializer, serializer,
-                                               error_null_box=False, params=params))
+                                               error_null_category=False, params=params))
 
     def put(self, request):
-        return update_object(request, InvoiceStorage, require_box=False, box_key='box_id')
+        return update_object(request, InvoiceStorage, require_category=False, category_key='category')
 
 
 class MenuView(TableView):
@@ -496,10 +486,11 @@ class TagView(TableView):
         return JsonResponse({'tags': TagASchema().dump(tags, many=True)})
 
     def post(self, request):
-        return create_object(request, Tag, box_key=None, return_item=True, serializer=TagASchema, error_null_box=False)
+        return create_object(request, Tag, category_key=None, return_item=True, serializer=TagASchema,
+                             error_null_category=False)
 
     def put(self, request):
-        return update_object(request, Tag, serializer=TagASchema, require_box=False, return_item=True)
+        return update_object(request, Tag, serializer=TagASchema, require_category=False, return_item=True)
 
     def delete(self, request):
         return delete_base(request, Tag)
@@ -509,7 +500,8 @@ class TagGroupView(TableView):
     permission_required = 'server.view_taggroup'
 
     def get(self, request):
-        return JsonResponse(serialized_objects(request, TagGroup, TagGroupASchema, TagGroupASchema))
+        return JsonResponse(serialized_objects(request, TagGroup, TagGroupASchema, TagGroupASchema,
+                                               category_key='category'))
 
     def post(self, request):
         # data = get_data(request)
@@ -517,10 +509,10 @@ class TagGroupView(TableView):
         # for tag in data['tags']:
         #     tags.append({'tag_id': tag, 'show': False})
         # data['tags'] = tags
-        return create_object(request, TagGroup, serializer=TagGroupASchema)
+        return create_object(request, TagGroup, serializer=TagGroupASchema, category_key='category')
 
     def put(self, request):
-        return update_object(request, TagGroup, serializer=TagGroupASchema, return_item=True)
+        return update_object(request, TagGroup, serializer=TagGroupASchema, return_item=True, category_key='category')
 
     def delete(self, request):
         return delete_base(request, TagGroup)
@@ -546,17 +538,18 @@ class SpecialProductView(TableView):
     permission_required = 'server.view_specialproduct'
 
     def get(self, request):
-        data = serialized_objects(request, SpecialProduct, SpecialProductASchema, SpecialProductESchema)
+        data = serialized_objects(request, SpecialProduct, serializer=SpecialProductASchema,
+                                  single_serializer=SpecialProductESchema, category_key='category')
         for index, item in enumerate(data['data']):
             data['data'][index]['product']['default_storage'] = data['data'][index].pop('default_storage')
             data['data'][index].pop('default_storage', None)
         return JsonResponse(data)
 
     def post(self, request):
-        return create_object(request, SpecialProduct, SpecialProductESchema)
+        return create_object(request, SpecialProduct, serializer=SpecialProductESchema, category_key='category')
 
     def put(self, request):
-        return update_object(request, SpecialProduct)
+        return update_object(request, SpecialProduct, category_key='category')
 
     def delete(self, request):
         # todo make it global
@@ -570,26 +563,28 @@ class MediaView(TableView):
     permission_required = 'server.view_media'
 
     def get(self, request):
-        no_box = [4, 5, 6]
-        require_box = {}
-        params = get_params(request, 'box_id')
+        no_category = [4, 5, 6]
+        require_category = {}
+        params = get_params(request, 'category_id')
         try:
-            if int(params['filter']['type']) in no_box:
-                require_box = {'error_null_box': False}
+            if int(params['filter']['type']) in no_category:
+                require_category = {'error_null_category': False}
         except Exception:
             pass
-        return JsonResponse(serialized_objects(request, Media, MediaASchema, MediaESchema, **require_box))
+        return JsonResponse(serialized_objects(request, Media, MediaASchema, MediaESchema, **require_category))
 
     def post(self, request):
         data = json.loads(request.POST.get('data'))
         titles = data['titles']
-        box_id = data.get('box_id')
+        category_id = data.get('category_id')
+        category = Category.objects.get(pk=category_id)
+        has_access(request.user, category)
         media_type = data['type']
-        if box_id not in request.user.box_permission.all().values_list('id', flat=True) and \
-                media_type not in Media.no_box_type:
+        if category_id not in request.user.category_permissions.all().values_list('id', flat=True) and \
+                media_type not in Media.no_category_type:
             raise PermissionDenied
 
-        media = upload(request, titles, media_type, box_id)
+        media = upload(request, titles, media_type, category_id)
         if media:
             return JsonResponse({'media': MediaASchema().dump(media, many=True)})
         return JsonResponse({}, status=res_code['bad_request'])
@@ -599,7 +594,7 @@ class MediaView(TableView):
         title = data['title']
         pk = data['id']
         media = Media.objects.filter(pk=pk)
-        assert request.user.box_permission.filter(id=media.first().box_id).exists()
+        has_access(request.user, media.first())
         media.update(title=title)
         return JsonResponse({'media': MediaASchema().dump(media.first())})
 
@@ -611,7 +606,8 @@ class CommentView(TableView):
     permission_required = 'server.view_comment'
 
     def get(self, request):
-        return JsonResponse(serialized_objects(request, Comment, CommentASchema, CommentESchema, error_null_box=False))
+        return JsonResponse(
+            serialized_objects(request, Comment, CommentASchema, CommentESchema, error_null_category=False))
 
     def patch(self, request):
         data = get_data(request)
@@ -645,10 +641,11 @@ class AdsView(TableView):
         if params['filter'].get('priority') == 'true':
             params['filter']['priority__isnull'] = False
             params['filter'].pop('priority')
-        return JsonResponse(serialized_objects(request, Ad, AdASchema, AdASchema, error_null_box=False, params=params))
+        return JsonResponse(
+            serialized_objects(request, Ad, AdASchema, AdASchema, error_null_category=False, params=params))
 
     def post(self, request):
-        return create_object(request, Ad, error_null_box=False)
+        return create_object(request, Ad, error_null_category=False)
 
     def patch(self, request):
         priorities = json.loads(request.body)['priorities']
@@ -657,7 +654,7 @@ class AdsView(TableView):
         return JsonResponse({'message': 'باموفقیت ذخیرته شد'})
 
     def put(self, request):
-        return update_object(request, Ad, require_box=False)
+        return update_object(request, Ad, require_category=False)
 
     def delete(self, request):
         return delete_base(request, Ad)
@@ -671,11 +668,11 @@ class SliderView(TableView):
         if params['filter'].get('priority') == 'true':
             params['filter']['priority__isnull'] = False
             params['filter'].pop('priority')
-        return JsonResponse(serialized_objects(request, Slider, SliderASchema, SliderASchema, error_null_box=False,
+        return JsonResponse(serialized_objects(request, Slider, SliderASchema, SliderASchema, error_null_category=False,
                                                params=params))
 
     def post(self, request):
-        return create_object(request, Slider, error_null_box=False)
+        return create_object(request, Slider, error_null_category=False)
 
     def patch(self, request):
         priorities = json.loads(request.body)['priorities']
@@ -684,7 +681,7 @@ class SliderView(TableView):
         return JsonResponse({'message': 'باموفقیت ذخیرته شد'})
 
     def put(self, request):
-        return update_object(request, Slider, require_box=False)
+        return update_object(request, Slider, require_category=False)
 
     def delete(self, request):
         return delete_base(request, Slider)
@@ -697,17 +694,18 @@ class SupplierView(TableView):
     def get(self, request):
         params = get_params(request)
         params['filter']['is_supplier'] = True
-        return JsonResponse(serialized_objects(request, User, SupplierESchema, SupplierESchema, error_null_box=False,
-                                               params=params))
+        return JsonResponse(
+            serialized_objects(request, User, SupplierESchema, SupplierESchema, error_null_category=False,
+                               params=params))
 
     def post(self, request):
-        data = get_data(request, require_box=False)
+        data = get_data(request, require_category=False)
         data['is_supplier'] = True
         [data.pop(k, None) for k in self.rm_list]
         message = f"{data['first_name']} {data['last_name']}\n{data['shaba']}\n{data['settings']}"
         # send_email('MT new supplier', 'soheilravasani@gmail.com', message=message)
         send_pm(312145983, message='MT new supplier\n\n' + message)
-        return create_object(request, User, serializer=SupplierESchema, error_null_box=False,
+        return create_object(request, User, serializer=SupplierESchema, error_null_category=False,
                              data=data, return_item=True)
 
 
@@ -725,4 +723,4 @@ class UserView(TableView):
     permission_required = 'server.view_user'
 
     def get(self, request):
-        return JsonResponse(serialized_objects(request, User, UserASchema, UserASchema, error_null_box=False))
+        return JsonResponse(serialized_objects(request, User, UserASchema, UserASchema, error_null_category=False))

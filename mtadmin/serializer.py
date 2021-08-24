@@ -46,7 +46,7 @@ def validate_permalink(permalink):
     pattern = '^[A-Za-z0-9\u0591-\u07FF\uFB1D-\uFDFD\uFE70-\uFEFC][A-Za-z0-9-\u0591-\u07FF\uFB1D-\uFDFD\uFE70-\uFEFC]*$'
     permalink = permalink
     if permalink and not re.match(pattern, permalink):
-        raise ValidationError(_("پیوند یکتا نامعتبر است"))
+        raise ValidationError("پیوند یکتا نامعتبر است")
     return permalink.lower()
 
 
@@ -104,14 +104,6 @@ class ProductTagGroupField(fields.Field):
 
 
 # Serializer
-class AdminSchema(MySchema):
-    id = fields.Int()
-    name = fields.Method("get_name")
-
-    def get_name(self, obj):
-        return obj.first_name + ' ' + obj.last_name
-
-
 class BaseAdminSchema(MySchema):
     """
     E = Edit
@@ -181,12 +173,12 @@ class BaseAdminSchema(MySchema):
     def get_title(self, obj):
         return obj.title
 
-    def get_box(self, obj):
+    def get_category(self, obj):
         try:
-            return {'id': obj.box_id, 'name': obj.box.name, 'settings': obj.box.settings}
+            return {'id': obj.category_id, 'name': obj.category.name, 'settings': obj.category.settings}
         except AttributeError:
             obj = obj.product
-            return {'id': obj.box_id, 'name': obj.box.name, 'settings': obj.box.settings}
+            return {'id': obj.category_id, 'name': obj.category.name, 'settings': obj.category.settings}
 
     def get_category(self, obj):
         cats = []
@@ -312,6 +304,20 @@ class BaseAdminSchema(MySchema):
         except AttributeError:
             pass
 
+    def get_settings(self, obj):
+        try:
+            return obj.settings['ui']
+        except Exception:
+            return {}
+
+
+class AdminSchema(MySchema):
+    id = fields.Int()
+    name = fields.Method("get_name")
+
+    def get_name(self, obj):
+        return obj.first_name + ' ' + obj.last_name
+
 
 class BookingASchema(BaseAdminSchema):
     start_date = fields.Function(lambda o: o.start_time.timestamp())
@@ -365,6 +371,24 @@ class DiscountASchema(BaseAdminSchema):
         return DiscountCode(**data)
 
 
+class DateRangeASchema(BaseAdminSchema):
+    class Meta:
+        unknown = INCLUDE
+        additional = ('id', 'title')
+
+    start_date = fields.Function(lambda o: o.start_date.timestamp())
+    end_date = fields.Function(lambda o: o.end_date.timestamp())
+
+    @post_load
+    def make_date_range(self, data, **kwargs):
+        print(data)
+        data['start_date'] = timestamp_to_datetime(data['start_date'])
+        data['end_date'] = timestamp_to_datetime(data['end_date'])
+        if self.return_dict:
+            return data
+        return DateRange(**data)
+
+
 class UserASchema(UserSchema):
     class Meta:
         additional = UserSchema.Meta.additional + ('avatar', 'settings')
@@ -389,24 +413,6 @@ class SupplierESchema(BaseAdminSchema):
         if self.return_dict:
             return data
         return Supplier(**data)
-
-
-class BoxASchema(BoxSchema):
-    class Meta:
-        additional = ('settings',)
-
-    name = fields.Dict()
-    disable = fields.Boolean()
-    is_owner = fields.Method("get_is_owner")
-    children = None
-
-    def get_categories(self, obj):  # for overwrite parent attribute
-        pass
-
-    def get_is_owner(self, obj):
-        if obj.owner == self.user:
-            return True
-        return False
 
 
 class InvoiceASchema(BaseAdminSchema):
@@ -594,7 +600,7 @@ class ProductASchema(BaseAdminSchema):
     list_filter = [Category]
 
     permalink = fields.Str()
-    settings = fields.Dict()
+    settings = fields.Method("get_settings")
     # box = fields.Method("get_box")
     categories = fields.Method("get_category")
     thumbnail = fields.Nested("MediaASchema")
@@ -647,6 +653,25 @@ class ProductTagASchema(MySchema):
     show = fields.Function(lambda o: True)
 
 
+class CategoryASchema(BaseAdminSchema, CategorySchema):
+    class Meta:
+        unknown = INCLUDE
+        additional = CategorySchema.Meta.additional + ('child_count', 'category_child_product_count', 'product_count',
+                                                       'disable')
+
+    parent = fields.Nested("CategoryASchema")
+    settings = fields.Method("get_settings")
+    children = None
+
+    @post_load
+    def make_category(self, data, **kwargs):
+        if data.get('permalink', None):
+            data['permalink'] = validate_permalink(data['permalink'])
+        if self.return_dict:
+            return data
+        return Category(**data)
+
+
 class ProductESchema(ProductASchema, ProductSchema):
     # class ProductESchema(BaseSchema):
     def __init__(self, include_storage=False, only_selectable=False, *args, **kwargs):
@@ -660,7 +685,7 @@ class ProductESchema(ProductASchema, ProductSchema):
 
     media = fields.Method("get_media")
     tags = ProductTagField()
-    box = fields.Nested(BoxASchema(only=['id', 'name', 'settings']))
+    category = fields.Nested(CategoryASchema(only=['id', 'name', 'settings']))
     tag_groups = fields.Method("get_tag_groups")
     brand = fields.Nested(BrandASchema)
     properties = fields.Dict()
@@ -956,7 +981,7 @@ class CommentESchema(CommentASchema, CommentSchema):
 
 
 class MediaASchema(BaseAdminSchema):
-    list_filter = [Box, Category]
+    list_filter = [Category]
 
     class Meta:
         unknown = INCLUDE
@@ -982,28 +1007,9 @@ class MediaESchema(MediaASchema, MediaSchema):
     pass
 
 
-class CategoryASchema(BaseAdminSchema, CategorySchema):
-    class Meta:
-        unknown = INCLUDE
-        additional = CategorySchema.Meta.additional + ('child_count', 'category_child_product_count', 'product_count',
-                                                       'disable')
-
-    parent = fields.Nested("CategoryASchema")
-    box = fields.Nested(BoxASchema)
-    children = None
-
-    @post_load
-    def make_category(self, data, **kwargs):
-        if data.get('permalink', None):
-            data['permalink'] = validate_permalink(data['permalink'])
-        if self.return_dict:
-            return data
-        return Category(**data)
-
-
 class CategoryESchema(CategoryASchema, BaseAdminSchema):
     class Meta:
-        additional = CategoryASchema.Meta.additional + ('box_id',)
+        additional = CategoryASchema.Meta.additional + ('category_id',)
 
     feature_groups = fields.Method("get_feature_groups")
 
@@ -1021,7 +1027,7 @@ class FeatureASchema(BaseAdminSchema):
     list_filter = [FeatureGroup]
 
     name = fields.Dict()
-    settings = fields.Dict()
+    settings = fields.Method("get_settings")
     type = fields.Function(lambda o: o.get_type_display())
     values = fields.Method("get_values")  # 7 + 19 (selected)
     groups = fields.Method("get_feature_groups")  # 8
@@ -1101,15 +1107,15 @@ class FeatureGroupASchema(BaseAdminSchema):
         self.user = user
 
     name = fields.Dict()
-    settings = fields.Dict()
+    settings = fields.Method("get_settings")
     # features = fields.Method("get_features_old")
     features = fields.Method("get_features")
 
     # features = fields.Nested('FeatureGroupFeatureASchema')
-    box = fields.Method('get_box')
+    category = fields.Method('get_category')
 
-    def get_box(self, obj):
-        return BoxASchema(only=['id']).dump(obj.box)
+    def get_category(self, obj):
+        return CategoryASchema(only=['id']).dump(obj.category)
 
     def get_features(self, obj):
         # product_features = ProductFeature.objects.filter(product=self.product, feature__groups__in=[obj.id])
@@ -1253,10 +1259,10 @@ class DashboardSchema(MySchema):
     active_product_count = fields.Method('get_active_product_count')
 
     def get_product_count(self, obj):
-        return Product.objects.filter(box=obj).count()
+        return Product.objects.filter(category=obj).count()
 
     def get_active_product_count(self, obj):
-        return Product.objects.filter(box=obj, disable=False, default_storage__disable=False).count()
+        return Product.objects.filter(category=obj, disable=False, default_storage__disable=False).count()
 
 
 class AdASchema(BaseAdminSchema):
@@ -1272,6 +1278,7 @@ class AdASchema(BaseAdminSchema):
     media = fields.Method('get_media')
     mobile_media = fields.Method('get_mobile_media')
     product_permalink = fields.Method('get_permalink')
+    settings = fields.Method("get_settings")
 
     def get_permalink(self, obj):
         try:

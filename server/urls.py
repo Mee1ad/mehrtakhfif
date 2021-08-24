@@ -4,7 +4,7 @@ from django.views.decorators.vary import vary_on_headers
 
 from server.decorators import try_except
 from server.views.auth import *
-from server.views.client.box import *
+from server.views.client.category import *
 from server.views.client.home import *
 from server.views.client.product import *
 from server.views.client.shopping import *
@@ -38,29 +38,26 @@ home = [
     cache_proxy(Test.as_view(), 'ping', lvl[9]),
     # path('n/<int:pk>', try_except(NotifTest.as_view()), name='n'),
     path('init', try_except(Init.as_view()), name='init'),  # no cache
-    cache_proxy(GetSlider.as_view(), 'slider/<str:slider_type>', lvl[6], False),
-    cache_proxy(GetSpecialOffer.as_view(), 'special_offer', lvl[6]),
-    cache_proxy(BoxesGetSpecialProduct.as_view(), 'box_special_product', lvl[6]),
-    cache_proxy(GetSpecialProduct.as_view(), 'special_product', lvl[6]),
-    cache_proxy(BestSeller.as_view(), 'best_seller', lvl[6]),
-    path('box_with_category', try_except(BoxWithCategory.as_view()), name='box_with_category'),  # not for admin
+    cache_proxy(ClientSlider.as_view(), 'slider/<str:slider_type>', lvl[6], False),
+    cache_proxy(ClientSpecialOffer.as_view(), 'special_offer', lvl[6]),
+    cache_proxy(ClientSpecialProduct.as_view(), 'special_product', lvl[6]),
+    cache_proxy(LimitedSpecialProduct.as_view(), 'limited_special_product', lvl[4]),
     path('categories', try_except(Categories.as_view()), name='categories'),  # not for admin
-    # path('menu', cache_page(60 * 5)(try_except(GetMenu.as_view())), name='menu'),
-    cache_proxy(GetMenu.as_view(), 'menu', lvl[9]),
-    cache_proxy(Suggest.as_view(), 'suggest', lvl[9]),
+    path('promoted_categories', try_except(PromotedCategories.as_view()), name='promoted_categories'),  # not for admin
+    # path('menu', cache_page(60 * 5)(try_except(ClientMenu.as_view())), name='menu'),
+    cache_proxy(ClientMenu.as_view(), 'menu', lvl[9]),
     cache_proxy(ElasticSearch.as_view(), 'search', lvl[9]),
-    cache_proxy(GetAds.as_view(), 'ads/<str:ads_type>', lvl[9], False),
+    cache_proxy(ClientAds.as_view(), 'ads/<str:ads_type>', lvl[9], False),
     cache_proxy(get_favicon, 'favicon', lvl[10]),
     cache_proxy(PermalinkToId.as_view(), 'permalink_id/<str:permalink>', lvl[10]),
 ]
 
-box = [
+category = [
     cache_proxy(Filter.as_view(), 'filter', lvl[5]),
-    # path('special_offer/<str:name>', GetSpecialOffer.as_view(), name='special_offer'),
+    # path('special_offer/<str:name>', ClientSpecialOffer.as_view(), name='special_offer'),
     # path('special_product/<str:permalink>', GetSpecialProduct.as_view(), name='special_product'),
     cache_proxy(FilterDetail.as_view(), 'filter_detail', lvl[5]),
     # path('features', try_except(GetFeature.as_view()), name='features'),
-    cache_proxy(CategoryView.as_view(), 'category/<str:permalink>', lvl[5]),
 ]
 
 product = [
@@ -68,7 +65,6 @@ product = [
     cache_proxy(CommentView.as_view(), 'comment', lvl[1]),
     path('product_wishlist/<int:product_id>', try_except(ProductWishlist.as_view()), name='product_wishlist'),
     path('features/<str:permalink>', try_except(FeatureView.as_view()), name='features'),  # no cache
-    path('product_userdata/<str:permalink>', try_except(ProductUserData.as_view()), name='features'),  # no cache
     cache_proxy(RelatedProduct.as_view(), 'related_products/<str:permalink>', lvl[7]),
 ]
 
@@ -121,4 +117,4 @@ sitemap = [path('sitemap.xml', sitemap, {'sitemaps': {'sitemaps': BaseSitemap}},
                 name='django.contrib.sitemaps.views.sitemap'),
            path('tag-sitemap.xml', sitemap, {'sitemaps': {'tag': TagSitemap}},
                 name='django.contrib.sitemaps.views.sitemap')]
-urlpatterns = [*home, *box, *user, *shopping, *product, *tourism, *auth, *pay, *urls, *sitemap]
+urlpatterns = [*home, *category, *user, *shopping, *product, *tourism, *auth, *pay, *urls, *sitemap]

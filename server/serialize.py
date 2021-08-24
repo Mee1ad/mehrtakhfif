@@ -3,7 +3,7 @@ from datetime import date
 from math import ceil
 
 from jdatetime import date, timedelta
-from marshmallow import Schema, fields, INCLUDE, post_load
+from marshmallow import Schema, fields, INCLUDE, EXCLUDE, post_load
 
 from mehr_takhfif.settings import SHORTLINK
 from server.models import *
@@ -139,7 +139,7 @@ class BaseSchema(Schema):
         return self.get(obj.short_description)
 
     def get_description(self, obj):
-        return self.get(obj.description['data'])
+        return self.get(obj.description['fa'])
 
     def get_properties(self, obj):
         if obj.properties:
@@ -148,17 +148,17 @@ class BaseSchema(Schema):
     def get_details(self, obj):
         return self.get(obj.details)
 
-    def get_box(self, obj):
-        if obj.box_id is not None:
-            return BoxSchema(self.lang, exclude=['media', 'children']).dump(obj.box)
+    def get_category(self, obj):
+        if obj.category_id is not None:
+            return CategorySchema(self.lang, exclude=['media', 'children']).dump(obj.category)
         return None
 
     def get_parent(self, obj):
         if obj.parent is not None:
-            return CategorySchema(self.lang, exclude=['media', 'box', 'children']).dump(obj.parent)
+            return CategorySchema(self.lang, exclude=['media', 'children']).dump(obj.parent)
         return None
 
-    def get_category(self, obj):
+    def get_categories(self, obj):
         categories = obj.categories.all()
         if categories:
             return CategorySchema(self.lang, exclude=['media', 'children']).dump(categories, many=True)
@@ -366,18 +366,6 @@ class AddressSchema(BaseSchema):
     location = fields.Method('get_location')
 
 
-class BoxSchema(BaseSchema):
-    class Meta:
-        additional = ('id', 'permalink', 'priority')
-
-    name = fields.Method("get_name")
-    media = fields.Method('get_media')
-    children = fields.Method('get_categories')
-
-    def get_categories(self, obj):
-        return CategorySchema(exclude=['box', 'media', 'parent']).dump(obj.prefetched_categories, many=True)
-
-
 class MediaSchema(BaseSchema):
     def __init__(self, language='fa'):
         super().__init__()
@@ -387,7 +375,7 @@ class MediaSchema(BaseSchema):
     type = fields.Function(lambda o: o.get_type_display())
     image = fields.Method("get_image")
     title = fields.Method("get_title")
-    box = fields.Function(lambda o: o.box_id)
+    category = fields.Function(lambda o: o.category_id)
 
     def get_image(self, obj):
         return HOST + obj.image.url
@@ -396,43 +384,43 @@ class MediaSchema(BaseSchema):
 class CategorySchema(BaseSchema):
     class Meta:
         unknown = INCLUDE
-        additional = ('id', 'permalink')
+        additional = ('id', 'permalink', 'priority')
 
     name = fields.Method('get_name')
     parent = fields.Method('get_parent')
     media = fields.Method('get_media')
-    box = fields.Method('get_box')
     children = fields.Method('get_children')
+    type = fields.Function(lambda o: o.get_type_display())
 
     def get_children(self, obj):
         try:
-            return CategorySchema(exclude=['parent', 'media', 'box']).dump(obj.prefetched_children, many=True)
+            return CategorySchema(exclude=['parent', 'media']).dump(obj.prefetched_children, many=True)
         except Exception:
             return []
 
 
-class BoxCategoriesSchema(BaseSchema):
-    class Meta:
-        additional = ('id', 'permalink', 'disable', 'priority')
-
-    name = fields.Method('resolve_name_type')
-    child = fields.Method('get_child')
-    media = fields.Method("get_media")
-    parent = fields.Function(lambda o: o.parent_id)
-
-    def resolve_name_type(self, obj):
-        try:
-            return obj.name if obj.is_admin else obj.name[self.lang]
-        except KeyError:
-            return obj.name['fa']
-
-    def get_child(self, obj):
-        if hasattr(obj, 'child'):
-            childes = []
-            for child in obj.child:
-                childes.append(BoxCategoriesSchema(self.lang).dump(child))
-            return childes
-        return None
+# class BoxCategoriesSchema(BaseSchema):
+#     class Meta:
+#         additional = ('id', 'permalink', 'disable', 'priority')
+#
+#     name = fields.Method('resolve_name_type')
+#     child = fields.Method('get_child')
+#     media = fields.Method("get_media")
+#     parent = fields.Function(lambda o: o.parent_id)
+#
+#     def resolve_name_type(self, obj):
+#         try:
+#             return obj.name if obj.is_admin else obj.name[self.lang]
+#         except KeyError:
+#             return obj.name['fa']
+#
+#     def get_child(self, obj):
+#         if hasattr(obj, 'child'):
+#             childes = []
+#             for child in obj.child:
+#                 childes.append(BoxCategoriesSchema(self.lang).dump(child))
+#             return childes
+#         return None
 
 
 class ParentSchema(BaseSchema):
@@ -600,8 +588,8 @@ class ProductSchema(MinProductSchema):
     short_address = fields.Method("get_short_address")
     type = fields.Function(lambda o: o.get_type_display())
     brand = fields.Method("get_brand")
-    box = fields.Method("get_box")
-    categories = fields.Method("get_category")
+    category = fields.Method("get_category")
+    categories = fields.Method("get_categories")
     house = fields.Method("get_house")
     tags = fields.Method("get_tags")
     media = MediaField()
@@ -821,7 +809,7 @@ class BasketSchema(BaseSchema):
 
         return BasketProductSchema().dump(basket_products, many=True)
 
-
+import pysnooper
 class InvoiceSchema(BaseSchema):
     def __init__(self, with_shipping_cost=False, invoice_storage_only_field=None,
                  storage_only_field=None, *args, **kwargs):
@@ -920,7 +908,7 @@ class InvoiceStorageSchema(BaseSchema):
             return HOST + f"/invoice/{obj.key}"
 
     def get_amer(self, obj):
-        return self.get_name(obj.storage.product.box)
+        return self.get_name(obj.storage.product.category)
 
     def get_storage_product(self, obj):
         p = obj.storage.product
@@ -1040,20 +1028,19 @@ class SpecialOfferSchema(BaseSchema):
     # product = fields.Method("get_product")
     # not_accepted_products = fields.Method("get_product")
     category = fields.Function(lambda o: o.category_id)
-    box = fields.Function(lambda o: o.box_id)
     media = fields.Method('get_media')
 
 
 class SpecialProductSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'url', 'box_id')
+        additional = ('id', 'url', 'category_id')
 
     name = fields.Method('get_name')
     default_storage = fields.Method('get_min_storage')
     # media = fields.Method('get_media')
     thumbnail = fields.Method("get_thumbnail")
     permalink = fields.Function(lambda o: o.storage.product.permalink)
-    box = fields.Method("get_box")
+    category = fields.Method("get_category")
 
     def get_name(self, obj):
         name = self.get(obj.name)
@@ -1069,6 +1056,7 @@ class AdSchema(BaseSchema):
     title = fields.Method('get_title')
     media = fields.Method('get_media')
     product_permalink = fields.Method('get_permalink')
+    settings = fields.Function(lambda o: o.settings['ui'])
 
     def get_permalink(self, obj):
         try:
@@ -1128,7 +1116,7 @@ class NotifyUserSchema(BaseSchema):
     product = fields.Method("get_product")
     type = fields.Function(lambda o: o.get_type_display())
     category = fields.Method("get_category")
-    box = fields.Method("get_box")
+    category = fields.Method("get_category")
 
 
 class StateSchema(BaseSchema):

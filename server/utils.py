@@ -11,7 +11,6 @@ import magic
 import xlsxwriter
 from MyQR import myqr
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.postgres.fields.jsonb import KeyTextTransform
 from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
 from django.core import serializers
 from django.core.cache import cache
@@ -26,12 +25,11 @@ from django.views import View
 from django_celery_beat.models import IntervalSchedule
 from kavenegar import *
 
-from mehr_takhfif.settings import CSRF_SALT, TOKEN_SALT, DEFAULT_COOKIE_DOMAIN, DEBUG, SMS_KEY, color_feature_id, \
-    SHORTLINK
+from mehr_takhfif.settings import CSRF_SALT, TOKEN_SALT, DEFAULT_COOKIE_DOMAIN, DEBUG, SMS_KEY, SHORTLINK
 from server.documents import ProductDocument, TagDocument
 from server.models import *
-from server.serialize import get_tax, BoxCategoriesSchema, BasketSchema, MinProductSchema, BasketProductSchema, \
-    UserSchema, InvoiceSchema, BoxSchema, CategorySchema
+from server.serialize import get_tax, BasketSchema, MinProductSchema, BasketProductSchema, \
+    UserSchema, InvoiceSchema, CategorySchema
 # from barcode import generate
 # from barcode.base import Barcode
 from server.views.post import get_shipping_cost_temp
@@ -47,7 +45,7 @@ def get_message(key):
     return {'message': res_pattern[key]}
 
 
-box_with_own_post = [2, 7, 10]  # golkade, adavat_moosighi, super market
+category_with_own_post = [2, 7, 10]  # golkade, adavat_moosighi, super market
 res_code = {'success': 200, 'bad_request': 400, 'unauthorized': 401, 'forbidden': 403, 'token_issue': 401,
             'integrity': 406, 'banned': 493, 'activation_warning': 250, 'updated_and_disable': 251,
             'object_does_not_exist': 444, 'signup_with_pp': 203, 'invalid_password': 450,
@@ -105,7 +103,7 @@ def get_mimetype(image):
     return mimetype
 
 
-def upload(request, titles, media_type, box=None):
+def upload(request, titles, media_type, category=None):
     image_formats = ['.jpeg', '.jpg', '.gif', '.png']
     # audio_formats = ['.jpeg', '.jpg', '.gif', '.png']
     media_list = []
@@ -118,7 +116,7 @@ def upload(request, titles, media_type, box=None):
                 return False
             # if media_type == 'avatar' and type(title) == dict:
             #     file.name = f"{title['user_id']} {timezone.now().strftime('%Y-%m-%d, %H-%M-%S')}{file_format}"
-            media = Media(image=file, box_id=box, created_by_id=1, type=media_type,
+            media = Media(image=file, category_id=category, created_by_id=1, type=media_type,
                           title=title, updated_by=request.user)
             media.save()
             media_list.append(media)
@@ -154,16 +152,16 @@ def filter_params(params, new_params=(), lang='fa'):
 
         except KeyError:
             pass
-    box_permalink = params.get('b', None)
+    category_permalink = params.get('category', None)
     # q = params.get('q', None)
     # todo test and fix s
     # sa = params.get('sa', None)  # search advanced
     orderby = params.get('o', '-created_at')
     min_price = params.get('min_price', None)
     max_price = params.get('max_price', None)
-    if box_permalink:
+    if category_permalink:
         try:  # for forign category
-            filters['related'] = {'categories__in': Category.objects.filter(box__permalink=box_permalink,
+            filters['related'] = {'categories__in': Category.objects.filter(category__permalink=category_permalink,
                                                                             permalink=None).values_list('parent_id',
                                                                                                         flat=True)}
         except Box.DoesNotExist:
@@ -243,7 +241,7 @@ def get_share(storage=None, invoice=None):
     :param invoice:
     :return:
     """
-    no_profit_box = [14]
+    no_profit_categories = [390]
     share = {'tax': 0, 'charity': 0, 'dev': 0, 'admin': 0, 'mt_profit': 0}
     invoice_storages = [storage]
     if invoice:
@@ -254,13 +252,13 @@ def get_share(storage=None, invoice=None):
     for invoice_storage in invoice_storages:
         count = invoice_storage.count
         storage = invoice_storage.storage
-        box = storage.product.box
+        category = storage.product.category
         share = {'tax': 0, 'charity': 0, 'dev': 0, 'admin': 0, 'mt_profit': 0}
-        if box.pk not in no_profit_box:
+        if category.pk not in no_profit_categories:
             tax = get_tax(storage.tax_type, storage.discount_price, storage.start_price)
             charity = ceil(storage.discount_price * 0.005)
             dev = ceil((storage.discount_price - storage.start_price - tax) * 0.069)
-            admin = ceil((storage.discount_price - storage.start_price - tax - charity - dev) * box.share)
+            admin = ceil((storage.discount_price - storage.start_price - tax - charity - dev) * category.settings['share'])
             mt_profit = storage.discount_price - storage.start_price - tax - charity - dev - admin
             share = {'tax': share['tax'] + tax, 'charity': share['charity'] + charity, 'dev': share['dev'] + dev,
                      'admin': share['admin'] + admin, 'mt_profit': share['mt_profit'] + mt_profit}
@@ -377,68 +375,17 @@ def send_email(subject, to, from_email='notification@mehrtakhfif.com', message=N
 # todo check for possible duplicates in category
 
 
-def get_categories_with_box(filters=None):
-    if not filters:
+def get_categories(filters=None):
+    if filters is None:
         filters = {}
     prefetch_grand_children = Prefetch('children', to_attr='prefetched_children',
                                        queryset=Category.objects.filter(disable=False))
     prefetch_children = Prefetch('children', to_attr='prefetched_children',
                                  queryset=Category.objects.filter(disable=False)
                                  .prefetch_related(prefetch_grand_children))
-    prefetch_box_categories = Prefetch('children', to_attr='prefetched_categories',
-                                       queryset=Category.objects.filter(disable=False, parent=None)
-                                       .prefetch_related(prefetch_children))
-    boxes = Box.objects.filter(disable=False, **filters).prefetch_related(prefetch_box_categories)
-    boxes = BoxSchema(exclude=['media']).dump(boxes, many=True)
-    for box in boxes:
-        box['isRoot'] = True
-    return boxes
-
-
-def get_categories_with_children(filters):
-    active_categories = {'disable': False, 'box__disable': False}
-    prefetch_children = Prefetch('children', to_attr='prefetched_children',
-                                 queryset=Category.objects.filter(**active_categories))
-    category = Category.objects.filter(filters, **active_categories).prefetch_related(prefetch_children)
-    categories = CategorySchema(only=['id', 'name', 'children', 'permalink']).dump(category, many=True)
+    categories = Category.objects.filter(**filters, disable=False).prefetch_related(prefetch_children)
+    categories = CategorySchema(only=['id', 'name', 'children', 'permalink']).dump(categories, many=True)
     return categories
-
-
-def get_categories(filters=None):
-    if not filters:
-        filters = Q()
-    if filters and Category.objects.filter(filters, disable=False, box__disable=False).exists():
-        return get_categories_with_children(filters)
-    if Box.objects.filter(filters, disable=False).exists():
-        return get_categories_with_box(filters)
-    # filters.pop('products__in', None)
-    return []
-
-
-def get_categories_old(language, box_id=None, categories=None, is_admin=None, disable={}):
-    if box_id:
-        categories = Category.objects.filter(box_id=box_id, **disable)
-    if categories is None:
-        categories = Category.objects.all()
-    if len(categories) == 0:
-        return []
-    new_cats = [*categories]
-    remove_index = []
-    for cat, index in zip(categories, range(len(categories))):
-        cat.is_admin = is_admin
-        if cat.parent is None:
-            continue
-        try:
-            category = next((category for category in categories if cat.parent_id == category.pk), None)
-            parent_index = new_cats.index(category)
-            if not hasattr(new_cats[parent_index], 'child'):
-                new_cats[parent_index].child = []
-            new_cats[parent_index].child.append(cat)
-            remove_index.append(cat)
-        except ValueError:  # for filterDetail when parent is not in result of query
-            pass
-    new_cats = [x for x in new_cats if x not in remove_index]
-    return BoxCategoriesSchema(language=language).dump(new_cats, many=True)
 
 
 def get_pagination(request, query, serializer, select=(), prefetch=(), show_all=False, serializer_args={}):
@@ -453,6 +400,10 @@ def get_pagination(request, query, serializer, select=(), prefetch=(), show_all=
     if step > 100:
         step = default_step
     try:
+        print(request.schema_params)
+        print(serializer_args)
+        print(query)
+        print(serializer)
         items = serializer(**request.schema_params, **serializer_args).dump(query, many=True)
     except TypeError:
         items = serializer(**serializer_args).dump(query, many=True)
@@ -528,13 +479,13 @@ def get_basket(request, basket_id=None, basket=None, basket_products=None, retur
     if user.is_authenticated:
         if basket_id:
             basket = Basket.objects.filter(pk=basket_id).select_related('discount_code') \
-                .prefetch_related('basket_storages__storage__features', 'basket_storages__storage__product__box',
+                .prefetch_related('basket_storages__storage__features', 'basket_storages__storage__product__category',
                                   'basket_storages__storage__product__thumbnail',
                                   'basket_storages__storage__vip_prices') \
                 .first()
         if not basket_id and not basket:
             basket = user.baskets.all() \
-                .prefetch_related('basket_storages__storage__features', 'basket_storages__storage__product__box',
+                .prefetch_related('basket_storages__storage__features', 'basket_storages__storage__product__category',
                                   'basket_storages__storage__product__thumbnail',
                                   'basket_storages__storage__vip_prices') \
                 .order_by('-id').first()
@@ -574,7 +525,7 @@ def get_basket(request, basket_id=None, basket=None, basket_products=None, retur
         #         basket_product.item_discount_price += feature_price
         #         basket_product.start_price += feature_price
         if tax:
-            basket_product.amer = storage.product.box.name['fa']
+            basket_product.amer = storage.product.category.name['fa']
             # storage = basket_product.storage
             # basket_product.tax = get_tax(storage.tax_type, storage.discount_price, storage.start_price)
             # summary['tax'] += basket_product.tax
@@ -658,9 +609,9 @@ def sync_default_storage(storages, products):
             product.default_storage = storage
 
 
-def get_best_seller(request, box, invoice_ids):
+def get_best_seller(request, category, invoice_ids):
     # from invoices
-    basket_products = InvoiceStorage.objects.filter(invoice_id__in=invoice_ids, box=box).values('storage', 'count')
+    basket_products = InvoiceStorage.objects.filter(invoice_id__in=invoice_ids, category=category).values('storage', 'count')
     storage_count = {}
     for product in basket_products:
         if product['storage'] in storage_count.keys():
@@ -723,10 +674,10 @@ def remove_if_is_empty(required_keys, dictionary):
 def get_product_filter_params(is_staff):
     if is_staff:
         return {}
-    return {'categories__disable': False, 'box__disable': False, 'disable': False, 'storages__disable': False}
+    return {'categories__disable': False, 'category__disable': False, 'disable': False, 'storages__disable': False}
 
 
-def get_preview_permission(user, category_check=True, box_check=True, box_key='box', product_check=False, is_get=True):
+def get_preview_permission(user, category_check=True, box_check=True, category_key='category', product_check=False, is_get=True):
     permitted_users = []  # user_id, can order for disabled product
     if is_get:
         permitted_users = [user.pk]
@@ -740,7 +691,7 @@ def get_preview_permission(user, category_check=True, box_check=True, box_key='b
     if category_check:
         preview[f'{product}categories__disable'] = False
     if box_check:
-        preview[f'{product}{box_key}__disable'] = False
+        preview[f'{product}{category_key}__disable'] = False
     return preview
 
 
@@ -766,11 +717,11 @@ def add_to_basket(basket, products):
             assert basket_product.exists()
             basket_product.update(count=count)
         except AssertionError:
-            box = storage.product.box
+            category = storage.product.category
             # features = storage.features.all()
             # features = ProductFeatureSchema().dump(features, many=True)
             # accessory =
-            BasketProduct.objects.create(basket=basket, storage=storage, count=count, box=box,
+            BasketProduct.objects.create(basket=basket, storage=storage, count=count, category=category,
                                          accessory_id=accessory_id)
 
     basket.count = basket.basket_storages.aggregate(count=Sum('count'))['count']
@@ -809,7 +760,7 @@ def make_short(link):
             pass
     return f"{SHORTLINK}/{url.shortlink}"
 
-
+# deprecated
 def get_removed_media_info():
     boxes = Box.objects.all()
     for box in boxes:

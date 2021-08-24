@@ -12,43 +12,45 @@ from server.models import *
 class DateProductCount(AdminView):
     def get(self, request):
         start_date = timezone.now() + timedelta(days=-14)
-        boxes = Box.objects.all()
-        boxes_list = []
+        categories = Category.objects.filter(parent=None)
+        categories_list = []
         labels = [
             f'{(jdatetime.now() + jtimedelta(days=-14 + day)).month}-{(jdatetime.now() + jtimedelta(days=-13 + day)).day}'
             for day in range(14)]
-        for box in boxes:
+        for category in categories:
             cp = []
             up = []
             for day in range(14):
                 gte = start_date + timedelta(days=day)
                 lte = start_date + timedelta(days=day + 1)
-                updated_products = Product.objects.filter(box=box, updated_at__gte=gte, updated_at__lte=lte).count()
-                created_products = Product.objects.filter(box=box, created_at__gte=gte, created_at__lte=lte).count()
+                updated_products = Product.objects.filter(parent_category=category, updated_at__gte=gte,
+                                                          updated_at__lte=lte).count()
+                created_products = Product.objects.filter(parent_category=category, created_at__gte=gte,
+                                                          created_at__lte=lte).count()
 
                 cp.append(created_products)
                 up.append(updated_products)
-            boxes_list.append({'id': box.id, 'name': box.name, 'created_products': cp,
-                               'updated_products': up, 'settings': box.settings})
-        data = {'label': labels, 'boxes': boxes_list}
+            categories_list.append({'id': category.id, 'name': category.name, 'created_products': cp,
+                                    'updated_products': up, 'settings': category.settings})
+        data = {'label': labels, 'categories': categories_list}
 
         return JsonResponse(data)
 
 
 class ProductCount(AdminView):
     def get(self, request):
-        boxes = Box.objects.all()
-        return JsonResponse({'boxes': ProductCountSchema().dump(boxes, many=True)})
+        categories = Category.objects.filter(parent=None)
+        return JsonResponse({'categories': ProductCountSchema().dump(categories, many=True)})
 
 
 class SoldProductCount(AdminView):
     def get(self, request):
-        box_id = request.GET.get('b')
+        category_id = request.GET.get('category_id')
         data = {}
         allowed_rolls = {'admin', 'support'}
         roll = request.user.groups.filter(name__in=allowed_rolls)
         if roll.exists() or request.user.is_superuser:
-            products = InvoiceStorage.objects.filter(box_id=box_id, invoice__status=2)
+            products = InvoiceStorage.objects.filter(parent_category_id=category_id, invoice__status=2)
             for status in deliver_status:
                 data[status[1]] = products.filter(deliver_status=status[0]).count()
             return JsonResponse(data)
@@ -63,24 +65,24 @@ class ProfitSummary(AdminView):
         start = timezone.datetime.fromtimestamp(int(start)).replace(tzinfo=pytz.utc)
         end = request.GET.get('end')
         end = timezone.datetime.fromtimestamp(int(end)).replace(tzinfo=pytz.utc)
-        boxes = Box.objects.all()
-        box_list = []
-        for box in boxes:
-            profit = InvoiceStorage.objects.filter(storage__product__box=box, invoice__payed_at__range=[start, end],
+        categories = Category.objects.filter(parent=None)
+        categories_list = []
+        for category in categories:
+            profit = InvoiceStorage.objects.filter(storage__product__parent_category=category, invoice__payed_at__range=[start, end],
                                                    invoice__status__in=Invoice.success_status) \
                 .aggregate(sold_count=Sum('count'), charity=Sum('charity'), dev=Sum('dev'), admin=Sum('admin'),
                            total_payment=Sum('discount_price'), start_prices=Sum('start_price'),
                            mt_profit=Sum('mt_profit'), post_price=Sum('invoice__post_invoice__amount'), tax=Sum('tax'))
 
-            data = {'id': box.id, 'name': box.name, 'mt_profit': profit['mt_profit'] or 0, 'settings': box.settings,
+            data = {'id': category.id, 'name': category.name, 'mt_profit': profit['mt_profit'] or 0, 'settings': category.settings,
                     'charity': profit['charity'] or 0, 'sold_count': profit['sold_count'] or 0,
                     'total_payment': profit['total_payment'] or 0, 'start_price': profit['start_prices'] or 0,
                     'post_price': profit['post_price'] or 0, 'dev': profit['dev'] or 0, 'admin': profit['admin'] or 0,
                     'tax': profit['tax'] or 0}
-            box_list.append(data)
+            categories_list.append(data)
         total = {'charity': 0, 'total_payment': 0, 'mt_profit': 0, 'start_price': 0, 'post_price': 0, 'dev': 0,
                  'admin': 0, 'tax': 0}
-        for b in box_list:
+        for b in categories_list:
             total['charity'] += b['charity']
             total['mt_profit'] += b['mt_profit']
             total['dev'] += b['dev']
@@ -89,4 +91,4 @@ class ProfitSummary(AdminView):
             total['start_price'] += b['start_price']
             total['post_price'] += b['post_price']
             total['tax'] += b['tax']
-        return JsonResponse({'boxes': box_list, 'total': total})
+        return JsonResponse({'categories': categories_list, 'total': total})

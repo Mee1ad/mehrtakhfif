@@ -19,7 +19,7 @@ class BasketView(View):
                 .annotate(invoice_exists=Count('invoice', filter=Q(invoice__user=request.user, invoice__status=1,
                                                                    invoice__expire__gt=timezone.now(),
                                                                    invoice__final_price__isnull=False))) \
-                .prefetch_related('basket_storages__storage__features', 'basket_storages__storage__product__box',
+                .prefetch_related('basket_storages__storage__features', 'basket_storages__storage__product__category',
                                   'basket_storages__storage__product__thumbnail',
                                   'basket_storages__storage__vip_prices') \
                 .order_by('-id').first()
@@ -117,18 +117,18 @@ class BasketView(View):
                                               basket_product['storage_id'] == storage.pk]
             # features = storage.features.all()
             # product['features'] = ProductFeatureSchema().dump(features, many=True)
-            product['box_id'] = storage.product.box_id
+            product['category_id'] = storage.product.category_id
             accessories = product.pop('accessories', [])
             if accessories:
                 accessories_ids = [accessory['id'] for accessory in accessories]
                 storage_accessories = StorageAccessories.objects.filter(id__in=accessories_ids) \
-                    .values('id', 'accessory_storage_id', 'accessory_storage__product__box_id')
+                    .values('id', 'accessory_storage_id', 'accessory_storage__product__category_id')
 
                 for accessory in accessories:
                     accessory_storage = next(sa for sa in storage_accessories if sa['id'] == accessory['id'])
                     accessory['storage_id'] = accessory_storage['accessory_storage_id']
                     accessory['accessory_id'] = accessory.pop('id')
-                    accessory['box_id'] = accessory_storage['accessory_storage__product__box_id']
+                    accessory['category_id'] = accessory_storage['accessory_storage__product__category_id']
                 products += accessories
             if duplicate_basket_product_index:
                 request.session['basket'][duplicate_basket_product_index[0]] = product
@@ -231,7 +231,7 @@ class BookingView(View):
         try:
             storage = Storage.objects.filter(pk=data['storage_id'], **preview).exclude(product__booking_type=1). \
                 select_related('product').prefetch_related(
-                'product__features').only('product__type', 'product__thumbnail', 'product__box').first()
+                'product__features').only('product__type', 'product__thumbnail', 'product__category').first()
             if storage.is_available(count) is False:
                 raise ValidationError(_('تعداد درخواست شده موجود نمیباشد'))
             invoice_id = self.create_invoice(request, storage, count, start_date, end_date,
@@ -284,7 +284,7 @@ class BookingView(View):
         product = storage.product
         InvoiceStorage.objects.create(storage=storage, invoice_id=invoice_id, count=count,
                                       tax=share['tax'] * count,
-                                      final_price=(storage.final_price - share['tax']) * count, box=product.box,
+                                      final_price=(storage.final_price - share['tax']) * count, category=product.category,
                                       discount_price=storage.discount_price * count,
                                       charity=share['charity'] * count,
                                       start_price=storage.start_price * count, admin=share['admin'] * count,

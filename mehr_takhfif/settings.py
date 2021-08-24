@@ -1,10 +1,10 @@
 import os
 import sys
 from re import compile
+
 from django.utils.timezone import activate
 
 from .settings_var import *
-
 
 TESTING = 'test' in sys.argv
 
@@ -66,9 +66,9 @@ INSTALLED_APPS = \
         # 'django.contrib.postgres',
         'prettyjson',
         'django.contrib.sitemaps',
+        'guardian',
         # 'django.contrib.sites'
     ] + MY_INSTALLED_APPS
-
 
 DEBUG_TOOLBAR_PANELS = [
     'debug_toolbar.panels.versions.VersionsPanel',
@@ -127,6 +127,7 @@ ROOT_URLCONF = 'mehr_takhfif.urls'
 AUTHENTICATION_BACKENDS = [
     # 'django.contrib.auth.backends.ModelBackend',
     'server.authentication.MyModelBackend',
+    'guardian.backends.ObjectPermissionBackend',
 ]
 
 TEMPLATES = [

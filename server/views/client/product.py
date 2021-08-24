@@ -28,9 +28,9 @@ class ProductView(View):
         # login(request, user)
         params = request.GET
         storages = params.get('include_storages')
-        exclude = ['box.media', 'storages']
+        exclude = ['category.media', 'storages']
         if storages:
-            exclude = ['box.media']
+            exclude = ['category.media']
         user = request.user
         product_preview = get_preview_permission(user)
         storage_preview = get_preview_permission(user, box_check=False, category_check=False)
@@ -41,12 +41,12 @@ class ProductView(View):
                          notify=Exists(WishList.objects.filter(user=user, notify=True, **product_identifier)),
                          purchased=Exists(
                              Invoice.objects.filter(user=user, status=2, **storage_product_identifier))). \
-                select_related('thumbnail', 'box', 'brand'). \
+                select_related('thumbnail', 'category', 'brand'). \
                 prefetch_related('product_tags__tag', 'tag_groups__tag_group_tags__tag', 'categories__parent').first()
         except TypeError:
             product_obj = Product.objects.filter(**identifier, **product_preview). \
                 annotate(review_count=Count('reviews')). \
-                select_related('thumbnail', 'box', 'brand'). \
+                select_related('thumbnail', 'category', 'brand'). \
                 prefetch_related('product_tags__tag', 'tag_groups__tag_group_tags__tag', 'categories__parent').first()
             if product_obj is None:
                 return JsonResponse({'message': 'محصول موقتا غیرفعال میباشد', 'variant': 'error'}, status=404)
@@ -67,12 +67,10 @@ class ProductView(View):
         #     purchased = self.purchase_status(user, storages)
         if product_obj.type == 3:
             product['house'] = HouseSchema(**request.schema_params).dump(product_obj.house)
-            # todo get purchased status
         elif product_obj.type == 4:
             storages = product_obj.storages.filter(Q(start_time__lte=timezone.now()) & Q(**storage_preview),
                                                    (Q(deadline__gte=timezone.now()) | Q(deadline__isnull=True)))
             product['storages'] = PackageSchema(**request.schema_params).dump(storages, many=True)
-        # todo debug
         # product['categories'] = [self.get_category(c) for c in product['categories']]
         # wish = WishList.objects.filter(product=product_obj, wish=True).exists()
         # notify = WishList.objects.filter(product=product_obj, notify=True).exists()
@@ -135,29 +133,6 @@ class ProductWishlist(LoginRequired):
         wishlist = list(wishlist)[0]
         purchased = Invoice.objects.filter(user=user, status=2, storages__product_id=product_id).exists()
         return JsonResponse({"purchased": purchased, **wishlist})
-
-
-class ProductUserData(LoginRequired):
-    def get(self, request, permalink):
-        data = {"wish": False, "notify": False, "purchased": False}
-        if request.user.is_authenticated:
-            identifier = {'permalink': permalink}
-            product_identifier = {'product__permalink': permalink}
-            storage_product_identifier = {'storages__product__permalink': permalink}
-            if permalink.isdecimal():
-                identifier = {'id': permalink}
-                product_identifier = {'product_id': permalink}
-                storage_product_identifier = {'storages__product_id': permalink}
-            user = request.user
-            product_preview = get_preview_permission(user)
-            product = Product.objects.filter(**identifier, **product_preview). \
-                annotate(wish=Exists(WishList.objects.filter(user=user, wish=True, **product_identifier)),
-                         notify=Exists(WishList.objects.filter(user=user, notify=True, **product_identifier)),
-                         purchased=Exists(Invoice.objects.filter(user=user, status=2, **storage_product_identifier))) \
-                .values('wish', 'notify', 'purchased')
-            if product:
-                data = list(product)[0]
-        return JsonResponse(data)
 
 
 class RelatedProduct(View):
@@ -404,7 +379,7 @@ class FeatureView(View):
                     if set(selected + [pf.pk]).issubset(l) or set(feature_combo + [pf.pk]).issubset(l):
                         feature_dict['available'] = True
                 values.append(feature_dict)
-            values = sorted(values, key = lambda i: i['priority'])
+            values = sorted(values, key=lambda i: i['priority'])
             features_list.append(
                 {'id': product_f.feature_id, 'name': product_f.feature.name['fa'], 'values': values,
                  'selected': select, 'settings': product_f.feature.settings})

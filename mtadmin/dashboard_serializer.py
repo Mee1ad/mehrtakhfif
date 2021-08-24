@@ -10,10 +10,10 @@ class ProductCountSchema(Schema):
     settings = fields.Function(lambda o: o.settings)
 
     def get_product_count(self, obj):
-        return Product.objects.filter(box=obj).count()
+        return Product.objects.filter(parent_category=obj).count()
 
     def get_active_product_count(self, obj):
-        return Product.objects.filter(box=obj, disable=False).count()
+        return Product.objects.filter(parent_category=obj, disable=False).count()
 
 
 class DateProductCountSchema(Schema):

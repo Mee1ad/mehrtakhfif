@@ -122,8 +122,8 @@ def upload_to(instance, filename):
         time = f'{time}-has-ph'
     # file_type = re.search('\\w+', instance.type)[0]
     file_format = os.path.splitext(instance.image.name)[-1]
-    # todo make it with box name
-    return f'boxes/{instance.box_id}/{date}/{instance.get_type_display()}/{time}{file_format}'
+    # todo make it with category name
+    return f'categories/{instance.category_id}/{date}/{instance.get_type_display()}/{time}{file_format}'
 
 
 def reduce_image_quality(img):
@@ -151,6 +151,10 @@ def is_list_of_dict(data):
 
 def default_meals():
     return {'Breakfast': False, 'Lunch': False, 'Dinner': False}
+
+
+def default_settings():
+    return {"ui": {}}
 
 
 def get_name(name, self):
@@ -214,7 +218,7 @@ class MyQuerySet(SafeDeleteQueryset):
 
     def update(self, *args, **kwargs):
         warning = kwargs.pop('warning', True)
-        remove_list = ['id', 'box_id', 'remove_fields']
+        remove_list = ['id', 'category_id', 'remove_fields']
         model = self[0].__class__.__name__.lower()
         # noinspection PyArgumentList
         remove_fields = kwargs.get('remove_fields', None)
@@ -232,7 +236,7 @@ class Base(SafeDeleteModel):
         abstract = True
 
     serializer_exclude = ()
-    no_box_type = [4, 5, 6, 8]
+    no_category_type = [4, 5, 6, 8]
     required_fields = []
     required_multi_lang = []
     related_fields = []
@@ -335,7 +339,7 @@ class MyModel(models.Model):
 
     id = models.BigAutoField(auto_created=True, primary_key=True)
     serializer_exclude = ()
-    no_box_type = [4, 5, 6, 8]
+    no_category_type = [4, 5, 6, 8]
     required_fields = []
     required_multi_lang = []
     related_fields = []
@@ -377,6 +381,7 @@ class Ad(Base):
     mobile_media = models.ForeignKey("Media", on_delete=PROTECT, null=True, blank=True, related_name='ad_mobile')
     storage = models.ForeignKey("Storage", on_delete=PROTECT, blank=True, null=True)
     type = models.CharField(default='home', max_length=255)
+    settings = JSONField(default=default_settings, blank=True, help_text={"ui": {"size": "1/2"}})
 
     class Meta:
         db_table = 'ad'
@@ -385,7 +390,7 @@ class Ad(Base):
 
 class User(AbstractUser):
     select = ['default_address', 'created_by', 'updated_by']
-    prefetch = ['vip_types', 'box_permission']
+    prefetch = ['vip_types']
     serializer_exclude = ()
     required_fields = []
     exclude_fields = []
@@ -446,6 +451,7 @@ class User(AbstractUser):
                                            related_name="user_default_address")
     vip_types = models.ManyToManyField(to="VipType", related_name="users", blank=True)
     box_permission = models.ManyToManyField("Box", blank=True)
+    # category_permissions = models.ManyToManyField("Category", blank=True)
     email_verified = models.BooleanField(default=False, verbose_name='Email verified')
     subscribe = models.BooleanField(default=True)
     meli_code = models.CharField(max_length=15, blank=True, null=True, verbose_name='National code',
@@ -456,7 +462,7 @@ class User(AbstractUser):
     activation_expire = models.DateTimeField(null=True, blank=True)
     token = models.CharField(max_length=255, unique=True, null=True, blank=True)
     token_expire = models.DateTimeField(auto_now_add=True)
-    settings = JSONField(default=dict, blank=True)
+    settings = JSONField(default=default_settings, blank=True, help_text={"supplier_details": "details", "fun": 2})
     created_by = models.ForeignKey('User', on_delete=PROTECT, related_name="%(app_label)s_%(class)s_created_by",
                                    null=True, blank=True)
     updated_by = models.ForeignKey('User', on_delete=PROTECT, related_name="%(app_label)s_%(class)s_updated_by",
@@ -543,7 +549,7 @@ class Address(MyModel):
     select = ['state', 'city', 'user'] + MyModel.select
 
     def __str__(self):
-        return self.city.name
+        return f"{self.city_id}"
 
     def validation(self):
         if not City.objects.filter(pk=self.city.pk, state=self.state).exists():
@@ -582,7 +588,7 @@ class Box(Base):
     name = JSONField(default=multilanguage)
     permalink = models.CharField(max_length=255, unique=True)
     owner = models.ForeignKey(User, on_delete=PROTECT)
-    settings = JSONField(default=dict, blank=True)
+    settings = JSONField(default=default_settings, blank=True)
     disable = models.BooleanField(default=True)
     priority = models.PositiveSmallIntegerField(default=0)
     share = models.FloatField(default=0.325)
@@ -597,10 +603,10 @@ class Box(Base):
 class Media(Base):
     types = [(1, 'image'), (2, 'thumbnail'), (3, 'media'), (4, 'slider'), (5, 'ads'), (6, 'mobile_ads'),
              (7, 'category'), (8, 'mobile_slider'), (9, 'description'), (100, 'video'), (200, 'audio')]
-    no_box_type = [4, 5, 6, 8]
+    no_category_type = [4, 5, 6, 8]
     media_sizes = {'thumbnail': (600, 372), 'media': (1280, 794), 'category': (800, 500), 'ads': (820, 300),
                    'mobile_ads': (500, 384), 'slider': (1920, 504), 'mobile_slider': (980, 860)}
-    select = ['box'] + Base.select
+    select = ['category'] + Base.select
 
     def get_absolute_url(self):
         return self.image.url
@@ -643,6 +649,7 @@ class Media(Base):
     title = JSONField(default=multilanguage)
     type = models.PositiveSmallIntegerField(choices=types)
     box = models.ForeignKey(Box, on_delete=models.CASCADE, null=True, blank=True, related_name="medias")
+    category = models.ForeignKey("Category", on_delete=models.CASCADE, null=True, blank=True, related_name="medias")
 
     class Meta:
         db_table = 'media'
@@ -651,13 +658,24 @@ class Media(Base):
 
 class Category(Base):
     # objects = MyQuerySet.as_manager()
-    serializer_exclude = ('box',)
+    serializer_exclude = ('category',)
     required_fields = []
     related_fields = []
     m2m = ['feature_groups']
     required_m2m = []
     fields = {}
-    select = ['parent', 'box', 'media'] + Base.select
+    select = ['parent', 'media'] + Base.select
+    types = [(1, 'service'), (2, 'product')]
+
+    def is_active(self):
+        category = Category.objects.filter(pk=self.pk).select_related('parent__parent').first()
+        parent = getattr(category, 'parent', None)
+        parent_disable = getattr(parent, 'disable', None)
+        grand_parent = getattr(parent, 'parent', None)
+        grand_parent_disable = getattr(grand_parent, 'disable', None)
+        if category.disable or parent_disable or grand_parent_disable:
+            return False
+        return True
 
     def get_absolute_url(self):
         return "/search/" + self.permalink
@@ -695,21 +713,23 @@ class Category(Base):
     def get_parent_fa(self):
         return getattr(getattr(self, 'parent', None), 'name', {}).get('fa')
 
-    def get_box_name(self):
-        return self.box.name['fa']
-
     parent = models.ForeignKey("self", on_delete=CASCADE, null=True, blank=True, related_name='children')
-    box = models.ForeignKey(Box, on_delete=CASCADE, related_name="children")
+    box = models.ForeignKey(Box, on_delete=CASCADE, related_name="children", null=True)
+    owner = models.ForeignKey(User, on_delete=PROTECT, null=True, blank=True)
     # features = models.ManyToManyField("Feature")
     feature_groups = models.ManyToManyField("FeatureGroup", through="CategoryGroupFeature", related_name='categories')
     name = JSONField(default=multilanguage)
     permalink = models.CharField(max_length=255, db_index=True, unique=True, null=True, blank=True)
     priority = models.PositiveSmallIntegerField(default=0)
     disable = models.BooleanField(default=True)
-    media = models.ForeignKey(Media, on_delete=CASCADE, null=True, blank=True)
+    media = models.ForeignKey(Media, on_delete=CASCADE, null=True, blank=True, related_name='media')
+    type = models.PositiveSmallIntegerField(choices=types, default=2)
+    promote = models.BooleanField(default=False)
+    settings = JSONField(default=default_settings, blank=True, help_text={"share": 3.25, "ui": {}})
 
     class Meta:
         db_table = 'category'
+        permissions = [("manage_category", "Can manage that category")]
         indexes = [HashIndex(fields=['permalink'])]
 
 
@@ -722,6 +742,16 @@ class CategoryGroupFeature(MyModel):
         db_table = 'category_group_feature'
 
 
+class DateRange(Base):
+    title = models.CharField(max_length=255)
+    start_date = models.DateTimeField()
+    end_date = models.DateTimeField()
+
+    class Meta:
+        db_table = 'date_range'
+        indexes = [BTreeIndex(fields=['start_date', 'end_date'])]
+
+
 class FeatureValue(Base):
     select = ['feature'] + Base.select
 
@@ -731,7 +761,7 @@ class FeatureValue(Base):
     feature = models.ForeignKey("Feature", on_delete=CASCADE, related_name="values")
     value = JSONField(default=dict)
     priority = models.PositiveIntegerField(default=0)
-    settings = JSONField(default=dict, blank=True)
+    settings = JSONField(default=default_settings, blank=True)
 
     # priority = models.PositiveSmallIntegerField(default=0)
 
@@ -756,7 +786,7 @@ class Feature(Base):
     # group = models.ForeignKey("FeatureGroup", on_delete=CASCADE, related_name="features", null=True, blank=True)
     type = models.PositiveSmallIntegerField(default=1, choices=types)
     layout_type = models.PositiveSmallIntegerField(default=1, choices=layout_types)
-    settings = JSONField(default=dict, blank=True)
+    settings = JSONField(default=default_settings, blank=True)
 
     class Meta:
         db_table = 'feature'
@@ -773,7 +803,7 @@ class FeatureGroupFeature(MyModel):
 
 
 class FeatureGroup(Base):
-    select = ['box'] + Base.select
+    select = ['category'] + Base.select
     prefetch = ['feature_group_features__feature__values']
 
     def __str__(self):
@@ -784,8 +814,9 @@ class FeatureGroup(Base):
     # custom_m2m = {'features': Feature}
 
     name = JSONField(default=multilanguage)
-    settings = JSONField(default=dict, help_text="{ui: {show_title: true}}")
-    box = models.ForeignKey(Box, on_delete=PROTECT)
+    settings = JSONField(default=default_settings, help_text="{ui: {show_title: true}}")
+    box = models.ForeignKey(Box, on_delete=PROTECT, null=True, blank=True)
+    category = models.ForeignKey(Category, on_delete=PROTECT)
     priority = models.PositiveIntegerField(default=0)
     features = models.ManyToManyField("Feature", through="FeatureGroupFeature", related_name='groups')
 
@@ -835,12 +866,13 @@ class TagGroupTag(MyModel):
 
 class TagGroup(Base):
     custom_m2m = {'tags': TagGroupTag}
-    select = ['box'] + Base.select
+    select = ['category'] + Base.select
 
     def __str__(self):
         return f"{self.name['fa']}"
 
-    box = models.ForeignKey(Box, on_delete=PROTECT)
+    box = models.ForeignKey(Box, on_delete=PROTECT, null=True, blank=True)
+    category = models.ForeignKey(Category, on_delete=PROTECT)
     name = JSONField(default=multilanguage)
     tags = models.ManyToManyField(Tag, through="TagGroupTag", related_name='groups')
 
@@ -910,7 +942,7 @@ class ProductFeature(Base):
     product = models.ForeignKey("Product", on_delete=CASCADE, related_name="product_features", db_index=False)
     feature = models.ForeignKey(Feature, on_delete=CASCADE, db_index=False)
     feature_value = models.ForeignKey(FeatureValue, on_delete=CASCADE, null=True, related_name='product_features')
-    settings = JSONField(default=dict)
+    settings = JSONField(default=default_settings)
     priority = models.PositiveSmallIntegerField(default=0)
 
     class Meta:
@@ -961,7 +993,7 @@ class StorageAccessories(MyModel):
 
 class Product(Base):
     table_select = ['thumbnail']
-    select = ['box', 'default_storage', 'brand'] + Base.select + table_select
+    select = ['category', 'default_storage', 'brand'] + Base.select + table_select
     table_prefetch = ['storages', 'categories']
     prefetch = ['cities', 'states'] + Base.prefetch
     # Prefetch('storages', queryset=Storage.objects.filter, to_attr='count')] + Base.prefetch
@@ -989,7 +1021,7 @@ class Product(Base):
         def is_all_categories_disabled():
             return not self.categories.filter(disable=False).exists()
 
-        return self.disable or is_all_categories_disabled() or self.box.disable
+        return self.disable or is_all_categories_disabled() or self.category.disable
 
     def get_absolute_url(self):
         return f"/product/{self.permalink}"
@@ -1052,11 +1084,9 @@ class Product(Base):
     def get_name_ar(self):
         return self.name['ar']
 
-    def get_category_fa(self):
-        try:
-            return self.categories.all().first().permalink
-        except Exception:
-            pass
+    def get_categories(self):
+        categories = self.categories.extra(select={'name': "name->>'fa'"}).values('id', 'name', 'permalink')
+        return list(categories)
 
     def get_category_en(self):
         return self.categories.name['en']
@@ -1091,7 +1121,8 @@ class Product(Base):
     #     super(Post, self).save()
 
     categories = models.ManyToManyField(Category, related_name="products", blank=True)
-    box = models.ForeignKey(Box, on_delete=PROTECT, db_index=False)
+    box = models.ForeignKey(Box, on_delete=PROTECT, db_index=False, null=True, blank=True)
+    category = models.ForeignKey(Category, on_delete=PROTECT, db_index=False, help_text="parent category")
     brand = models.ForeignKey(Brand, on_delete=SET_NULL, null=True, blank=True, related_name="products")
     thumbnail = models.ForeignKey(Media, on_delete=PROTECT, related_name='products', null=True, blank=True)
     cities = models.ManyToManyField(City, blank=True)
@@ -1127,7 +1158,7 @@ class Product(Base):
     short_address = JSONField(null=True, blank=True)
     properties = JSONField(null=True, blank=True)
     details = JSONField(null=True, blank=True)
-    settings = JSONField(default=dict, blank=True)
+    settings = JSONField(default=default_settings, blank=True)
     # review = models.TextField(null=True, blank=True)
     review = JSONField(default=default_review, help_text="{chats: [], state: reviewed/request_review/ready}")
 
@@ -1140,7 +1171,7 @@ class Product(Base):
     class Meta:
         db_table = 'product'
         # ordering = ['-updated_at']
-        indexes = [BTreeIndex(fields=['box', 'default_storage', 'updated_at', 'created_at']),
+        indexes = [BTreeIndex(fields=['category', 'default_storage', 'updated_at', 'created_at']),
                    HashIndex(fields=['permalink'])]
 
 
@@ -1239,9 +1270,9 @@ class Storage(Base):
                 self.make_item_disable(self)
                 raise ActivationError(get_activation_warning_msg(f'انبار: {items[0]}'))
             super().clean()
-        no_profit_boxes = [14]  # home jobs
+        no_profit_categories = [390]  # home jobs
         # todo free post recommended profit
-        # if my_dict.get('discount_price', None) and box_id not in no_profit_boxes:
+        # if my_dict.get('discount_price', None) and category_id not in no_profit_categories:
         #     recommended_profit = 1.15
         #     tax_factor = 1
         #     if my_dict.get('tax_type', self.tax_type) == 2:
@@ -1379,7 +1410,7 @@ class Storage(Base):
     dimensions = JSONField(help_text="{'weight': '', 'height': '', 'width': '', 'length': ''}",
                            validators=[validate_vip_price], default=dict, blank=True)
     max_shipping_time = models.PositiveIntegerField(default=0)
-    settings = JSONField(default=dict, blank=True)
+    settings = JSONField(default=default_settings, blank=True)
     media = models.ForeignKey(Media, on_delete=SET_NULL, null=True, blank=True)
 
     class Meta:
@@ -1410,7 +1441,7 @@ class Basket(Base):
 
 class BasketProduct(MyModel):
     related = ['storage']
-    select = ['storage', 'basket', 'vip_price', 'box'] + MyModel.select
+    select = ['storage', 'basket', 'vip_price', 'category'] + MyModel.select
 
     def __str__(self):
         return f"{self.id}"
@@ -1432,7 +1463,8 @@ class BasketProduct(MyModel):
     basket = models.ForeignKey(Basket, on_delete=CASCADE, null=True, blank=True, related_name="basket_storages",
                                db_index=False)
     count = models.PositiveIntegerField(default=1)
-    box = models.ForeignKey(Box, on_delete=PROTECT)
+    box = models.ForeignKey(Box, on_delete=PROTECT, null=True, blank=True)
+    category = models.ForeignKey(Category, on_delete=PROTECT, help_text="parent category")
     features = JSONField(default=dict, help_text="{'name': 'feature name', 'value': 'feature value'}")
     vip_price = models.ForeignKey(to=VipPrice, on_delete=CASCADE, null=True, blank=True)
 
@@ -1443,12 +1475,13 @@ class BasketProduct(MyModel):
 
 
 class Blog(Base):
-    select = ['box', 'media'] + Base.select
+    select = ['category', 'media'] + Base.select
 
     def __str__(self):
         return self.title
 
-    box = models.ForeignKey(Box, on_delete=CASCADE)
+    box = models.ForeignKey(Box, on_delete=CASCADE, null=True, blank=True)
+    category = models.ForeignKey(Category, on_delete=CASCADE)
     title = JSONField(default=multilanguage)
     description = JSONField(null=True, blank=True)
     media = models.ForeignKey(Media, on_delete=CASCADE, blank=True, null=True)
@@ -1594,7 +1627,7 @@ class InvoiceSuppliers(MyModel):
 
 
 class InvoiceStorage(Base):
-    select = ['box', 'storage', 'invoice'] + Base.select
+    select = ['category', 'storage', 'invoice'] + Base.select
     table_select = ['storage', 'storage__product', 'invoice__user', 'invoice', 'storage__product__thumbnail',
                     'storage__supplier']
     table_prefetch = []
@@ -1610,7 +1643,8 @@ class InvoiceStorage(Base):
     id = models.BigAutoField(auto_created=True, primary_key=True)
     key = models.CharField(max_length=31, unique=True, null=True, db_index=False)
     filename = models.CharField(max_length=255, null=True, blank=True)
-    box = models.ForeignKey(Box, on_delete=PROTECT)
+    box = models.ForeignKey(Box, on_delete=PROTECT, null=True, blank=True)
+    category = models.ForeignKey(Category, on_delete=PROTECT, help_text="parent category")
     tax = models.PositiveIntegerField(default=0)
     dev = models.PositiveIntegerField()
     admin = models.PositiveIntegerField()
@@ -1656,7 +1690,7 @@ class DiscountCode(Base):
 
 
 class Menu(Base):
-    select = ['media', 'parent', 'box'] + Base.select
+    select = ['media', 'parent', 'category'] + Base.select
     types = ((1, 'home'),)
     choices = ('type',)
 
@@ -1670,6 +1704,7 @@ class Menu(Base):
     parent = models.ForeignKey("self", on_delete=CASCADE, null=True, blank=True)
     priority = models.PositiveSmallIntegerField(default=0)
     box = models.ForeignKey(Box, on_delete=PROTECT, null=True, blank=True)
+    category = models.ForeignKey(Category, on_delete=PROTECT, null=True, blank=True, help_text="parent category")
 
     class Meta:
         db_table = 'menu'
@@ -1756,7 +1791,7 @@ class SpecialProduct(Base):
     select = ['storage', 'thumbnail'] + Base.select
     filter = {"disable": False}
 
-    required_fields = ['storage', 'box']
+    required_fields = ['storage', 'category']
     related_fields = []
     remove_fields = []
     m2m = []
@@ -1786,8 +1821,10 @@ class SpecialProduct(Base):
     thumbnail = models.ForeignKey(Media, on_delete=PROTECT, related_name='special_product_thumbnail', null=True,
                                   blank=True)
     box = models.ForeignKey(Box, on_delete=PROTECT, null=True, blank=True)
+    category = models.ForeignKey(Category, on_delete=PROTECT, null=True, blank=True, help_text="parent category")
     url = models.URLField(null=True, blank=True)
     name = JSONField(null=True, blank=True)
+    date = models.ForeignKey(DateRange, null=True, blank=True, related_name="special_products", on_delete=PROTECT)
 
     class Meta:
         db_table = 'special_products'
@@ -1820,6 +1857,7 @@ class WishList(Base):
         db_table = 'wishList'
 
 
+# todo replace with wishlist
 class NotifyUser(MyModel):
     select = ['user', 'category'] + MyModel.select
 
@@ -1829,7 +1867,7 @@ class NotifyUser(MyModel):
     user = models.ForeignKey(User, on_delete=CASCADE)
     type = models.PositiveSmallIntegerField(null=True, blank=True)
     category = models.ForeignKey(Category, on_delete=CASCADE)
-    box = models.ForeignKey(Box, on_delete=CASCADE)
+    box = models.ForeignKey(Box, on_delete=CASCADE, null=True, blank=True)
 
     class Meta:
         db_table = 'notify_user'

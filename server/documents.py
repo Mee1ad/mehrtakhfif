@@ -6,17 +6,16 @@ from elasticsearch_dsl import analyzer, tokenizer
 
 from .models import Product, User, Category, Tag, Media, Brand, Storage
 
-ngram = analyzer('ngram', tokenizer=tokenizer('trigram', 'nGram', min_gram=4, max_gram=4), filter=["lowercase"])
+ngram = analyzer('ngram', tokenizer=tokenizer('trigram', 'nGram', min_gram=2, max_gram=3), filter=["lowercase"])
 standard = analyzer('standard', tokenizer='standard')
 
 
 @registry.register_document
 class ProductDocument(Document):
     id = fields.IntegerField()
-    box_id = fields.IntegerField()
+    category_id = fields.IntegerField()
     name_fa = fields.TextField(analyzer=standard, attr='get_name_fa')
     name_fa2 = fields.TextField(analyzer=ngram, attr='get_name_fa')
-    category_fa = fields.TextField(attr='get_category_fa')
     thumbnail = fields.TextField(attr='get_thumbnail')
     type = fields.TextField(attr='get_type_display')
     tags = fields.ListField(fields.TextField("get_tags"))
@@ -33,11 +32,6 @@ class ProductDocument(Document):
         'name': fields.TextField("__str__"),
         'permalink': fields.KeywordField(),
     })
-    # colors = fields.NestedField(properties={
-    #     'id': fields.IntegerField(),
-    #     'name': fields.TextField(),
-    #     'color': fields.TextField(),
-    # }, attr="get_colors")
     colors = fields.NestedField(properties={
         'id': fields.IntegerField(),
         'name': fields.TextField(),
@@ -87,7 +81,6 @@ class CategoryDocument(Document):
     # name_fa2 = fields.TextField(analyzer=ngram, attr='get_name_fa')
     # name = fields.TextField(attr='get_name_fa')
     parent = fields.TextField(attr='get_parent_fa')
-    box = fields.TextField(attr="get_box_name")
     media = fields.TextField(attr='get_media')
     id = fields.IntegerField()
 

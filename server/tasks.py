@@ -123,15 +123,15 @@ def sale_report(self, invoice_id, **kwargs):
         if acquired:
             try:
                 invoice_storages = InvoiceStorage.objects.filter(invoice_id=invoice_id). \
-                    select_related('storage__product__box__owner', 'invoice'). \
-                    prefetch_related('storage__product__box__owner__gcmdevice_set')
+                    select_related('storage__product__category__owner', 'invoice'). \
+                    prefetch_related('storage__product__category__owner__gcmdevice_set')
                 owners = {}
                 invoice = invoice_storages.first().invoice
                 address = invoice.address
                 invoice = {'نام': address['name'], 'شماره تماس': address['phone'], 'شهر': address['city']['name'],
                            'آدرس': address['address'], 'محصولات': [], '\nقیمت': invoice.amount}
                 for invoice_storage in invoice_storages:
-                    owner = invoice_storage.storage.product.box.owner
+                    owner = invoice_storage.storage.product.category.owner
                     product_data = f"{invoice_storage.count} عدد {invoice_storage.storage.title['fa']}"
                     invoice['محصولات'].append(product_data)
                     if owner in owners:
@@ -170,7 +170,7 @@ def sale_report_summary(self, **kwargs):
                 for invoice in invoices:
                     invoice_storages = InvoiceStorage.objects.filter(invoice=invoice)
                     for invoice_storage in invoice_storages:
-                        owner = invoice_storage.storage.product.box.owner
+                        owner = invoice_storage.storage.product.category.owner
                         duplicate_data = [item for item in notify_list if item['owner'] == owner]
                         if not duplicate_data:
                             notify_list.append({'owner': owner, 'count': invoice_storage.count})

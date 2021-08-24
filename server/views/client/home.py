@@ -79,76 +79,36 @@ class Init(View):
         return set_custom_signed_cookie(res, 'is_login', False)
 
 
-class GetSpecialOffer(View):
+class ClientSpecialOffer(View):
     def get(self, request):
         special_offer = SpecialOffer.objects.select_related(*SpecialOffer.select).all()
         res = {'special_offer': SpecialOfferSchema().dump(special_offer, many=True)}
         return JsonResponse(res)
 
 
-class GetSpecialProduct(View):
+class LimitedSpecialProduct(View):
     def get(self, request):
-        special_product = SpecialProduct.objects.select_related(*SpecialProduct.select)[:5]
-        res = {'special_product': SpecialProductSchema(**request.schema_params).dump(special_product, many=True)}
-        return JsonResponse(res)
-
-
-class BoxesGetSpecialProduct(View):
-    def get_old(self, request):
-        step = int(request.GET.get('s', default_step))
-        page = int(request.GET.get('e', default_page))
-        all_box = Box.objects.all()
-        language = request.lang
-        products = []
-
-        for box, index in zip(all_box, range(len(all_box))):
-            box_special_product = SpecialProduct.objects.select_related('thumbnail', 'storage__product__thumbnail') \
-                                      .prefetch_related('storage__vip_prices') \
-                                      .filter(box=box)[(page - 1) * step:step * page]
-            if box_special_product:
-                box = {'id': box.pk, 'name': box.name[language], 'key': box.permalink}
-                box['special_products'] = SpecialProductSchema(**request.schema_params).dump(box_special_product,
-                                                                                             many=True)
-                products.append(box)
-        res = {'products': products}
-        return JsonResponse(res)
-
-    def get(self, request):
-        step = int(request.GET.get('s', default_step))
-        page = int(request.GET.get('e', default_page))
-        language = request.lang
-        special_products = []
-        products = SpecialProduct.objects.select_related('thumbnail', 'storage__product__thumbnail', 'box') \
+        today = timezone.now()
+        selected_date = DateRange.objects.get(start_date__lte=today, end_date__gte=today)
+        products = SpecialProduct.objects.filter(category=None, date_id=selected_date.id) \
+            .select_related('thumbnail', 'storage__product__thumbnail', 'category') \
             .prefetch_related('storage__vip_prices')
         products = SpecialProductSchema(**request.schema_params).dump(products, many=True)
-        # products = groupby(sorted(products, key=itemgetter('box')), key=itemgetter('box'))
-        # for item in products:
-        #     special_products.append({**item[0], 'special_products': item[1]})
-        for box, event_list in groupby(sorted(products, key=itemgetter('box_id')), itemgetter('box')):
-            sp = list(event_list)
-            list(map(lambda d: d.pop('box'), sp))
-            special_products.append({**box, 'special_products': sp})
-
-            # for e in event_list:
-            #     print(e)
-        return JsonResponse({'products': sorted(special_products, key=itemgetter('priority'))})
+        return JsonResponse({'products': products})
 
 
-class BestSeller(View):
+class ClientSpecialProduct(View):
     def get(self, request):
-        all_box = Box.objects.all()
-        last_week = add_days(-7)
-        boxes = []
-        language = request.lang
-        invoice_ids = Invoice.objects.filter(created_at__gte=last_week, status=2).values('id')
-        for box, index in zip(all_box, range(len(all_box))):
-            item = {}
-            item['id'] = box.pk
-            item['name'] = box.name[language]
-            item['key'] = box.permalink
-            item['best_seller'] = get_best_seller(request, box, invoice_ids)
-            boxes.append(item)
-        return JsonResponse({'box': boxes})
+        special_products = []
+        products = SpecialProduct.objects.filter(category__isnull=False) \
+            .select_related('thumbnail', 'storage__product__thumbnail', 'category') \
+            .prefetch_related('storage__vip_prices')
+        products = SpecialProductSchema(**request.schema_params).dump(products, many=True)
+        for category, event_list in groupby(sorted(products, key=itemgetter('category_id')), itemgetter('category')):
+            sp = list(event_list)
+            list(map(lambda d: d.pop('category'), sp))
+            special_products.append({**category, 'special_products': sp})
+        return JsonResponse({'products': sorted(special_products, key=itemgetter('priority'))})
 
 
 class BoxWithCategory(View):
@@ -181,13 +141,23 @@ class Categories(View):
         return JsonResponse({'data': all_category})
 
 
-class GetMenu(View):
+class PromotedCategories(View):
+    def get(self, request):
+        categories = Category.objects.filter(promote=True)
+        categories = CategorySchema().dump(categories, many=True)
+        res = {}
+        for category_type, categories in groupby(sorted(categories, key=itemgetter('type')), itemgetter('type')):
+            res[category_type] = list(categories)
+        return JsonResponse(res)
+
+
+class ClientMenu(View):
     def get(self, request):
         menu = Menu.objects.select_related('media').all()
         return JsonResponse({'menu': MenuSchema(request.lang).dump(menu, many=True)})
 
 
-class GetAds(View):
+class ClientAds(View):
     def get(self, request, ads_type):
         agent = request.user_agent
         ads = Ad.objects.filter(priority__isnull=False, type=ads_type).select_related('media')
@@ -204,23 +174,11 @@ class PermalinkToId(LoginRequired):
             raise ValidationError('محصول پیدا نشد')
 
 
-class GetSlider(View):
+class ClientSlider(View):
     def get(self, request, slider_type):
         agent = request.user_agent
         slider = Slider.objects.filter(priority__isnull=False, type=slider_type).select_related('media')
         return JsonResponse({'slider': SliderSchema(is_mobile=agent.is_mobile).dump(slider, many=True)})
-
-
-class Suggest(View):
-    def get(self, request):
-        q = request.GET.get('q', '')
-        lang = request.lang
-        s = ProductDocument.search()
-        s = s.query("multi_match", query=q, fields=['name_fa', 'category_fa'])
-        products = []
-        for hit in s:
-            products.append({'name': hit.name_fa, 'permalink': hit.permalink, 'thumbnail': hit.thumbnail})
-        return JsonResponse({'products': products})
 
 
 class ElasticSearch(View):
@@ -231,8 +189,11 @@ class ElasticSearch(View):
         t = TagDocument.search()
         p = p.query({"bool": {"should": [{"match": {"name_fa": {"query": q, "boost": 1}}},
                                          {"wildcard": {"name_fa": f"{q}*"}},
-                                         {"match": {"name_fa2": {"query": q, "boost": 0.5}}}],
+                                         {"match": {"name_fa2": {"query": q, "boost": 1}}}],
                               "must": [{"match": {"disable": False}}, {"match": {"available": True}}]}})
+
+        # p = p.query({"bool": {"should": [{"match": {"name_fa2": {"query": q, "boost": 1}}}]}})
+
         c = c.query({"bool": {"should": [{"match": {"name_fa": {"query": q, "boost": 1}}},
                                          {"wildcard": {"name_fa": f"{q}*"}}]}}).query('match', disable=False)
         t = t.query({"bool": {"should": [{"match": {"name_fa": {"query": q, "boost": 1}}},
