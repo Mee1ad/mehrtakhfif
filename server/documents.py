@@ -19,6 +19,11 @@ class ProductDocument(Document):
     thumbnail = fields.TextField(attr='get_thumbnail')
     type = fields.TextField(attr='get_type_display')
     tags = fields.ListField(fields.TextField("get_tags"))
+    categories = fields.NestedField(properties={
+        'id': fields.IntegerField(),
+        'name': fields.TextField(),
+        'permalink': fields.TextField()
+    }, attr="get_categories")
     disable = fields.BooleanField(attr='is_disable')
     default_storage = fields.ObjectField(properties={
         'title': fields.TextField("__str__"),

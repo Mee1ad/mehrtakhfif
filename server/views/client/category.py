@@ -35,6 +35,7 @@ class FilterDetail(View):
         query = self.params.get('q', None)
         if query:
             self.query["query"]["bool"]["must"].append({"match": {"name_fa": {"query": query, "boost": 1}}})
+            self.query["query"]["bool"]["must"].append({"match": {"name_fa2": {"query": query, "boost": 0.5}}})
             self.query["query"]["bool"]["must"].append({"match": {"tags": {"query": query, "boost": 0.5}}})
 
     def add_brand_filter(self, ):
@@ -57,7 +58,10 @@ class FilterDetail(View):
     def add_category_filter(self, ):
         self.category_permalink = self.params.get('cat', )
         if self.category_permalink:
-            self.query["query"]["bool"]["must"].append({"match": {"category_fa": self.category_permalink}})
+            self.query["query"]["bool"]["must"].append(
+                {"nested": {"query": {"term": {"categories.permalink": self.category_permalink}},
+                            "path": "categories",
+                            "inner_hits": {"_source": ["permalink"]}}})
 
     def get_breadcrumb(self, permalink):
         categories = Category.objects.filter(permalink=permalink).values('name__fa', 'permalink', 'parent__name__fa',
