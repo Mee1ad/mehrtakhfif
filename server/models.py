@@ -1029,8 +1029,7 @@ class Product(Base):
         #     self.make_item_disable(self)
         #     raise ActivationError('نه تگ داری نه گروه تک، نمیشه ک اینجوری میشه؟')
         if not self.storages.filter(disable=False):
-            self.make_item_disable(self)
-            raise ActivationError(get_activation_warning_msg('انبار فعال'))
+            self.available = False
         if self.review['state'] == 'reviewed':
             self.make_item_disable(self)
             raise ActivationError('بنظر نمیاد محصولت آماده فعال شدن باشه، یه نگاه به چت محصول بنداز!')
