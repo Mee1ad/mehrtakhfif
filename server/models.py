@@ -1068,7 +1068,8 @@ class Product(Base):
         if storages:
             if self.manage:
                 default_storage = min(storages, key=attrgetter('discount_price'))
-            available = True
+            if self.available is True:
+                available = True
         Product.objects.filter(pk=self.pk).update(available=available, default_storage=default_storage)
 
     def __str__(self):
