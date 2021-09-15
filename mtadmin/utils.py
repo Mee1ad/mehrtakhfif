@@ -417,7 +417,7 @@ def update_object(request, model, category_key=None, return_item=False, serializ
         m2m, custom_m2m, ordered_m2m, remove_fields = None, None, None, None
     pk = data['id']
     # category_check = get_category_permission(request, category_key) if require_category else {}
-    footprint = {'updated_by': user, 'updated_at': timezone.now()}
+    footprint = {'updated_by_id': user.id, 'updated_at': timezone.now()}
     # items = model.objects.filter(pk=pk, **category_chqeck)
     item = model.objects.get(pk=pk)
     category = get_category_id(item, category_key)
