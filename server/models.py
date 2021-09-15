@@ -1365,8 +1365,9 @@ class Storage(Base):
 
     def is_available(self, count=1):
         max_count_for_sale = self.get_max_count()
-        return self.available_count_for_sale >= count and max_count_for_sale >= count and \
-               self.disable is False and self.product.disable is False
+        return (self.available_count_for_sale >= count) and (max_count_for_sale >= count) and \
+               (self.disable is False) and (self.product.disable is False) and self.product.available and (
+                       self.unavailable is False)
 
     product = models.ForeignKey(Product, on_delete=CASCADE, related_name='storages')
     # features = models.ManyToManyField(ProductFeature, through='StorageFeature', related_name="storages")
