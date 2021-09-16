@@ -412,3 +412,10 @@ class PromoteCategory(AdminView, PromotedCategories):
         Category.objects.filter(promote=True).update(promote=False)
         Category.objects.filter(pk__in=category_ids).update(promote=True)
         return JsonResponse({**responses['202']}, status=202)
+
+
+class Categories(View):
+    def get(self, request):
+        parent_id = request.GET.get('id', None)
+        categories = get_categories({"parent_id": parent_id}, admin=True)
+        return JsonResponse({'data': categories})

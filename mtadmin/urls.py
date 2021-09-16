@@ -54,6 +54,7 @@ urlpatterns = [
     path('cache', error_handler(Cache.as_view()), name='cache'),
     path('cache/<str:key>', error_handler(Cache.as_view()), name='cache'),
     path('product_preview/<str:permalink>', error_handler(ProductPreview.as_view()), name='product_preview'),
+    path('categories', error_handler(Categories.as_view()), name='categories'),
 
     path('tg_login', error_handler(TelegramLogin.as_view()), name='tg_login'),
     path('tg_register', error_handler(TelegramRegister.as_view()), name='tg_register'),
