@@ -173,7 +173,6 @@ class Filter(View):
         self.add_available_filter()
         self.add_category_filter()
         self.add_price_filter()
-
         s = Search(using=ES_CLIENT, index="product")
         products = s.from_dict(self.query)[:500]
         products = products.execute()

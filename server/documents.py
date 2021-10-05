@@ -22,7 +22,7 @@ class ProductDocument(Document):
     categories = fields.NestedField(properties={
         'id': fields.IntegerField(),
         'name': fields.TextField(),
-        'permalink': fields.TextField()
+        'permalink': fields.KeywordField()
     }, attr="get_categories")
     disable = fields.BooleanField(attr='is_disable')
     default_storage = fields.ObjectField(properties={
