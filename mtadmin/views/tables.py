@@ -578,17 +578,18 @@ class MediaView(TableView):
                 require_category = {'error_null_category': False}
         except Exception:
             pass
-        return JsonResponse(serialized_objects(request, Media, MediaASchema, MediaESchema, **require_category))
+        return JsonResponse(serialized_objects(request, Media, MediaASchema, MediaESchema, **require_category,
+                                               category_key='category_id'))
 
     def post(self, request):
         data = json.loads(request.POST.get('data'))
         titles = data['titles']
-        category_id = data.get('category_id')
-        category = Category.objects.get(pk=category_id)
-        has_access(request.user, category)
+        category_id = data.get('category_id', None)
+        category = None
+        if category_id:
+            category = Category.objects.get(pk=category_id)
         media_type = data['type']
-        if category_id not in request.user.category_permissions.all().values_list('id', flat=True) and \
-                media_type not in Media.no_category_type:
+        if not has_access(request.user, category) and media_type not in Media.no_category_type:
             raise PermissionDenied
 
         media = upload(request, titles, media_type, category_id)
@@ -608,6 +609,8 @@ class MediaView(TableView):
     def delete(self, request):
         return delete_base(request, Media)
 
+    # def has_access(self, user, category_id):
+    #     return user_
 
 class CommentView(TableView):
     permission_required = 'server.view_comment'

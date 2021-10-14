@@ -75,7 +75,7 @@ class ReviewPrice(AdminView):
                    'start_price': data['start_price'], 'final_price': data['final_price']}
         storage = type('Storage', (), {**storage})()
         storage.product = type('Product', (), {})()
-        storage.product.category = type('Category', (), {'share': category.settings['share'], 'pk': category.pk})()
+        storage.product.category = type('Category', (), {'settings': category.settings, 'pk': category.pk})()
         storage.storage = storage
         share = get_share(storage)
         profit = share['charity'] + share['dev'] + share['admin'] + share['mt_profit']
@@ -256,6 +256,8 @@ class SearchView(AdminView):
     def supplier(self, q, username, **kwargs):
         items = []
         s = SupplierDocument.search()
+        print(q)
+        print(username)
         r = s.query("multi_match", query=q or username,
                     fields=['first_name', 'last_name', 'username']).filter("term", is_supplier="true")[:5]
         # if r.count() == 0:
@@ -417,5 +419,5 @@ class PromoteCategory(AdminView, PromotedCategories):
 class Categories(View):
     def get(self, request):
         parent_id = request.GET.get('id', None)
-        categories = get_categories({"parent_id": parent_id}, admin=True)
+        categories = get_categories({"parent_id": parent_id})
         return JsonResponse({'data': categories})

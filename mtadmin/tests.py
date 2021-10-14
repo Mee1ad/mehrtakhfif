@@ -356,6 +356,20 @@ class PostModelTestCase(TestCase):
         res = SupplierView.as_view()(request)
         self.assertEqual(res.status_code, 201, f"can't create")
 
+    def test_review_price(self):
+        category = fake_category(settings={"share": 0.32})
+        data = {
+            "category_id": category.id,
+            "tax_type": "has_not",
+            "discount_price": 5000,
+            "start_price": 0,
+            "final_price": 10000,
+            "shipping_cost": 1000
+        }
+        request = self.make_request('/admin/review_price', data)
+        res = ReviewPrice.as_view()(request)
+        self.assertEqual(res.status_code, 200, f"can't create")
+
 
 class PutModelTestCase(TestCase):
     def setUp(self):

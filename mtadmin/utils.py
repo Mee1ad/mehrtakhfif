@@ -37,6 +37,7 @@ def has_access(user, category, error_null_category=True):
         permitted = user.has_perm('has_access', category)
         if not permitted:
             raise PermissionDenied
+        return True
 
 
 def get_category_id(obj, category_key=None):
@@ -83,8 +84,8 @@ def serialized_objects(request, model, serializer=None, single_serializer=None, 
     try:
         category_id = params['filter'].get('category_id', None)
         has_access(user, category_id, error_null_category)
-        if error_null_category and not params['filter'].get(category_key) and not params['filter'].get(
-                category_key[:-3]) and not set(required_fields).issubset(params['filter']):
+        if error_null_category and not params['filter'].get(category_key, None) and not params['filter'].get(
+                category_key[:-3], None) and not set(required_fields).issubset(params['filter']):
             try:
                 if int(params['filter']['type']) not in model.no_category_type:
                     raise PermissionDenied

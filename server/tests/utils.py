@@ -13,8 +13,9 @@ def fake_json():
     return {"fa": fake.name(), "en": ""}
 
 
-def get(route):
-    user = fake_user(is_superuser=False, is_active=False)
+def get(route, user=None):
+    if user is None:
+        user = fake_user(is_superuser=False, is_active=False)
     factory = RequestFactory()
 
     request = factory.get(route)

@@ -59,7 +59,7 @@ POST {{admin_host}}/review_price
 Content-Type: application/json
 
 {
-  "b": 10,
+  "category_id": 396,
   "tax_type": "has_not",
   "discount_price": 5000,
   "start_price": 0,
@@ -841,11 +841,11 @@ Content-Type: multipart/form-data; boundary=WebAppBoundary
 --WebAppBoundary
 Content-Disposition: form-data; name="data"
 
-{"category_id": 3, "type": 2, "titles": [{"fa": "نام دسته بندی"}, {"fa": "2نام دسته بندی"}]}
+{"category_id": null, "type": 2, "titles": [{"fa": "نام دسته بندی"}, {"fa": "2نام دسته بندی"}]}
 --WebAppBoundary--
-Content-Disposition: form-data; name="file"; filename="takh1.jpg"
+Content-Disposition: form-data; name="file"; filename="takh1.png"
 
-< F:\Download\Photos\takh1.jpg
+< F:\Download\Photos\takh1.png
 
 > res.js
 

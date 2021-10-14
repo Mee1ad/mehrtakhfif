@@ -219,8 +219,9 @@ class ProductTestCase(TestCase):
 
     def test_product_userdata(self):
         product = fake_product(null=False)
-        request = get(f'/product_wishlist')
-        res = ProductWishlist.as_view()(request, permalink=product.permalink)
+        wishlist = fake_wishlist(product_id=product.id, user_id=self.user.id)
+        request = get(f'/product_wishlist', self.user)
+        res = ProductWishlist.as_view()(request, product_id=product.id)
         assert 200 <= res.status_code <= 299
 
     def test_related_products(self):

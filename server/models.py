@@ -35,6 +35,7 @@ from mehr_takhfif.settings import HOST, MEDIA_ROOT
 from mehr_takhfif.settings import color_feature_id
 from mtadmin.exception import *
 from server.field_validation import *
+from simple_history.models import HistoricalRecords
 
 # from django.contrib.sites.models import Site
 
@@ -450,8 +451,8 @@ class User(AbstractUser):
     default_address = models.OneToOneField(to="Address", on_delete=SET_NULL, null=True, blank=True,
                                            related_name="user_default_address")
     vip_types = models.ManyToManyField(to="VipType", related_name="users", blank=True)
-    box_permission = models.ManyToManyField("Box", blank=True)
-    # category_permissions = models.ManyToManyField("Category", blank=True)
+    # box_permission = models.ManyToManyField("Box", blank=True)
+    category_permissions = models.ManyToManyField("Category", blank=True)
     email_verified = models.BooleanField(default=False, verbose_name='Email verified')
     subscribe = models.BooleanField(default=True)
     meli_code = models.CharField(max_length=15, blank=True, null=True, verbose_name='National code',
