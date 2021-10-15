@@ -711,7 +711,7 @@ class PaymentHistoryAdmin(Base):
 
 
 class TagAdmin(Base):
-    list_display = ('id', 'name_fa', 'permalink') + SafeDeleteAdmin.list_display
+    list_display = ('id', 'name_fa') + SafeDeleteAdmin.list_display
     list_per_page = 10
     search_fields = ['name']
 

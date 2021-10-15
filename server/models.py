@@ -35,7 +35,6 @@ from mehr_takhfif.settings import HOST, MEDIA_ROOT
 from mehr_takhfif.settings import color_feature_id
 from mtadmin.exception import *
 from server.field_validation import *
-from simple_history.models import HistoricalRecords
 
 # from django.contrib.sites.models import Site
 
@@ -210,6 +209,13 @@ def esearch(q, document, fields=("name_fa",), exact_match=False, only=None):
     if only:
         return [project(hit.to_dict(), only)[only[0]] for hit in r]
     return [hit.to_dict() for hit in r]
+
+
+def lock_permalink(obj):
+    settings = obj.settings
+    if obj.disable is False:
+        settings.update({'permalink_lock': True})
+    return settings
 
 
 class MyQuerySet(SafeDeleteQueryset):
@@ -391,7 +397,7 @@ class Ad(Base):
 
 class User(AbstractUser):
     select = ['default_address', 'created_by', 'updated_by']
-    prefetch = ['vip_types']
+    prefetch = ['vip_types', 'category_permissions']
     serializer_exclude = ()
     required_fields = []
     exclude_fields = []
@@ -616,7 +622,10 @@ class Media(Base):
         return "/test/"
 
     def __str__(self):
-        return self.title['fa']
+        try:
+            return self.title['fa']
+        except Exception:
+            return ""
 
     def validation(self):
         try:
@@ -694,6 +703,7 @@ class Category(Base):
         return f"{self.name['fa']}"
 
     def save(self, *args, **kwargs):
+        self.settings = lock_permalink(self)
         super().save(*args, **kwargs)
         pk = self.id
         parent_id = self.parent_id
@@ -844,12 +854,11 @@ class Tag(Base):
         self.validation()
         super().save(*args, **kwargs)
 
-    permalink = models.CharField(max_length=255, db_index=True, unique=True)
     name = JSONField(default=multilanguage)
 
     class Meta:
         db_table = 'tag'
-        indexes = [HashIndex(fields=['permalink']), GinIndex(fields=['name'])]
+        indexes = [GinIndex(fields=['name'])]
 
 
 class TagGroupTag(MyModel):
@@ -1059,6 +1068,7 @@ class Product(Base):
 
     def save(self, *args, **kwargs):
         self.pre_save()
+        self.settings = lock_permalink(self)
         super().save(*args, **kwargs)
         self.post_save()
 
@@ -1156,7 +1166,7 @@ class Product(Base):
     short_address = JSONField(null=True, blank=True)
     properties = JSONField(null=True, blank=True)
     details = JSONField(null=True, blank=True)
-    settings = JSONField(default=default_settings, blank=True)
+    settings = JSONField(default=default_settings, blank=True, help_text="{ui: {}, permalink_lock: True}")
     # review = models.TextField(null=True, blank=True)
     review = JSONField(default=default_review, help_text="{chats: [], state: reviewed/request_review/ready}")
 
@@ -1591,7 +1601,7 @@ class Invoice(Base):
     post_tracking_code = models.CharField(max_length=255, null=True, blank=True)
     post_invoice = models.ForeignKey("Invoice", on_delete=CASCADE, related_name='main_invoice', null=True, blank=True)
     charity = models.ForeignKey(Charity, on_delete=PROTECT, null=True, blank=True)
-    details = JSONField(default=dict, help_text="{sender: ali, cart_postal_text: with love}")
+    details = JSONField(default=dict, blank=True, help_text="{sender: ali, cart_postal_text: with love}")
 
     class Meta:
         db_table = 'invoice'

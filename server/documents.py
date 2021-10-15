@@ -120,7 +120,7 @@ class TagDocument(Document):
         model = Tag  # The model associated with this Document
 
         # The fields of the model you want to be indexed in Elasticsearch
-        fields = ['permalink']
+        fields = []
 
 
 @registry.register_document
