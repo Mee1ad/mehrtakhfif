@@ -23,9 +23,9 @@ class DateProductCount(AdminView):
             for day in range(14):
                 gte = start_date + timedelta(days=day)
                 lte = start_date + timedelta(days=day + 1)
-                updated_products = Product.objects.filter(parent_category=category, updated_at__gte=gte,
+                updated_products = Product.objects.filter(category=category, updated_at__gte=gte,
                                                           updated_at__lte=lte).count()
-                created_products = Product.objects.filter(parent_category=category, created_at__gte=gte,
+                created_products = Product.objects.filter(category=category, created_at__gte=gte,
                                                           created_at__lte=lte).count()
 
                 cp.append(created_products)
@@ -50,7 +50,7 @@ class SoldProductCount(AdminView):
         allowed_rolls = {'admin', 'support'}
         roll = request.user.groups.filter(name__in=allowed_rolls)
         if roll.exists() or request.user.is_superuser:
-            products = InvoiceStorage.objects.filter(parent_category_id=category_id, invoice__status=2)
+            products = InvoiceStorage.objects.filter(category_id=category_id, invoice__status=2)
             for status in deliver_status:
                 data[status[1]] = products.filter(deliver_status=status[0]).count()
             return JsonResponse(data)
@@ -68,7 +68,7 @@ class ProfitSummary(AdminView):
         categories = Category.objects.filter(parent=None)
         categories_list = []
         for category in categories:
-            profit = InvoiceStorage.objects.filter(storage__product__parent_category=category, invoice__payed_at__range=[start, end],
+            profit = InvoiceStorage.objects.filter(storage__product__category=category, invoice__payed_at__range=[start, end],
                                                    invoice__status__in=Invoice.success_status) \
                 .aggregate(sold_count=Sum('count'), charity=Sum('charity'), dev=Sum('dev'), admin=Sum('admin'),
                            total_payment=Sum('discount_price'), start_prices=Sum('start_price'),

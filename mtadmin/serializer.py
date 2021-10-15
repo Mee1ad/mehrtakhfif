@@ -1164,8 +1164,6 @@ class TagASchema(MySchema):
 
     @post_load
     def make_tag(self, data, **kwargs):
-        if data.get('permalink', None):
-            data['permalink'] = validate_permalink(data['permalink'])
         if self.return_dict:
             return data
         return Tag(**data)
@@ -1173,7 +1171,6 @@ class TagASchema(MySchema):
 
 class TagGroupTagASchema(MySchema):
     name = fields.Function(lambda o: o.tag.name)
-    permalink = fields.Function(lambda o: o.tag.permalink)
     id = fields.Function(lambda o: o.tag.pk)
     show = fields.Function(lambda o: True)
 

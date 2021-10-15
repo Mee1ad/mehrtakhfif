@@ -195,7 +195,6 @@ class PostModelTestCase(TestCase):
     def test_tag(self):
         data = {
             "name": fake_json(),
-            "permalink": fake.uuid4()
         }
         request = self.make_request('/admin/tag', data)
         res = TagView.as_view()(request)
@@ -385,12 +384,11 @@ class PutModelTestCase(TestCase):
 
     def test_category(self):
         media = fake_media(media_type=7)
-        parent_category = fake_category()
-        category = fake_category()
+        category1 = fake_category()
+        category2 = fake_category()
         data = {
-            "id": category.id,
-            "parent_id": parent_category.id,
-            "category_id": self.category.id,
+            "id": category1.id,
+            "parent_id": category2.id,
             "name": fake_json(),
             "permalink": fake.uuid4(),
             "media_id": media.id
@@ -566,7 +564,6 @@ class PutModelTestCase(TestCase):
         data = {
             "id": tag.id,
             "name": fake_json(),
-            "permalink": fake.uuid4()
         }
         request = self.make_request('/admin/tag', data)
         res = TagView.as_view()(request)
