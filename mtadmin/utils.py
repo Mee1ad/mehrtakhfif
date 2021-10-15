@@ -420,6 +420,11 @@ def update_object(request, model, category_key=None, return_item=False, serializ
     footprint = {'updated_by_id': user.id, 'updated_at': timezone.now()}
     # items = model.objects.filter(pk=pk, **category_chqeck)
     item = model.objects.get(pk=pk)
+    if 'permalink' in data:
+        if not (user.is_superuser or user.groups.filter(name='superuser').exists()):
+            if item.settings.get('permalink_lock', False):
+                data.pop('permalink', None)
+                message = {'message': "بعد از فعال شدن محصول امکان تغییر پرمالینک وجود ندارد", 'variant': 'warning'}
     category = get_category_id(item, category_key)
     has_access(user, category, error_null_category=require_category)
     data = serializer(user=user, return_dict=True).load(data)
@@ -435,7 +440,10 @@ def update_object(request, model, category_key=None, return_item=False, serializ
             # items.update(**data)
             item.__dict__.update(**data)
     if settings:
-        item.settings['ui'].update(settings)
+        try:
+            item.settings['ui'].update(settings)
+        except KeyError:
+            item.settings['ui'] = settings
     # item = items.first()
     add_m2m(user, item, m2m, custom_m2m, ordered_m2m, restrict_m2m, used_product_feature_ids)
     try:
