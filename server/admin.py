@@ -440,6 +440,14 @@ class DiscountCodeAdmin(Base):
     ordering = ('-created_at',)
 
 
+class DateRangeAdmin(Base):
+    list_display = ('title', 'start_date', 'end_date') + SafeDeleteAdmin.list_display
+    search_fields = ['title']
+    list_filter = ()
+    list_per_page = 10
+    ordering = ('-created_at',)
+
+
 class FeatureAdmin(Base):
     list_display = ('id', 'name_fa', 'type', 'layout_type', 'values') + SafeDeleteAdmin.list_display
     list_filter = ('type', 'layout_type') + SafeDeleteAdmin.list_filter
@@ -892,7 +900,7 @@ register_list = [(Session, SessionAdmin), (User, UserAdmin), (Category, Category
                  (Holiday, HolidayAdmin), (Charity, CharityAdmin), (DiscountCode, DiscountCodeAdmin),
                  (SpecialProduct, SpecialProductAdmin), (Blog,), (BlogPost,), (WishList,), (NotifyUser,), (Ad, AdAdmin),
                  (State, StateAdmin), (City, CityAdmin), (Permission,), (VipType, VipTypeAdmin),
-                 (Supplier, SupplierAdmin), (PaymentHistory, PaymentHistoryAdmin)]
+                 (Supplier, SupplierAdmin), (PaymentHistory, PaymentHistoryAdmin), (DateRange, DateRangeAdmin)]
 for item in register_list:
     admin.site.register(*item)
 admin.site.site_header = "Mehr Takhfif"
