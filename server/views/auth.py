@@ -47,8 +47,8 @@ class Login_old(View):
                 return JsonResponse({'message': 'شماره موبایل یا پسورد نامعتبر است'}, status=res_code['unauthorized'])
             if is_staff:
                 return set_token(user, self.send_activation(user, request))
-            # login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-            login(request, user)
+            login(request, user, backend='server.authentication.MyModelBackend')
+            # login(request, user)
             res = {'user': UserSchema().dump(user)}
             basket_count = get_basket_count(user=user)
             res = JsonResponse(res)
@@ -114,8 +114,8 @@ class Login(View):
                 request.session['login_with_password'] = True
                 res = JsonResponse({'status': 'otp_required'})
                 return set_token(user, res)
-            # login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-            login(request, user)
+            login(request, user, backend='server.authentication.MyModelBackend')
+            # login(request, user)
             res = JsonResponse({})
             basket_count = sync_session_basket(request)
             res = set_custom_signed_cookie(res, 'is_login', True)
@@ -147,7 +147,7 @@ class Login(View):
             if user.is_staff and not request.session.get('login_with_password', False):
                 request.session['login_with_otp'] = True
                 return JsonResponse({"status": "password_required"})
-            login(request, user)
+            login(request, user, backend='server.authentication.MyModelBackend')
             basket_count = sync_session_basket(request)
             res = JsonResponse({'status': status})
             res = set_custom_signed_cookie(res, 'basket_count', basket_count)
@@ -178,6 +178,7 @@ class SendCode(View):
     def post(self, request):
         try:
             user = MyModelBackend.get_user_from_cookie(request)
+            print(user)
             return self.send_activation(user, request)
         except Exception as e:
             traceback.print_exc()
