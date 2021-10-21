@@ -4,6 +4,90 @@ GET {{host}}/ping
 
 ############# Tables #############
 
+### Ad CRUD
+POST {{admin_host}}/ad
+Content-Type: application/json
+
+{
+  "title": {
+    "fa": "category-test16"
+  },
+  "url": "/test",
+  "priority": 0,
+  "media_id": 1,
+  "mobile_media_id": 2,
+  "storage_id": 2,
+  "type": "home",
+  "settings": {}
+}
+
+> res.jssss
+
+###
+GET {{admin_host}}/ad
+
+> res.jss
+
+###
+PUT {{admin_host}}/ads
+Content-Type: application/json
+
+{
+  "id": 3,
+  "title": {
+    "fa": "category-test16"
+  },
+  "url": "/test",
+  "priority": 0,
+  "media_id": 150,
+  "mobile_media_id": 2,
+  "storage_id": 2,
+  "type": "home",
+  "settings": {}
+}
+> res.js
+
+### Slider CRUD
+POST {{admin_host}}/slider
+Content-Type: application/json
+
+{
+  "title": {
+    "fa": "category-test16"
+  },
+  "url": "/test",
+  "priority": 0,
+  "media_id": 150,
+  "mobile_media_id": 2,
+  "product_id": 2,
+  "type": "home"
+}
+
+> res.jssss
+
+###
+GET {{admin_host}}/slider
+
+> res
+
+###
+PUT {{admin_host}}/slider
+Content-Type: application/json
+
+{
+  "id": 15,
+  "title": {
+    "fa": "category-test16"
+  },
+  "url": "/test",
+  "priority": 0,
+  "media_id": 150,
+  "mobile_media_id": 2,
+  "product_id": 2,
+  "type": "home"
+}
+> res.js
+
 ### Category CRUD
 POST {{admin_host}}/category
 Content-Type: application/json
