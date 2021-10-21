@@ -556,7 +556,7 @@ class SpecialProductView(TableView):
         return create_object(request, SpecialProduct, serializer=SpecialProductESchema, category_key='category')
 
     def put(self, request):
-        return update_object(request, SpecialProduct, category_key='category')
+        return update_object(request, SpecialProduct, serializer=SpecialProductASchema, category_key='category')
 
     def delete(self, request):
         # todo make it global
@@ -612,6 +612,7 @@ class MediaView(TableView):
     # def has_access(self, user, category_id):
     #     return user_
 
+
 class CommentView(TableView):
     permission_required = 'server.view_comment'
 
@@ -655,7 +656,7 @@ class AdsView(TableView):
             serialized_objects(request, Ad, AdASchema, AdASchema, error_null_category=False, params=params))
 
     def post(self, request):
-        return create_object(request, Ad, error_null_category=False)
+        return create_object(request, Ad, error_null_category=False, serializer=AdASchema)
 
     def patch(self, request):
         priorities = json.loads(request.body)['priorities']
@@ -664,7 +665,7 @@ class AdsView(TableView):
         return JsonResponse({'message': 'باموفقیت ذخیرته شد'})
 
     def put(self, request):
-        return update_object(request, Ad, require_category=False)
+        return update_object(request, Ad, serializer=AdASchema, require_category=False)
 
     def delete(self, request):
         return delete_base(request, Ad)
@@ -682,7 +683,7 @@ class SliderView(TableView):
                                                params=params))
 
     def post(self, request):
-        return create_object(request, Slider, error_null_category=False)
+        return create_object(request, Slider, serializer=SliderASchema, error_null_category=False)
 
     def patch(self, request):
         priorities = json.loads(request.body)['priorities']
@@ -691,7 +692,7 @@ class SliderView(TableView):
         return JsonResponse({'message': 'باموفقیت ذخیرته شد'})
 
     def put(self, request):
-        return update_object(request, Slider, require_category=False)
+        return update_object(request, Slider, serializer=SliderASchema, require_category=False)
 
     def delete(self, request):
         return delete_base(request, Slider)

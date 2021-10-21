@@ -40,10 +40,6 @@ admin_default_step = 10
 default_page = 1
 
 
-def get_message(key):
-    res_pattern = {'user_is_ban': 'دسترسی شما محدود شده است لطفا بعدا تلاش کنید'}
-    return {'message': res_pattern[key]}
-
 
 category_with_own_post = [2, 7, 10]  # golkade, adavat_moosighi, super market
 res_code = {'success': 200, 'bad_request': 400, 'unauthorized': 401, 'forbidden': 403, 'token_issue': 401,
@@ -110,6 +106,7 @@ def upload(request, titles, media_type, category=None):
     for file, title in zip(request.FILES.getlist('file'), titles):
         if file is not None:
             file_format = os.path.splitext(file.name)[-1]
+            print(type(file))
             mimetype = get_mimetype(file).split('/')[0]
             if (mimetype == 'image' and file_format not in image_formats) or \
                     (mimetype != 'image'):
@@ -182,8 +179,8 @@ def filter_params(params, new_params=(), lang='fa'):
     return filters
 
 
-def get_request_params(request):
-    param_dict = dict(request.GET)
+def get_request_params(get_parameters):
+    param_dict = dict(get_parameters)
     for key, value in param_dict.copy().items():
         if type(value) is list and len(value) < 2:
             param_dict[key] = value[0]
@@ -192,12 +189,12 @@ def get_request_params(request):
     return param_dict
 
 
-def get_rank(q, lang="fa", field='name'):
-    sv = SearchVector(KeyTextTransform(lang, field), weight='A')  # + \
-    # SearchVector(KeyTextTransform('fa', 'product__category__name'), weight='B')
-    sq = SearchQuery(q)
-    rank = SearchRank(sv, sq, weights=[0.2, 0.4, 0.6, 0.8])
-    return rank
+# def get_rank(q, lang="fa", field='name'):
+#     sv = SearchVector(KeyTextTransform(lang, field), weight='A')  # + \
+#     # SearchVector(KeyTextTransform('fa', 'product__category__name'), weight='B')
+#     sq = SearchQuery(q)
+#     rank = SearchRank(sv, sq, weights=[0.2, 0.4, 0.6, 0.8])
+#     return rank
 
 
 def load_location(location):
@@ -226,6 +223,10 @@ def get_invoice_file(request, invoice=None, invoice_id=None, user={}):
 
 
 def safe_get(*args):
+    """
+    :param args: obj, attr1, attr2, attr3, ...
+    :return: obj.attr1.attr2.attr3
+    """
     try:
         o = args[0]
         for arg in args[1:]:
@@ -268,19 +269,15 @@ def get_share(storage=None, invoice=None):
 
 # No Usage
 
-def to_json(obj=None, string=None):
+def obj_to_json(obj=None):
     if obj is not list:
         obj = [obj]
     if obj:
-        string = serializers.serialize("json", obj)
-    return json.loads(string[1:-1])['fields']
+        serialized = serializers.serialize("json", obj)
+    return json.loads(serialized[1:-1])['fields']
 
 
-def timestamp_to_date(timestamp):
-    return datetime.fromtimestamp(timestamp)
-
-
-def move(obj, folder):
+def move_file(obj, folder):
     old_path = obj.file.path
     new_path = MEDIA_ROOT + f'\\{folder}\\' + obj.file.name
     try:
@@ -292,7 +289,7 @@ def move(obj, folder):
         obj.save()
 
 
-def to_obj(dic):
+def dict_to_obj(dic):
     if type(dic) is not dict:
         dic = json.loads(dic)
     obj = type('test', (object,), {})()
@@ -318,21 +315,14 @@ def get_barcode(data=None):
 
 # Utils
 
-def send_sms_old(to, pattern="gs3vltcvoi", content=None, input_data=None):
-    # +985000125475
-    if to == "Meelad":
-        to = "09015518439"
-    if pattern:
-        data = {"op": 'pattern', "user": '09379118854', "pass": 'Mojirzg6654', 'fromNum': '+98100020400',
-                'toNum': to, 'patternCode': pattern, 'inputData': input_data}
-    if content:
-        data = {"op": 'send', "uname": '09379118854', "pass": 'Mojirzg6654', 'from': '+98100020400',
-                'to': to, 'message': content}
-
-    return requests.post('http://ippanel.com/api/select', data=json.dumps(data))
-
-
 def send_sms(to, template, token, token2=None):
+    """
+    :param to:
+    :param template: digital-order-details, order-summary, user-order, verify
+    :param token:
+    :param token2:
+    :return:
+    """
     try:
         api = KavenegarAPI(SMS_KEY)
         params = {
@@ -357,9 +347,19 @@ def send_pm(tg_id, message):  # 312145983  -550039210
     while r.status_code != 200 and retry < 3:
         r = requests.post(url, json=data)
         retry += 1
+    return r
 
 
 def send_email(subject, to, from_email='notification@mehrtakhfif.com', message=None, html_content=None, attach=None):
+    """
+    :param subject:
+    :param to:
+    :param from_email:
+    :param message:
+    :param html_content:
+    :param attach:
+    :return:
+    """
     return True
     if type(to) != list:
         to = [to]
@@ -369,6 +369,7 @@ def send_email(subject, to, from_email='notification@mehrtakhfif.com', message=N
         msg.content_subtype = "html"
         [msg.attach_file(a) for a in attach]
     msg.send()
+    return msg
 
 
 # info category by moji
@@ -664,7 +665,7 @@ def get_vip_price(user, storage):
     vip_prices = storage.vip_prices.all()
 
 
-def remove_if_is_empty(required_keys, dictionary):
+def remove_null_from_dict(required_keys, dictionary):
     for key in required_keys:
         if not dictionary[key]:
             dictionary.pop(key, None)

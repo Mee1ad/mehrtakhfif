@@ -611,8 +611,8 @@ class Media(Base):
     types = [(1, 'image'), (2, 'thumbnail'), (3, 'media'), (4, 'slider'), (5, 'ads'), (6, 'mobile_ads'),
              (7, 'category'), (8, 'mobile_slider'), (9, 'description'), (100, 'video'), (200, 'audio')]
     no_category_type = [4, 5, 6, 8]
-    media_sizes = {'thumbnail': (600, 372), 'media': (1280, 794), 'category': (800, 500), 'ads': (820, 300),
-                   'mobile_ads': (500, 384), 'slider': (1920, 504), 'mobile_slider': (980, 860)}
+    media_sizes = {'thumbnail': (600, 372), 'media': (1280, 794), 'category': (800, 500),
+                   'slider': (1920, 504), 'mobile_slider': (980, 860)}
     select = ['category'] + Base.select
 
     def get_absolute_url(self):
@@ -751,6 +751,10 @@ class CategoryGroupFeature(MyModel):
 
 
 class DateRange(Base):
+    def __str__(self):
+        return self.title
+
+
     title = models.CharField(max_length=255)
     start_date = models.DateTimeField()
     end_date = models.DateTimeField()
@@ -1752,7 +1756,7 @@ class Slider(Base):
     media = models.ForeignKey(Media, on_delete=CASCADE, related_name='slider')
     mobile_media = models.ForeignKey(Media, on_delete=CASCADE, related_name='slider_mobile')
     type = models.CharField(default='home', max_length=255)
-    url = models.URLField(null=True, blank=True)
+    url = models.CharField(max_length=255, null=True, blank=True)
     priority = models.PositiveSmallIntegerField(default=0, null=True, blank=True, help_text="need null value")
 
     class Meta:

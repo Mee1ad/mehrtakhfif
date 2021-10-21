@@ -89,7 +89,7 @@ class ClientSpecialOffer(View):
 class LimitedSpecialProduct(View):
     def get(self, request):
         today = timezone.now()
-        selected_date = DateRange.objects.get(start_date__lte=today, end_date__gte=today)
+        selected_date = DateRange.objects.filter(start_date__lte=today, end_date__gte=today).first()
         products = SpecialProduct.objects.filter(category=None, date_id=selected_date.id) \
             .select_related('thumbnail', 'storage__product__thumbnail', 'category') \
             .prefetch_related('storage__vip_prices')
@@ -136,7 +136,7 @@ class Categories(View):
     def get(self, request):
         all_category = cache.get('categories', None)
         if not all_category:
-            all_category = get_categories()
+            all_category = get_categories({"parent_id": None})
             cache.set('categories', all_category, 3000000)  # about 1 month
         return JsonResponse({'data': all_category})
 

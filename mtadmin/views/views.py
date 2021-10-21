@@ -173,14 +173,14 @@ class TableFilter(AdminView):
         return brands
 
 
-class CheckLoginToken(AdminView):
+class RollView(AdminView):
     # def options(self, request, *args, **kwargs):
     #     return JsonResponse({"test": "ok"})
 
     def get(self, request):
         user = request.user
         permissions = get_objects_for_user(user, 'server.manage_category').filter(parent=None)
-        categories = CategoryASchema(user=request.user, exclude=['media']).dump(permissions, many=True)
+        categories = CategoryASchema(user=request.user, only=['id', 'name']).dump(permissions, many=True)
         roll = get_roll(user)
         user = UserASchema(exclude=['default_address']).dump(user)
         user['roll'] = roll
@@ -188,14 +188,14 @@ class CheckLoginToken(AdminView):
         return JsonResponse(res)
 
 
-class PSearch(AdminView):
-    def get(self, request):
-        params = get_request_params(request)
-        # switch = {'media': self.supplier, 'tag': self.tag,}
-        rank = get_rank(params['q'], 'fa', 'title')
-        medias = Media.objects.annotate(rank=rank).filter(rank__gt=0).order_by('-rank')[:5]
-        medias = MediaASchema().dump(medias, many=True)
-        return JsonResponse({"media": medias})
+# class PSearch(AdminView):
+#     def get(self, request):
+#         params = get_request_params(request.GET)
+#         # switch = {'media': self.supplier, 'tag': self.tag,}
+#         rank = get_rank(params['q'], 'fa', 'title')
+#         medias = Media.objects.annotate(rank=rank).filter(rank__gt=0).order_by('-rank')[:5]
+#         medias = MediaASchema().dump(medias, many=True)
+#         return JsonResponse({"media": medias})
 
 
 class SearchView(AdminView):
@@ -203,7 +203,8 @@ class SearchView(AdminView):
         model = request.GET.get('type', None)
         switch = {'supplier': self.supplier, 'tag': self.tag, 'product': self.product, 'cat': self.category,
                   'media': self.media}
-        params = get_request_params(request)
+        print(request.GET)
+        params = get_request_params(request.GET)
         username = request.user.username
         return JsonResponse(switch[model](**params, username=username))
 
@@ -388,7 +389,7 @@ class SetOrder(View):
     def put(self, request):
         # check_user_permission(request.user, 'change_feature')
         data = get_data(request, require_category=False)
-        data = to_obj(data)
+        data = dict_to_obj(data)
         model = {'product_feature': ProductFeature, 'feature_value': FeatureValue,
                  'feature_group_feature': FeatureGroupFeature, 'category': Category}[data.model]
         ids = data.ids

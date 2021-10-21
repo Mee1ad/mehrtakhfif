@@ -489,7 +489,6 @@ class FeatureStorageSchema(BaseSchema):
 class TagSchema(BaseSchema):
     id = fields.Function(lambda o: o.tag.pk)
     name = fields.Method('get_name')
-    permalink = fields.Function(lambda o: o.tag.permalink)
     show = fields.Function(lambda o: True)
 
     def get_name(self, obj):

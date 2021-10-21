@@ -1229,6 +1229,7 @@ class SpecialProductASchema(SpecialProductSchema, MySchema):
 
     product = fields.Method("get_product")
     name = fields.Method("get_name")
+    date_id = fields.Int()
 
     def get_name(self, obj):
         if obj.name:
@@ -1267,8 +1268,8 @@ class AdASchema(BaseAdminSchema):
         unknown = INCLUDE
         additional = ('id', 'url', 'priority', 'type')
 
-    def __init__(self, is_mobile=True):
-        super().__init__()
+    def __init__(self, is_mobile=True, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.is_mobile = is_mobile
 
     title = fields.Dict()
@@ -1307,8 +1308,8 @@ class SliderASchema(BaseAdminSchema):
         unknown = INCLUDE
         additional = ('id', 'url', 'priority', 'type')
 
-    def __init__(self, is_mobile=True):
-        super().__init__()
+    def __init__(self, is_mobile=True, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.is_mobile = is_mobile
 
     title = fields.Dict()
@@ -1336,6 +1337,7 @@ class SliderASchema(BaseAdminSchema):
 
     @post_load
     def make_slider(self, data, **kwargs):
+        print(self.return_dict)
         if self.return_dict:
             return data
         return Slider(**data)
