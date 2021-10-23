@@ -122,11 +122,12 @@ class Filter(View):
     params = None
 
     def add_query_filter(self, ):
-        query = self.params.get('q', None)
-        if query:
-            self.query['query']["bool"]["should"] = [{"match": {"name_fa": {"query": query, "boost": 1}}},
-                                                     {"match": {"name_fa2": {"query": query, "boost": 0.5}}},
-                                                     {"match": {"tags": {"query": query, "boost": 0.5}}}]
+        q = self.params.get('q', None)
+        if q:
+            query = [{"match": {"name_fa": {"query": q, "boost": 1}}},
+                     {"match": {"name_fa2": {"query": q, "boost": 0.5}}},
+                     {"match": {"tags": {"query": q, "boost": 0.5}}}]
+            self.query['query']["bool"]["should"] = query
 
     def add_brand_filter(self, ):
         brands = self.params.getlist('brands', None)
@@ -148,10 +149,10 @@ class Filter(View):
     def add_category_filter(self, ):
         category_permalink = self.params.get('cat', )
         if category_permalink:
-            self.query['query']["bool"]["must"].append(
-                {"nested": {"query": {"term": {"categories.permalink": category_permalink}},
-                            "path": "categories",
-                            "inner_hits": {"_source": ["permalink"]}}})
+            query = [{"nested": {"query": {"term": {"categories.permalink": category_permalink}},
+                                 "path": "categories", "inner_hits": {"_source": ["permalink"]}}},
+                     {"term": {"category.permalink": category_permalink}}]
+            self.query['query']["bool"]["should"] = query
 
     def add_price_filter(self, ):
         min_price = self.params.get('min_price', )

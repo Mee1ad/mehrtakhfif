@@ -13,7 +13,11 @@ standard = analyzer('standard', tokenizer='standard')
 @registry.register_document
 class ProductDocument(Document):
     id = fields.IntegerField()
-    category_id = fields.IntegerField()
+    category = fields.ObjectField(properties={
+        'id': fields.IntegerField(),
+        'name': fields.TextField("__str__"),
+        'permalink': fields.KeywordField(),
+    })
     name_fa = fields.TextField(analyzer=standard, attr='get_name_fa')
     name_fa2 = fields.TextField(analyzer=ngram, attr='get_name_fa')
     thumbnail = fields.TextField(attr='get_thumbnail')
