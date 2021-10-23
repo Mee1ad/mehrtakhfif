@@ -90,7 +90,7 @@ class LimitedSpecialProduct(View):
     def get(self, request):
         today = timezone.now()
         selected_date = DateRange.objects.filter(start_date__lte=today, end_date__gte=today).first()
-        products = SpecialProduct.objects.filter(category=None, date_id=selected_date.id) \
+        products = SpecialProduct.objects.filter(date_id=selected_date.id) \
             .select_related('thumbnail', 'storage__product__thumbnail', 'category') \
             .prefetch_related('storage__vip_prices')
         products = SpecialProductSchema(**request.schema_params).dump(products, many=True)
