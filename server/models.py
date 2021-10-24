@@ -1128,6 +1128,11 @@ class Product(Base):
         storage = type('Storage', (), {"final_price": 0, 'discount_price': 0})()
         return getattr(self, 'default_storage', storage)
 
+    def get_default_storage(self):
+        ds = self.default_storage
+        if self.available:
+            return ds
+        return None
     # def save(self):
     #     self.slug = slugify(self.title)
     #     super(Post, self).save()

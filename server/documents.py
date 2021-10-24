@@ -35,7 +35,7 @@ class ProductDocument(Document):
         'discount_percent': fields.IntegerField(),
         'final_price': fields.IntegerField(),
         'sold_count': fields.IntegerField()
-    })
+    }, attr="get_default_storage")
     brand = fields.ObjectField(properties={
         'id': fields.IntegerField(),
         'name': fields.TextField("__str__"),
