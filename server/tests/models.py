@@ -19,7 +19,7 @@ def fake_json():
 
 
 def fake_settings():
-    return {"ui": {}}
+    return {"ui": {}, "share": 0.35}
 
 
 def fake_mobile_agent():
@@ -45,7 +45,8 @@ def fake_address(user=None, **kwargs):
     state = fake_state()
     city = fake_city(state=state)
     location = fake.location_on_land()[:2]
-    return mixer.blend(Address, user=user, location={'lat': location[0], 'lng': location[1]}, city=city, state=state, **kwargs)
+    return mixer.blend(Address, user=user, location={'lat': location[0], 'lng': location[1]}, city=city, state=state,
+                       **kwargs)
 
 
 def fake_basket(**kwargs):
@@ -145,7 +146,8 @@ def fake_product(**kwargs):
                        location={'lat': location[0], 'lng': location[1]}, address=fake.address,
                        properties=fake_json(), name=fake_json(), description=fake_json(),
                        short_address=fake.address, details=fake_json(), settings=fake_settings(),
-                       review=review, type=types[fake.random_int(1, 4)], **kwargs)
+                       review=review, type=types[fake.random_int(1, 4)], available=True,
+                       category=fake_category(settings=fake_settings()), **kwargs)
 
 
 def fake_payment_history(**kwargs):
@@ -158,18 +160,21 @@ def fake_slider(**kwargs):
 
 
 def fake_special_product(**kwargs):
-    return mixer.blend(SpecialProduct, storage=fake_storage(null=False), thumbnail=fake_media(2), category=fake_category(),
+    return mixer.blend(SpecialProduct, storage=fake_storage(null=False), thumbnail=fake_media(2),
+                       category=fake_category(),
                        url=fake.url(), name=fake_json(), **kwargs)
 
 
 def fake_storage(**kwargs):
     supplier = fake_user(is_verify=True)
     product = fake_product()
-    return mixer.blend(Storage, title=fake_json(), disable=False, available_count=100,
+    storage = mixer.blend(Storage, title=fake_json(), disable=False, available_count=100,
                        available_count_for_sale=100, start_price=1000, discount_price=2000,
                        final_price=3000, shipping_cost=1000, max_count_for_sale=5, tax_type=1,
-                       deadline=None, supplier=supplier, media=fake_media(2),
+                       deadline=None, supplier=supplier, media=fake_media(2), discount_percent=15,
                        dimensions={'weight': 10, 'height': 10, 'width': 10, 'length': 10}, **kwargs)
+    product.default_storage = storage
+    return storage
 
 
 def fake_state(**kwargs):
@@ -177,7 +182,7 @@ def fake_state(**kwargs):
 
 
 def fake_tag(**kwargs):
-    return mixer.blend(Tag, **kwargs)
+    return mixer.blend(Tag, name=fake_json(), **kwargs)
 
 
 def fake_tag_group(**kwargs):
@@ -186,6 +191,10 @@ def fake_tag_group(**kwargs):
 
 def fake_vip_type(**kwargs):
     return mixer.blend(VipType, **kwargs)
+
+
+def fake_vip_price(**kwargs):
+    return mixer.blend(VipPrice, **kwargs)
 
 
 def fake_user(**kwargs):
