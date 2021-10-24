@@ -304,3 +304,19 @@ Content-Type: application/json
 
 ###
 GET {{host}}/limited_special_product
+
+###
+POST {{host}}/address
+Content-Type: application/json
+
+{
+  "city_id": 30,
+  "postal_code": "1234567890",
+  "address": "رشت گاز فلکخه اول ",
+  "location": [1, 0],
+  "name": "test",
+  "phone": "09015518439",
+  "set_default": false
+}
+
+###

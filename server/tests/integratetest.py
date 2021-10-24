@@ -6,7 +6,7 @@ from server.views.client.home import *
 from server.views.client.product import *
 from server.views.client.shopping import *
 from server.views.client.user import *
-from ..utils import *
+from server.tests.utils import *
 
 
 # Get an instance of a logger
@@ -185,6 +185,10 @@ class BoxTestCase(TestCase):
         res = FilterDetail.as_view()(request)
         assert 200 <= res.status_code <= 299
 
+    def test_special_offer(self):
+        request = get(f'/special_offer')
+        res = ClientSpecialOffer.as_view()(request)
+        assert 200 <= res.status_code <= 299
 
 class ProductTestCase(TestCase):
 

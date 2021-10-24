@@ -120,64 +120,6 @@ def upload(request, titles, media_type, category=None):
     return media_list
 
 
-def filter_params(params, new_params=(), lang='fa'):
-    filters = {'filter': {'default_storage__isnull': False, 'verify': True},
-               'or_filter': {'default_storage__isnull': False, 'verify': True},
-               'related': {}, 'query': {}, 'order': ''}
-    if not params:
-        return filters
-    ds = 'default_storage__'
-    dis = 'discount'
-    valid_orders = {'cheap': f'{ds}{dis}_price', 'expensive': f'-{ds}{dis}_price',
-                    'best_seller': f'-{ds}sold_count', 'popular': '-created_at',
-                    'discount': f'-{ds}{dis}_percent'}
-    for k in params.keys():
-        value = params[k]
-        if params[k] in ['false', 'true']:
-            value = json.loads(params[k].lower())
-        try:
-            if k == "q":
-                tag_ids = esearch(value, TagDocument, only=['id'])
-                filters['or_filter']['tags__in'] = tag_ids
-                value = esearch(value, ProductDocument, only=['id'])
-                new_params[k] = "id__in"
-            list_of_values = params.getlist(k)
-            if len(list_of_values) == 1:
-                filters['filter'][new_params[k]] = value
-            elif len(list_of_values) > 1:
-                filters['filter'][f'{new_params[k]}__in'] = list_of_values
-
-        except KeyError:
-            pass
-    category_permalink = params.get('category', None)
-    # q = params.get('q', None)
-    # todo test and fix s
-    # sa = params.get('sa', None)  # search advanced
-    orderby = params.get('o', '-created_at')
-    min_price = params.get('min_price', None)
-    max_price = params.get('max_price', None)
-    if category_permalink:
-        try:  # for forign category
-            filters['related'] = {'categories__in': Category.objects.filter(category__permalink=category_permalink,
-                                                                            permalink=None).values_list('parent_id',
-                                                                                                        flat=True)}
-        except Box.DoesNotExist:
-            pass
-    if params.get('available', None):
-        filters['filter']['default_storage__unavailable'] = False
-    if orderby != '-created_at':
-        valid_key = valid_orders[orderby]
-        filters['order'] = valid_key
-    # if sa:
-    #     filters['annotate']['rank'] = get_rank(q, lang)
-    #     filters['order'] = '-rank'
-    # if q:
-    #     filters['annotate']['text'] = KeyTextTransform(lang, 'name')
-    #     filters['order'] = 'text'
-    if min_price and max_price:
-        filters['filter'][f'{ds}{dis}_price__range'] = (min_price, max_price)
-    return filters
-
 
 def get_request_params(get_parameters):
     param_dict = dict(get_parameters)
@@ -672,12 +614,6 @@ def remove_null_from_dict(required_keys, dictionary):
     return dictionary
 
 
-def get_product_filter_params(is_staff):
-    if is_staff:
-        return {}
-    return {'categories__disable': False, 'category__disable': False, 'disable': False, 'storages__disable': False}
-
-
 def get_preview_permission(user, category_check=True, box_check=True, category_key='category', product_check=False, is_get=True):
     permitted_users = []  # user_id, can order for disabled product
     if is_get:
@@ -731,107 +667,18 @@ def add_to_basket(basket, products):
     return basket.count
 
 
-def get_colors_hex(products=None, with_price=False):
-    key = 'colors' + sha3_512(f"colors{products}".encode()).hexdigest()
-    colors = cache.get(key, None)
-    if colors:
-        return colors
-    if products:
-        product_features = list(
-            ProductFeature.objects.filter(feature_id=color_feature_id, product__in=products).annotate(
-                color=KeyTextTransform('hex', 'feature_value__settings'),
-                name=KeyTextTransform('fa', 'feature_value__value')).order_by('feature_value_id').distinct(
-                'feature_value_id').values('feature_value_id', 'color', 'name'))
-        for item in product_features:
-            item['id'] = item.pop('feature_value_id')
-        cache.set(key, product_features, timeout=60 * 60 * 24 * 30)
-        return product_features
-    colors = list(FeatureValue.objects.filter(feature_id=color_feature_id).values('id', 'settings__hex', 'value__fa'))
-    cache.set(key, colors, timeout=60 * 60 * 24 * 30)
-    return colors
-
-
-def make_short(link):
+def make_short_link(link):
     url = None
     while not url:
         try:
             shortlink = f"l{get_random_string(4)}"
-            url, created = URL.objects.get_or_create(url=link, default={'shortlink': shortlink})
+            url, created = URL.objects.get_or_create(url=link, shortlink=shortlink)
         except IntegrityError:
             pass
     return f"{SHORTLINK}/{url.shortlink}"
 
-# deprecated
-def get_removed_media_info():
-    boxes = Box.objects.all()
-    for box in boxes:
-        products = Product.objects.filter(box=box)
-        categories = Category.objects.filter(box=box)
-        products_book = xlsxwriter.Workbook(f'محصول {box.name["fa"]}.xlsx')
-        products_sheet = products_book.add_worksheet()
-        category_book = xlsxwriter.Workbook(f'دسته بندی {box.name["fa"]}.xlsx')
-        category_sheet = category_book.add_worksheet()
-        products_sheet.set_column('B:B', 70)
-        products_sheet.set_column('C:C', 10)
-        category_sheet.set_column('B:B', 40)
-        products_sheet.write(f'A1', "ID")
-        products_sheet.write(f'B1', "name")
-        products_sheet.write(f'C1', "thumbnail")
-        products_sheet.write(f'D1', "deleted media count")
-        category_sheet.write(f'A1', "ID")
-        category_sheet.write(f'B1', "name")
-        category_sheet.write(f'C1', "image")
-        row = 2
-        for product in products:
-            thumbnail = None
-            deleted_media_count = 0
-            try:
-                if os.path.exists(product.thumbnail.image.path) is False:
-                    thumbnail = "حذف شده"
-            except AttributeError:
-                pass
-            medias = product.media.all()
-            for media in medias:
-                if os.path.exists(media.image.path) is False:
-                    deleted_media_count += 1
-            if thumbnail or deleted_media_count:
-                products_sheet.write(f'A{row}', product.id)
-                products_sheet.write(f'B{row}', product.get_name_fa())
-                products_sheet.write(f'C{row}', thumbnail)
-                products_sheet.write(f'D{row}', deleted_media_count)
-                row += 1
-        row = 2
-        for category in categories:
-            try:
-                if os.path.exists(category.media.image.path) is False:
-                    category_sheet.write(f'A{row}', category.id)
-                    category_sheet.write(f'B{row}', category.get_name_fa())
-                    category_sheet.write(f'C{row}', "حذف شده")
-                    row += 1
-            except AttributeError:
-                pass
-        products_book.close()
-        category_book.close()
 
-
-def disable_no_thumbnail_products():
-    i = 0
-    products = Product.objects.all()
-    for product in products:
-        try:
-            if os.path.exists(product.thumbnail.image.path) is False:
-                product.disable = True
-                product.save()
-                i += 1
-        except AttributeError:
-            pass
-
-
-def sort_by_list(unsorted_list, list_of_id):
-    return [unsorted_list[x] for x in list_of_id]
-
-
-# incomplete
+# todo incomplete
 def supplier_sale_report(supplier):
     book = xlsxwriter.Workbook(f'book.xlsx')
     sheet = book.add_worksheet()
@@ -904,20 +751,6 @@ def check_csrf_token(request):
     raise PermissionDenied
 
 
-def products_availability_check(products, step, page):
-    count = 0
-    available_products = []
-    for product in products:
-        storages = Storage.objects.filter(available_count_for_sale__gt=0, product=product).exists()
-        if storages:
-            count += 1
-            available_products.append(product)
-            if count == step:
-                break
-            continue
-    return available_products
-
-
 def set_custom_signed_cookie(res, key, value, salt=TOKEN_SALT, domain=DEFAULT_COOKIE_DOMAIN, **kwargs):
     res.set_signed_cookie(key, value, salt=salt, domain=domain, **kwargs)
     return res
@@ -951,42 +784,3 @@ def sort_by_list_of_id(model, id_list):
 
 class LoginRequired(LoginRequiredMixin, View):
     raise_exception = True
-
-
-class ORM:
-    @staticmethod
-    def get_menu():
-        return Menu.objects.select_related('media', 'parent').all()
-
-    @staticmethod
-    def get_special_offer():
-        return SpecialOffer.objects.select_related('media').all()
-
-    @staticmethod
-    def get_special_product():
-        return SpecialProduct.objects.select_related('storage', 'storage__product', 'media').all()
-
-    @staticmethod
-    def get_best_seller(count=5):
-        return Storage.objects.select_related('product', 'product__thumbnail').filter(
-            default=True).order_by('-product__sold_count')[:count]
-
-    @staticmethod
-    def get_most_discounted(count=5):
-        return Storage.objects.select_related('product', 'product__thumbnail').filter(
-            default=True).order_by('-product__sold_count')[:count]
-
-    @staticmethod
-    def get_cheapest(count=5):
-        return Storage.objects.select_related('product', 'product__thumbnail').filter(
-            default=True).order_by('-product__sold_count')[:count]
-
-    @staticmethod
-    def get_most_expensive(count=5):
-        return Storage.objects.select_related('product', 'product__thumbnail').filter(
-            default=True).order_by('-product__sold_count')[:count]
-
-    @staticmethod
-    def get_latest(count=5):
-        return Storage.objects.select_related('product', 'product__thumbnail').filter(
-            default=True).order_by('-product__sold_count')[:count]
