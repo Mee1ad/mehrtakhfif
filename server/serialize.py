@@ -1055,7 +1055,7 @@ class AdSchema(BaseSchema):
     title = fields.Method('get_title')
     media = fields.Method('get_media')
     product_permalink = fields.Method('get_permalink')
-    settings = fields.Function(lambda o: o.settings['ui'])
+    settings = fields.Function(lambda o: o.settings.get('ui', None))
 
     def get_permalink(self, obj):
         try:

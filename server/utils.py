@@ -751,8 +751,8 @@ def check_csrf_token(request):
     raise PermissionDenied
 
 
-def set_custom_signed_cookie(res, key, value, salt=TOKEN_SALT, domain=DEFAULT_COOKIE_DOMAIN, **kwargs):
-    res.set_signed_cookie(key, value, salt=salt, domain=domain, **kwargs)
+def set_custom_signed_cookie(res, key, value, salt=TOKEN_SALT, domain=DEFAULT_COOKIE_DOMAIN, max_age=2678400, **kwargs):
+    res.set_signed_cookie(key, value, salt=salt, domain=domain, max_age=max_age, **kwargs)
     return res
 
 

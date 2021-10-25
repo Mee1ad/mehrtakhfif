@@ -58,10 +58,10 @@ class FilterDetail(View):
     def add_category_filter(self, ):
         self.category_permalink = self.params.get('cat', )
         if self.category_permalink:
-            self.query["query"]["bool"]["must"].append(
-                {"nested": {"query": {"term": {"categories.permalink": self.category_permalink}},
-                            "path": "categories",
-                            "inner_hits": {"_source": ["permalink"]}}})
+            query = [{"nested": {"query": {"term": {"categories.permalink": self.category_permalink}},
+                                 "path": "categories", "inner_hits": {"_source": ["permalink"]}}},
+                     {"term": {"category.permalink": self.category_permalink}}]
+            self.query['query']["bool"]["should"] = query
 
     def get_breadcrumb(self, permalink):
         categories = Category.objects.filter(permalink=permalink).values('name__fa', 'permalink', 'parent__name__fa',
@@ -96,11 +96,12 @@ class FilterDetail(View):
         brands = s.from_dict({"_source": "brand", "collapse": {"field": "brand.id"}, **self.query})
         brands = brands.execute()
         brands = [hit.brand.to_dict() for hit in brands if hit.brand]
-        category_ids = s.from_dict({"_source": "category_id", "collapse": {"field": "category_id"}, **self.query})
-        category_ids = category_ids.execute()
-        category_ids = [hit.category_id for hit in category_ids]
-        category_ids = flatten(category_ids)
-        category_ids = [item for sublist in category_ids for item in sublist]
+        # category_ids = s.from_dict({"_source": "category_id", "collapse": {"field": "category_id"}, **self.query})
+        category_ids_object = s.from_dict({"_source": "categories.id", "collapse": {"field": "categories.id"},
+                                           **self.query})
+        category_ids_hits = category_ids_object.execute()
+        category_ids_list = [hit.categories for hit in category_ids_hits]
+        category_ids = [hit.id for hit in category_ids_list[0]]
         list_of_colors = [hit.colors for hit in products]
         colors = list(chain.from_iterable(list_of_colors))
         unique_colors = list({v['id']: v.to_dict() for v in colors}.values())
@@ -174,6 +175,7 @@ class Filter(View):
         self.add_available_filter()
         self.add_category_filter()
         self.add_price_filter()
+        print(self.query)
         s = Search(using=ES_CLIENT, index="product")
         products = s.from_dict(self.query)[:500]
         products = products.execute()

@@ -35,7 +35,7 @@ def cache_proxy(func, key, minutes=5, cached=True):
 lvl = {0: 1, 1: 5, 2: 10, 3: 15, 4: 30, 5: 60, 6: 120, 7: 180, 8: 360, 9: 720, 10: 1440, 20: 2592000}
 
 home = [
-    cache_proxy(Test.as_view(), 'ping', lvl[9]),
+    cache_proxy(PingView.as_view(), 'ping', lvl[9]),
     # path('n/<int:pk>', try_except(NotifTest.as_view()), name='n'),
     path('init', try_except(Init.as_view()), name='init'),  # no cache
     cache_proxy(ClientSlider.as_view(), 'slider/<str:slider_type>', lvl[6], False),

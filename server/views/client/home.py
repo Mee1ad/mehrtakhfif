@@ -8,7 +8,7 @@ from server.serialize import *
 from server.utils import *
 
 
-class Test(View):
+class PingView(View):
     def get(self, request):
         return JsonResponse({"message": "pong"})
 

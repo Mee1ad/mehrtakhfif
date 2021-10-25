@@ -5,7 +5,7 @@ GET {{host}}/ping
 ############# Tables #############
 
 ### Ad CRUD
-POST {{admin_host}}/ad
+POST {{admin_host}}/ads
 Content-Type: application/json
 
 {
@@ -14,11 +14,10 @@ Content-Type: application/json
   },
   "url": "/test",
   "priority": 0,
-  "media_id": 1,
+  "media_id": 256,
   "mobile_media_id": 2,
   "storage_id": 2,
-  "type": "home",
-  "settings": {}
+  "type": "home"
 }
 
 > res.jssss
