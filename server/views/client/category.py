@@ -103,7 +103,7 @@ class FilterDetail(View):
         category_ids_hits = category_ids_object.execute()
         category_ids_list = [hit.categories for hit in category_ids_hits]
         category_ids = [hit.id for hit in category_ids_list[0]]
-        list_of_colors = [hit.colors for hit in products]
+        list_of_colors = [getattr(hit, 'colors', {}) for hit in products]
         colors = list(chain.from_iterable(list_of_colors))
         unique_colors = list({v['id']: v.to_dict() for v in colors}.values())
         prices = products.aggregations.to_dict()
