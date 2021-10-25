@@ -739,11 +739,10 @@ Content-Type: application/json
 
 {
   "name": {
-    "fa": "چای سیاه4",
+    "fa": "چای سیاه6",
     "en": "",
     "ar": ""
-  },
-  "permalink": "api-test55"
+  }
 }
 
 > res.js

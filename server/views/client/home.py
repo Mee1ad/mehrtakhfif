@@ -207,7 +207,6 @@ class ElasticSearch(View):
             category = {'name': hit.name_fa, 'permalink': hit.permalink, 'media': hit.media, 'parent': hit.parent}
             categories.append(category)
         for hit in t[:3]:
-            tag = {'name': hit.name_fa, 'permalink': hit.permalink}
-            tags.append(tag)
+            tags.append(hit.name_fa)
         categories = sorted(categories, key=lambda i: 1 if i['parent'] else 0)
         return JsonResponse({'categories': categories, 'tags': tags, 'products': products})

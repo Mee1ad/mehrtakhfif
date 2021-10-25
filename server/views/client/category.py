@@ -32,11 +32,12 @@ class FilterDetail(View):
     category_permalink = None
 
     def add_query_filter(self, ):
-        query = self.params.get('q', None)
-        if query:
-            self.query["query"]["bool"]["must"].append({"match": {"name_fa": {"query": query, "boost": 1}}})
-            self.query["query"]["bool"]["must"].append({"match": {"name_fa2": {"query": query, "boost": 0.5}}})
-            self.query["query"]["bool"]["must"].append({"match": {"tags": {"query": query, "boost": 0.5}}})
+        q = self.params.get('q', None)
+        if q:
+            query = [{"match": {"name_fa": {"query": q, "boost": 1}}},
+                     {"match": {"name_fa2": {"query": q, "boost": 0.5}}},
+                     {"match": {"tags": {"query": q, "boost": 0.5}}}]
+            self.query['query']["bool"]["should"] = query
 
     def add_brand_filter(self, ):
         brands = self.params.getlist('brands', None)
