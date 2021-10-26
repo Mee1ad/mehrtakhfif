@@ -298,6 +298,17 @@ Content-Type: application/json
 > res.js
 
 ###
+PUT {{admin_host}}/product
+Content-Type: application/json
+
+{
+  "id": 1261,
+  "disable": false
+}
+
+> res.js
+
+###
 GET {{admin_host}}/product?id=516
 
 > res.js

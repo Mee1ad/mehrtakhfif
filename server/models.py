@@ -1039,9 +1039,9 @@ class Product(Base):
 
     def validation(self):
         super().validation()
-        # if not self.tags.all() and not self.tag_groups.all():
-        #     self.make_item_disable(self)
-        #     raise ActivationError('نه تگ داری نه گروه تک، نمیشه ک اینجوری میشه؟')
+        if self.default_storage is None:
+            self.make_item_disable(self)
+            raise ActivationError('لطفا انبار پیش فرض را مشخص نمایید!')
         if not self.storages.filter(disable=False):
             self.available = False
         if self.review['state'] == 'reviewed':
