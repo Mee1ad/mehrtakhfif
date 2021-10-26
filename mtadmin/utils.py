@@ -34,7 +34,7 @@ def has_access(user, category, error_null_category=True):
     if type(category) is int:
         category = Category.objects.get(pk=category)
     if error_null_category:
-        permitted = user.has_perm('has_access', category)
+        permitted = user.has_perm('manage_category', category)
         if not permitted:
             raise PermissionDenied
         return True
