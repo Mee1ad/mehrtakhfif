@@ -135,10 +135,13 @@ class BoxWithCategory(View):
 class Categories(View):
     def get(self, request):
         all_category = cache.get('categories', None)
+        res = {}
         if not all_category:
             all_category = get_categories({"parent_id": None})
-            cache.set('categories', all_category, 3000000)  # about 1 month
-        return JsonResponse({'data': all_category})
+            for category_type, categories in groupby(sorted(all_category, key=itemgetter('type')), itemgetter('type')):
+                res[category_type] = list(categories)
+            cache.set('categories', res, 3000000)  # about 1 month
+        return JsonResponse(res)
 
 
 class PromotedCategories(View):

@@ -327,7 +327,7 @@ def get_categories(filters=None):
                                  queryset=Category.objects.filter(disable=False)
                                  .prefetch_related(prefetch_grand_children))
     categories = Category.objects.filter(**filters, disable=False).prefetch_related(prefetch_children)
-    categories = CategorySchema(only=['id', 'name', 'children', 'permalink']).dump(categories, many=True)
+    categories = CategorySchema(only=['id', 'name', 'children', 'permalink', 'type']).dump(categories, many=True)
     return categories
 
 
