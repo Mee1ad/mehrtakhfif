@@ -124,7 +124,9 @@ class UserAdmin(BaseUserAdmin):
     ordering = ('-id',)
     list_per_page = 10
     BaseUserAdmin.fieldsets[2][1]['fields'] = ('is_supplier',) + BaseUserAdmin.fieldsets[2][1]['fields'] + (
-        'vip_types', )
+        'vip_types', 'category_permissions')
+
+    # UserAdmin.filter_horizontal += ('box_permission',)
 
 
 from django.core.exceptions import (
