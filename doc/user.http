@@ -290,7 +290,16 @@ GET {{host}}/orders?id=100
 GET {{host}}/wishlist
 
 > res.js
+###
+POST {{host}}/wishlist
+Content-Type: application/json
 
+{
+  "product_id": 530,
+  "wish": true
+}
+
+> res.js
 ###
 POST {{host}}//add_device
 Content-Type: application/json
