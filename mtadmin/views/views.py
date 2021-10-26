@@ -237,7 +237,7 @@ class SearchView(AdminView):
         # r = s.query('match', category_id=category_id).query(must=[Q('match', name_fa=q), Q('match', disable=False)])
         if category_id:
             only_fields = ['id', 'name', 'storages', 'thumbnail.id', 'thumbnail.title', 'thumbnail.image']
-            category_info = {'category_id': category_id}
+            category_info = {'category.id': category_id}
             s = s.query('match', **category_info).query('match', name_fa=q).query('match', disable=False)
             # r = s.query('match', category_id=category_id).query(type_query).query('match', name_fa=q)
             if s.count() == 0 and not q and category_info:
