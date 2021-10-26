@@ -589,7 +589,7 @@ class MediaView(TableView):
         if category_id:
             category = Category.objects.get(pk=category_id)
         media_type = data['type']
-        if not has_access(request.user, category) and media_type not in Media.no_category_type:
+        if (media_type not in Media.no_category_type) and (not has_access(request.user, category)):
             raise PermissionDenied
 
         media = upload(request, titles, media_type, category_id)
