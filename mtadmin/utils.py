@@ -452,7 +452,10 @@ def update_object(request, model, category_key=None, return_item=False, serializ
             item.validation()
     except AttributeError:
         pass
-    item.save()
+    save_data = {}
+    if model == Storage:
+        save_data = {'admin': True}
+    item.save(**save_data)
     message = {}
     if notif:
         message = responses['202']
