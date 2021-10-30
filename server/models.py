@@ -1132,7 +1132,11 @@ class Product(Base):
         ds = self.default_storage
         if self.available:
             return ds
-        return None
+        if ds:
+            ds.discount_price = 0
+            ds.final_price = 0
+            ds.discount_percent = 0
+        return ds
     # def save(self):
     #     self.slug = slugify(self.title)
     #     super(Post, self).save()
@@ -1325,7 +1329,7 @@ class Storage(Base):
             self.items.clear()
             user = self.created_by
             package_items = [Package(**item, created_by=user, updated_by=user, package=self) for item in
-                             my_dict.get('items')]
+                             my_dict.get('items', [])]
             Package.objects.bulk_create(package_items)
             self.discount_price = 0
             self.final_price = 0
