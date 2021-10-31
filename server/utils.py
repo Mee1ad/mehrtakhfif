@@ -327,7 +327,7 @@ def get_categories(filters=None):
                                  queryset=Category.objects.filter(disable=False)
                                  .prefetch_related(prefetch_grand_children))
     categories = Category.objects.filter(**filters, disable=False).prefetch_related(prefetch_children)
-    categories = CategorySchema(only=['id', 'name', 'children', 'permalink', 'type']).dump(categories, many=True)
+    categories = CategorySchema(only=['id', 'name', 'children', 'permalink', 'type', 'priority']).dump(categories, many=True)
     return categories
 
 
@@ -767,10 +767,6 @@ def get_custom_signed_cookie(req, key, error=None, salt=TOKEN_SALT):
     return req.get_signed_cookie(key, default=None, salt=salt)
 
 
-def sort_by_list_of_id(model, id_list):
-    id_list = list(id_list)
-    queryset = model.objects.filter(pk__in=id_list)
-    return sorted(queryset, key=lambda i: id_list.index(i.pk))
 
 
 # def available_products2(products):
