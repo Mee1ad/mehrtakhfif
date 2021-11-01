@@ -29,7 +29,6 @@ class TableView(LoginRequiredMixin, PermissionRequiredMixin, View):
 class AdminView(LoginRequiredMixin, View):
     pass
 
-
 def has_access(user, category, error_null_category=True):
     if type(category) is int:
         category = Category.objects.get(pk=category)
@@ -47,9 +46,9 @@ def get_category_id(obj, category_key=None):
         category_key = category_key.split('__')
         if count > 0:
             if count > 1:
-                return getattr(getattr(getattr(obj, category_key[0]), category_key[1]), category_key[2])
-            return getattr(getattr(obj, category_key[0]), category_key[1])
-        return getattr(obj, category_key[0])
+                return int(getattr(getattr(getattr(obj, category_key[0]), category_key[1]), category_key[2]))
+            return int(getattr(getattr(obj, category_key[0]), category_key[1]))
+        return int(getattr(obj, category_key[0]))
 
 
 def serialized_objects(request, model, serializer=None, single_serializer=None, category_key=None,
