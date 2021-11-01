@@ -386,7 +386,7 @@ Content-Type: application/json
   },
   "max_count_for_sale": 3,
   "min_count_alert": 0,
-  "product_id": 1285,
+  "product_id": 2096,
   "shipping_cost": 0,
   "start_price": 270000,
   "start_time": 1591004832,
@@ -417,64 +417,8 @@ PUT {{admin_host}}/storage
 Content-Type: application/json
 
 {
-  "id": 908,
-  "available_count": 4,
-  "available_count_for_sale": 3,
-  "dimensions": {
-    "weight": 5,
-    "height": 5,
-    "length": 5,
-    "width": 5
-  },
-  "discount_price": 4000,
-  "features": [
-    {
-      "product_feature_id": 29,
-      "extra_data": {}
-    },
-    {
-      "product_feature_id": 30,
-      "extra_data": {}
-    }
-  ],
-  "final_price": 338000,
-  "invoice_description": {
-    "fa": "<p></p>",
-    "en": "",
-    "ar": ""
-  },
-  "invoice_title": {
-    "fa": "گل آلستر بنفشASH",
-    "en": "",
-    "ar": ""
-  },
-  "max_count_for_sale": 1,
-  "max_shipping_time": 48,
-  "min_count_alert": 0,
-  "product_id": 303,
-  "shipping_cost": null,
-  "start_price": 4000,
-  "start_time": 1590682463,
-  "supplier_id": 5,
-  "tax_type": "has_not",
-  "title": {
-    "fa": "گل آلستر بنفشASH",
-    "en": "",
-    "ar": ""
-  },
-  "vip_prices": [],
-  "accessories": [
-    {
-      "accessory_product_id": 1270,
-      "accessory_storage_id": 845,
-      "discount_price": 2000
-    },
-    {
-      "accessory_product_id": 1277,
-      "accessory_storage_id": 845,
-      "discount_price": 3000
-    }
-  ]
+  "id": 2789,
+  "disable": false
 }
 
 > res.js

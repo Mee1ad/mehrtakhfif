@@ -648,7 +648,6 @@ class BrandASchema(BrandSchema, BaseAdminSchema):
 
 class ProductTagASchema(MySchema):
     id = fields.Function(lambda o: o.tag_id)
-    permalink = fields.Function(lambda o: o.tag.permalink)
     name = fields.Function(lambda o: o.tag.name)
     show = fields.Function(lambda o: True)
 

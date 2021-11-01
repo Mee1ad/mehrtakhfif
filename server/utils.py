@@ -362,9 +362,7 @@ def user_data_with_pagination(model, serializer, request, show_all=False, extra=
 def get_discount_price(storage):
     try:
         prices = storage.vip_prices.all()
-        prices = [price.discount_price for price in prices]
-        # prices = storage.vip_prices.all()
-        # return 0
+        prices = [price.discount_price for price in prices] + [storage.discount_price]
         return min(prices)
     except Exception:
         return storage.discount_price
@@ -373,7 +371,7 @@ def get_discount_price(storage):
 def get_discount_percent(storage):
     try:
         prices = storage.vip_prices.all()
-        prices = [price.discount_percent for price in prices]
+        prices = [price.discount_percent for price in prices] + [storage.discount_percent]
         return min(prices)
     except Exception:
         return storage.discount_percent
