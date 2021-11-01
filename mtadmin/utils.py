@@ -56,6 +56,9 @@ def serialized_objects(request, model, serializer=None, single_serializer=None, 
                        error_null_category=True, params=None, required_fields=[]):
     user = request.user
     params = params or get_params(request, category_key)
+    # todo delete this
+    if 'seo_title' in params['only_fields']:
+        params['only_fields'].pop('seo_title')
     pk = params['filter'].get('id', None)
     if pk:
         sip = {}
