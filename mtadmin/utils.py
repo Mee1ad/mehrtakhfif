@@ -49,7 +49,7 @@ def get_category_id(obj, category_key=None):
             if count > 1:
                 return getattr(getattr(getattr(obj, category_key[0]), category_key[1]), category_key[2])
             return getattr(getattr(obj, category_key[0]), category_key[1])
-        return getattr(obj, category_key[0])
+        return int(getattr(obj, category_key[0]))
 
 
 def serialized_objects(request, model, serializer=None, single_serializer=None, category_key=None,
