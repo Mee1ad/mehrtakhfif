@@ -134,12 +134,12 @@ class BoxWithCategory(View):
 
 class Categories(View):
     def get(self, request):
-        res = cache.get('categories', {})
+        res = cache.get('home-categories', {})
         if not res:
             all_category = get_categories({"parent_id": None})
             for category_type, categories in groupby(sorted(all_category, key=itemgetter('type')), itemgetter('type')):
                 res[category_type] = list(categories)
-            cache.set('categories', res, 3000000)  # about 1 month
+            cache.set('home-categories', res, 3000000)  # about 1 month
         return JsonResponse(res)
 
 
