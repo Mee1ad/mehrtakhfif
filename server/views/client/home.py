@@ -6,6 +6,9 @@ from django.http import JsonResponse, HttpResponseNotFound
 from server.documents import *
 from server.serialize import *
 from server.utils import *
+from elasticsearch_dsl import Search
+
+from mehr_takhfif.settings import ES_CLIENT
 
 
 class PingView(View):
@@ -186,27 +189,35 @@ class ClientSlider(View):
 class ElasticSearch(View):
     def get(self, request):
         q = request.GET.get('q', '')
-        p = ProductDocument.search()
+        p = Search(using=ES_CLIENT, index="product")
+        # category_index = Search(using=ES_CLIENT, index="category")
         c = CategoryDocument.search()
-        t = TagDocument.search()
-        p = p.query({"bool": {"should": [{"match": {"name_fa": {"query": q, "boost": 1}}},
-                                         {"wildcard": {"name_fa": f"{q}*"}},
-                                         {"match": {"name_fa2": {"query": q, "boost": 1}}}],
-                              "must": [{"match": {"disable": False}}, {"match": {"available": True}}]}})
+        product_query = {"query": {"bool": {"should": [{"match": {"name_fa": {"query": q, "boost": 1}}},
+                                                       {"wildcard": {"name_fa": f"{q}*"}},
+                                                       {"match": {"name_fa2": {"query": q, "boost": .2}}}],
+                                            "must": [{"match": {"disable": False}}, {"match": {"available": True}}]}},
+                         "min_score": 5}
+        p = p.from_dict(product_query)[:3]
 
-        # p = p.query({"bool": {"should": [{"match": {"name_fa2": {"query": q, "boost": 1}}}]}})
-
-        c = c.query({"bool": {"should": [{"match": {"name_fa": {"query": q, "boost": 1}}},
+        #
+        category_search_result = c.query({"bool": {"should": [{"match": {"name_fa": {"query": q, "boost": 5}}},
                                          {"wildcard": {"name_fa": f"{q}*"}}]}}).query('match', disable=False)
-        t = t.query({"bool": {"should": [{"match": {"name_fa": {"query": q, "boost": 1}}},
+        # category_query = {"query": {"bool": {"should": [{"match": {"name_fa": {"query": q, "boost": 5}}},
+        #                                                 {"wildcard": {"name_fa": f"{q}*"}}],
+        #                             "must": [{"match": {"disable": False}}]}}, "min_score": 5}
+        # category_search_result = category_index.from_dict(category_query)[:3]
+        t = Search(using=ES_CLIENT, index="tag")
+        tag_query = {"query": {"bool": {"should": [{"match": {"name_fa": {"query": q, "boost": 1}}},
                                          {"wildcard": {"name_fa": f"{q}*"}},
-                                         {"match": {"name_fa2": {"query": q, "boost": 0.5}}}]}})
+                                         {"match": {"name_fa2": {"query": q, "boost": 0.5}}}]}}, "min_score": 5}
+        t = t.from_dict(tag_query)[:3]
         products, categories, tags = [], [], []
         for hit in p[:3]:
+            # print(hit.name_fa, hit.meta['score'])
             product = {'name': hit.name_fa, 'permalink': hit.permalink, 'thumbnail': hit.thumbnail}
             products.append(product)
-        for hit in c[:3]:
-            category = {'name': hit.name_fa, 'permalink': hit.permalink, 'media': hit.media, 'parent': hit.parent}
+        for hit in category_search_result[:3]:
+            category = {'name': hit.name_fa, 'permalink': hit.permalink, 'parent': hit.parent}
             categories.append(category)
         for hit in t[:3]:
             tags.append(hit.name_fa)
