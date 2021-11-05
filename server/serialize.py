@@ -305,6 +305,8 @@ class BaseSchema(Schema):
         except Exception as e:
             return None
 
+    def get_image(self, obj):
+        return HOST + obj.image.url
 
 class MinUserSchema(BaseSchema):
     class Meta:
@@ -376,9 +378,6 @@ class MediaSchema(BaseSchema):
     image = fields.Method("get_image")
     title = fields.Method("get_title")
     category = fields.Function(lambda o: o.category_id)
-
-    def get_image(self, obj):
-        return HOST + obj.image.url
 
 
 class CategorySchema(BaseSchema):
@@ -1072,27 +1071,13 @@ class AdSchema(BaseSchema):
             return None
 
 
-class SliderSchema(BaseSchema):
+class AdsSchema(BaseSchema):
     class Meta:
         additional = ('id', 'url', 'priority')
 
-    title = fields.Method('get_title')
-    product = fields.Method("get_permalink")
-    media = fields.Method("get_media")
-
-    def get_permalink(self, obj):
-        try:
-            return obj.storage.product.permalink
-        except AttributeError:
-            pass
-
-    def get_media(self, obj):
-        try:
-            if self.is_mobile:
-                return MediaSchema(self.lang).dump(obj.mobile_media)
-            return MediaSchema(self.lang).dump(obj.media)
-        except AttributeError:
-            return None
+    image = fields.Method("get_image")
+    title = fields.Method("get_title")
+    settings = fields.Method("get_settings")
 
 
 class WalletDetailSchema(BaseSchema):

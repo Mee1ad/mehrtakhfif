@@ -614,6 +614,7 @@ class Media(Base):
     media_sizes = {'thumbnail': (600, 372), 'media': (1280, 794), 'category': (800, 500),
                    'slider': (1920, 504), 'mobile_slider': (980, 860)}
     select = ['category'] + Base.select
+    fields = {'title': 'عنوان', 'media': 'تصویر', 'mobile_media': 'تصویر موبایل', 'type': 'نوع'}
 
     def get_absolute_url(self):
         return self.image.url
@@ -640,10 +641,7 @@ class Media(Base):
             pass
 
     def post_save(self):
-        if self.type < 100 and self.image:
-            ph = reduce_image_quality(self.image.path)
-            name = self.image.name.replace('has-ph', 'ph')
-            ph.save(f'{MEDIA_ROOT}/{name}', optimize=True, quality=80)
+        pass
 
     def save(self, *args, **kwargs):
         self.validation()
@@ -657,6 +655,10 @@ class Media(Base):
     type = models.PositiveSmallIntegerField(choices=types)
     box = models.ForeignKey(Box, on_delete=models.CASCADE, null=True, blank=True, related_name="medias")
     category = models.ForeignKey("Category", on_delete=models.CASCADE, null=True, blank=True, related_name="medias")
+    url = models.CharField(max_length=255, null=True, blank=True)
+    priority = models.PositiveIntegerField(default=0)
+    disable = models.BooleanField(default=True)
+    settings = JSONField(default=default_settings, blank=True, help_text={"ui": {"size": "1/2"}})
 
     class Meta:
         db_table = 'media'

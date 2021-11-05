@@ -163,10 +163,13 @@ class ClientMenu(View):
 
 
 class ClientAds(View):
-    def get(self, request, ads_type):
+    def get(self, request):
         agent = request.user_agent
-        ads = Ad.objects.filter(priority__isnull=False, type=ads_type).select_related('media')
-        return JsonResponse({'ads': AdSchema(is_mobile=agent.is_mobile).dump(ads, many=True)})
+        preview = get_preview_permission(request.user, category_check=False, box_check=False)
+        ads = Media.objects.filter(priority__isnull=False, type=5, **preview)
+        if agent.is_mobile:
+            ads = Media.objects.filter(priority__isnull=False, type=6, **preview)
+        return JsonResponse({'ads': AdsSchema().dump(ads, many=True)})
 
 
 class PermalinkToId(LoginRequired):
@@ -180,10 +183,13 @@ class PermalinkToId(LoginRequired):
 
 
 class ClientSlider(View):
-    def get(self, request, slider_type):
+    def get(self, request):
         agent = request.user_agent
-        slider = Slider.objects.filter(priority__isnull=False, type=slider_type).select_related('media')
-        return JsonResponse({'slider': SliderSchema(is_mobile=agent.is_mobile).dump(slider, many=True)})
+        preview = get_preview_permission(request.user, category_check=False, box_check=False)
+        sliders = Media.objects.filter(priority__isnull=False, type=4, **preview)
+        if agent.is_mobile:
+            sliders = Media.objects.filter(priority__isnull=False, type=8, **preview)
+        return JsonResponse({'slider': AdsSchema().dump(sliders, many=True)})
 
 
 class ElasticSearch(View):

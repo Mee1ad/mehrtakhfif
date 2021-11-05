@@ -38,7 +38,7 @@ home = [
     cache_proxy(PingView.as_view(), 'ping', lvl[9]),
     # path('n/<int:pk>', try_except(NotifTest.as_view()), name='n'),
     path('init', try_except(Init.as_view()), name='init'),  # no cache
-    cache_proxy(ClientSlider.as_view(), 'slider/<str:slider_type>', lvl[6], False),
+    cache_proxy(ClientSlider.as_view(), 'slider', lvl[6], False),
     cache_proxy(ClientSpecialOffer.as_view(), 'special_offer', lvl[6]),
     cache_proxy(ClientSpecialProduct.as_view(), 'special_product', lvl[6]),
     cache_proxy(LimitedSpecialProduct.as_view(), 'limited_special_product', lvl[4]),
@@ -47,7 +47,7 @@ home = [
     # path('menu', cache_page(60 * 5)(try_except(ClientMenu.as_view())), name='menu'),
     cache_proxy(ClientMenu.as_view(), 'menu', lvl[9]),
     cache_proxy(ElasticSearch.as_view(), 'search', lvl[9]),
-    cache_proxy(ClientAds.as_view(), 'ads/<str:ads_type>', lvl[9], False),
+    cache_proxy(ClientAds.as_view(), 'ads', lvl[9], False),
     cache_proxy(get_favicon, 'favicon', lvl[10]),
     cache_proxy(PermalinkToId.as_view(), 'permalink_id/<str:permalink>', lvl[10]),
 ]
