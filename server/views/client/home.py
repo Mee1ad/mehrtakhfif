@@ -166,7 +166,7 @@ class ClientAds(View):
     def get(self, request):
         agent = request.user_agent
         preview = get_preview_permission(request.user, category_check=False, box_check=False)
-        ads = Media.objects.filter(priority__isnull=False, type=5, **preview)
+        ads = Media.objects.filter(priority__isnull=False, type=5, **preview).order_by('-id')[:7]
         if agent.is_mobile:
             ads = Media.objects.filter(priority__isnull=False, type=6, **preview)
         return JsonResponse({'ads': AdsSchema().dump(ads, many=True)})
@@ -186,7 +186,7 @@ class ClientSlider(View):
     def get(self, request):
         agent = request.user_agent
         preview = get_preview_permission(request.user, category_check=False, box_check=False)
-        sliders = Media.objects.filter(priority__isnull=False, type=4, **preview)
+        sliders = Media.objects.filter(priority__isnull=False, type=4, **preview).order_by('-id')[:5]
         if agent.is_mobile:
             sliders = Media.objects.filter(priority__isnull=False, type=8, **preview)
         return JsonResponse({'slider': AdsSchema().dump(sliders, many=True)})
