@@ -588,6 +588,9 @@ def distinct_list_of_dict(l, k):  # list, key
     return distinct_list
 
 
-def add_category_permission(user, objects):
-    for obj in objects:
-        UserObjectPermission.objects.assign_perm('manage_category', user, obj=obj)
+def add_category_permission(user_id, category_id):
+    user = User.objects.get(pk=user_id)
+    categories = Category.objects.filter(
+        Q(id=category_id) | Q(parent_id=category_id) | Q(parent__parent_id=category_id))
+    for category in categories:
+        UserObjectPermission.objects.assign_perm('manage_category', user, obj=category)
