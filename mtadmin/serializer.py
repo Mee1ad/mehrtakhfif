@@ -1099,6 +1099,7 @@ class FeatureValueASchema(BaseAdminSchema):
 class FeatureGroupASchema(BaseAdminSchema):
     class Meta:
         unknown = INCLUDE
+        additional = ('category_id', )
 
     def __init__(self, product=None, user=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1109,9 +1110,8 @@ class FeatureGroupASchema(BaseAdminSchema):
     settings = fields.Method("get_settings")
     # features = fields.Method("get_features_old")
     features = fields.Method("get_features")
-
     # features = fields.Nested('FeatureGroupFeatureASchema')
-    category = fields.Method('get_category')
+    # category = fields.Method('get_category')
 
     def get_category(self, obj):
         return CategoryASchema(only=['id']).dump(obj.category)
