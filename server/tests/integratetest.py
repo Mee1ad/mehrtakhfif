@@ -24,7 +24,7 @@ class HomeTestCase(TestCase):
     def test_test(self):
         request = self.factory.get(f'/ping')
         request = attach_request_default_attr(request, self.user)
-        res = Test.as_view()(request)
+        res = PingView.as_view()(request)
         assert 200 <= res.status_code <= 299
 
     def test_init(self):

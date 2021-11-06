@@ -22,6 +22,8 @@ class CategoryView(TableView):
             return JsonResponse(data)
         # todo external categories, permalink__isnull=True,
         categories = Category.objects.filter(**params['filter']).order_by(*params['order'])
+        if not categories:
+            return JsonResponse({'data': []})
         has_access(request.user, categories[0].parent)
         for category in categories:
             category.child_count = self.get_child_count(category)
@@ -589,7 +591,7 @@ class MediaView(TableView):
         if category_id:
             category = Category.objects.get(pk=category_id)
         media_type = data['type']
-        if (media_type not in Media.no_category_type) and (not has_access(request.user, category)):
+        if (media_type not in Media.no_category_type) and (not has_access(request.user, category.id)):
             raise PermissionDenied
 
         media = upload(request, titles, media_type, category_id)
@@ -601,10 +603,12 @@ class MediaView(TableView):
         data = json.loads(request.body)
         title = data['title']
         pk = data['id']
-        media = Media.objects.filter(pk=pk)
-        has_access(request.user, media.first())
-        media.update(title=title)
-        return JsonResponse({'media': MediaASchema().dump(media.first())})
+        media = Media.objects.filter(pk=pk).first()
+        if (media.type not in Media.no_category_type) and (not has_access(request.user, media.category_id)):
+            raise PermissionDenied
+        media.title = title
+        media.save()
+        return JsonResponse({'media': MediaASchema().dump(media)})
 
     def delete(self, request):
         return delete_base(request, Media)
