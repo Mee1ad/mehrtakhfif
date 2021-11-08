@@ -1073,7 +1073,7 @@ class AdSchema(BaseSchema):
 
 class AdsSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'url', 'priority')
+        additional = ('id', 'url', 'priority', 'disable')
 
     image = fields.Method("get_image")
     title = fields.Method("get_title")
