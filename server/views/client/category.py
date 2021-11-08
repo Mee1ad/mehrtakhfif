@@ -163,7 +163,7 @@ class Filter(View):
             self.query['query']["bool"]["must"].append({
                 "range": {"default_storage.discount_price": {"gte": min_price, "lte": max_price}}})
 
-    def add_sort(self):
+    def add_sort_type(self):
         sort = self.params.get('o', None)
         available_sorts = {'price': {"default_storage.discount_price": {"order": "asc"}},
                            '-price': {"default_storage.discount_price": {"order": "desc"}},
@@ -171,6 +171,15 @@ class Filter(View):
                            'discount': {"default_storage.discount_percent": {"order": "desc"}}}
         if sort:
             self.query['sort'].append(available_sorts[sort])
+
+    def add_type_filter(self):
+        product_type = self.params.get('type', None)
+        if product_type:
+            query = {"product": {"must_not": [{"term": {"disable": True}}, {"term": {"type": "service"}}]},
+                     "service": {"must": [{"term": {"disable": False}}, {"term": {"type": "service"}}]}}
+            query = query.get(product_type, query["product"])
+            self.query["query"]["bool"] = query
+            self.query["min_score"] = 0
 
     def get(self, request):
         self.params = request.GET
@@ -183,7 +192,8 @@ class Filter(View):
         self.add_available_filter()
         self.add_category_filter()
         self.add_price_filter()
-        self.add_sort()
+        self.add_sort_type()
+        self.add_type_filter()
         s = Search(using=ES_CLIENT, index="product")
         products = s.from_dict(self.query)
         products = products.execute()
