@@ -160,35 +160,35 @@ class Filter(View):
         min_price = self.params.get('min_price', )
         max_price = self.params.get('max_price', )
         if min_price and max_price:
-            self.query['query']["bool"]["must"].append({"range": {"default_storage.discount_price": {"gte": min_price,
-                                                                                                     "lte": max_price}}})
+            self.query['query']["bool"]["must"].append({
+                "range": {"default_storage.discount_price": {"gte": min_price, "lte": max_price}}})
+
+    def add_sort(self):
+        sort = self.params.get('o', None)
+        available_sorts = {'price': {"default_storage.discount_price": {"order": "asc"}},
+                           '-price': {"default_storage.discount_price": {"order": "desc"}},
+                           'best_seller': {"default_storage.sold_count": {"order": "desc"}},
+                           'discount': {"default_storage.discount_percent": {"order": "desc"}}}
+        if sort:
+            self.query['sort'].append(available_sorts[sort])
 
     def get(self, request):
-        available_sorts = {'cheap': 'default_storage.discount_price', 'expensive': '-default_storage.discount_price',
-                           'best_seller': '-default_storage.sold_count',
-                           'discount': '-default_storage.discount_percent'}
         self.params = request.GET
-        sort = self.params.get('o', None)
-        self.query = {"query": {"bool": {"must": [{"term": {"disable": False}}]}}, "min_score": 2}
+        self.query = {"query": {"bool": {"must": [{"term": {"disable": False}}]}},
+                      "sort": [{"available": {"order": "desc"}}], "from": request.step * (request.page - 1),
+                      "size": request.step, "min_score": 5}
         self.add_query_filter()
         self.add_color_filter()
         self.add_brand_filter()
         self.add_available_filter()
         self.add_category_filter()
         self.add_price_filter()
+        self.add_sort()
         s = Search(using=ES_CLIENT, index="product")
-        products = s.from_dict(self.query)[:500]
+        products = s.from_dict(self.query)
         products = products.execute()
         count = products.hits.total['value']
-
-        # product = ProductDocument.search()
-        # products = product.query(self.query).extra(min_score=2)
-        # count = products.count()
-        # print(count)
         pagination = {"count": count, "step": request.step, "last_page": ceil(count / request.step)}
-        if sort:
-            products = products.sort(available_sorts[sort])
-        products = products[request.step * (request.page - 1):request.step * request.page]
         serialized_products = FilterProductSchema().dump(products, many=True)
         # todo vip prices
         return JsonResponse({"data": serialized_products, "pagination": pagination})
