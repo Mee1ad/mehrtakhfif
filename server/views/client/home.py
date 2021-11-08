@@ -149,7 +149,7 @@ class Categories(View):
 class PromotedCategories(View):
     def get(self, request):
         categories = Category.objects.filter(promote=True)
-        categories = CategorySchema().dump(categories, many=True)
+        categories = CategorySchema(exclude=['parent']).dump(categories, many=True)
         res = {}
         for category_type, categories in groupby(sorted(categories, key=itemgetter('type')), itemgetter('type')):
             res[category_type] = list(categories)
