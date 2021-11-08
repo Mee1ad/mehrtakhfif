@@ -196,7 +196,7 @@ class DiscountCodeView(View):
                 return JsonResponse({'message': 'هزینه پست شما رایگان شد', 'variant': 'success'})
             return JsonResponse({'message': 'کد تخفیف اعمال شد', 'variant': 'success'})
         except DiscountCode.DoesNotExist:
-            return JsonResponse({'message': 'به نظر نمیاد این کد کاری بکنه!', 'variant': 'warning'})
+            return JsonResponse({'message': 'کد تخفیف اشتباه است!', 'variant': 'warning'})
 
 
 class BookingView(View):
