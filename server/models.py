@@ -724,7 +724,7 @@ class Category(Base):
         return getattr(getattr(self, 'parent', None), 'name', {}).get('fa')
 
     parent = models.ForeignKey("self", on_delete=CASCADE, null=True, blank=True, related_name='children')
-    box = models.ForeignKey(Box, on_delete=CASCADE, related_name="children", null=True)
+    box = models.ForeignKey(Box, on_delete=CASCADE, related_name="children", null=True, blank=True)
     owner = models.ForeignKey(User, on_delete=PROTECT, null=True, blank=True)
     # features = models.ManyToManyField("Feature")
     feature_groups = models.ManyToManyField("FeatureGroup", through="CategoryGroupFeature", related_name='categories')
