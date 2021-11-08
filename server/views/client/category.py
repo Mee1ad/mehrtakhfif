@@ -83,10 +83,10 @@ class FilterDetail(View):
     def get(self, request):
         s = Search(using=ES_CLIENT, index="product")
         self.params = request.GET
-        self.query = {"query": {"bool": {"must": [{"term": {"disable": False}}]}}, "min_score": 2}
+        self.query = {"query": {"bool": {"must": [{"term": {"disable": False}}]}}, "size": 10000, "min_score": 2}
         self.add_query_filter()
         self.add_category_filter()
-        products = s.from_dict(self.query)[:500]
+        products = s.from_dict(self.query)
         # products = s.query("match_all")[:20]
         products.aggs.metric('max_price', 'max', field='default_storage.discount_price') \
             .metric('min_price', 'min', field='default_storage.discount_price')
@@ -98,11 +98,11 @@ class FilterDetail(View):
         brands = brands.execute()
         brands = [hit.brand.to_dict() for hit in brands if hit.brand]
         # category_ids = s.from_dict({"_source": "category_id", "collapse": {"field": "category_id"}, **self.query})
-        category_ids_object = s.from_dict({"_source": "categories.id", "collapse": {"field": "categories.id"},
-                                           **self.query})
+        category_ids_object = s.from_dict({"_source": "categories.id", **self.query})
+        # category_ids_object = s.from_dict({"_source": "categories.id", **self.query})
         category_ids_hits = category_ids_object.execute()
-        category_ids_list = [hit.categories for hit in category_ids_hits]
-        category_ids = [hit.id for hit in category_ids_list[0]]
+        category_ids_list = [hit.categories[0].id for hit in category_ids_hits]
+        category_ids = set(category_ids_list)
         list_of_colors = [getattr(hit, 'colors', {}) for hit in products]
         colors = list(chain.from_iterable(list_of_colors))
         unique_colors = list({v['id']: v.to_dict() for v in colors}.values())
