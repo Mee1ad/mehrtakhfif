@@ -1118,9 +1118,12 @@ class Product(Base):
         return list(self.tags.all().values_list("name__fa", flat=True))
 
     def get_colors(self):
-        colors = FeatureValue.objects.filter(
-            product_features__product_id=self.id, feature_id=color_feature_id).order_by('id').distinct('id').values(
-            'id', name=KeyTextTransform('fa', 'value'), color=KeyTextTransform('hex', 'settings'))
+        colors = ProductFeature.objects.filter(product_id=self.id, feature_id=color_feature_id)\
+            .select_related('feature_value').values('feature_value__id', 'feature_value__value__fa',
+                                                    'feature_value__settings__hex')
+        colors = [{'id': color['feature_value__id'], 'name': color['feature_value__value__fa'],
+                   'color': color['feature_value__settings__hex']} for color in colors]
+        print(colors)
         colors_obj = []
         for color in colors:
             colors_obj.append(type('ClassName', (), color)())
