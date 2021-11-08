@@ -127,8 +127,8 @@ class Filter(View):
         q = self.params.get('q', None)
         if q:
             query = [{"match": {"name_fa": {"query": q, "boost": 1}}},
-                     {"match": {"name_fa2": {"query": q, "boost": 0.5}}},
-                     {"match": {"tags": {"query": q, "boost": 0.5}}}]
+                     {"match": {"name_fa2": {"query": q, "boost": 0.2}}},
+                     {"match": {"tags": {"query": q, "boost": 0.2}}}]
             self.query['query']["bool"]["should"] = query
 
     def add_brand_filter(self, ):

@@ -207,19 +207,20 @@ class ElasticSearch(View):
 
         #
         category_search_result = c.query({"bool": {"should": [{"match": {"name_fa": {"query": q, "boost": 5}}},
-                                         {"wildcard": {"name_fa": f"{q}*"}}]}}).query('match', disable=False)
+                                                              {"wildcard": {"name_fa": f"{q}*"}}]}}).query('match',
+                                                                                                           disable=False)
         # category_query = {"query": {"bool": {"should": [{"match": {"name_fa": {"query": q, "boost": 5}}},
         #                                                 {"wildcard": {"name_fa": f"{q}*"}}],
         #                             "must": [{"match": {"disable": False}}]}}, "min_score": 5}
         # category_search_result = category_index.from_dict(category_query)[:3]
         t = Search(using=ES_CLIENT, index="tag")
         tag_query = {"query": {"bool": {"should": [{"match": {"name_fa": {"query": q, "boost": 1}}},
-                                         {"wildcard": {"name_fa": f"{q}*"}},
-                                         {"match": {"name_fa2": {"query": q, "boost": 0.5}}}]}}, "min_score": 5}
+                                                   {"wildcard": {"name_fa": f"{q}*"}},
+                                                   {"match": {"name_fa2": {"query": q, "boost": 0.2}}}]}},
+                     "min_score": 5}
         t = t.from_dict(tag_query)[:3]
         products, categories, tags = [], [], []
         for hit in p[:3]:
-            # print(hit.name_fa, hit.meta['score'])
             product = {'name': hit.name_fa, 'permalink': hit.permalink, 'thumbnail': hit.thumbnail}
             products.append(product)
         for hit in category_search_result[:3]:
