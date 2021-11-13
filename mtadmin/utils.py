@@ -468,7 +468,7 @@ def update_object(request, model, category_key=None, return_item=False, serializ
     if return_item:
         request.GET._mutable = True
         request.GET['id'] = item.pk
-        items = serialized_objects(request, model, single_serializer=serializer, error_null_category=require_category)
+        items = serialized_objects(request, model, single_serializer=serializer, error_null_category=False)
         return JsonResponse({"data": items, **extra_response, **message}, status=res_code['updated'])
     return JsonResponse({**extra_response, **message}, status=res_code['updated'])
 
