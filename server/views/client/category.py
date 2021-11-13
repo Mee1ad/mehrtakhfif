@@ -225,7 +225,7 @@ class Filter(View):
     def get(self, request):
         self.params = request.GET
         self.query = {"query": {"bool": {"must": [], "should": [], "must_not": [{"term": {"disable": True}}]}},
-                      "sort": ["_score", {"available": {"order": "desc"}}], "from": request.step * (request.page - 1),
+                      "sort": [{"available": {"order": "desc"}}, "_score", ], "from": request.step * (request.page - 1),
                       "size": request.step, "min_score": 0}
 
         self.add_query_filter()
