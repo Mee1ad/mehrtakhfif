@@ -42,22 +42,22 @@ class FilterDetail(View):
             self.query['min_score'] += 4
 
     def add_category_filter(self, ):
-        category_permalink = self.params.get('cat', )
-        if category_permalink:
+        self.category_permalink = self.params.get('cat', )
+        if self.category_permalink:
             query = [
                 {
                     "nested": {
                         "path": "categories",
                         "query": {
                             "match": {
-                                "categories.permalink": category_permalink
+                                "categories.permalink": self.category_permalink
                             }
                         }
                     }
                 },
                 {
                     "term": {
-                        "category.permalink": category_permalink
+                        "category.permalink": self.category_permalink
                     }
                 }
             ]
@@ -127,6 +127,7 @@ class FilterDetail(View):
         breadcrumb = []
         if self.category_permalink:
             breadcrumb = self.get_breadcrumb(self.category_permalink)
+            print(breadcrumb)
         return JsonResponse({"brands": brands, "colors": unique_colors, "categories": categories,
                              "breadcrumb": breadcrumb, 'min_price': prices['min_price']['value'],
                              'max_price': prices['max_price']['value']})
