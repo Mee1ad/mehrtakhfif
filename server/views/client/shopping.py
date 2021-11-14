@@ -10,6 +10,8 @@ from server.utils import *
 from server.views.client.home import Init
 from server.views.payment import PaymentRequest, CallBack
 from server.views.post import *
+from django.db import transaction
+import pysnooper
 
 
 class BasketView(View):
@@ -46,39 +48,16 @@ class BasketView(View):
             basket_count = self.add_to_session(request, data['products'])
             use_session = True
         else:
-            baskets = Basket.objects.filter(user=user).order_by('-id')
-            basket = baskets.first()
-            if not basket:
-                basket = Basket.objects.create(user=user, created_by=user, updated_by=user)
-            basket_count = add_to_basket(basket, data['products'])
+            baskets = Basket.objects.select_for_update().filter(user=user).order_by('-id')
+            with transaction.atomic():
+                basket = baskets.first()
+                if not basket:
+                    basket = Basket.objects.create(user=user, created_by=user, updated_by=user)
+                basket_count = add_to_basket(basket, data['products'])
         res = {'basket_count': basket_count, **get_basket(request, use_session=use_session),
                'message': 'محصول با موفقیت به سبد خرید افزوده شد'}
         res = JsonResponse(res)
         return set_custom_signed_cookie(res, 'basket_count', basket_count)
-
-    def patch(self, request):
-        data = load_data(request)
-        pk = data['basket_product_id']
-        count = data['count']
-        user = request.user
-        if not user.is_authenticated:
-            product = request.session.get('basket', [])[pk]
-            storage = Storage.objects.filter(pk=product['storage_id']).first()
-            if storage.is_available(count) is False:
-                return JsonResponse({'message': 'تعداد درخواست شده موجود نمیباشد', 'variant': 'error'})
-            product['count'] = count
-            request.session.save()
-            res = JsonResponse(get_basket(request))
-            return set_custom_signed_cookie(res, 'basket_count', get_basket_count(user, session=request.session))
-        basket = Basket.objects.filter(user=user).order_by('-id').first()
-        basket_product = BasketProduct.objects.filter(basket=basket, pk=pk).select_related('storage')
-        storage = basket_product.first().storage
-        if storage.is_available(count) is False:
-            return JsonResponse({'message': 'تعداد درخواست شده موجود نمیباشد', 'variant': 'error'})
-        basket_product.update(count=data['count'])
-        basket.discount_code.update(basket=None)
-        res = JsonResponse(get_basket(request))
-        return set_custom_signed_cookie(res, 'basket_count', get_basket_count(user, basket_id=basket.id))
 
     def delete(self, request):
         # storage_id = request.GET.get('storage_id', None)
@@ -86,10 +65,12 @@ class BasketView(View):
         summary = request.GET.get('summary', None)
         try:
             try:
-                basket = Basket.objects.filter(user=request.user).order_by('-id').first()
+                basket_queryset = Basket.objects.filter(user=request.user).order_by('-id')
+                basket = basket_queryset.first()
                 BasketProduct.objects.filter(basket=basket, id=basket_product_id).delete()
                 basket.discount_code.update(basket=None)
                 basket_count = get_basket_count(request.user, basket_id=basket.id)
+                basket_queryset.update(count=basket_count)
             except TypeError:
                 session = request.session
                 products = session.get('basket', {})

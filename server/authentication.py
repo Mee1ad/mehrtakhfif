@@ -2,7 +2,7 @@ from django.contrib import auth
 from django.contrib.auth import get_user_model
 from django.contrib.auth.backends import ModelBackend
 from django.contrib.auth.middleware import AuthenticationMiddleware
-from django.db.models import Count, Q
+from django.db.models import Count, Q, F, Sum
 from django.utils.functional import SimpleLazyObject
 
 from server.utils import get_custom_signed_cookie
@@ -67,7 +67,7 @@ class MyModelBackend(ModelBackend):
             # user = UserModel._default_manager.get(pk=user_id)
             user = User.objects.filter(pk=user_id).select_related(*prefetch['select'])\
                 .prefetch_related(*prefetch['prefetch']).\
-                annotate(basket_count=Count('baskets__products', filter=Q(baskets__sync=0))).first()
+                annotate(basket_count=Sum('baskets__count', filter=Q(baskets__sync=0))).first()
         except UserModel.DoesNotExist:
             return None
         return user if self.user_can_authenticate(user) else None
