@@ -31,6 +31,9 @@ class AdminView(LoginRequiredMixin, View):
 
 
 def has_access(user, category, error_null_category=True):
+    if user.is_superuser or user.groups.filter(name__in=['accountants', 'content_manager',
+                                                         'superuser', 'support']).exists():
+        return True
     if type(category) in [int, str]:
         category = Category.objects.get(pk=category)
     if error_null_category:
@@ -289,6 +292,8 @@ def create_object(request, model, category_key=None, return_item=False, serializ
     data = {**data, 'created_by': user, 'updated_by': user}
     obj = serializer(user=user).load(data)
     category_id = data.get('category_id', None)
+    if model == Category:
+        category_id = data.get('parent_id', None)
     has_access(user, category_id, error_null_category)
     save_data = {}
     if model == Storage:
