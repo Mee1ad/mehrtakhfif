@@ -890,7 +890,8 @@ class StorageESchema(StorageASchema):
     class Meta:
         additional = StorageASchema.Meta.additional + StorageSchema.Meta.additional + \
                      ('features_percent', 'available_count', 'invoice_description', 'max_shipping_time',
-                      'invoice_title', 'dimensions', 'package_discount_price', 'sold_count')
+                      'invoice_title', 'dimensions', 'package_discount_price', 'sold_count',
+                      'discount_price', 'discount_percent', 'final_price')
 
     supplier = fields.Nested(MinUserSchema)
     # features = fields.Method('get_features')
