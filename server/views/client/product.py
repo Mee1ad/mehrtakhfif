@@ -218,7 +218,7 @@ class FeatureView(View):
         storage_preview = get_preview_permission(request.user, box_check=False, product_check=True)
         product_preview = get_preview_permission(request.user, box_check=False)
         product = Product.objects.filter(**identifier, **product_preview).first()
-        if product.unavailable:
+        if product.available is False:
             storages = product.storages.filter(**storage_preview)
             storages = MinStorageSchema(only=['name']).dump(storages, many=True)
             return JsonResponse({'storage': storages})

@@ -595,7 +595,7 @@ class InvoiceStorageFDSchema(InvoiceStorageASchema):
 class ProductASchema(BaseAdminSchema):
     class Meta:
         unknown = INCLUDE
-        additional = ('review', 'check_review', 'name', 'storages_count', 'active_storages_count', 'unavailable')
+        additional = ('review', 'check_review', 'name', 'storages_count', 'active_storages_count', 'available')
 
     list_filter = [Category]
 
