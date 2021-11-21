@@ -666,6 +666,8 @@ class MinStorageSchema(BaseSchema):
             pass
 
     def get_discount_price(self, obj):
+        if obj.unavailable is True:
+            return 0
         min_price = 0
         if obj.available_count_for_sale > 0:
             min_price = obj.discount_price
@@ -680,20 +682,13 @@ class MinStorageSchema(BaseSchema):
         return min_price
 
     def get_final_price(self, obj):
-        if obj.available_count_for_sale > 0:
+        if obj.available_count_for_sale > 0 and obj.unavailable is False:
             return obj.final_price
         return 0
 
     def get_discount_percent(self, obj):
-        # try:
-        #     user_groups = self.user.vip_types.all()
-        #     prices = VipPrice.objects.filter(storage_id=obj.pk, available_count_for_sale__gt=0,
-        #                                      vip_type__in=user_groups).values_list('discount_percent', flat=True)
-        #     return min(prices)
-        # except Exception:
-        #     if obj.available_count_for_sale > 0:
-        #         return obj.discount_percent
-        #     return 0
+        if obj.unavailable is True:
+            return 0
         min_percent = 0
         if obj.available_count_for_sale > 0:
             min_percent = obj.discount_percent
