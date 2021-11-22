@@ -253,6 +253,8 @@ class BaseSchema(Schema):
         return new_value
 
     def get_max_count_for_sale(self, obj):
+        if obj.unavailable is True or obj.product.available is False:
+            return 0
         if (obj.available_count_for_sale >= obj.max_count_for_sale) and (obj.max_count_for_sale != 0):
             return obj.max_count_for_sale
         if obj.available_count_for_sale > 1:

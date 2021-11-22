@@ -220,7 +220,7 @@ class FeatureView(View):
         product = Product.objects.filter(**identifier, **product_preview).first()
         if product.available is False:
             storages = product.storages.filter(**storage_preview)
-            storages = MinStorageSchema(only=['title']).dump(storages, many=True)
+            storages = MinStorageSchema(only=['title', 'max_count_for_sale']).dump(storages, many=True)
             return JsonResponse({'storage': storages})
         if product.type == 1:
             all_storages = product.storages.filter(**storage_preview)

@@ -35,6 +35,8 @@ from mehr_takhfif.settings import HOST, MEDIA_ROOT
 from mehr_takhfif.settings import color_feature_id
 from mtadmin.exception import *
 from server.field_validation import *
+from guardian.shortcuts import UserObjectPermission
+import copy
 
 # from django.contrib.sites.models import Site
 
@@ -1134,17 +1136,14 @@ class Product(Base):
         return getattr(self, 'default_storage', storage)
 
     def get_default_storage(self):
-        ds = self.default_storage
+        new_storage = copy.deepcopy(self.default_storage)
         if self.available:
-            return ds
-        if ds:
-            ds.discount_price = 0
-            ds.final_price = 0
-            ds.discount_percent = 0
-        return ds
-    # def save(self):
-    #     self.slug = slugify(self.title)
-    #     super(Post, self).save()
+            return self.default_storage
+        if new_storage:
+            new_storage.discount_price = 0
+            new_storage.final_price = 0
+            new_storage.discount_percent = 0
+        return new_storage
 
     categories = models.ManyToManyField(Category, related_name="products", blank=True)
     box = models.ForeignKey(Box, on_delete=PROTECT, db_index=False, null=True, blank=True)
