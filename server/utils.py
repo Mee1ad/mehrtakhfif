@@ -435,7 +435,7 @@ def get_basket(request, basket_id=None, basket=None, basket_products=None, retur
     changed_items = {}
     if with_changes:
         changed_items = check_basket(request, basket)
-    basket_products = basket_products or basket.basket_storages.all()
+    basket_products = basket_products or basket.basket_storages.all().order_by('-id')
     summary = {"total_price": 0, "discount_price": 0, "profit": 0, "mt_profit": 0, 'charity': 0,
                "shipping_cost": 0, "tax": 0, "final_price": 0}
     address_required = False
