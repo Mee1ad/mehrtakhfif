@@ -51,7 +51,7 @@ default:
       - ~/.cache/pip/
   before_script:
     - cd /home/ubuntu/server
-    - pip3 install -r req.txt
+    - /home/ubuntu/.local/share/virtualenvs/server-kzNZvDYs/bin/pip3 install -r req.txt
 
 
 migrations:
