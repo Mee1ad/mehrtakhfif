@@ -50,11 +50,9 @@ default:
     paths:
       - ~/.cache/pip/
   before_script:
-    - pwd
     - cd /home/ubuntu/server
     - pipenv shell
-    - pwd
-    # - pip3 install -r req.txt
+    - pip3 install -r req.txt
 
 
 migrations:
@@ -68,10 +66,10 @@ migrations:
     - uwsgi --relaod /tmp/mt.pid
 
 
-# django-tests:
-#   stage: test
-#   tags:
-#         - server
-#   script:
-#     # use python3 explicitly. see https://wiki.ubuntu.com/Python/3
-#     - python3 manage.py test --keepdb --pattern="*test.py" server mtadmin
+django-tests:
+  stage: test
+  tags:
+        - server
+  script:
+    # use python3 explicitly. see https://wiki.ubuntu.com/Python/3
+    - python3 manage.py test --keepdb --pattern="*test.py" server mtadmin
