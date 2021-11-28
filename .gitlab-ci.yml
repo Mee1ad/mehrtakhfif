@@ -57,15 +57,15 @@ default:
     # - pip3 install -r req.txt
 
 
-# migrations:
-#   stage: build
-#   tags:
-#         - server
-#   script:
-#     - python3 manage.py makemigrations
-#     - python3 manage.py migrate
-#     - python3 manage.py check
-#     - uwsgi --relaod /tmp/mt.pid
+migrations:
+  stage: build
+  tags:
+        - server
+  script:
+    - python3 manage.py makemigrations
+    - python3 manage.py migrate
+    - python3 manage.py check
+    - uwsgi --relaod /tmp/mt.pid
 
 
 # django-tests:
