@@ -1230,6 +1230,7 @@ class VipPrice(MyModel):
     discount_price = models.PositiveIntegerField()
     discount_percent = models.PositiveSmallIntegerField()
     max_count_for_sale = models.PositiveSmallIntegerField(default=1)
+    min_count_for_sale = models.PositiveSmallIntegerField(default=1)
     available_count_for_sale = models.PositiveIntegerField(default=1)
 
     class Meta:
@@ -1322,7 +1323,7 @@ class Storage(Base):
                     my_dict.get('final_price') or self.final_price) * 100)
             vip_prices = [VipPrice(vip_type_id=item['vip_type_id'], discount_price=item['discount_price'],
                                    max_count_for_sale=item.get('max_count_for_sale', self.max_count_for_sale),
-                                   discount_percent=dper,
+                                   discount_percent=dper, min_count_for_sale=item.get('min_count_for_sale', self.min_count_for_sale),
                                    available_count_for_sale=item.get('available_count_for_sale',
                                                                      self.available_count_for_sale), storage_id=self.pk)
                           for item in
@@ -1395,7 +1396,7 @@ class Storage(Base):
         max_count_for_sale = self.get_max_count()
         return (self.available_count_for_sale >= count) and (max_count_for_sale >= count) and \
                (self.disable is False) and (self.product.disable is False) and self.product.available and (
-                       self.unavailable is False)
+                       self.unavailable is False) and self.available_count_for_sale >= self.min_count_for_sale
 
     product = models.ForeignKey(Product, on_delete=CASCADE, related_name='storages')
     # features = models.ManyToManyField(ProductFeature, through='StorageFeature', related_name="storages")
@@ -1416,6 +1417,7 @@ class Storage(Base):
     least_booking_time = models.PositiveIntegerField(default=48, blank=True)
     available_count_for_sale = models.PositiveIntegerField(default=0, verbose_name='Available count for sale')
     max_count_for_sale = models.PositiveSmallIntegerField(default=1)
+    min_count_for_sale = models.PositiveSmallIntegerField(default=1)
     min_count_alert = models.PositiveSmallIntegerField(default=3)
     priority = models.PositiveSmallIntegerField(default=0)
     tax_type = models.PositiveSmallIntegerField(default=0, choices=tax_types)

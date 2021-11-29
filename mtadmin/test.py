@@ -247,6 +247,7 @@ class PostModelTestCase(TestCase):
             "invoice_description": fake_json(),
             "invoice_title": fake_json(),
             "max_count_for_sale": 10,
+            "min_count_for_sale": fake.random_int(1, 4),
             "min_count_alert": 3,
             "product_id": product.id,
             "shipping_cost": 0,
@@ -260,10 +261,10 @@ class PostModelTestCase(TestCase):
             "title": fake_json(),
             "vip_prices": [
                 {'vip_type_id': vip_price1.vip_type_id, 'discount_price': vip_price1.discount_price,
-                 'max_count_for_sale': vip_price1.max_count_for_sale,
+                 'max_count_for_sale': vip_price1.max_count_for_sale, 'min_count_for_sale': vip_price1.min_count_for_sale,
                  'available_count_for_sale': vip_price1.available_count_for_sale},
                 {'vip_type_id': vip_price2.vip_type_id, 'discount_price': vip_price2.discount_price,
-                 'max_count_for_sale': vip_price2.max_count_for_sale,
+                 'max_count_for_sale': vip_price2.max_count_for_sale, 'min_count_for_sale': vip_price1.min_count_for_sale,
                  'available_count_for_sale': vip_price2.available_count_for_sale}
             ],
             "accessories": [
@@ -616,7 +617,7 @@ class PutModelTestCase(TestCase):
             "title": fake_json(),
             "vip_prices": [
                 {'vip_type_id': vip_price1.vip_type_id, 'discount_price': vip_price1.discount_price,
-                 'max_count_for_sale': vip_price1.max_count_for_sale,
+                 'max_count_for_sale': vip_price1.max_count_for_sale, 'min_count_for_sale': vip_price1.min_count_for_sale,
                  'available_count_for_sale': vip_price1.available_count_for_sale},
                 {'vip_type_id': vip_price2.vip_type_id, 'discount_price': vip_price2.discount_price,
                  'max_count_for_sale': vip_price2.max_count_for_sale,

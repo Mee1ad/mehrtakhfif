@@ -821,7 +821,7 @@ class PriceSchema(MySchema):
 class VipPriceASchema(MySchema):
     class Meta:
         additional = ('storage_id', 'discount_price', 'discount_percent', 'max_count_for_sale',
-                      'available_count_for_sale')
+                      'available_count_for_sale', 'min_count_for_sale')
 
     # vip_type = fields.Function(lambda o: o.vip_type.name)
     vip_type = fields.Nested("VipTypeASchema")
@@ -850,7 +850,7 @@ class StorageASchema(BaseAdminSchema):
         unknown = INCLUDE
         additional = ('title', 'start_price', 'final_price', 'discount_price', 'discount_percent',
                       'available_count_for_sale', 'tax', 'product_id', 'settings', 'max_count_for_sale',
-                      'min_count_alert', 'disable', 'unavailable', 'priority')
+                      'min_count_alert', 'disable', 'unavailable', 'priority', 'min_count_for_sale')
 
     least_booking_time = fields.Method("get_least_booking_time")
     booking_cost = fields.Method("get_booking_cost")

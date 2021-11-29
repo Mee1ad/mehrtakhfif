@@ -642,6 +642,8 @@ class ProductMediaSchema(BaseSchema):
 
 
 class MinStorageSchema(BaseSchema):
+    class Meta:
+        additional = ('unavailable', 'min_count_for_sale')
     discount_price = fields.Method("get_discount_price")
     final_price = fields.Method("get_final_price")
     discount_percent = fields.Method("get_discount_percent")
@@ -707,7 +709,7 @@ class MinStorageSchema(BaseSchema):
 
 class StorageSchema(MinStorageSchema):
     class Meta:
-        additional = ('shipping_cost', 'priority', 'gender', 'disable')
+        additional = ('shipping_cost', 'priority', 'gender', 'disable') + MinStorageSchema.Meta.additional
 
     # todo optimize
     default = fields.Function(lambda o: o == o.product.default_storage)
