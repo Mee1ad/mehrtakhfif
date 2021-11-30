@@ -289,6 +289,23 @@ class DiscountCodeView(AdminView):
         storage.save()
         return JsonResponse({'data': DiscountASchema().dump(discount_codes, many=True)}, status=201)
 
+    def delete(self, request):
+        ids = request.GET.getlist('ids')
+        discount_codes = DiscountCode.objects.filter(pk__in=ids, basket=None, invoice=None)
+        discount_codes.delete()
+        return JsonResponse({})
+
+
+class ManualDiscountCodeView(AdminView):
+    permission_required = 'server.view_discountcode'
+
+    def post(self, request):
+        data = json.loads(request.body)
+        user = request.user
+        items = [DiscountCode(code=code, storage_id=data['storage_id'], created_by=user,
+                              updated_by=user) for code in data['codes']]
+        DiscountCode.objects.bulk_create(items)
+        return JsonResponse({}, status=201)
 
 class HouseView(TableView):
     permission_required = 'server.view_house'
