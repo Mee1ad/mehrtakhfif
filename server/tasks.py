@@ -9,7 +9,6 @@ from hashlib import md5
 from operator import add
 from time import sleep
 
-import pdfkit
 import requests
 from celery import shared_task
 from celery.signals import task_postrun
@@ -30,7 +29,8 @@ LOCK_EXPIRE = 60 * 10  # Lock expires in 10 minutes
 from django.conf import settings
 from django.core.management import call_command
 import datetime
-
+from weasyprint import HTML, CSS
+from weasyprint.text.fonts import FontConfiguration
 
 @contextmanager
 def task_lock(lock_id, oid):
@@ -125,7 +125,7 @@ def sale_report(self, invoice_id, **kwargs):
                     prefetch_related('storage__product__category__owner__gcmdevice_set')
                 owners = {}
                 invoice = invoice_storages.first().invoice
-                address = getattr(invoice, 'address', {})
+                address = invoice.address
                 invoice = {'نام': address.get('name', ''), 'شماره تماس': address.get('phone', ''),
                            'شهر': address.get('city', {}).get('name', ''),
                            'آدرس': address.get('address', ''), 'محصولات': [], '\nقیمت': invoice.amount}
@@ -244,7 +244,10 @@ def send_invoice(self, invoice_id, lang="fa", **kwargs):
                         rendered += render_to_string('invoice.html', data)
                     pdf = INVOICE_ROOT + f'/{filename}.pdf'
                     css = BASE_DIR + '/templates/css/pdf_style.css'
-                    pdfkit.from_string(rendered, pdf, css=css)
+                    font_config = FontConfiguration()
+                    html = HTML(string=rendered)
+                    css = CSS(css)
+                    html.write_pdf(pdf, stylesheets=[css], font_config=font_config)
                     pdf_list.append(pdf)
                     all_renders += rendered
                     # sms_content += f'\n{storage.invoice_title[lang]}\n{SHORTLINK}/{product.key}'
