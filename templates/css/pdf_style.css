@@ -1,11 +1,172 @@
-.keep-together {
-    page-break-inside: avoid;
+@font-face {
+    font-family: 'irsans'; /*a name to be used later*/
+    src: url('https://mehrtakhfif.com/drawable/fonts/iranSans/IRANSansWeb(FaNum).woff2'); /*URL to font*/
 }
 
-.break-before {
-    page-break-before: always;
+* {
+  font-family: irsans !important;
 }
 
-.break-after {
-    page-break-after: always;
+#logo {
+  width: 60px;
+}
+
+#typo {
+  width: 200px;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body > div {
+  flex-direction: column;
+  padding: 1cm 2cm;
+  text-align: initial;
+  position: relative;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+  padding: 0;
+}
+
+.center {
+  text-align: center;
+}
+
+.right {
+  text-align: right;
+}
+
+.flex {
+  /*display: flex*/
+}
+
+.column {
+  /*flex-direction: column;*/
+}
+
+.center {
+  justify-content: center;
+  align-items: center;
+}
+
+.flex1 {
+  flex: 1;
+}
+
+.rtl {
+  direction: rtl;
+}
+
+.ltr {
+  direction: ltr;
+}
+.display_block {
+  display: block;
+}
+
+.align-center-text {
+  text-align: center;
+}
+.align-right-text {
+  text-align: right;
+}
+.align-flex-end-text {
+  align-items: flex-end;
+}
+
+.margin20px-0-10 {
+  margin: 20px 0 10%;
+}
+
+.margin-t-2cm {
+  margin-top: 2cm;
+}
+
+.logo {
+  color: #000;
+  display: block;
+  margin-bottom: 1cm;
+  text-decoration: none;
+}
+
+.logo > div {
+  direction: rtl;
+  padding-bottom: 3mm;
+}
+
+.title {
+  font-family: IRANSans, serif !important;
+  text-align: center;
+  font-size: 23px;
+  font-weight: 500;
+  color: #373737;
+  margin-top: 1cm;
+  border-bottom: 3px solid #ea4253;
+  padding-bottom: 0.2cm;
+  padding-right: 2mm;
+  padding-left: 2mm;
+  display: initial;
+  line-height: 2;
+}
+.font-weight400 {
+  font-weight: 400;
+}
+.font-weight500 {
+  font-weight: 500;
+}
+.font-weight600 {
+  font-weight: 600;
+}
+.font-weight700 {
+  font-weight: 700;
+}
+.font-size12 {
+  font-size: 12px;
+}
+.font-size14 {
+  font-size: 14px;
+}
+.font-size16 {
+  font-size: 15px;
+}
+.font-size17 {
+  font-size: 17px;
+}
+.font-size24 {
+  font-size: 24px;
+}
+.padding-left2px {
+  padding-left: 2px;
+}
+.margint-05cm {
+  margin-top: 0.5cm;
+}
+.padding-t05cm {
+  padding-top: 0.5cm;
+}
+.code-sell {
+  direction: rtl;
+  margin-bottom: 1.2cm;
+  font-weight: 500;
+  font-size: 22px;
+}
+.code-cell-line {
+  border-top: 2px solid #ea4253;
+}
+
+.code {
+  -webkit-border-radius: 5px;
+  border-radius: 5px;
+  padding: 6mm 6mm;
+  font-weight: 500;
+  font-size: xx-large;
 }

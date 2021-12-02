@@ -4,124 +4,55 @@
     <meta charset="UTF-8">
     <title>Title</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://api.mehrtakhfif.com/static/css/iran-sans.css" rel="stylesheet">
-    <style>
-        h1, h2, h3, h4, h5, h6 {
-            margin: 0;
-            padding: 0;
-        }
-
-        .center {
-            text-align: center;
-        }
-
-        .right {
-            text-align: right;
-        }
-
-        .flex {
-            /*display: flex*/
-        }
-
-        .column {
-            /*flex-direction: column;*/
-        }
-
-        .center {
-            justify-content: center;
-            align-items: center;
-        }
-
-        .flex1 {
-            flex: 1
-        }
-
-        .rtl {
-            direction: rtl;
-        }
-
-        .ltr {
-            direction: ltr;
-        }
-
-        body {
-            margin: 0;
-            padding: 0;
-        }
-
-        body > div {
-            flex-direction: column;
-            padding: 1cm 2cm;
-            text-align: initial;
-            position: relative;
-        }
-    </style>
+    <link rel="stylesheet" href="css/pdf_style.css">
 </head>
-<body class="iran-sans rtl flex center" style="">
-<div class="flex column break-before" style="text-align: center; margin: 20px 0 10%">
-    <a href="https://www.mehrtakhfif.com" style="color:#000;display:block;margin-bottom: 1cm;text-decoration: none;">
-        <div class="flex center" style="direction:rtl;padding-bottom: 3mm">
-            <img src="https://api.mehrtakhfif.com/static/mtIcon.svg" width="60"/>
-            <img src="https://api.mehrtakhfif.com/static/mtTypo.svg" width="200"/>
+<body class="align-center-text  iran-sans rtl flex margin20px-0-10">
+<div class="flex column break-before align-center-text margin20px-0-10">
+    <a href="https://www.mehrtakhfif.com" class="align-center-text logo">
+        <div class="flex center">
+            <img src="https://api.mehrtakhfif.com/static/mtIcon.svg" id="logo"/>
+            <img src="https://api.mehrtakhfif.com/static/mtTypo.svg" id="typo"/>
         </div>
         www.mehrtakhfif.com
     </a>
-    <div class="center" style="text-align: center">
-        <div class="flex1 rtl"
-             style="
-             font-family: IRANSans, serif !important;
-        text-align:center;
-        font-size: 23px;
-    font-weight: 500;
-    color: #373737;
-    margin-top: 1cm;
-    border-bottom: 3px solid #ea4253;
-    padding-bottom: 0.2cm;
-    padding-right: 2mm;
-    padding-left: 2mm;
-    display: initial;
-line-height: 2">
+    <div class="center align-center-text">
+        <div class="flex1 rtl title">
             {{ title }}
         </div>
     </div>
-    <div class="center" style="margin-top: 2cm;text-align: center">
-        <div class="center" dir="rtl" style="text-align: center">
-            <span style="font-family: IRANSans, serif !important;">خریدار:</span>
-            <span style="font-family: IRANSans, serif !important;font-size: 20px;font-weight: 500;">{{ user }}</span>
+    <div class="center margin-t-2cm align-center-text">
+        <div class="center align-center-text" dir="rtl">
+            <span>خریدار:</span>
+            <span>{{ user }}</span>
         </div>
-        <div class="center" dir="rtl" style="margin-top:0.5cm;font-size: 16px;font-weight: 600">
-            <span style="font-family: IRANSans, serif !important;font-size:17px;font-weight: 500;padding-left: 2px">قیمت محصول :</span>
-            <span style="font-family: IRANSans, serif !important;font-size: 24px;font-weight: 500;">{{price}}</span>
-            <span style="font-family: IRANSans, serif !important;font-weight: 400;font-size: 14px;">تومان</span>
+        <div class="center font-weight600 font-size16 margint-05cm" dir="rtl">
+            <span class=" font-weight500 font-size17 padding-left2px">قیمت محصول :</span>
+            <span class=" font-weight500 font-size24">{{price}}</span>
+            <span class=" font-weight400 font-size14">تومان</span>
         </div>
     </div>
-    <div class="row column" style="padding-top: 0.5cm;text-align: center">
-        <h3 class="center"
-            style="font-family: IRANSans, serif !important;direction:rtl;margin-bottom:1.2cm;font-weight: 500;font-size: 22px; text-align: center">
+    <div class="row column align-center-text padding-t05cm">
+        <h3 class="center code-sell align-center-text">
             کد خریداری
             شده:</h3>
-        <p style="border-top:2px solid #ea4253;"/>
-        <div style="display:block;text-align:center;
-        -webkit-border-radius: 5px;border-radius:5px;
-        padding: 6mm 6mm; font-weight: 500;font-size: xx-large;">
+        <p class="code-cell-line"/>
+        <div class="display_block align-center-text code">
             <span class="center ltr">{{ code }}</span>
         </div>
-        <p style="border-top:2px solid #ea4253;"/>
+        <p class="code-cell-line"/>
     </div>
-    <div class="flex column" dir="rtl" style="text-align: right">
+    <div class="flex column align-right-text" dir="rtl">
         {% if product_description %}
-        <p class="right"
-           style="font-family: IRANSans, serif !important;text-align:right; display:block;font-size: 16px;font-weight: 500; align-items: flex-end;">
+        <p class="right align-right-text font-size16 font-weight500 display_block align-flex-end-text">
             توضیحات: {{ product_description }} </p>
         {% endif %}
         {% if storage_description %}
-        <p class="right"
-           style="font-family: IRANSans, serif !important;text-align:right;display:block;font-size: 16px;font-weight: 500; align-items: flex-end;">
+        <p class="right align-right-text display_block font-size16 font-weight500 align-flex-end-text">
              توضیحات: {{ storage_description|safe }}</p>
         {% endif %}
     </div>
 </div>
-{#<p style="border-top:2px solid #ea4253; margin: 20px 0 10%" class="break-after"/>#}
+{#<p class="break-after margin20px-0-10 code-cell-line"/>#}
 
 </body>
 </html>

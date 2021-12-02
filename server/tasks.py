@@ -228,7 +228,8 @@ def send_invoice(self, invoice_id, lang="fa", **kwargs):
                             product.save()
                         except Exception:
                             product.refresh_from_db()
-                    data = {'title': storage.invoice_title[lang], 'user': f'{user.first_name} {user.last_name}',
+                    title = getattr(storage, 'invoice_title', storage.title)[lang]
+                    data = {'title': title, 'user': f'{user.first_name} {user.last_name}',
                             'price': storage.discount_price}
                     if storage.product.invoice_description[lang]:
                         data['product_description'] = storage.product.invoice_description[lang]
