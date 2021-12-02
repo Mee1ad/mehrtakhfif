@@ -125,7 +125,7 @@ def sale_report(self, invoice_id, **kwargs):
                     prefetch_related('storage__product__category__owner__gcmdevice_set')
                 owners = {}
                 invoice = invoice_storages.first().invoice
-                address = invoice.address
+                address = getattr(invoice, 'address', {})
                 invoice = {'نام': address.get('name', ''), 'شماره تماس': address.get('phone', ''),
                            'شهر': address.get('city', {}).get('name', ''),
                            'آدرس': address.get('address', ''), 'محصولات': [], '\nقیمت': invoice.amount}
