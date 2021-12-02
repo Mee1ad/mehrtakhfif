@@ -1599,7 +1599,7 @@ class Invoice(Base):
     storages = models.ManyToManyField(Storage, through='InvoiceStorage')
     payed_at = models.DateTimeField(blank=True, null=True, verbose_name='Payed at')
     special_offer_id = models.BigIntegerField(blank=True, null=True, verbose_name='Special offer id')
-    address = JSONField(null=True, blank=True)
+    address = JSONField(blank=True, default=dict)
     description = models.TextField(max_length=255, blank=True, null=True)
     amount = models.PositiveIntegerField()
     invoice_discount = models.PositiveIntegerField(null=True, blank=True)
