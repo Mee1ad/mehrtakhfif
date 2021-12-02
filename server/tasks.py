@@ -126,8 +126,9 @@ def sale_report(self, invoice_id, **kwargs):
                 owners = {}
                 invoice = invoice_storages.first().invoice
                 address = invoice.address
-                invoice = {'نام': address['name'], 'شماره تماس': address['phone'], 'شهر': address['city']['name'],
-                           'آدرس': address['address'], 'محصولات': [], '\nقیمت': invoice.amount}
+                invoice = {'نام': address.get('name', ''), 'شماره تماس': address.get('phone', ''),
+                           'شهر': address.get('city', {}).get('name', ''),
+                           'آدرس': address.get('address', ''), 'محصولات': [], '\nقیمت': invoice.amount}
                 for invoice_storage in invoice_storages:
                     owner = invoice_storage.storage.product.category.owner
                     product_data = f"{invoice_storage.count} عدد {invoice_storage.storage.title['fa']}"
