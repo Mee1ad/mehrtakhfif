@@ -707,6 +707,7 @@ class Category(Base):
         return f"{self.name['fa']}"
 
     def save(self, *args, **kwargs):
+        is_new_object = self._state.adding
         self.settings = lock_permalink(self)
         super().save(*args, **kwargs)
         pk = self.id
@@ -715,6 +716,12 @@ class Category(Base):
             self.parent = None
             self.save()
             raise ValidationError(_("والد نامعتبر است"))
+        if is_new_object:
+            if self.parent:
+                permissions = UserObjectPermission.objects.filter(object_pk=self.parent_id).select_related('user')
+                for permission in permissions:
+                    permitted_user = permission.user
+                    UserObjectPermission.objects.assign_perm('manage_category', permitted_user, obj=self)
 
     def get_media(self):
         try:
