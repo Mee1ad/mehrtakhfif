@@ -190,6 +190,7 @@ class BoxTestCase(TestCase):
         res = ClientSpecialOffer.as_view()(request)
         assert 200 <= res.status_code <= 299
 
+
 class ProductTestCase(TestCase):
 
     def setUp(self):
@@ -243,7 +244,7 @@ class BookingTestCase(TestCase):
     def test_booking(self):
         invoice = fake_invoice()
         request = get(f'/booking')
-        res = BookingView.as_view()(request, invoice_id=invoice.id)
+        res = ProductBookingView.as_view()(request, invoice_id=invoice.id)
         assert res.status_code == 302, res.status_code
 
 

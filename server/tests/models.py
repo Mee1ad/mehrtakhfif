@@ -147,7 +147,7 @@ def fake_product(**kwargs):
                        properties=fake_json(), name=fake_json(), description=fake_json(),
                        short_address=fake.address, details=fake_json(), settings=fake_settings(),
                        review=review, type=types[fake.random_int(1, 4)], available=True,
-                       category=fake_category(settings=fake_settings()), **kwargs)
+                       category=kwargs.pop('category', fake_category(settings=fake_settings())), **kwargs)
 
 
 def fake_payment_history(**kwargs):
@@ -198,7 +198,8 @@ def fake_vip_type(**kwargs):
 
 
 def fake_vip_price(**kwargs):
-    return mixer.blend(VipPrice, **kwargs)
+    discount_price = fake.random_int(2000, 50000, 1000)
+    return mixer.blend(VipPrice, discount_price=discount_price, **kwargs)
 
 
 def fake_user(**kwargs):

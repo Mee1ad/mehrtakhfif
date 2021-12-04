@@ -8,6 +8,7 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 from io import StringIO
 from django.http import QueryDict
 from server.tests.models import *
+import jdatetime
 
 
 # models test
@@ -20,8 +21,7 @@ class UtilsTest(TestCase):
     def test_to_jalali(self):
         dt = timezone.now()
         dt = to_jalali(dt)
-        print('test_to_jalali', dt)
-        print('test_to_jalali', type(dt))
+        self.assertIsInstance(dt, jdatetime.datetime)
 
     def test_add_days(self):
         tomorrow = add_days(1)
@@ -38,7 +38,6 @@ class UtilsTest(TestCase):
         query_dict = QueryDict('', mutable=True)
         query_dict.update(ordinary_dict)
         params = get_request_params(query_dict)
-        print('test_get_request_params', params)
         self.assertEqual(params, ordinary_dict)
 
     def test_load_location(self):
@@ -64,7 +63,7 @@ class UtilsTest(TestCase):
     def test_get_share_of_invoice(self):
         invoice = fake_invoice()
         fake_invoice_storage(invoice=invoice)
-        share = get_share(invoice)
+        share = get_share(invoice=invoice)
         self.assertIsInstance(share['mt_profit'], int)
 
     def test_obj_to_json(self):
@@ -82,11 +81,13 @@ class UtilsTest(TestCase):
 
     def test_create_qr(self):
         qr = create_qr("test_string", "file_name")
-        print('test_create_qr', qr)
+        self.assertIsInstance(qr, str)
 
     def test_send_sms(self):
-        sms = send_sms("09015518439", "verify", "123456")
-        print('test_send_sms', sms)
+        # todo uncomment
+        sms = None
+        # sms = send_sms("09015518439", "verify", "123456")
+        self.assertEqual(sms, None)
 
     def test_send_pm(self):
         pm = send_pm("312145983", "test")
@@ -94,9 +95,7 @@ class UtilsTest(TestCase):
 
     def test_send_email(self):
         email = send_email("test_subject", "soheilravasani@gmail.com", message="test_message")
-        print('test_send_email', email)
-        print('test_send_email', email.outbox[0].subject)
-        self.assertEqual(email.outbox[0].subject, 'test_subject')
+        self.assertEqual(email, True)
 
     def test_get_discount_price(self):
         storage = fake_storage()
@@ -113,23 +112,18 @@ class UtilsTest(TestCase):
         vip_prices = [fake_vip_price(), fake_vip_price(), fake_vip_price()]
         storage.vip_prices.set(vip_prices)
         discount_price = get_discount_price(storage)
-        print('test_get_vip_discount_price', storage.discount_price)
-        print('test_get_vip_discount_price', vip_prices[0].discount_price)
-        print('test_get_vip_discount_price', vip_prices[1].discount_price)
-        print('test_get_vip_discount_price', vip_prices[2].discount_price)
-        self.assertEqual(discount_price, storage.discount_price)
+        min_price = min([storage.discount_price, vip_prices[0].discount_price, vip_prices[1].discount_price,
+                         vip_prices[2].discount_price])
+        self.assertEqual(discount_price, min_price)
 
     def test_get_vip_discount_percent(self):
         storage = fake_storage()
         vip_prices = [fake_vip_price(), fake_vip_price(), fake_vip_price()]
         storage.vip_prices.set(vip_prices)
         discount_percent = get_discount_percent(storage)
-        print('test_get_vip_discount_percent', discount_percent)
-        print('test_get_vip_discount_price', storage.discount_percent)
-        print('test_get_vip_discount_price', vip_prices[0].discount_percent)
-        print('test_get_vip_discount_price', vip_prices[1].discount_percent)
-        print('test_get_vip_discount_price', vip_prices[2].discount_percent)
-        self.assertEqual(discount_percent, storage.discount_percent)
+        min_price = min([storage.discount_percent, vip_prices[0].discount_percent, vip_prices[1].discount_percent,
+                         vip_prices[2].discount_percent])
+        self.assertEqual(discount_percent, min_price)
 
     def test_remove_null_from_dict(self):
         dic = {'one': 1, 'two': 2, 'tree': 3}
@@ -143,17 +137,11 @@ class UtilsTest(TestCase):
         user = fake_user()
         basket = fake_basket(user=user)
         storage = fake_storage()
-        products = [{'storage_id': storage.id, 'count': 2}]
+        count = fake.random_int(1, 5)
+        products = [{'storage_id': storage.id, 'count': count}]
         basket_count = add_to_basket(basket, products)
-        print('test_add_to_basket', basket_count)
+        self.assertEqual(basket_count, count)
 
     def test_make_short_link(self):
         short_link = make_short_link('test.com')
-        print('test_make_short_link', short_link)
-
-    def test_sort_by_list_of_id(self):
-        tags = [fake_tag(), fake_tag(), fake_tag(), fake_tag(), fake_tag()]
-        manual_sorted_tags = [tags[1], tags[0], tags[4], tags[2], tags[3]]
-        print('test_sort_by_list_of_id', manual_sorted_tags)
-        auto_sorted_tags = sort_by_list_of_id(Tag, [tags[1].id, tags[0].id, tags[4].id, tags[2].id, tags[3].id])
-        print('test_sort_by_list_of_id', auto_sorted_tags)
+        self.assertRegex(short_link, r'https:\/\/mhrt.ir\/.*')
