@@ -194,8 +194,8 @@ class ProductView(TableView):
                                                category_key='category', **required_category))
 
     def post(self, request):
-        # data = get_data(request, require_category=True)
-        return create_object(request, Product, serializer=ProductESchema, category_key='category')
+        data = get_data(request, require_category=True)
+        return create_object(request, Product, serializer=ProductESchema, category_key='category', data=data)
 
     def put(self, request):
         data = get_data(request, require_category=True)

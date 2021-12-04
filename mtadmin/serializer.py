@@ -162,7 +162,7 @@ class BaseAdminSchema(MySchema):
             return None
 
     def get_name(self, obj):
-        return obj.name
+        return getattr(obj, 'name', '')
 
     def get_brand(self, obj):
         try:
@@ -179,13 +179,6 @@ class BaseAdminSchema(MySchema):
         except AttributeError:
             obj = obj.product
             return {'id': obj.category_id, 'name': obj.category.name, 'settings': obj.category.settings}
-
-    def get_category(self, obj):
-        cats = []
-        # categories = Category.objects
-        for cat in obj.categories.all():
-            cats.append({'id': cat.pk, 'name': cat.name})
-        return cats
 
     def get_product(self, obj):
         try:
@@ -381,7 +374,6 @@ class DateRangeASchema(BaseAdminSchema):
 
     @post_load
     def make_date_range(self, data, **kwargs):
-        print(data)
         data['start_date'] = timestamp_to_datetime(data['start_date'])
         data['end_date'] = timestamp_to_datetime(data['end_date'])
         if self.return_dict:
@@ -454,7 +446,6 @@ class InvoiceASchema(BaseAdminSchema):
 
     @post_load
     def make_invoice(self, data, **kwargs):
-        data['status'] = {'payed': 2, 'sent': 5, 'ready': 6}[data['status']]
         if self.return_dict:
             return data
         return Invoice(**data)
@@ -695,7 +686,7 @@ class ProductESchema(ProductASchema, ProductSchema):
     short_description = fields.Dict()
     # default_storage = fields.Function(lambda o: None)
     # available = fields.Function(lambda o: None)
-    default_storage_id = fields.Int()
+    default_storage_id = fields.Int(allow_none=True)
     has_selectable_feature = fields.Function(lambda o: True)
     # features = fields.Method("get_features")  # 38 + 19(selected) => 64
     features = fields.Method("get_product_features_new")
@@ -759,6 +750,36 @@ class ProductESchema(ProductASchema, ProductSchema):
     def get_tag_groups(self, obj):
         tag_groups = obj.tag_groups.all()
         return TagGroupASchema(exclude=['tags']).dump(tag_groups, many=True)
+
+    @post_load
+    def make_product(self, data, **kwargs):
+        # if (self.review['chat'] != []) and (my_dict.get('review') != self.review):
+        #     my_dict['check_review'] = False
+        try:
+            data['type'] = {'service': 1, 'product': 2, 'tourism': 3, 'package': 4, 'package_item': 5}[data['type']]
+        except KeyError:
+            pass
+        try:
+            data['booking_type'] = {'unbookable': 1, 'datetime': 2, 'range': 3}[data['booking_type']]
+        except KeyError:
+            pass
+        if data.get('permalink', None):
+            data['permalink'] = validate_permalink(data['permalink'])
+        if self.return_dict:
+            return data
+        return Product(**data)
+
+
+class HousePriceASchema(BaseAdminSchema, HousePriceSchema):
+    class Meta:
+        unknown = INCLUDE
+        additional = HousePriceSchema.Meta.additional
+
+    @post_load
+    def make_house_price(self, data, **kwargs):
+        if self.return_dict:
+            return data
+        return HousePrice(**data)
 
 
 class ProductFeatureASchema(MySchema):
@@ -1009,7 +1030,7 @@ class MediaESchema(MediaASchema, MediaSchema):
 
 class CategoryESchema(CategoryASchema, BaseAdminSchema):
     class Meta:
-        additional = CategoryASchema.Meta.additional + ('category_id',)
+        additional = CategoryASchema.Meta.additional + ('category_id', 'description')
 
     feature_groups = fields.Method("get_feature_groups")
 
@@ -1337,7 +1358,6 @@ class SliderASchema(BaseAdminSchema):
 
     @post_load
     def make_slider(self, data, **kwargs):
-        print(self.return_dict)
         if self.return_dict:
             return data
         return Slider(**data)

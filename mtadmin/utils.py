@@ -44,7 +44,6 @@ def has_access(user, category, error_null_category=True):
 
 
 def get_category_id(obj, category_key=None):
-    print(obj.__class__.__name__, category_key)
     if category_key:
         count = re.subn('__', '', category_key)[1]
         category_key = category_key.split('__')
@@ -52,7 +51,7 @@ def get_category_id(obj, category_key=None):
             if count > 1:
                 return getattr(getattr(getattr(obj, category_key[0]), category_key[1]), category_key[2])
             return getattr(getattr(obj, category_key[0]), category_key[1])
-        return getattr(obj, category_key[0])
+        return getattr(obj, category_key[0], None)
 
 
 def serialized_objects(request, model, serializer=None, single_serializer=None, category_key=None,

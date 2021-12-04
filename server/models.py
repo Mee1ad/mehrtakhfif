@@ -182,7 +182,7 @@ def translate_types(dictionary, model):
         try:
             dictionary[item] = next((v[0] for i, v in enumerate(types) if v[1] == dictionary[item]), dictionary[item])
         except KeyError:
-            pass
+            print(f"{item} not found in data")
     return dictionary
 
 
@@ -732,6 +732,7 @@ class Category(Base):
     feature_groups = models.ManyToManyField("FeatureGroup", through="CategoryGroupFeature", related_name='categories')
     name = JSONField(default=multilanguage)
     permalink = models.CharField(max_length=255, db_index=True, unique=True, null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
     priority = models.PositiveSmallIntegerField(default=0)
     disable = models.BooleanField(default=True)
     media = models.ForeignKey(Media, on_delete=CASCADE, null=True, blank=True, related_name='media')
@@ -757,7 +758,6 @@ class CategoryGroupFeature(MyModel):
 class DateRange(Base):
     def __str__(self):
         return self.title
-
 
     title = models.CharField(max_length=255)
     start_date = models.DateTimeField()
@@ -1081,7 +1081,8 @@ class Product(Base):
         self.post_save()
 
     def assign_default_value(self):
-        storages = self.storages.filter(available_count_for_sale__gt=0, unavailable=False, disable=False)
+        storages = self.storages.filter(available_count_for_sale__gt=0, unavailable=False, disable=False,
+                                        min_count_for_sale__lt=F('available_count_for_sale'))
         available = False
         default_storage = self.default_storage
         if storages:
@@ -1120,12 +1121,11 @@ class Product(Base):
         return list(self.tags.all().values_list("name__fa", flat=True))
 
     def get_colors(self):
-        colors = ProductFeature.objects.filter(product_id=self.id, feature_id=color_feature_id)\
+        colors = ProductFeature.objects.filter(product_id=self.id, feature_id=color_feature_id) \
             .select_related('feature_value').values('feature_value__id', 'feature_value__value__fa',
                                                     'feature_value__settings__hex')
         colors = [{'id': color['feature_value__id'], 'name': color['feature_value__value__fa'],
                    'color': color['feature_value__settings__hex']} for color in colors]
-        print(colors)
         colors_obj = []
         for color in colors:
             colors_obj.append(type('ClassName', (), color)())
@@ -1184,7 +1184,6 @@ class Product(Base):
     properties = JSONField(null=True, blank=True)
     details = JSONField(null=True, blank=True)
     settings = JSONField(default=default_settings, blank=True, help_text="{ui: {}, permalink_lock: True}")
-    # review = models.TextField(null=True, blank=True)
     review = JSONField(default=default_review, help_text="{chats: [], state: reviewed/request_review/ready}")
 
     # site = models.ForeignKey(Site, on_delete=models.CASCADE, default=1)
@@ -1250,6 +1249,7 @@ class Storage(Base):
     fields = {'supplier': 'تامین کننده', 'dimensions': 'ابعاد'}
     tax_types = [(1, 'has_not'), (2, 'from_total_price'), (3, 'from_profit')]
     choices = ('tax_type',)
+
 
     def full_clean(self, exclude=None, validate_unique=True):
         if Package.objects.filter(package=self):
@@ -1327,7 +1327,8 @@ class Storage(Base):
                     my_dict.get('final_price') or self.final_price) * 100)
             vip_prices = [VipPrice(vip_type_id=item['vip_type_id'], discount_price=item['discount_price'],
                                    max_count_for_sale=item.get('max_count_for_sale', self.max_count_for_sale),
-                                   discount_percent=dper, min_count_for_sale=item.get('min_count_for_sale', self.min_count_for_sale),
+                                   discount_percent=dper,
+                                   min_count_for_sale=item.get('min_count_for_sale', self.min_count_for_sale),
                                    available_count_for_sale=item.get('available_count_for_sale',
                                                                      self.available_count_for_sale), storage_id=self.pk)
                           for item in
@@ -1398,9 +1399,16 @@ class Storage(Base):
 
     def is_available(self, count=1):
         max_count_for_sale = self.get_max_count()
-        return (self.available_count_for_sale >= count) and (max_count_for_sale >= count) and \
-               (self.disable is False) and (self.product.disable is False) and self.product.available and (
-                       self.unavailable is False) and self.available_count_for_sale >= self.min_count_for_sale
+        if count < self.min_count_for_sale:
+            raise ValidationError(f"حداقل تعداد خرید {self.product.name['fa']} باید {self.min_count_for_sale} عدد باشد")
+        if count > self.max_count_for_sale:
+            raise ValidationError(
+                f"حداکثر تعداد خرید {self.product.name['fa']} باید {self.max_count_for_sale} عدد باشد")
+        if (self.disable is True) or (self.product.disable is True):
+            raise ValidationError("متاسفانه محصول غیرفعال میباشد")
+        if (self.product.available is False) or (self.unavailable is True):
+            raise ValidationError("متاسفانه محصول ناموجود میباشد")
+
 
     product = models.ForeignKey(Product, on_delete=CASCADE, related_name='storages')
     # features = models.ManyToManyField(ProductFeature, through='StorageFeature', related_name="storages")
@@ -1574,7 +1582,8 @@ class Comment(Base):
 
 class Invoice(Base):
     select = ['basket', 'suspended_by', 'user', 'charity', 'post_invoice'] + Base.select
-    statuss = ((1, 'pending'), (2, 'payed'), (3, 'canceled'), (4, 'rejected'), (5, 'sent'), (6, 'ready'))
+    statuss = ((1, 'pending'), (2, 'payed'), (3, 'canceled'), (4, 'rejected'), (5, 'sent'), (6, 'ready'),
+               (7, 'accepted'))
     choices = ('status',)
 
     success_status = [2, 5, 6]
@@ -1598,7 +1607,8 @@ class Invoice(Base):
     user = models.ForeignKey(User, on_delete=CASCADE, related_name='invoices')
     sync_task = models.ForeignKey(PeriodicTask, on_delete=CASCADE, null=True, blank=True,
                                   related_name='invoice_sync_task')
-    email_task = models.ForeignKey(PeriodicTask, on_delete=CASCADE, null=True, blank=True)
+    email_task = models.ForeignKey(PeriodicTask, on_delete=CASCADE, null=True, blank=True,
+                                   related_name='invoice_email_task')
     basket = models.ForeignKey(to=Basket, on_delete=CASCADE, related_name='invoice', null=True)
     storages = models.ManyToManyField(Storage, through='InvoiceStorage')
     payed_at = models.DateTimeField(blank=True, null=True, verbose_name='Payed at')

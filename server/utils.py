@@ -39,8 +39,6 @@ default_step = 18
 admin_default_step = 10
 default_page = 1
 
-
-
 category_with_own_post = [2, 7, 10]  # golkade, adavat_moosighi, super market
 res_code = {'success': 200, 'bad_request': 400, 'unauthorized': 401, 'forbidden': 403, 'token_issue': 401,
             'integrity': 406, 'banned': 493, 'activation_warning': 250, 'updated_and_disable': 251,
@@ -201,7 +199,8 @@ def get_share(storage=None, invoice=None):
             tax = get_tax(storage.tax_type, storage.discount_price, storage.start_price)
             charity = ceil(storage.discount_price * 0.005)
             dev = ceil((storage.discount_price - storage.start_price - tax) * 0.069)
-            admin = ceil((storage.discount_price - storage.start_price - tax - charity - dev) * category.settings['share'])
+            admin = ceil(
+                (storage.discount_price - storage.start_price - tax - charity - dev) * category.settings['share'])
             mt_profit = storage.discount_price - storage.start_price - tax - charity - dev - admin
             share = {'tax': share['tax'] + tax, 'charity': share['charity'] + charity, 'dev': share['dev'] + dev,
                      'admin': share['admin'] + admin, 'mt_profit': share['mt_profit'] + mt_profit}
@@ -327,7 +326,8 @@ def get_categories(filters=None):
                                  queryset=Category.objects.filter(disable=False)
                                  .prefetch_related(prefetch_grand_children))
     categories = Category.objects.filter(**filters, disable=False).prefetch_related(prefetch_children)
-    categories = CategorySchema(only=['id', 'name', 'children', 'permalink', 'type', 'priority']).dump(categories, many=True)
+    categories = CategorySchema(only=['id', 'name', 'children', 'permalink', 'type', 'priority']).dump(categories,
+                                                                                                       many=True)
     return categories
 
 
@@ -451,7 +451,7 @@ def get_basket(request, basket_id=None, basket=None, basket_products=None, retur
         basket_product.product = storage.product
         basket_product.product.default_storage = storage
         # basket_product.supplier = storage.supplier
-        if basket_product.product.type == 2 and not address_required:
+        if basket_product.product.type in [2, 4] and not address_required:
             address_required = True
         storage.discount_price = get_discount_price(storage)
         basket_product.__dict__.update(
@@ -552,7 +552,8 @@ def sync_default_storage(storages, products):
 
 def get_best_seller(request, category, invoice_ids):
     # from invoices
-    basket_products = InvoiceStorage.objects.filter(invoice_id__in=invoice_ids, category=category).values('storage', 'count')
+    basket_products = InvoiceStorage.objects.filter(invoice_id__in=invoice_ids, category=category).values('storage',
+                                                                                                          'count')
     storage_count = {}
     for product in basket_products:
         if product['storage'] in storage_count.keys():

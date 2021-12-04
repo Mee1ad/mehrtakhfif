@@ -93,6 +93,12 @@ class BasketView(View):
                 #       'max_count_for_sale:', storage.max_count_for_sale, 'storage.disable:', storage.disable,
                 #       'storage.product.disable:', storage.product.disable)
                 raise ValidationError(_('متاسفانه این محصول ناموجود میباشد'))
+            if count < storage.min_count_for_sale:
+                raise ValidationError(
+                    f"حداقل تعداد خرید {storage.product.name['fa']} باید {storage.min_count_for_sale} عدد باشد")
+            if count < storage.max_count_for_sale:
+                raise ValidationError(
+                    f"حداکثر تعداد خرید {storage.product.name['fa']} باید {storage.max_count_for_sale} عدد باشد")
             basket = request.session.get('basket', [])
             duplicate_basket_product_index = [basket.index(basket_product) for basket_product in basket if
                                               basket_product['storage_id'] == storage.pk]

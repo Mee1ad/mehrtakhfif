@@ -239,10 +239,12 @@ def send_invoice(self, invoice_id, lang="fa", **kwargs):
                         data['storage_description'] = storage.invoice_description[lang]
                     rendered = ""
                     for c in range(product.count):
-                        discount_code = storage.discount_code.filter(invoice=None).first()
-                        discount_code.invoice_id = invoice_id
-                        discount_code.invoice_storage = product
-                        discount_code.save()
+                        discount_code = product.discount_codes.filter(type=1).first()
+                        if discount_code is None:
+                            discount_code = storage.discount_codes.filter(invoice=None).first()
+                            discount_code.invoice_id = invoice_id
+                            discount_code.invoice_storage = product
+                            discount_code.save()
                         data['code'] = discount_code.code
                         rendered += render_to_string('invoice.html', data)
                     pdf = INVOICE_ROOT + f'/{filename}.pdf'
