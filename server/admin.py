@@ -119,7 +119,7 @@ class SessionAdmin(admin.ModelAdmin):
 
 
 class UserAdmin(BaseUserAdmin):
-    BaseUserAdmin.list_display += ('updated_at',)
+    BaseUserAdmin.list_display = ('id', *BaseUserAdmin.list_display, 'updated_at',)
     list_filter = ('groups', 'is_staff')
     ordering = ('-id',)
     list_per_page = 10
@@ -646,7 +646,8 @@ class ResidenceTypeAdmin(Base):
 
 class StorageAdmin(Base):
     list_display = ('id', 'storage_name', 'sold_count', 'available_count_for_sale', 'max_count_for_sale',
-                    'discount_price', 'disable', 'tax_type', 'get_supplier') + SafeDeleteAdmin.list_display
+                    'discount_price', 'disable', 'tax_type', 'get_supplier',
+                    'min_count_for_sale') + SafeDeleteAdmin.list_display
     list_filter = () + SafeDeleteAdmin.list_filter
     list_display_links = ('storage_name',)
     search_fields = ['storage_name']
