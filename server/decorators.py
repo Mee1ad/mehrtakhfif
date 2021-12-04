@@ -5,7 +5,7 @@ import traceback
 
 from django.http import JsonResponse, HttpResponseServerError, HttpResponseForbidden, HttpResponseBadRequest
 from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
-
+from elasticsearch.exceptions import RequestError
 from server.models import *
 from server.utils import res_code
 from django.core.exceptions import NON_FIELD_ERRORS
@@ -22,7 +22,8 @@ def try_except(func):
             return func(*args, **kwargs)
         except (PermissionDenied, PermissionError):
             user = args[0].user
-            return Init.set_login_cookie(user)
+            res = JsonResponse({"message": "برای استفاده از این باید لاگین کنی", "variant": "warning"}, status=401)
+            return Init.set_login_cookie(user, res=res)
         except json.decoder.JSONDecodeError:
             traceback.print_exc()
             return HttpResponseServerError()
@@ -34,7 +35,7 @@ def try_except(func):
             except Exception:
                 return HttpResponseBadRequest()
         except (AssertionError, StopIteration, AttributeError, KeyError, ValueError, TypeError,
-                EmptyPage):
+                EmptyPage, RequestError):
             traceback.print_exc()
             return HttpResponseBadRequest()
         except ObjectDoesNotExist:

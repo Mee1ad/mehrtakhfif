@@ -104,7 +104,7 @@ class CategoryDocument(Document):
         model = Category  # The model associated with this Document
 
         # The fields of the model you want to be indexed in Elasticsearch
-        fields = ['permalink', 'disable']
+        fields = ['permalink', 'disable', 'description']
 
 
 @registry.register_document

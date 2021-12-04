@@ -78,7 +78,7 @@ class PaymentRequest(LoginRequired):
             invoice.final_amount = invoice.amount
             invoice.save()
             # invoice.basket.status = 3  # done
-            invoice.basket.discount_code.update(invoice=invoice)
+            invoice.basket.discount_codes.update(invoice=invoice)
             url = self.get_payment_url(invoice)
             # invoice.basket.save()
             # CallBack.notification_admin(invoice)
@@ -273,14 +273,14 @@ class PaymentRequest(LoginRequired):
             share = get_share(storage)
             invoice_products.append(
                 InvoiceStorage(storage=storage, invoice_id=invoice_id, count=product.count, tax=share['tax'],
-                               final_price=(storage.final_price - share['tax']) * product.count, box=product.box,
+                               final_price=(storage.final_price - share['tax']) * product.count,
                                discount_price=storage.discount_price * product.count, charity=share['charity'],
                                start_price=storage.start_price * product.count, admin=share['admin'],
                                features=product.features, mt_profit=share['mt_profit'],
                                total_price=(storage.final_price - share['tax']) * product.count, dev=share['dev'],
                                discount_price_without_tax=(storage.discount_price - share['tax']) * product.count,
                                discount=(storage.final_price - storage.discount_price) * product.count,
-                               created_by=invoice.user, updated_by=invoice.user))
+                               created_by=invoice.user, updated_by=invoice.user, category=product.category,))
         InvoiceStorage.objects.bulk_create(invoice_products)
 
 
@@ -369,7 +369,7 @@ class CallBack(View):
         if finish:  # successful payment, cancel task
             # invoice.basket.status = 3  # done
             description = f'{timezone.now()}: successful payment'
-            invoice.basket.discount_code.update(invoice=invoice)
+            invoice.basket.discount_codes.update(invoice=invoice)
             # invoice.basket.save()
             # Basket.objects.create(user=invoice.user, created_by=invoice.user, updated_by=invoice.user)
         elif cancel:

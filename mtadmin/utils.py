@@ -31,17 +31,19 @@ class AdminView(LoginRequiredMixin, View):
 
 
 def has_access(user, category, error_null_category=True):
-    if type(category) is int:
+    if user.is_superuser or user.groups.filter(name__in=['accountants', 'content_manager',
+                                                         'superuser', 'support']).exists():
+        return True
+    if type(category) in [int, str]:
         category = Category.objects.get(pk=category)
     if error_null_category:
-        permitted = user.has_perm('has_access', category)
+        permitted = user.has_perm('manage_category', category)
         if not permitted:
             raise PermissionDenied
         return True
 
 
 def get_category_id(obj, category_key=None):
-    print(obj.__class__.__name__, category_key)
     if category_key:
         count = re.subn('__', '', category_key)[1]
         category_key = category_key.split('__')
@@ -49,13 +51,19 @@ def get_category_id(obj, category_key=None):
             if count > 1:
                 return getattr(getattr(getattr(obj, category_key[0]), category_key[1]), category_key[2])
             return getattr(getattr(obj, category_key[0]), category_key[1])
-        return getattr(obj, category_key[0])
+        return getattr(obj, category_key[0], None)
 
 
 def serialized_objects(request, model, serializer=None, single_serializer=None, category_key=None,
                        error_null_category=True, params=None, required_fields=[]):
     user = request.user
     params = params or get_params(request, category_key)
+    # todo delete this
+    try:
+        params['only_fields'].remove('seo_title')
+    except Exception:
+        pass
+
     pk = params['filter'].get('id', None)
     if pk:
         sip = {}
@@ -283,6 +291,8 @@ def create_object(request, model, category_key=None, return_item=False, serializ
     data = {**data, 'created_by': user, 'updated_by': user}
     obj = serializer(user=user).load(data)
     category_id = data.get('category_id', None)
+    if model == Category:
+        category_id = data.get('parent_id', None)
     has_access(user, category_id, error_null_category)
     save_data = {}
     if model == Storage:
@@ -452,14 +462,17 @@ def update_object(request, model, category_key=None, return_item=False, serializ
             item.validation()
     except AttributeError:
         pass
-    item.save()
+    save_data = {}
+    if model == Storage:
+        save_data = {'admin': True}
+    item.save(**save_data)
     message = {}
     if notif:
         message = responses['202']
     if return_item:
         request.GET._mutable = True
         request.GET['id'] = item.pk
-        items = serialized_objects(request, model, single_serializer=serializer, error_null_category=require_category)
+        items = serialized_objects(request, model, single_serializer=serializer, error_null_category=False)
         return JsonResponse({"data": items, **extra_response, **message}, status=res_code['updated'])
     return JsonResponse({**extra_response, **message}, status=res_code['updated'])
 
@@ -579,6 +592,15 @@ def distinct_list_of_dict(l, k):  # list, key
     return distinct_list
 
 
-def add_category_permission(user, objects):
-    for obj in objects:
-        UserObjectPermission.objects.assign_perm('manage_category', user, obj=obj)
+def add_category_permission(user_id, category_id):
+    user = User.objects.get(pk=user_id)
+    categories = Category.objects.filter(
+        Q(id=category_id) | Q(parent_id=category_id) | Q(parent__parent_id=category_id))
+    for category in categories:
+        UserObjectPermission.objects.assign_perm('manage_category', user, obj=category)
+
+
+def check_required_fields(dictionary, required_fields):
+    for field in required_fields:
+        if field not in dictionary or dictionary[field] is None:
+            raise ValidationError(f"لطفا {field} را وارد نمایید")

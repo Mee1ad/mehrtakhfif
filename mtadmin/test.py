@@ -15,6 +15,73 @@ logger.setLevel(logging.DEBUG)
 
 
 # USE THIS
+class GetModelTestCase(TestCase):
+    def setUp(self):
+        self.user = fake_user(is_superuser=True, is_active=True)
+        self.factory = RequestFactory()
+        self.headers = {"content_type": "application/json"}
+
+    def make_request(self, route):
+        request = self.factory.get(route, **self.headers)
+        request.user = self.user
+        request.all = False
+        request.page = 1
+        request.step = 18
+        request.schema_params = {'language': 'fa', 'user': request.user}
+        return request
+
+    def test_single_product(self):
+        product = fake_product()
+        request = self.make_request(f'/admin/product?id={product.id}')
+        res = ProductView.as_view()(request)
+        res = json.loads(res.content)
+        self.assertEqual(res['data']['id'], product.id, f"can't create")
+
+    def test_products(self):
+        category = fake_category()
+        products = [fake_product(category=category), fake_product(category=category), fake_product(category=category)]
+        request = self.make_request(f'/admin/product?category_id={category.id}')
+        res = ProductView.as_view()(request)
+        res = json.loads(res.content)
+        self.assertEqual(res['pagination']['count'], len(products), f"can't get")
+        self.assertEqual(len(res['data']), len(products), f"can't get")
+
+    def test_single_invoice(self):
+        product = fake_invoice()
+        request = self.make_request(f'/admin/invoice?id={product.id}')
+        res = InvoiceView.as_view()(request)
+        res = json.loads(res.content)
+        self.assertEqual(res['data']['id'], product.id, f"can't create")
+
+    def test_invoices(self):
+        invoices = [fake_invoice(), fake_invoice(), fake_invoice(), fake_invoice(), fake_invoice()]
+        print(Invoice.objects.all()[0].final_price)
+        print(Invoice.objects.all())
+        request = self.make_request(f'/admin/invoice')
+        res = InvoiceView.as_view()(request)
+        res = json.loads(res.content)
+        print('invoice', res)
+        self.assertEqual(res['pagination']['count'], len(invoices), f"can't get")
+        self.assertEqual(len(res['data']), len(invoices), f"can't get")
+
+    def test_single_house_price(self):
+        house_price = mixer.blend(HousePrice)
+        request = self.make_request(f'/admin/house_price?id={house_price.id}')
+        res = HousePriceView.as_view()(request)
+        res = json.loads(res.content)
+        self.assertEqual(res['data']['id'], house_price.id, f"can't get")
+
+    def test_product_house_prices(self):
+        product = fake_product()
+        print('product_id', product.id)
+        house_price = mixer.blend(HousePrice, product=product)
+        print('house_price', house_price.id)
+        request = self.make_request(f'/admin/house_price?product_id={product.id}')
+        res = HousePriceView.as_view()(request)
+        res = json.loads(res.content)
+        print('product house price', res)
+        self.assertEqual(res['data'][0]['id'], house_price.id, f"can't get")
+
 
 class PostModelTestCase(TestCase):
     def setUp(self):
@@ -186,7 +253,10 @@ class PostModelTestCase(TestCase):
                     "show": False
                 }
             ],
-            "thumbnail_id": thumbnail.id
+            "thumbnail_id": thumbnail.id,
+            "capacity": fake.random_int(2, 8),
+            "max_capacity": fake.random_int(8, 15),
+            "min_reserve_time": fake.random_int(3, 7)
         }
         request = self.make_request('/admin/product', data)
         res = ProductView.as_view()(request)
@@ -247,6 +317,7 @@ class PostModelTestCase(TestCase):
             "invoice_description": fake_json(),
             "invoice_title": fake_json(),
             "max_count_for_sale": 10,
+            "min_count_for_sale": fake.random_int(1, 4),
             "min_count_alert": 3,
             "product_id": product.id,
             "shipping_cost": 0,
@@ -260,10 +331,10 @@ class PostModelTestCase(TestCase):
             "title": fake_json(),
             "vip_prices": [
                 {'vip_type_id': vip_price1.vip_type_id, 'discount_price': vip_price1.discount_price,
-                 'max_count_for_sale': vip_price1.max_count_for_sale,
+                 'max_count_for_sale': vip_price1.max_count_for_sale, 'min_count_for_sale': vip_price1.min_count_for_sale,
                  'available_count_for_sale': vip_price1.available_count_for_sale},
                 {'vip_type_id': vip_price2.vip_type_id, 'discount_price': vip_price2.discount_price,
-                 'max_count_for_sale': vip_price2.max_count_for_sale,
+                 'max_count_for_sale': vip_price2.max_count_for_sale, 'min_count_for_sale': vip_price1.min_count_for_sale,
                  'available_count_for_sale': vip_price2.available_count_for_sale}
             ],
             "accessories": [
@@ -367,7 +438,21 @@ class PostModelTestCase(TestCase):
         }
         request = self.make_request('/admin/review_price', data)
         res = ReviewPrice.as_view()(request)
-        self.assertEqual(res.status_code, 200, f"can't create")
+        self.assertEqual(res.status_code, 201, f"can't create")
+
+    def test_house_price(self):
+        product = fake_product()
+        data = {
+            "product_id": product.id,
+            "guest": fake.random_int(5000, 100000, 1000),
+            "weekend": fake.random_int(5000, 100000, 1000),
+            "weekday": fake.random_int(5000, 100000, 1000),
+            "peak": fake.random_int(5000, 100000, 1000),
+            "custom_price": {}
+        }
+        request = self.make_request('/admin/house_price', data)
+        res = HousePriceView.as_view()(request)
+        self.assertEqual(res.status_code, 201, f"can't create")
 
 
 class PutModelTestCase(TestCase):
@@ -552,7 +637,10 @@ class PutModelTestCase(TestCase):
                     "show": False
                 }
             ],
-            "thumbnail_id": thumbnail.id
+            "thumbnail_id": thumbnail.id,
+            "capacity": fake.random_int(2, 8),
+            "max_capacity": fake.random_int(8, 15),
+            "min_reserve_time": fake.random_int(3, 7)
         }
         request = self.make_request('/admin/product', data)
         res = ProductView.as_view()(request)
@@ -603,6 +691,7 @@ class PutModelTestCase(TestCase):
             "invoice_description": fake_json(),
             "invoice_title": fake_json(),
             "max_count_for_sale": 10,
+            "min_count_for_sale": fake.random_int(1, 4),
             "min_count_alert": 3,
             "product_id": product.id,
             "shipping_cost": 0,
@@ -616,10 +705,10 @@ class PutModelTestCase(TestCase):
             "title": fake_json(),
             "vip_prices": [
                 {'vip_type_id': vip_price1.vip_type_id, 'discount_price': vip_price1.discount_price,
-                 'max_count_for_sale': vip_price1.max_count_for_sale,
+                 'max_count_for_sale': vip_price1.max_count_for_sale, 'min_count_for_sale': vip_price1.min_count_for_sale,
                  'available_count_for_sale': vip_price1.available_count_for_sale},
                 {'vip_type_id': vip_price2.vip_type_id, 'discount_price': vip_price2.discount_price,
-                 'max_count_for_sale': vip_price2.max_count_for_sale,
+                 'max_count_for_sale': vip_price2.max_count_for_sale, 'min_count_for_sale': vip_price1.min_count_for_sale,
                  'available_count_for_sale': vip_price2.available_count_for_sale}
             ],
             "accessories": [
@@ -692,3 +781,40 @@ class PutModelTestCase(TestCase):
         request = self.make_request('/admin/promote_categories', data)
         res = PromoteCategory.as_view()(request)
         self.assertEqual(res.status_code, res_code['updated'], f"can't update")
+
+    def test_house_price(self):
+        product = fake_product()
+        data = {
+            "product_id": product.id,
+            "guest": fake.random_int(5000, 100000, 1000),
+            "weekend": fake.random_int(5000, 100000, 1000),
+            "weekday": fake.random_int(5000, 100000, 1000),
+            "peak": fake.random_int(5000, 100000, 1000),
+            "custom_price": {}
+        }
+        request = self.make_request('/admin/house_price', data)
+        res = HousePriceView.as_view()(request)
+        self.assertEqual(res.status_code, res_code['updated'], f"can't update")
+
+    def test_invoice(self):
+        invoice = fake_invoice()
+        data = {
+            "id": invoice.id,
+            "status": fake.random_element(Invoice.statuss)[1],
+        }
+        request = self.make_request('/admin/invoice', data)
+        res = InvoiceView.as_view()(request)
+        self.assertEqual(res.status_code, res_code['updated'], f"can't update")
+
+
+class UnitTestCase(TestCase):
+    def test_unauthorized_access_to_category(self):
+        user = User.objects.filter(is_superuser=False, is_staff=False).first()
+        category = Category.objects.first()
+        try:
+            has_access(user, category)
+        except PermissionDenied:
+            pass
+
+    def test_get_category_id_in_3rd_level(self):
+        pass

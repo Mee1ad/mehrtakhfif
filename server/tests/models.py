@@ -147,7 +147,7 @@ def fake_product(**kwargs):
                        properties=fake_json(), name=fake_json(), description=fake_json(),
                        short_address=fake.address, details=fake_json(), settings=fake_settings(),
                        review=review, type=types[fake.random_int(1, 4)], available=True,
-                       category=fake_category(settings=fake_settings()), **kwargs)
+                       category=kwargs.pop('category', fake_category(settings=fake_settings())), **kwargs)
 
 
 def fake_payment_history(**kwargs):
@@ -168,12 +168,16 @@ def fake_special_product(**kwargs):
 def fake_storage(**kwargs):
     supplier = fake_user(is_verify=True)
     product = fake_product()
-    storage = mixer.blend(Storage, title=fake_json(), disable=False, available_count=100,
-                       available_count_for_sale=100, start_price=1000, discount_price=2000,
-                       final_price=3000, shipping_cost=1000, max_count_for_sale=5, tax_type=1,
-                       deadline=None, supplier=supplier, media=fake_media(2), discount_percent=15,
-                       dimensions={'weight': 10, 'height': 10, 'width': 10, 'length': 10}, **kwargs)
-    product.default_storage = storage
+    storage = mixer.blend(Storage, title=fake_json(), disable=False, available_count=100, product=kwargs.pop('product', product),
+                          available_count_for_sale=100, start_price=1000, discount_price=2000,
+                          final_price=3000, shipping_cost=1000, max_count_for_sale=5,
+                          min_count_for_sale=fake.random_int(1, 3), tax_type=1,
+                          deadline=None, supplier=supplier, media=fake_media(2), discount_percent=15,
+                          dimensions={'weight': 10, 'height': 10, 'width': 10, 'length': 10}, **kwargs)
+    # storage.product = kwargs.get('product', product)
+    # storage.save()
+    # product.default_storage = storage
+    # product.save()
     return storage
 
 
@@ -194,7 +198,8 @@ def fake_vip_type(**kwargs):
 
 
 def fake_vip_price(**kwargs):
-    return mixer.blend(VipPrice, **kwargs)
+    discount_price = fake.random_int(2000, 50000, 1000)
+    return mixer.blend(VipPrice, discount_price=discount_price, **kwargs)
 
 
 def fake_user(**kwargs):

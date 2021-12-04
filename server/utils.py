@@ -39,8 +39,6 @@ default_step = 18
 admin_default_step = 10
 default_page = 1
 
-
-
 category_with_own_post = [2, 7, 10]  # golkade, adavat_moosighi, super market
 res_code = {'success': 200, 'bad_request': 400, 'unauthorized': 401, 'forbidden': 403, 'token_issue': 401,
             'integrity': 406, 'banned': 493, 'activation_warning': 250, 'updated_and_disable': 251,
@@ -201,7 +199,8 @@ def get_share(storage=None, invoice=None):
             tax = get_tax(storage.tax_type, storage.discount_price, storage.start_price)
             charity = ceil(storage.discount_price * 0.005)
             dev = ceil((storage.discount_price - storage.start_price - tax) * 0.069)
-            admin = ceil((storage.discount_price - storage.start_price - tax - charity - dev) * category.settings['share'])
+            admin = ceil(
+                (storage.discount_price - storage.start_price - tax - charity - dev) * category.settings['share'])
             mt_profit = storage.discount_price - storage.start_price - tax - charity - dev - admin
             share = {'tax': share['tax'] + tax, 'charity': share['charity'] + charity, 'dev': share['dev'] + dev,
                      'admin': share['admin'] + admin, 'mt_profit': share['mt_profit'] + mt_profit}
@@ -327,7 +326,8 @@ def get_categories(filters=None):
                                  queryset=Category.objects.filter(disable=False)
                                  .prefetch_related(prefetch_grand_children))
     categories = Category.objects.filter(**filters, disable=False).prefetch_related(prefetch_children)
-    categories = CategorySchema(only=['id', 'name', 'children', 'permalink']).dump(categories, many=True)
+    categories = CategorySchema(only=['id', 'name', 'children', 'permalink', 'type', 'priority']).dump(categories,
+                                                                                                       many=True)
     return categories
 
 
@@ -362,9 +362,7 @@ def user_data_with_pagination(model, serializer, request, show_all=False, extra=
 def get_discount_price(storage):
     try:
         prices = storage.vip_prices.all()
-        prices = [price.discount_price for price in prices]
-        # prices = storage.vip_prices.all()
-        # return 0
+        prices = [price.discount_price for price in prices] + [storage.discount_price]
         return min(prices)
     except Exception:
         return storage.discount_price
@@ -373,7 +371,7 @@ def get_discount_price(storage):
 def get_discount_percent(storage):
     try:
         prices = storage.vip_prices.all()
-        prices = [price.discount_percent for price in prices]
+        prices = [price.discount_percent for price in prices] + [storage.discount_percent]
         return min(prices)
     except Exception:
         return storage.discount_percent
@@ -437,7 +435,7 @@ def get_basket(request, basket_id=None, basket=None, basket_products=None, retur
     changed_items = {}
     if with_changes:
         changed_items = check_basket(request, basket)
-    basket_products = basket_products or basket.basket_storages.all()
+    basket_products = basket_products or basket.basket_storages.all().order_by('-id')
     summary = {"total_price": 0, "discount_price": 0, "profit": 0, "mt_profit": 0, 'charity': 0,
                "shipping_cost": 0, "tax": 0, "final_price": 0}
     address_required = False
@@ -453,7 +451,7 @@ def get_basket(request, basket_id=None, basket=None, basket_products=None, retur
         basket_product.product = storage.product
         basket_product.product.default_storage = storage
         # basket_product.supplier = storage.supplier
-        if basket_product.product.type == 2 and not address_required:
+        if basket_product.product.type in [2, 4] and not address_required:
             address_required = True
         storage.discount_price = get_discount_price(storage)
         basket_product.__dict__.update(
@@ -554,7 +552,8 @@ def sync_default_storage(storages, products):
 
 def get_best_seller(request, category, invoice_ids):
     # from invoices
-    basket_products = InvoiceStorage.objects.filter(invoice_id__in=invoice_ids, category=category).values('storage', 'count')
+    basket_products = InvoiceStorage.objects.filter(invoice_id__in=invoice_ids, category=category).values('storage',
+                                                                                                          'count')
     storage_count = {}
     for product in basket_products:
         if product['storage'] in storage_count.keys():
@@ -614,7 +613,8 @@ def remove_null_from_dict(required_keys, dictionary):
     return dictionary
 
 
-def get_preview_permission(user, category_check=True, box_check=True, category_key='category', product_check=False, is_get=True):
+def get_preview_permission(user, category_check=True, box_check=True, category_key='category', product_check=False,
+                           is_get=True):
     permitted_users = []  # user_id, can order for disabled product
     if is_get:
         permitted_users = [user.pk]
@@ -663,7 +663,7 @@ def add_to_basket(basket, products):
 
     basket.count = basket.basket_storages.aggregate(count=Sum('count'))['count']
     basket.save()
-    basket.discount_code.update(basket=None)
+    basket.discount_codes.update(basket=None)
     return basket.count
 
 
@@ -765,12 +765,6 @@ def get_custom_signed_cookie(req, key, error=None, salt=TOKEN_SALT):
     if error is not None:
         return req.get_signed_cookie(key, error, salt=salt)
     return req.get_signed_cookie(key, default=None, salt=salt)
-
-
-def sort_by_list_of_id(model, id_list):
-    id_list = list(id_list)
-    queryset = model.objects.filter(pk__in=id_list)
-    return sorted(queryset, key=lambda i: id_list.index(i.pk))
 
 
 # def available_products2(products):

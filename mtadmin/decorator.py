@@ -15,11 +15,13 @@ from elasticsearch.exceptions import RequestError
 def error_handler(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
+        pagination = {"pagination": {"last_page": 0, "count": 0, "step": 0 }}
         try:
             return func(*args, **kwargs)
         except (FieldError, TypeError, KeyError, ValueError, AttributeError, RequestError):
             traceback.print_exc()
-            return JsonResponse({'message': 'مشکلی پیش آمده', 'variant': 'error'}, status=res_code['bad_request'])
+            return JsonResponse({**pagination, 'data': [], 'message': 'مشکلی پیش آمده', 'variant': 'error'},
+                                status=res_code['bad_request'])
         except ActivationError as e:
             traceback.print_exc()
             return JsonResponse({'message': str(e), 'variant': 'warning'}, status=res_code['activation_warning'])

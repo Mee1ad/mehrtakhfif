@@ -139,7 +139,7 @@ class BaseSchema(Schema):
         return self.get(obj.short_description)
 
     def get_description(self, obj):
-        return self.get(obj.description['fa'])
+        return self.get(obj.description)
 
     def get_properties(self, obj):
         if obj.properties:
@@ -253,9 +253,13 @@ class BaseSchema(Schema):
         return new_value
 
     def get_max_count_for_sale(self, obj):
+        if obj.unavailable is True or obj.product.available is False:
+            return 0
         if (obj.available_count_for_sale >= obj.max_count_for_sale) and (obj.max_count_for_sale != 0):
             return obj.max_count_for_sale
         if obj.available_count_for_sale > 1:
+            if obj.min_count_for_sale > obj.available_count_for_sale:
+                return 0
             return obj.available_count_for_sale - 1
         return obj.available_count_for_sale
 
@@ -304,6 +308,28 @@ class BaseSchema(Schema):
             return getattr(obj, attr).timestamp()
         except Exception as e:
             return None
+
+    def get_image(self, obj):
+        return HOST + obj.image.url
+
+    def to_arithmetic_number(self, num):
+        return int((abs(num) + num) / 2)
+
+    def get_status(self, obj):
+        return obj.get_status_display()
+
+    def get_invoice_file(self, obj):
+        try:
+            if self.user.is_staff or obj.get_type_display == 'payed':
+                return HOST + f'/invoice_detail/{obj.id}'
+        except AttributeError:
+            return None
+
+    def get_created_at_date(self, obj):
+        return self.get_date(obj, 'created_at')
+
+    def get_type(self, obj):
+        return obj.get_type_display()
 
 
 class MinUserSchema(BaseSchema):
@@ -377,9 +403,6 @@ class MediaSchema(BaseSchema):
     title = fields.Method("get_title")
     category = fields.Function(lambda o: o.category_id)
 
-    def get_image(self, obj):
-        return HOST + obj.image.url
-
 
 class CategorySchema(BaseSchema):
     class Meta:
@@ -390,7 +413,7 @@ class CategorySchema(BaseSchema):
     parent = fields.Method('get_parent')
     media = fields.Method('get_media')
     children = fields.Method('get_children')
-    type = fields.Function(lambda o: o.get_type_display())
+    type = fields.Method("get_type")
 
     def get_children(self, obj):
         try:
@@ -426,11 +449,6 @@ class CategorySchema(BaseSchema):
 class ParentSchema(BaseSchema):
     id = fields.Int()
     name = fields.Method('get_name')
-
-
-class FeatureSchema(BaseSchema):
-    name = fields.Method('get_name')
-    settings = fields.Dict()
 
 
 class FeatureGroupSchema(BaseSchema):
@@ -554,11 +572,15 @@ class ColorsSchema(BaseSchema):
 
 class FilterProductSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'permalink', 'available', 'disable', 'thumbnail', 'colors')
+        additional = ('id', 'permalink', 'available', 'disable', 'thumbnail', 'colors', 'type')
 
     thumbnail = fields.Method("get_thumbnail")
     default_storage = fields.Method("get_default_storage")
     colors = fields.Nested(ColorsSchema(many=True))
+    name = fields.Method("get_name")
+
+    def get_name(self, obj):
+        return getattr(obj, 'name_fa')
 
     def get_default_storage(self, obj):
         try:
@@ -609,7 +631,7 @@ class ProductSchema(MinProductSchema):
         return f"{SHORTLINK}/p/{obj.pk}"
 
     def get_storages(self, obj):
-        storages = StorageSchema(only=['id', 'discount_price', 'max_count_for_sale']).dump(obj.storages.all(),
+        storages = StorageSchema(only=['id', 'discount_price', 'max_count_for_sale', 'min_count_for_sale']).dump(obj.storages.all(),
                                                                                            many=True)
         return sorted(storages, key=lambda i: i['discount_price'])
 
@@ -641,6 +663,8 @@ class ProductMediaSchema(BaseSchema):
 
 
 class MinStorageSchema(BaseSchema):
+    class Meta:
+        additional = ('unavailable', 'min_count_for_sale')
     discount_price = fields.Method("get_discount_price")
     final_price = fields.Method("get_final_price")
     discount_percent = fields.Method("get_discount_percent")
@@ -667,6 +691,8 @@ class MinStorageSchema(BaseSchema):
             pass
 
     def get_discount_price(self, obj):
+        if obj.unavailable is True:
+            return 0
         min_price = 0
         if obj.available_count_for_sale > 0:
             min_price = obj.discount_price
@@ -681,20 +707,13 @@ class MinStorageSchema(BaseSchema):
         return min_price
 
     def get_final_price(self, obj):
-        if obj.available_count_for_sale > 0:
+        if obj.available_count_for_sale > 0 and obj.unavailable is False:
             return obj.final_price
         return 0
 
     def get_discount_percent(self, obj):
-        # try:
-        #     user_groups = self.user.vip_types.all()
-        #     prices = VipPrice.objects.filter(storage_id=obj.pk, available_count_for_sale__gt=0,
-        #                                      vip_type__in=user_groups).values_list('discount_percent', flat=True)
-        #     return min(prices)
-        # except Exception:
-        #     if obj.available_count_for_sale > 0:
-        #         return obj.discount_percent
-        #     return 0
+        if obj.unavailable is True:
+            return 0
         min_percent = 0
         if obj.available_count_for_sale > 0:
             min_percent = obj.discount_percent
@@ -711,7 +730,7 @@ class MinStorageSchema(BaseSchema):
 
 class StorageSchema(MinStorageSchema):
     class Meta:
-        additional = ('shipping_cost', 'priority', 'gender', 'disable')
+        additional = ('shipping_cost', 'priority', 'gender', 'disable') + MinStorageSchema.Meta.additional
 
     # todo optimize
     default = fields.Function(lambda o: o == o.product.default_storage)
@@ -821,7 +840,7 @@ class InvoiceSchema(BaseSchema):
         additional = ('id', 'final_price', 'invoice_discount', 'details')
 
     payed_at = fields.Method('get_payed_at')
-    status = fields.Function(lambda o: o.get_status_display())
+    status = fields.Method("get_status")
     address = fields.Dict()
     storages = fields.Method('get_invoice_storages')
     amount = fields.Method('get_amount')  # without tax
@@ -857,21 +876,11 @@ class InvoiceSchema(BaseSchema):
     def get_start_date(self, obj):
         return self.get_date(obj, 'start_date')
 
-    def get_created_at_date(self, obj):
-        return self.get_date(obj, 'created_at')
-
     def get_expire_date(self, obj):
         return self.get_date(obj, 'expire')
 
     def get_end_date(self, obj):
         return self.get_date(obj, 'end_date')
-
-    def get_invoice_file(self, obj):
-        try:
-            if self.user.is_staff or obj.get_type_display == 'payed':
-                return HOST + f'/invoice_detail/{obj.id}'
-        except AttributeError:
-            return None
 
     def get_amount(self, obj):
         # if InvoiceStorage.objects.filter(invoice=obj).exists():
@@ -1048,51 +1057,13 @@ class SpecialProductSchema(BaseSchema):
         return self.get(obj.storage.title)
 
 
-class AdSchema(BaseSchema):
+class AdsSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'url', 'priority')
+        additional = ('id', 'url', 'priority', 'disable')
 
-    title = fields.Method('get_title')
-    media = fields.Method('get_media')
-    product_permalink = fields.Method('get_permalink')
-    settings = fields.Function(lambda o: o.settings.get('ui', None))
-
-    def get_permalink(self, obj):
-        try:
-            return obj.storage.product.permalink
-        except AttributeError:
-            pass
-
-    def get_media(self, obj):
-        try:
-            if self.is_mobile:
-                return MediaSchema(self.lang).dump(obj.mobile_media)
-            return MediaSchema(self.lang).dump(obj.media)
-        except AttributeError:
-            return None
-
-
-class SliderSchema(BaseSchema):
-    class Meta:
-        additional = ('id', 'url', 'priority')
-
-    title = fields.Method('get_title')
-    product = fields.Method("get_permalink")
-    media = fields.Method("get_media")
-
-    def get_permalink(self, obj):
-        try:
-            return obj.storage.product.permalink
-        except AttributeError:
-            pass
-
-    def get_media(self, obj):
-        try:
-            if self.is_mobile:
-                return MediaSchema(self.lang).dump(obj.mobile_media)
-            return MediaSchema(self.lang).dump(obj.media)
-        except AttributeError:
-            return None
+    image = fields.Method("get_image")
+    title = fields.Method("get_title")
+    settings = fields.Method("get_settings")
 
 
 class WalletDetailSchema(BaseSchema):

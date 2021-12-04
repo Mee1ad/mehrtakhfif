@@ -22,6 +22,8 @@ class CategoryView(TableView):
             return JsonResponse(data)
         # todo external categories, permalink__isnull=True,
         categories = Category.objects.filter(**params['filter']).order_by(*params['order'])
+        if not categories:
+            return JsonResponse({'data': []})
         has_access(request.user, categories[0].parent)
         for category in categories:
             category.child_count = self.get_child_count(category)
@@ -31,12 +33,16 @@ class CategoryView(TableView):
 
     def post(self, request):
         data = get_data(request)
+        required_fields = ['parent_id']
+        check_required_fields(data, required_fields)
         data.pop('promote', None)
         return create_object(request, Category, serializer=CategoryASchema, return_item=True, category_key='id',
                              data=data)
 
     def put(self, request):
         data = get_data(request)
+        if data.get('parent_id', None) is None:
+            raise ValidationError("دسته بندی والد نمیتواند خالی باشد")
         data.pop('promote', None)
         category = update_object(request, Category, return_item=True, serializer=CategoryASchema, category_key='id',
                                  data=data)
@@ -192,8 +198,8 @@ class ProductView(TableView):
                                                category_key='category', **required_category))
 
     def post(self, request):
-        # data = get_data(request, require_category=True)
-        return create_object(request, Product, serializer=ProductESchema, category_key='category')
+        data = get_data(request, require_category=True)
+        return create_object(request, Product, serializer=ProductESchema, category_key='category', data=data)
 
     def put(self, request):
         data = get_data(request, require_category=True)
@@ -287,6 +293,23 @@ class DiscountCodeView(AdminView):
         storage.save()
         return JsonResponse({'data': DiscountASchema().dump(discount_codes, many=True)}, status=201)
 
+    def delete(self, request):
+        ids = request.GET.getlist('ids')
+        discount_codes = DiscountCode.objects.filter(pk__in=ids, basket=None, invoice=None)
+        discount_codes.delete()
+        return JsonResponse({})
+
+
+class ManualDiscountCodeView(AdminView):
+    permission_required = 'server.view_discountcode'
+
+    def post(self, request):
+        data = json.loads(request.body)
+        user = request.user
+        items = [DiscountCode(code=code, storage_id=data['storage_id'], created_by=user,
+                              updated_by=user) for code in data['codes']]
+        DiscountCode.objects.bulk_create(items)
+        return JsonResponse({}, status=201)
 
 class HouseView(TableView):
     permission_required = 'server.view_house'
@@ -589,7 +612,7 @@ class MediaView(TableView):
         if category_id:
             category = Category.objects.get(pk=category_id)
         media_type = data['type']
-        if not has_access(request.user, category) and media_type not in Media.no_category_type:
+        if (media_type not in Media.no_category_type) and (not has_access(request.user, category.id)):
             raise PermissionDenied
 
         media = upload(request, titles, media_type, category_id)
@@ -601,10 +624,12 @@ class MediaView(TableView):
         data = json.loads(request.body)
         title = data['title']
         pk = data['id']
-        media = Media.objects.filter(pk=pk)
-        has_access(request.user, media.first())
-        media.update(title=title)
-        return JsonResponse({'media': MediaASchema().dump(media.first())})
+        media = Media.objects.filter(pk=pk).first()
+        if (media.type not in Media.no_category_type) and (not has_access(request.user, media.category_id)):
+            raise PermissionDenied
+        media.title = title
+        media.save()
+        return JsonResponse({'media': MediaASchema().dump(media)})
 
     def delete(self, request):
         return delete_base(request, Media)

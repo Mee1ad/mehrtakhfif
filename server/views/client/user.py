@@ -194,7 +194,7 @@ class WishlistView(LoginRequired):
         query = {'wish': True}
         if notify:
             query = {'notify': True}
-        wishlists = WishList.objects.filter(user=request.user, **query)
+        wishlists = WishList.objects.filter(user=request.user, **query).order_by('-id')
         pg = get_pagination(request, wishlists, WishListSchema)
         return JsonResponse(pg)
 

@@ -215,9 +215,15 @@ class FeatureView(View):
         identifier = {'permalink': permalink}
         if permalink.isdecimal():
             identifier = {'id': permalink}
-        product = Product.objects.filter(**identifier).first()
+        storage_preview = get_preview_permission(request.user, box_check=False, product_check=True)
+        product_preview = get_preview_permission(request.user, box_check=False)
+        product = Product.objects.filter(**identifier, **product_preview).first()
+        if product.available is False:
+            storages = product.storages.filter(**storage_preview)
+            storages = MinStorageSchema(only=['title', 'max_count_for_sale']).dump(storages, many=True)
+            return JsonResponse({'storage': storages})
         if product.type == 1:
-            all_storages = product.storages.all()
+            all_storages = product.storages.filter(**storage_preview)
             storages = all_storages.prefetch_related('vip_prices', Prefetch('storage_accessories',
                                                                             queryset=StorageAccessories.objects.filter(
                                                                                 storage__in=all_storages)
@@ -227,7 +233,7 @@ class FeatureView(View):
                                                                             to_attr='accessory'))
             storages = StorageSchema(exclude=['features']).dump(storages, many=True)
             return JsonResponse({'storage': storages})
-        product = Product.objects.filter(**identifier).select_related('default_storage'). \
+        product = Product.objects.filter(**identifier, **product_preview).select_related('default_storage'). \
             annotate(storages_count=Count('storages'),
                      active_storages_count=Count('storages', filter=Q(storages__unavailable=False,
                                                                       storages__disable=False,

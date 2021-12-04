@@ -9,7 +9,6 @@ from hashlib import md5
 from operator import add
 from time import sleep
 
-import pdfkit
 import requests
 from celery import shared_task
 from celery.signals import task_postrun
@@ -30,7 +29,8 @@ LOCK_EXPIRE = 60 * 10  # Lock expires in 10 minutes
 from django.conf import settings
 from django.core.management import call_command
 import datetime
-
+from weasyprint import HTML, CSS
+from weasyprint.text.fonts import FontConfiguration
 
 @contextmanager
 def task_lock(lock_id, oid):
@@ -61,8 +61,6 @@ def cancel_reservation(self, invoice_id, force=False, **kwargs):
                 url = f"https://bpm.shaparak.ir/pgwchannel/startpay.mellat?RefId={invoice.reference_id}"
                 r = requests.get(url)
                 task = invoice.sync_task
-                if force:
-                    task.enabled = False
                 if re.search(r'<form.*>', r.text) and force is False:
                     print("ok, i`ll try it later")
                     task.description = f"{task.description} - delay for 3 minutes"
@@ -74,7 +72,7 @@ def cancel_reservation(self, invoice_id, force=False, **kwargs):
                     return 'waiting for ipg'
 
                 #  ((1, 'pending'), (2, 'payed'), (3, 'canceled'), (4, 'rejected'), (5, 'sent'), (6, 'ready'))
-                task.one_off = True
+                task.enabled = False
                 task.save()
                 successful_status = [2, 5]  # payed, posted
                 if invoice.status not in successful_status:
@@ -128,8 +126,9 @@ def sale_report(self, invoice_id, **kwargs):
                 owners = {}
                 invoice = invoice_storages.first().invoice
                 address = invoice.address
-                invoice = {'نام': address['name'], 'شماره تماس': address['phone'], 'شهر': address['city']['name'],
-                           'آدرس': address['address'], 'محصولات': [], '\nقیمت': invoice.amount}
+                invoice = {'نام': address.get('name', ''), 'شماره تماس': address.get('phone', ''),
+                           'شهر': address.get('city', {}).get('name', ''),
+                           'آدرس': address.get('address', ''), 'محصولات': [], '\nقیمت': invoice.amount}
                 for invoice_storage in invoice_storages:
                     owner = invoice_storage.storage.product.category.owner
                     product_data = f"{invoice_storage.count} عدد {invoice_storage.storage.title['fa']}"
@@ -229,7 +228,10 @@ def send_invoice(self, invoice_id, lang="fa", **kwargs):
                             product.save()
                         except Exception:
                             product.refresh_from_db()
-                    data = {'title': storage.invoice_title[lang], 'user': f'{user.first_name} {user.last_name}',
+                    title = storage.invoice_title[lang]
+                    if not title:
+                        title = storage.title[lang]
+                    data = {'title': title, 'user': f'{user.first_name} {user.last_name}',
                             'price': storage.discount_price}
                     if storage.product.invoice_description[lang]:
                         data['product_description'] = storage.product.invoice_description[lang]
@@ -237,15 +239,20 @@ def send_invoice(self, invoice_id, lang="fa", **kwargs):
                         data['storage_description'] = storage.invoice_description[lang]
                     rendered = ""
                     for c in range(product.count):
-                        discount_code = storage.discount_code.filter(invoice=None).first()
-                        discount_code.invoice_id = invoice_id
-                        discount_code.invoice_storage = product
-                        discount_code.save()
+                        discount_code = product.discount_codes.filter(type=1).first()
+                        if discount_code is None:
+                            discount_code = storage.discount_codes.filter(invoice=None).first()
+                            discount_code.invoice_id = invoice_id
+                            discount_code.invoice_storage = product
+                            discount_code.save()
                         data['code'] = discount_code.code
                         rendered += render_to_string('invoice.html', data)
                     pdf = INVOICE_ROOT + f'/{filename}.pdf'
                     css = BASE_DIR + '/templates/css/pdf_style.css'
-                    pdfkit.from_string(rendered, pdf, css=css)
+                    font_config = FontConfiguration()
+                    html = HTML(string=rendered)
+                    css = CSS(css)
+                    html.write_pdf(pdf, stylesheets=[css], font_config=font_config)
                     pdf_list.append(pdf)
                     all_renders += rendered
                     # sms_content += f'\n{storage.invoice_title[lang]}\n{SHORTLINK}/{product.key}'

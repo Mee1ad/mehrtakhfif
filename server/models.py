@@ -35,6 +35,8 @@ from mehr_takhfif.settings import HOST, MEDIA_ROOT
 from mehr_takhfif.settings import color_feature_id
 from mtadmin.exception import *
 from server.field_validation import *
+from guardian.shortcuts import UserObjectPermission
+import copy
 
 # from django.contrib.sites.models import Site
 
@@ -180,7 +182,7 @@ def translate_types(dictionary, model):
         try:
             dictionary[item] = next((v[0] for i, v in enumerate(types) if v[1] == dictionary[item]), dictionary[item])
         except KeyError:
-            pass
+            print(f"{item} not found in data")
     return dictionary
 
 
@@ -614,6 +616,7 @@ class Media(Base):
     media_sizes = {'thumbnail': (600, 372), 'media': (1280, 794), 'category': (800, 500),
                    'slider': (1920, 504), 'mobile_slider': (980, 860)}
     select = ['category'] + Base.select
+    fields = {'title': 'عنوان', 'media': 'تصویر', 'mobile_media': 'تصویر موبایل', 'type': 'نوع'}
 
     def get_absolute_url(self):
         return self.image.url
@@ -640,10 +643,7 @@ class Media(Base):
             pass
 
     def post_save(self):
-        if self.type < 100 and self.image:
-            ph = reduce_image_quality(self.image.path)
-            name = self.image.name.replace('has-ph', 'ph')
-            ph.save(f'{MEDIA_ROOT}/{name}', optimize=True, quality=80)
+        pass
 
     def save(self, *args, **kwargs):
         self.validation()
@@ -657,6 +657,10 @@ class Media(Base):
     type = models.PositiveSmallIntegerField(choices=types)
     box = models.ForeignKey(Box, on_delete=models.CASCADE, null=True, blank=True, related_name="medias")
     category = models.ForeignKey("Category", on_delete=models.CASCADE, null=True, blank=True, related_name="medias")
+    url = models.CharField(max_length=255, null=True, blank=True)
+    priority = models.PositiveIntegerField(default=0)
+    disable = models.BooleanField(default=True)
+    settings = JSONField(default=default_settings, blank=True, help_text={"ui": {"size": "1/2"}})
 
     class Meta:
         db_table = 'media'
@@ -703,6 +707,7 @@ class Category(Base):
         return f"{self.name['fa']}"
 
     def save(self, *args, **kwargs):
+        is_new_object = self._state.adding
         self.settings = lock_permalink(self)
         super().save(*args, **kwargs)
         pk = self.id
@@ -711,6 +716,12 @@ class Category(Base):
             self.parent = None
             self.save()
             raise ValidationError(_("والد نامعتبر است"))
+        if is_new_object:
+            if self.parent:
+                permissions = UserObjectPermission.objects.filter(object_pk=self.parent_id).select_related('user')
+                for permission in permissions:
+                    permitted_user = permission.user
+                    UserObjectPermission.objects.assign_perm('manage_category', permitted_user, obj=self)
 
     def get_media(self):
         try:
@@ -722,12 +733,13 @@ class Category(Base):
         return getattr(getattr(self, 'parent', None), 'name', {}).get('fa')
 
     parent = models.ForeignKey("self", on_delete=CASCADE, null=True, blank=True, related_name='children')
-    box = models.ForeignKey(Box, on_delete=CASCADE, related_name="children", null=True)
+    box = models.ForeignKey(Box, on_delete=CASCADE, related_name="children", null=True, blank=True)
     owner = models.ForeignKey(User, on_delete=PROTECT, null=True, blank=True)
     # features = models.ManyToManyField("Feature")
     feature_groups = models.ManyToManyField("FeatureGroup", through="CategoryGroupFeature", related_name='categories')
     name = JSONField(default=multilanguage)
     permalink = models.CharField(max_length=255, db_index=True, unique=True, null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
     priority = models.PositiveSmallIntegerField(default=0)
     disable = models.BooleanField(default=True)
     media = models.ForeignKey(Media, on_delete=CASCADE, null=True, blank=True, related_name='media')
@@ -753,7 +765,6 @@ class CategoryGroupFeature(MyModel):
 class DateRange(Base):
     def __str__(self):
         return self.title
-
 
     title = models.CharField(max_length=255)
     start_date = models.DateTimeField()
@@ -1039,9 +1050,9 @@ class Product(Base):
 
     def validation(self):
         super().validation()
-        # if not self.tags.all() and not self.tag_groups.all():
-        #     self.make_item_disable(self)
-        #     raise ActivationError('نه تگ داری نه گروه تک، نمیشه ک اینجوری میشه؟')
+        if self.default_storage is None:
+            self.make_item_disable(self)
+            raise ActivationError('لطفا انبار پیش فرض را مشخص نمایید!')
         if not self.storages.filter(disable=False):
             self.available = False
         if self.review['state'] == 'reviewed':
@@ -1077,7 +1088,8 @@ class Product(Base):
         self.post_save()
 
     def assign_default_value(self):
-        storages = self.storages.filter(available_count_for_sale__gt=0, unavailable=False, disable=False)
+        storages = self.storages.filter(available_count_for_sale__gt=0, unavailable=False, disable=False,
+                                        min_count_for_sale__lt=F('available_count_for_sale'))
         available = False
         default_storage = self.default_storage
         if storages:
@@ -1116,9 +1128,11 @@ class Product(Base):
         return list(self.tags.all().values_list("name__fa", flat=True))
 
     def get_colors(self):
-        colors = FeatureValue.objects.filter(
-            product_features__product_id=self.id, feature_id=color_feature_id).order_by('id').distinct('id').values(
-            'id', name=KeyTextTransform('fa', 'value'), color=KeyTextTransform('hex', 'settings'))
+        colors = ProductFeature.objects.filter(product_id=self.id, feature_id=color_feature_id) \
+            .select_related('feature_value').values('feature_value__id', 'feature_value__value__fa',
+                                                    'feature_value__settings__hex')
+        colors = [{'id': color['feature_value__id'], 'name': color['feature_value__value__fa'],
+                   'color': color['feature_value__settings__hex']} for color in colors]
         colors_obj = []
         for color in colors:
             colors_obj.append(type('ClassName', (), color)())
@@ -1129,13 +1143,14 @@ class Product(Base):
         return getattr(self, 'default_storage', storage)
 
     def get_default_storage(self):
-        ds = self.default_storage
+        new_storage = copy.deepcopy(self.default_storage)
         if self.available:
-            return ds
-        return None
-    # def save(self):
-    #     self.slug = slugify(self.title)
-    #     super(Post, self).save()
+            return self.default_storage
+        if new_storage:
+            new_storage.discount_price = 0
+            new_storage.final_price = 0
+            new_storage.discount_percent = 0
+        return new_storage
 
     categories = models.ManyToManyField(Category, related_name="products", blank=True)
     box = models.ForeignKey(Box, on_delete=PROTECT, db_index=False, null=True, blank=True)
@@ -1176,7 +1191,6 @@ class Product(Base):
     properties = JSONField(null=True, blank=True)
     details = JSONField(null=True, blank=True)
     settings = JSONField(default=default_settings, blank=True, help_text="{ui: {}, permalink_lock: True}")
-    # review = models.TextField(null=True, blank=True)
     review = JSONField(default=default_review, help_text="{chats: [], state: reviewed/request_review/ready}")
 
     # site = models.ForeignKey(Site, on_delete=models.CASCADE, default=1)
@@ -1222,6 +1236,7 @@ class VipPrice(MyModel):
     discount_price = models.PositiveIntegerField()
     discount_percent = models.PositiveSmallIntegerField()
     max_count_for_sale = models.PositiveSmallIntegerField(default=1)
+    min_count_for_sale = models.PositiveSmallIntegerField(default=1)
     available_count_for_sale = models.PositiveIntegerField(default=1)
 
     class Meta:
@@ -1242,6 +1257,7 @@ class Storage(Base):
     tax_types = [(1, 'has_not'), (2, 'from_total_price'), (3, 'from_profit')]
     choices = ('tax_type',)
 
+
     def full_clean(self, exclude=None, validate_unique=True):
         if Package.objects.filter(package=self):
             self.clean()
@@ -1257,6 +1273,10 @@ class Storage(Base):
             self.manage = True
         if self.disable is True:
             self.cascade_disabling([self], warning=False)
+        if self.product.type == 1:
+            if self.discount_codes.exists() is False:
+                self.make_item_disable(self)
+                raise ValidationError(_('لطفا قبل از فعالسازی کد تخفیف ایجاد کنید!'))
         if self.product.type != 4:
             super().clean()
             if self.available_count < self.available_count_for_sale:
@@ -1315,6 +1335,7 @@ class Storage(Base):
             vip_prices = [VipPrice(vip_type_id=item['vip_type_id'], discount_price=item['discount_price'],
                                    max_count_for_sale=item.get('max_count_for_sale', self.max_count_for_sale),
                                    discount_percent=dper,
+                                   min_count_for_sale=item.get('min_count_for_sale', self.min_count_for_sale),
                                    available_count_for_sale=item.get('available_count_for_sale',
                                                                      self.available_count_for_sale), storage_id=self.pk)
                           for item in
@@ -1325,7 +1346,7 @@ class Storage(Base):
             self.items.clear()
             user = self.created_by
             package_items = [Package(**item, created_by=user, updated_by=user, package=self) for item in
-                             my_dict.get('items')]
+                             my_dict.get('items', [])]
             Package.objects.bulk_create(package_items)
             self.discount_price = 0
             self.final_price = 0
@@ -1385,9 +1406,16 @@ class Storage(Base):
 
     def is_available(self, count=1):
         max_count_for_sale = self.get_max_count()
-        return (self.available_count_for_sale >= count) and (max_count_for_sale >= count) and \
-               (self.disable is False) and (self.product.disable is False) and self.product.available and (
-                       self.unavailable is False)
+        if count < self.min_count_for_sale:
+            raise ValidationError(f"حداقل تعداد خرید {self.product.name['fa']} باید {self.min_count_for_sale} عدد باشد")
+        if count > self.max_count_for_sale:
+            raise ValidationError(
+                f"حداکثر تعداد خرید {self.product.name['fa']} باید {self.max_count_for_sale} عدد باشد")
+        if (self.disable is True) or (self.product.disable is True):
+            raise ValidationError("متاسفانه محصول غیرفعال میباشد")
+        if (self.product.available is False) or (self.unavailable is True):
+            raise ValidationError("متاسفانه محصول ناموجود میباشد")
+
 
     product = models.ForeignKey(Product, on_delete=CASCADE, related_name='storages')
     # features = models.ManyToManyField(ProductFeature, through='StorageFeature', related_name="storages")
@@ -1408,6 +1436,7 @@ class Storage(Base):
     least_booking_time = models.PositiveIntegerField(default=48, blank=True)
     available_count_for_sale = models.PositiveIntegerField(default=0, verbose_name='Available count for sale')
     max_count_for_sale = models.PositiveSmallIntegerField(default=1)
+    min_count_for_sale = models.PositiveSmallIntegerField(default=1)
     min_count_alert = models.PositiveSmallIntegerField(default=3)
     priority = models.PositiveSmallIntegerField(default=0)
     tax_type = models.PositiveSmallIntegerField(default=0, choices=tax_types)
@@ -1560,7 +1589,8 @@ class Comment(Base):
 
 class Invoice(Base):
     select = ['basket', 'suspended_by', 'user', 'charity', 'post_invoice'] + Base.select
-    statuss = ((1, 'pending'), (2, 'payed'), (3, 'canceled'), (4, 'rejected'), (5, 'sent'), (6, 'ready'))
+    statuss = ((1, 'pending'), (2, 'payed'), (3, 'canceled'), (4, 'rejected'), (5, 'sent'), (6, 'ready'),
+               (7, 'accepted'))
     choices = ('status',)
 
     success_status = [2, 5, 6]
@@ -1584,12 +1614,13 @@ class Invoice(Base):
     user = models.ForeignKey(User, on_delete=CASCADE, related_name='invoices')
     sync_task = models.ForeignKey(PeriodicTask, on_delete=CASCADE, null=True, blank=True,
                                   related_name='invoice_sync_task')
-    email_task = models.ForeignKey(PeriodicTask, on_delete=CASCADE, null=True, blank=True)
+    email_task = models.ForeignKey(PeriodicTask, on_delete=CASCADE, null=True, blank=True,
+                                   related_name='invoice_email_task')
     basket = models.ForeignKey(to=Basket, on_delete=CASCADE, related_name='invoice', null=True)
     storages = models.ManyToManyField(Storage, through='InvoiceStorage')
     payed_at = models.DateTimeField(blank=True, null=True, verbose_name='Payed at')
     special_offer_id = models.BigIntegerField(blank=True, null=True, verbose_name='Special offer id')
-    address = JSONField(null=True, blank=True)
+    address = JSONField(blank=True, default=dict)
     description = models.TextField(max_length=255, blank=True, null=True)
     amount = models.PositiveIntegerField()
     invoice_discount = models.PositiveIntegerField(null=True, blank=True)
@@ -1694,11 +1725,11 @@ class DiscountCode(Base):
     choices = ('type',)
 
     select = ['storage', 'qr_code', 'invoice'] + Base.select
-    storage = models.ForeignKey(Storage, on_delete=CASCADE, related_name='discount_code', null=True, blank=True)
-    basket = models.ForeignKey(Basket, on_delete=CASCADE, related_name='discount_code', null=True, blank=True)
+    storage = models.ForeignKey(Storage, on_delete=CASCADE, related_name='discount_codes', null=True, blank=True)
+    basket = models.ForeignKey(Basket, on_delete=CASCADE, related_name='discount_codes', null=True, blank=True)
     qr_code = models.ForeignKey(Media, on_delete=PROTECT, null=True, blank=True)
     invoice = models.ForeignKey(Invoice, on_delete=CASCADE, related_name='discount_codes', null=True, blank=True)
-    invoice_storage = models.ForeignKey(InvoiceStorage, on_delete=CASCADE, related_name='discount_code', null=True,
+    invoice_storage = models.ForeignKey(InvoiceStorage, on_delete=CASCADE, related_name='discount_codes', null=True,
                                         blank=True)
     code = models.CharField(max_length=32)
     type = models.PositiveSmallIntegerField(choices=types, default=1)

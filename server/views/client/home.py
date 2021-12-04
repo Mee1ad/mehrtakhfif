@@ -6,6 +6,9 @@ from django.http import JsonResponse, HttpResponseNotFound
 from server.documents import *
 from server.serialize import *
 from server.utils import *
+from elasticsearch_dsl import Search
+
+from mehr_takhfif.settings import ES_CLIENT
 
 
 class PingView(View):
@@ -134,17 +137,19 @@ class BoxWithCategory(View):
 
 class Categories(View):
     def get(self, request):
-        all_category = cache.get('categories', None)
-        if not all_category:
+        res = cache.get('home-categories', {})
+        if not res:
             all_category = get_categories({"parent_id": None})
-            cache.set('categories', all_category, 3000000)  # about 1 month
-        return JsonResponse({'data': all_category})
+            for category_type, categories in groupby(sorted(all_category, key=itemgetter('type')), itemgetter('type')):
+                res[category_type] = list(categories)
+            cache.set('home-categories', res, 3000000)  # about 1 month
+        return JsonResponse(res)
 
 
 class PromotedCategories(View):
     def get(self, request):
         categories = Category.objects.filter(promote=True)
-        categories = CategorySchema().dump(categories, many=True)
+        categories = CategorySchema(exclude=['parent']).dump(categories, many=True)
         res = {}
         for category_type, categories in groupby(sorted(categories, key=itemgetter('type')), itemgetter('type')):
             res[category_type] = list(categories)
@@ -158,10 +163,13 @@ class ClientMenu(View):
 
 
 class ClientAds(View):
-    def get(self, request, ads_type):
+    def get(self, request):
         agent = request.user_agent
-        ads = Ad.objects.filter(priority__isnull=False, type=ads_type).select_related('media')
-        return JsonResponse({'ads': AdSchema(is_mobile=agent.is_mobile).dump(ads, many=True)})
+        preview = get_preview_permission(request.user, category_check=False, box_check=False)
+        ads = Media.objects.filter(priority__isnull=False, type=5, **preview).order_by('-priority')[:7]
+        if agent.is_mobile:
+            ads = Media.objects.filter(priority__isnull=False, type=6, **preview).order_by('-priority')[:7]
+        return JsonResponse({'ads': AdsSchema().dump(ads, many=True)})
 
 
 class PermalinkToId(LoginRequired):
@@ -175,39 +183,50 @@ class PermalinkToId(LoginRequired):
 
 
 class ClientSlider(View):
-    def get(self, request, slider_type):
+    def get(self, request):
         agent = request.user_agent
-        slider = Slider.objects.filter(priority__isnull=False, type=slider_type).select_related('media')
-        return JsonResponse({'slider': SliderSchema(is_mobile=agent.is_mobile).dump(slider, many=True)})
+        preview = get_preview_permission(request.user, category_check=False, box_check=False)
+        sliders = Media.objects.filter(priority__isnull=False, type=4, **preview).order_by('-priority')[:5]
+        if agent.is_mobile:
+            sliders = Media.objects.filter(priority__isnull=False, type=8, **preview).order_by('-priority')[:5]
+        return JsonResponse({'slider': AdsSchema().dump(sliders, many=True)})
 
 
 class ElasticSearch(View):
     def get(self, request):
         q = request.GET.get('q', '')
-        p = ProductDocument.search()
+        p = Search(using=ES_CLIENT, index="product")
+        # category_index = Search(using=ES_CLIENT, index="category")
         c = CategoryDocument.search()
-        t = TagDocument.search()
-        p = p.query({"bool": {"should": [{"match": {"name_fa": {"query": q, "boost": 1}}},
-                                         {"wildcard": {"name_fa": f"{q}*"}},
-                                         {"match": {"name_fa2": {"query": q, "boost": 1}}}],
-                              "must": [{"match": {"disable": False}}, {"match": {"available": True}}]}})
+        product_query = {"query": {"bool": {"should": [{"match": {"name_fa": {"query": q, "boost": 1}}},
+                                                       {"wildcard": {"name_fa": f"{q}*"}},
+                                                       {"match": {"name_fa2": {"query": q, "boost": .2}}}],
+                                            "must": [{"match": {"disable": False}}, {"match": {"available": True}}]}},
+                         "min_score": 5}
+        p = p.from_dict(product_query)[:3]
 
-        # p = p.query({"bool": {"should": [{"match": {"name_fa2": {"query": q, "boost": 1}}}]}})
-
-        c = c.query({"bool": {"should": [{"match": {"name_fa": {"query": q, "boost": 1}}},
-                                         {"wildcard": {"name_fa": f"{q}*"}}]}}).query('match', disable=False)
-        t = t.query({"bool": {"should": [{"match": {"name_fa": {"query": q, "boost": 1}}},
-                                         {"wildcard": {"name_fa": f"{q}*"}},
-                                         {"match": {"name_fa2": {"query": q, "boost": 0.5}}}]}})
+        #
+        category_search_result = c.query({"bool": {"should": [{"match": {"name_fa": {"query": q, "boost": 5}}},
+                                                              {"wildcard": {"name_fa": f"{q}*"}}]}}).query('match',
+                                                                                                           disable=False)
+        # category_query = {"query": {"bool": {"should": [{"match": {"name_fa": {"query": q, "boost": 5}}},
+        #                                                 {"wildcard": {"name_fa": f"{q}*"}}],
+        #                             "must": [{"match": {"disable": False}}]}}, "min_score": 5}
+        # category_search_result = category_index.from_dict(category_query)[:3]
+        t = Search(using=ES_CLIENT, index="tag")
+        tag_query = {"query": {"bool": {"should": [{"match": {"name_fa": {"query": q, "boost": 1}}},
+                                                   {"wildcard": {"name_fa": f"{q}*"}},
+                                                   {"match": {"name_fa2": {"query": q, "boost": 0.2}}}]}},
+                     "min_score": 5}
+        t = t.from_dict(tag_query)[:3]
         products, categories, tags = [], [], []
         for hit in p[:3]:
             product = {'name': hit.name_fa, 'permalink': hit.permalink, 'thumbnail': hit.thumbnail}
             products.append(product)
-        for hit in c[:3]:
-            category = {'name': hit.name_fa, 'permalink': hit.permalink, 'media': hit.media, 'parent': hit.parent}
+        for hit in category_search_result[:3]:
+            category = {'name': hit.name_fa, 'permalink': hit.permalink, 'parent': hit.parent}
             categories.append(category)
         for hit in t[:3]:
-            tag = {'name': hit.name_fa, 'permalink': hit.permalink}
-            tags.append(tag)
+            tags.append(hit.name_fa)
         categories = sorted(categories, key=lambda i: 1 if i['parent'] else 0)
         return JsonResponse({'categories': categories, 'tags': tags, 'products': products})
