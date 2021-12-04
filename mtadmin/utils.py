@@ -598,3 +598,9 @@ def add_category_permission(user_id, category_id):
         Q(id=category_id) | Q(parent_id=category_id) | Q(parent__parent_id=category_id))
     for category in categories:
         UserObjectPermission.objects.assign_perm('manage_category', user, obj=category)
+
+
+def check_required_fields(dictionary, required_fields):
+    for field in required_fields:
+        if field not in dictionary or dictionary[field] is None:
+            raise ValidationError(f"لطفا {field} را وارد نمایید")

@@ -671,7 +671,9 @@ class ProductESchema(ProductASchema, ProductSchema):
 
     class Meta:
         unknown = INCLUDE
-        additional = ('verify', 'manage', 'review') + ProductSchema.Meta.additional + ProductASchema.Meta.additional
+        allow_none = True
+        additional = ('verify', 'manage', 'review', 'capacity', 'max_capacity', 'default_storage_id',
+                      'min_reserve_time') + ProductSchema.Meta.additional + ProductASchema.Meta.additional
 
     media = fields.Method("get_media")
     tags = ProductTagField()

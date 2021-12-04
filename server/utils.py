@@ -767,8 +767,6 @@ def get_custom_signed_cookie(req, key, error=None, salt=TOKEN_SALT):
     return req.get_signed_cookie(key, default=None, salt=salt)
 
 
-
-
 # def available_products2(products):
 #     storages = Storage.objects.filter(available_count_for_sale__gt=0, product__in=products)
 #     for storage in storages:
