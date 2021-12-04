@@ -1266,6 +1266,10 @@ class Storage(Base):
             self.manage = True
         if self.disable is True:
             self.cascade_disabling([self], warning=False)
+        if self.product.type == 1:
+            if self.discount_codes.exists() is False:
+                self.make_item_disable(self)
+                raise ValidationError(_('لطفا قبل از فعالسازی کد تخفیف ایجاد کنید!'))
         if self.product.type != 4:
             super().clean()
             if self.available_count < self.available_count_for_sale:
@@ -1704,11 +1708,11 @@ class DiscountCode(Base):
     choices = ('type',)
 
     select = ['storage', 'qr_code', 'invoice'] + Base.select
-    storage = models.ForeignKey(Storage, on_delete=CASCADE, related_name='discount_code', null=True, blank=True)
-    basket = models.ForeignKey(Basket, on_delete=CASCADE, related_name='discount_code', null=True, blank=True)
+    storage = models.ForeignKey(Storage, on_delete=CASCADE, related_name='discount_codes', null=True, blank=True)
+    basket = models.ForeignKey(Basket, on_delete=CASCADE, related_name='discount_codes', null=True, blank=True)
     qr_code = models.ForeignKey(Media, on_delete=PROTECT, null=True, blank=True)
     invoice = models.ForeignKey(Invoice, on_delete=CASCADE, related_name='discount_codes', null=True, blank=True)
-    invoice_storage = models.ForeignKey(InvoiceStorage, on_delete=CASCADE, related_name='discount_code', null=True,
+    invoice_storage = models.ForeignKey(InvoiceStorage, on_delete=CASCADE, related_name='discount_codes', null=True,
                                         blank=True)
     code = models.CharField(max_length=32)
     type = models.PositiveSmallIntegerField(choices=types, default=1)

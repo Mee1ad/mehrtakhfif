@@ -78,7 +78,7 @@ class PaymentRequest(LoginRequired):
             invoice.final_amount = invoice.amount
             invoice.save()
             # invoice.basket.status = 3  # done
-            invoice.basket.discount_code.update(invoice=invoice)
+            invoice.basket.discount_codes.update(invoice=invoice)
             url = self.get_payment_url(invoice)
             # invoice.basket.save()
             # CallBack.notification_admin(invoice)
@@ -369,7 +369,7 @@ class CallBack(View):
         if finish:  # successful payment, cancel task
             # invoice.basket.status = 3  # done
             description = f'{timezone.now()}: successful payment'
-            invoice.basket.discount_code.update(invoice=invoice)
+            invoice.basket.discount_codes.update(invoice=invoice)
             # invoice.basket.save()
             # Basket.objects.create(user=invoice.user, created_by=invoice.user, updated_by=invoice.user)
         elif cancel:

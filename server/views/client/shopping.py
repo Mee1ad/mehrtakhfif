@@ -68,7 +68,7 @@ class BasketView(View):
                 basket_queryset = Basket.objects.filter(user=request.user).order_by('-id')
                 basket = basket_queryset.first()
                 BasketProduct.objects.filter(basket=basket, id=basket_product_id).delete()
-                basket.discount_code.update(basket=None)
+                basket.discount_codes.update(basket=None)
                 basket_count = get_basket_count(request.user, basket_id=basket.id)
                 basket_queryset.update(count=basket_count)
             except TypeError:

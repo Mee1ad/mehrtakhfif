@@ -662,7 +662,7 @@ def add_to_basket(basket, products):
 
     basket.count = basket.basket_storages.aggregate(count=Sum('count'))['count']
     basket.save()
-    basket.discount_code.update(basket=None)
+    basket.discount_codes.update(basket=None)
     return basket.count
 
 

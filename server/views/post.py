@@ -69,7 +69,7 @@ def get_shipping_cost_temp(user, basket=None):
     try:
         # check if has post discount
         if basket:
-            if user.vip_types.filter(name__fa="MehrTakhfif").exists() or basket.discount_code.filter(type=3).exists():
+            if user.vip_types.filter(name__fa="MehrTakhfif").exists() or basket.discount_codes.filter(type=3).exists():
                 return 0
     except AttributeError:
         pass
