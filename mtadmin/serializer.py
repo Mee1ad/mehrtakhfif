@@ -775,7 +775,6 @@ class ProductESchema(ProductASchema, ProductSchema):
 class HousePriceASchema(BaseAdminSchema, HousePriceSchema):
     class Meta:
         unknown = INCLUDE
-        additional = HousePriceSchema.Meta.additional
 
     @post_load
     def make_house_price(self, data, **kwargs):
