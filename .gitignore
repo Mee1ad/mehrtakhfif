@@ -117,3 +117,4 @@ celerybeat.pid
 celerybeat-schedule
 !icons.json
 !static/.gitkeep
+doc_old 
