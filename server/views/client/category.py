@@ -137,6 +137,7 @@ class FilterDetail(View):
 class Filter(View):
     query = None
     params = None
+    category_description = None
 
     def add_query_filter(self, ):
         q = self.params.get('q', None)
@@ -176,6 +177,11 @@ class Filter(View):
     def add_category_filter(self, ):
         category_permalink = self.params.get('cat', )
         if category_permalink:
+            category_document = Search(using=ES_CLIENT, index="category")
+            query = {"query": {"match": {"permalink": category_permalink}}, 'min_score': 5}
+            category_query = category_document.from_dict(query)
+            category_result = category_query.execute()
+            self.category_description = category_result[0].description
             query = [
                 {
                     "nested": {
@@ -243,7 +249,8 @@ class Filter(View):
         pagination = {"count": count, "step": request.step, "last_page": ceil(count / request.step)}
         serialized_products = FilterProductSchema().dump(products, many=True)
         # todo vip prices
-        return JsonResponse({"data": serialized_products, "pagination": pagination})
+        return JsonResponse({"data": serialized_products, "description": self.category_description,
+                             "pagination": pagination})
 
 
 class GetFeature(View):
