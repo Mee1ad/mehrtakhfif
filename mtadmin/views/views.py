@@ -179,7 +179,11 @@ class RollView(AdminView):
 
     def get(self, request):
         user = request.user
-        permissions = get_objects_for_user(user, 'server.manage_category').filter(parent=None)
+        if user.is_superuser or user.groups.filter(name__in=['accountants', 'content_manager',
+                                                             'superuser', 'support']).exists():
+            permissions = Category.objects.filter(parent=None)
+        else:
+            permissions = get_objects_for_user(user, 'server.manage_category').filter(parent=None)
         categories = CategoryASchema(user=request.user, only=['id', 'name']).dump(permissions, many=True)
         roll = get_roll(user)
         user = UserASchema(exclude=['default_address']).dump(user)
