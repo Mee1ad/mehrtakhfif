@@ -1161,6 +1161,8 @@ class Product(Base):
     states = models.ManyToManyField(State, blank=True)
     default_storage = models.OneToOneField(null=True, blank=True, to="Storage", on_delete=SET_NULL,
                                            related_name='product_default_storage', db_index=False)
+    promoted_storage = models.OneToOneField(null=True, blank=True, to="Storage", on_delete=SET_NULL,
+                                            related_name='product_promoted_storage')
     tags = models.ManyToManyField(Tag, through="ProductTag", related_name='products', blank=True)
     tag_groups = models.ManyToManyField(TagGroup, related_name='products', blank=True)
     media = models.ManyToManyField(Media, through='ProductMedia', blank=True)
@@ -1177,6 +1179,7 @@ class Product(Base):
     accessory_type = models.PositiveSmallIntegerField(choices=accessory_types, default=1)
     # accessories = models.ManyToManyField("self", through='ProductAccessories', symmetrical=False)
     breakable = models.BooleanField(default=False)
+    promote = models.BooleanField(default=False)
     type = models.PositiveSmallIntegerField(choices=types, validators=[validate_product_type])
     permalink = models.CharField(max_length=255, db_index=False, unique=True)
 
@@ -1192,6 +1195,9 @@ class Product(Base):
     details = JSONField(null=True, blank=True)
     settings = JSONField(default=default_settings, blank=True, help_text="{ui: {}, permalink_lock: True}")
     review = JSONField(default=default_review, help_text="{chats: [], state: reviewed/request_review/ready}")
+    capacity = models.PositiveSmallIntegerField(null=True, blank=True)
+    max_capacity = models.PositiveSmallIntegerField(null=True, blank=True)
+    min_reserve_time = models.PositiveSmallIntegerField(null=True, blank=True)
 
     # site = models.ForeignKey(Site, on_delete=models.CASCADE, default=1)
 
@@ -1641,7 +1647,11 @@ class Invoice(Base):
     post_tracking_code = models.CharField(max_length=255, null=True, blank=True)
     post_invoice = models.ForeignKey("Invoice", on_delete=CASCADE, related_name='main_invoice', null=True, blank=True)
     charity = models.ForeignKey(Charity, on_delete=PROTECT, null=True, blank=True)
-    details = JSONField(default=dict, blank=True, help_text="{sender: ali, cart_postal_text: with love}")
+    details = JSONField(default=dict, blank=True, help_text="{sender: ali, cart_postal_text: with love,"
+                                                            " price: {weekday: 1000, weekend: 1000,"
+                                                            " peak: 1000, guest: 1000, custom_price: {}}")
+    booking_type = models.PositiveSmallIntegerField(choices=Product.booking_types, null=True, blank=True)
+    people_count = models.PositiveSmallIntegerField(default=0)
 
     class Meta:
         db_table = 'invoice'
@@ -1946,14 +1956,12 @@ class HousePrice(Base):
         self.validation()
         super().save(*args, **kwargs)
 
+    product = models.OneToOneField(Product, related_name='price', on_delete=CASCADE)
     guest = models.PositiveIntegerField(default=0)
-    eyd = models.PositiveIntegerField(default=0)
     weekend = models.PositiveIntegerField(default=0)
     weekday = models.PositiveIntegerField(default=0)
     peak = models.PositiveIntegerField(default=0)
-    weekly_discount_percent = models.PositiveSmallIntegerField(default=0)
-    monthly_discount_percent = models.PositiveSmallIntegerField(default=0)
-    custom_price = JSONField(default=dict)
+    custom_price = JSONField(default=dict, blank=True)
 
     class Meta:
         db_table = 'house_price'
