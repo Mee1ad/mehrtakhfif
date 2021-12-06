@@ -1182,7 +1182,6 @@ class Product(Base):
     promote = models.BooleanField(default=False)
     type = models.PositiveSmallIntegerField(choices=types, validators=[validate_product_type])
     permalink = models.CharField(max_length=255, db_index=False, unique=True)
-
     name = JSONField(default=multilanguage)
     # name = pg_search.SearchVectorField(null=True)
     short_description = JSONField(default=multilanguage)
@@ -1262,7 +1261,6 @@ class Storage(Base):
     fields = {'supplier': 'تامین کننده', 'dimensions': 'ابعاد'}
     tax_types = [(1, 'has_not'), (2, 'from_total_price'), (3, 'from_profit')]
     choices = ('tax_type',)
-
 
     def full_clean(self, exclude=None, validate_unique=True):
         if Package.objects.filter(package=self):
@@ -1421,7 +1419,6 @@ class Storage(Base):
             raise ValidationError("متاسفانه محصول غیرفعال میباشد")
         if (self.product.available is False) or (self.unavailable is True):
             raise ValidationError("متاسفانه محصول ناموجود میباشد")
-
 
     product = models.ForeignKey(Product, on_delete=CASCADE, related_name='storages')
     # features = models.ManyToManyField(ProductFeature, through='StorageFeature', related_name="storages")
@@ -1624,6 +1621,7 @@ class Invoice(Base):
                                    related_name='invoice_email_task')
     basket = models.ForeignKey(to=Basket, on_delete=CASCADE, related_name='invoice', null=True)
     storages = models.ManyToManyField(Storage, through='InvoiceStorage')
+    product = models.ForeignKey(Product, null=True, blank=True, on_delete=PROTECT, help_text="for tourism")
     payed_at = models.DateTimeField(blank=True, null=True, verbose_name='Payed at')
     special_offer_id = models.BigIntegerField(blank=True, null=True, verbose_name='Special offer id')
     address = JSONField(blank=True, default=dict)
