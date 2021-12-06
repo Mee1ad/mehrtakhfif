@@ -1412,7 +1412,7 @@ class Storage(Base):
         max_count_for_sale = self.get_max_count()
         if count < self.min_count_for_sale:
             raise ValidationError(f"حداقل تعداد خرید {self.product.name['fa']} باید {self.min_count_for_sale} عدد باشد")
-        if count > self.max_count_for_sale:
+        if count > max_count_for_sale:
             raise ValidationError(
                 f"حداکثر تعداد خرید {self.product.name['fa']} باید {self.max_count_for_sale} عدد باشد")
         if (self.disable is True) or (self.product.disable is True):
