@@ -180,6 +180,13 @@ class BaseAdminSchema(MySchema):
             obj = obj.product
             return {'id': obj.category_id, 'name': obj.category.name, 'settings': obj.category.settings}
 
+    def get_categories(self, obj):
+        cats = []
+        # categories = Category.objects
+        for cat in obj.categories.all():
+            cats.append({'id': cat.pk, 'name': cat.name})
+        return cats
+
     def get_product(self, obj):
         try:
             return {'id': obj.product_id, 'name': obj.product.name}
@@ -593,7 +600,7 @@ class ProductASchema(BaseAdminSchema):
     permalink = fields.Str()
     settings = fields.Method("get_settings")
     # box = fields.Method("get_box")
-    categories = fields.Method("get_category")
+    categories = fields.Method("get_categories")
     thumbnail = fields.Nested("MediaASchema")
     disable = fields.Boolean()
     # has_selectable_feature = fields.Method("get_has_selectable_feature")
