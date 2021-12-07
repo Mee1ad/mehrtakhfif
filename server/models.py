@@ -1279,8 +1279,7 @@ class Storage(Base):
             self.cascade_disabling([self], warning=False)
         if self.product.type == 1:
             if self.discount_codes.exists() is False:
-                self.make_item_disable(self)
-                raise ValidationError(_('لطفا قبل از فعالسازی کد تخفیف ایجاد کنید!'))
+                self.unavailable = True
         if self.product.type != 4:
             super().clean()
             if self.available_count < self.available_count_for_sale:
