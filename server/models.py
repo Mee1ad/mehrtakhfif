@@ -1154,7 +1154,8 @@ class Product(Base):
 
     categories = models.ManyToManyField(Category, related_name="products", blank=True)
     box = models.ForeignKey(Box, on_delete=PROTECT, db_index=False, null=True, blank=True)
-    category = models.ForeignKey(Category, on_delete=PROTECT, db_index=False, help_text="parent category")
+    category = models.ForeignKey(Category, on_delete=PROTECT, related_name="all_products", db_index=False,
+                                 help_text="parent category")
     brand = models.ForeignKey(Brand, on_delete=SET_NULL, null=True, blank=True, related_name="products")
     thumbnail = models.ForeignKey(Media, on_delete=PROTECT, related_name='products', null=True, blank=True)
     cities = models.ManyToManyField(City, blank=True)

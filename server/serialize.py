@@ -572,12 +572,20 @@ class ColorsSchema(BaseSchema):
 
 class FilterProductSchema(BaseSchema):
     class Meta:
-        additional = ('id', 'permalink', 'available', 'disable', 'thumbnail', 'colors', 'type')
+        additional = ('id', 'permalink', 'available', 'disable', 'thumbnail', 'colors', 'type', 'priority')
 
     thumbnail = fields.Method("get_thumbnail")
     default_storage = fields.Method("get_default_storage")
     colors = fields.Nested(ColorsSchema(many=True))
     name = fields.Method("get_name")
+    category_id = fields.Method("get_category_id")
+    category = fields.Method('get_category')
+
+    def get_category(self, obj):
+        return dict(obj.category.__dict__['_d_'])
+
+    def get_category_id(self, obj):
+        return obj.category['id']
 
     def get_name(self, obj):
         return getattr(obj, 'name_fa')

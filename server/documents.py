@@ -17,6 +17,7 @@ class ProductDocument(Document):
         'id': fields.IntegerField(),
         'name': fields.TextField("__str__"),
         'permalink': fields.KeywordField(),
+        'priority': fields.IntegerField()
     })
     name_fa = fields.TextField(analyzer=standard, attr='get_name_fa')
     name_fa2 = fields.TextField(analyzer=ngram, attr='get_name_fa')
@@ -36,6 +37,13 @@ class ProductDocument(Document):
         'final_price': fields.IntegerField(),
         'sold_count': fields.IntegerField()
     }, attr="get_default_storage")
+    promoted_storage = fields.ObjectField(properties={
+        'title': fields.TextField("__str__"),
+        'discount_price': fields.IntegerField(),
+        'discount_percent': fields.IntegerField(),
+        'final_price': fields.IntegerField(),
+        'sold_count': fields.IntegerField()
+    }, attr="get_promoted_storage")
     brand = fields.ObjectField(properties={
         'id': fields.IntegerField(),
         'name': fields.TextField("__str__"),
@@ -46,6 +54,7 @@ class ProductDocument(Document):
         'name': fields.TextField(),
         'color': fields.TextField()
     }, attr="get_colors")
+
 
     class Index:
         # Name of the Elasticsearch index
@@ -58,13 +67,13 @@ class ProductDocument(Document):
         model = Product  # The model associated with this Document
 
         # The fields of the model you want to be indexed in Elasticsearch
-        fields = ['permalink', 'available']
+        fields = ['permalink', 'available', 'promote']
         related_models = [Tag, Storage, Brand, Category]
 
     def get_queryset(self):
         """Not mandatory but to improve performance we can select related in one sql request"""
         return super(ProductDocument, self).get_queryset().select_related(
-            'brand', 'thumbnail', 'default_storage'
+            'brand', 'thumbnail', 'default_storage', 'category'
         )
 
     def get_instances_from_related(self, related_instance):
@@ -81,7 +90,7 @@ class ProductDocument(Document):
         elif isinstance(related_instance, Storage):
             return related_instance.product_default_storage
         elif isinstance(related_instance, Category):
-            return related_instance.products.all()
+            return related_instance.products.all() | related_instance.all_products.all()
 
 
 @registry.register_document
