@@ -592,7 +592,9 @@ class FilterProductSchema(BaseSchema):
 
     def get_default_storage(self, obj):
         try:
-            return obj.default_storage._d_
+            if obj.promoted_storage._d_ == {}:
+                return obj.default_storage._d_
+            return obj.promoted_storage._d_
         except AttributeError:
             print(f"product {obj.id} has no default_storage")
 

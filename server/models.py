@@ -1152,6 +1152,16 @@ class Product(Base):
             new_storage.discount_percent = 0
         return new_storage
 
+    def get_promoted_storage(self):
+        new_storage = copy.deepcopy(self.promoted_storage)
+        if self.available:
+            return self.promoted_storage
+        if new_storage:
+            new_storage.discount_price = 0
+            new_storage.final_price = 0
+            new_storage.discount_percent = 0
+        return new_storage
+
     categories = models.ManyToManyField(Category, related_name="products", blank=True)
     box = models.ForeignKey(Box, on_delete=PROTECT, db_index=False, null=True, blank=True)
     category = models.ForeignKey(Category, on_delete=PROTECT, related_name="all_products", db_index=False,
@@ -1162,6 +1172,8 @@ class Product(Base):
     states = models.ManyToManyField(State, blank=True)
     default_storage = models.OneToOneField(null=True, blank=True, to="Storage", on_delete=SET_NULL,
                                            related_name='product_default_storage', db_index=False)
+    promoted_storage = models.OneToOneField(null=True, blank=True, to="Storage", on_delete=SET_NULL,
+                                            related_name='product_promoted_storage')
     tags = models.ManyToManyField(Tag, through="ProductTag", related_name='products', blank=True)
     tag_groups = models.ManyToManyField(TagGroup, related_name='products', blank=True)
     media = models.ManyToManyField(Media, through='ProductMedia', blank=True)
@@ -1178,6 +1190,7 @@ class Product(Base):
     accessory_type = models.PositiveSmallIntegerField(choices=accessory_types, default=1)
     # accessories = models.ManyToManyField("self", through='ProductAccessories', symmetrical=False)
     breakable = models.BooleanField(default=False)
+    promote = models.BooleanField(default=False)
     type = models.PositiveSmallIntegerField(choices=types, validators=[validate_product_type])
     permalink = models.CharField(max_length=255, db_index=False, unique=True)
 
