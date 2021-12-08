@@ -1230,48 +1230,6 @@ class MenuESchema(MenuASchema, MenuSchema):
     pass
 
 
-class SpecialOfferASchema(BaseAdminSchema):
-    class Meta:
-        unknown = INCLUDE
-
-    @post_load
-    def make_special_offer(self, data, **kwargs):
-        if self.return_dict:
-            return data
-        return SpecialOffer(**data)
-
-
-class SpecialOfferESchema(SpecialOfferASchema, SpecialOfferSchema):
-    pass
-
-
-class SpecialProductASchema(SpecialProductSchema, MySchema):
-    class Meta:
-        unknown = INCLUDE
-
-    product = fields.Method("get_product")
-    name = fields.Method("get_name")
-    date_id = fields.Int()
-
-    def get_name(self, obj):
-        if obj.name:
-            return obj.name
-        return obj.storage.title
-
-    def get_product(self, obj):
-        return ProductASchema().dump(obj.storage.product)
-
-    @post_load
-    def make_special_product(self, data, **kwargs):
-        if self.return_dict:
-            return data
-        return SpecialProduct(**data)
-
-
-class SpecialProductESchema(SpecialProductASchema, SpecialProductSchema):
-    pass
-
-
 class DashboardSchema(MySchema):
     id = fields.Int()
     name = fields.Dict()

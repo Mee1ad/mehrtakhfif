@@ -9,23 +9,6 @@ from server.serialize import *
 from server.utils import *
 
 
-class ClientSpecialOffer(View):
-    def get(self, request, name):
-        special_offer = SpecialOffer.objects.select_related('media').filter(category__meta_key=name).order_by('-id')
-        res = {'special_product': SpecialProductSchema(**request.schema_params).dump(special_offer, many=True)}
-        return JsonResponse(res)
-
-
-class GetSpecialProduct(View):
-    def get(self, request, permalink):
-        step = int(request.GET.get('s', default_step))
-        page = int(request.GET.get('e', default_page))
-        special_products = SpecialProduct.objects.filter(category__permalink=permalink) \
-                               .select_related(*SpecialProduct.select)[(page - 1) * step:step * page]
-        special_products = SpecialProductSchema(**request.schema_params).dump(special_products, many=True)
-        return JsonResponse({'special_product': special_products})
-
-
 # noinspection PyTypeChecker
 class FilterDetail(View):
     query = None
