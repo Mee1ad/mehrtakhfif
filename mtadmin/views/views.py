@@ -56,19 +56,8 @@ class Token(AdminView):
 class ReviewPrice(AdminView):
     def post(self, request):
         data = get_data(request, require_category=False)
-
-        # fp = data['final_price']
-        # dp = data.get('discount_price', None)
-        # vdp = data.get('vip_discount_price', None)
-        # dper = data.get('discount_percent', None)
-        # vdper = data.get('vip_discount_percent', None)
-        #
-        # if dp and vdp:
-        #     dper = int(100 - dp / fp * 100)
-        #     return JsonResponse({'discount_percent': dper})
-        # elif dper and vdper:
-        #     dp = int(fp - fp * dper / 100)
-
+        if data['discount_price'] < 2000:
+            raise ValidationError("قیمت پایانی بدون تخفیف حداقل باید 2000 تومان باشد")
         category = Category.objects.only('settings', 'pk').get(pk=data['category_id'])
         data = translate_types(data, Storage)
         storage = {'count': 1, 'storage': '', 'tax_type': data['tax_type'], 'discount_price': data['discount_price'],
