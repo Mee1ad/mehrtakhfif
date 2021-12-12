@@ -673,7 +673,7 @@ class ProductESchema(ProductASchema, ProductSchema):
         unknown = INCLUDE
         allow_none = True
         additional = ('verify', 'manage', 'review', 'capacity', 'max_capacity', 'default_storage_id',
-                      'min_reserve_time') + ProductSchema.Meta.additional + ProductASchema.Meta.additional
+                      'min_reserve_time', 'promote') + ProductSchema.Meta.additional + ProductASchema.Meta.additional
 
     media = fields.Method("get_media")
     tags = ProductTagField()
@@ -689,6 +689,7 @@ class ProductESchema(ProductASchema, ProductSchema):
     # default_storage = fields.Function(lambda o: None)
     # available = fields.Function(lambda o: None)
     default_storage_id = fields.Int(allow_none=True)
+    promoted_storage_id = fields.Int(allow_none=True)
     has_selectable_feature = fields.Function(lambda o: True)
     # features = fields.Method("get_features")  # 38 + 19(selected) => 64
     features = fields.Method("get_product_features_new")
