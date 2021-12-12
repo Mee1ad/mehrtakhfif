@@ -17,7 +17,8 @@ class ProductDocument(Document):
         'id': fields.IntegerField(),
         'name': fields.TextField("__str__"),
         'permalink': fields.KeywordField(),
-        'priority': fields.IntegerField()
+        'priority': fields.IntegerField(),
+        'disable': fields.BooleanField()
     })
     name_fa = fields.TextField(analyzer=standard, attr='get_name_fa')
     name_fa2 = fields.TextField(analyzer=ngram, attr='get_name_fa')

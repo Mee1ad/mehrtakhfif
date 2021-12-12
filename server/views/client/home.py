@@ -102,7 +102,8 @@ class LimitedSpecialProduct(View):
 class ClientSpecialProduct(View):
     def get(self, request):
         special_products = []
-        query = {"query": {"bool": {"must": [{"term": {"promote": True}}]}}}
+        query = {"query": {"bool": {"must": [{"term": {"promote": True}}],
+                                    "must_not": [{"term": {"category.disable": True}}]}}}
         s = Search(using=ES_CLIENT, index="product")
         products = s.from_dict(query)[:500]
         products = products.execute()
