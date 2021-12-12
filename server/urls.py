@@ -98,6 +98,7 @@ user = [
     # path('avatar', try_except(Avatar.as_view()), name='avatar'),
     path('address', try_except(AddressView.as_view()), name='address'),
     path('user_comments', try_except(UserCommentView.as_view()), name='user_comments'),
+    path('user_products', try_except(UserProductsView.as_view()), name='user_products'),
     cache_proxy(InvoiceView.as_view(), 'invoice_detail/<int:invoice_id>', lvl[10])  # vary by user
 ]
 

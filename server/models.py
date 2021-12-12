@@ -1585,6 +1585,7 @@ class Comment(Base):
     suspend = models.BooleanField(default=False)
     type = models.PositiveSmallIntegerField(choices=types)
     product = models.ForeignKey(Product, on_delete=CASCADE, null=True, blank=True, related_name="reviews")
+    storage = models.ForeignKey(Storage, on_delete=CASCADE, null=True, blank=True, related_name="reviews")
     blog_post = models.ForeignKey(BlogPost, on_delete=CASCADE, null=True, blank=True)
 
     class Meta:

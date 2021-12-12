@@ -343,10 +343,6 @@ def get_pagination(request, query, serializer, select=(), prefetch=(), show_all=
     if step > 100:
         step = default_step
     try:
-        print(request.schema_params)
-        print(serializer_args)
-        print(query)
-        print(serializer)
         items = serializer(**request.schema_params, **serializer_args).dump(query, many=True)
     except TypeError:
         items = serializer(**serializer_args).dump(query, many=True)

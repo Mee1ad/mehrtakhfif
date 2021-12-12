@@ -827,7 +827,7 @@ class BasketSchema(BaseSchema):
 
         return BasketProductSchema().dump(basket_products, many=True)
 
-import pysnooper
+
 class InvoiceSchema(BaseSchema):
     def __init__(self, with_shipping_cost=False, invoice_storage_only_field=None,
                  storage_only_field=None, *args, **kwargs):
@@ -1005,7 +1005,13 @@ class CommentSchema(BaseSchema):
 
 
 class UserCommentSchema(CommentSchema):
-    product = fields.Method("get_min_product")
+    product = fields.Method("get_product")
+
+    def get_product(self, obj):
+        storage = obj.storage
+        product = storage.product
+        return {"thumbnail": MediaSchema().dump(product.thumbnail),
+                "title": storage.title.get("fa", ""), "id": storage.product_id}
 
 
 class MenuSchema(BaseSchema):

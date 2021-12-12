@@ -1,10 +1,11 @@
 from django.http import JsonResponse, FileResponse
 from django.shortcuts import render_to_response
 
-from mehr_takhfif.settings import INVOICE_ROOT
+from mehr_takhfif.settings import INVOICE_ROOT, MEDIA_URL
 from server.serialize import *
 from server.utils import *
 from server.utils import LoginRequired
+from django.db.models import Q
 
 
 # from selenium import webdriver
@@ -171,9 +172,32 @@ class AddressView(LoginRequired):
         return JsonResponse({})
 
 
+class UserProductsView(LoginRequired):
+    def get(self, request):
+        page = request.page
+        step = request.step
+        commented_product_ids = Comment.objects.filter(user=request.user).values_list('product_id', flat=True)
+        uncommented_products_query = InvoiceStorage.objects.filter(
+            Q(invoice__user=request.user, invoice__status=2), ~Q(
+                storage__product_id__in=commented_product_ids)).order_by('-id').distinct('id')
+        count = uncommented_products_query.count()
+        uncommented_products = uncommented_products_query.values_list(
+            f'storage__title__{request.lang}', 'storage__product__thumbnail__image')[(page - 1) * step:page * step]
+        uncommented_products = list(map(lambda t: {"title": t[0], "image": HOST + MEDIA_URL + t[1]},
+                                        uncommented_products))
+        pagination = {'last_page': ceil(count / step), 'count': count, 'step': step}
+        return JsonResponse({"uncommented_products": uncommented_products, "pagination": pagination})
+
+
 class UserCommentView(LoginRequired):
     def get(self, request):
-        return JsonResponse(user_data_with_pagination(Comment, UserCommentSchema, request))
+        page = request.page
+        step = request.step
+        comments_query = Comment.objects.filter(user=request.user).order_by('-id')
+        count = comments_query.count()
+        comments = UserCommentSchema().dump(comments_query, many=True)[(page - 1) * 10:page * 10]
+        pagination = {'last_page': ceil(count / step), 'count': count, 'step': step}
+        return JsonResponse({"comments": comments, "pagination": pagination})
 
 
 class GetState(LoginRequired):
