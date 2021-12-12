@@ -7,7 +7,6 @@ from server.documents import *
 from server.serialize import *
 from server.utils import *
 from elasticsearch_dsl import Search
-
 from mehr_takhfif.settings import ES_CLIENT
 
 
@@ -103,11 +102,13 @@ class LimitedSpecialProduct(View):
 class ClientSpecialProduct(View):
     def get(self, request):
         special_products = []
-        products = SpecialProduct.objects.filter(category__isnull=False) \
-            .select_related('thumbnail', 'storage__product__thumbnail', 'category') \
-            .prefetch_related('storage__vip_prices')
-        products = SpecialProductSchema(**request.schema_params).dump(products, many=True)
-        for category, event_list in groupby(sorted(products, key=itemgetter('category_id')), itemgetter('category')):
+        query = {"query": {"bool": {"must": [{"term": {"promote": True}}]}}}
+        s = Search(using=ES_CLIENT, index="product")
+        products = s.from_dict(query)[:500]
+        products = products.execute()
+        serialized_products = FilterProductSchema().dump(products, many=True)
+        for category, event_list in groupby(sorted(serialized_products, key=itemgetter('category_id')),
+                                            itemgetter('category')):
             sp = list(event_list)
             list(map(lambda d: d.pop('category'), sp))
             special_products.append({**category, 'special_products': sp})

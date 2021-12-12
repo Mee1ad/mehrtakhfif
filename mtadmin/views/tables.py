@@ -311,6 +311,7 @@ class ManualDiscountCodeView(AdminView):
         DiscountCode.objects.bulk_create(items)
         return JsonResponse({}, status=201)
 
+
 class HouseView(TableView):
     permission_required = 'server.view_house'
 
@@ -342,7 +343,7 @@ class StorageView(TableView):
         # required_fields = ['id', 'name', 'type', 'manage', 'default_storage_id', 'has_selectable_feature',
         #                    'booking_type', 'thumbnail', 'storages', 'category', 'media']
         required_fields = ['id', 'name', 'type', 'manage', 'default_storage_id', 'has_selectable_feature',
-                           'booking_type', 'category', 'media']
+                           'booking_type', 'category', 'media', 'promote', 'promoted_storage_id']
         extra_data = []
         category_key = 'product__category'
         params = get_params(request, category_key)

@@ -680,7 +680,7 @@ class ProductESchema(ProductASchema, ProductSchema):
         unknown = INCLUDE
         allow_none = True
         additional = ('verify', 'manage', 'review', 'capacity', 'max_capacity', 'default_storage_id',
-                      'min_reserve_time') + ProductSchema.Meta.additional + ProductASchema.Meta.additional
+                      'min_reserve_time', 'promote') + ProductSchema.Meta.additional + ProductASchema.Meta.additional
 
     media = fields.Method("get_media")
     tags = ProductTagField()
@@ -696,6 +696,7 @@ class ProductESchema(ProductASchema, ProductSchema):
     # default_storage = fields.Function(lambda o: None)
     # available = fields.Function(lambda o: None)
     default_storage_id = fields.Int(allow_none=True)
+    promoted_storage_id = fields.Int(allow_none=True)
     has_selectable_feature = fields.Function(lambda o: True)
     # features = fields.Method("get_features")  # 38 + 19(selected) => 64
     features = fields.Method("get_product_features_new")
@@ -1234,48 +1235,6 @@ class MenuASchema(BaseAdminSchema):
 
 
 class MenuESchema(MenuASchema, MenuSchema):
-    pass
-
-
-class SpecialOfferASchema(BaseAdminSchema):
-    class Meta:
-        unknown = INCLUDE
-
-    @post_load
-    def make_special_offer(self, data, **kwargs):
-        if self.return_dict:
-            return data
-        return SpecialOffer(**data)
-
-
-class SpecialOfferESchema(SpecialOfferASchema, SpecialOfferSchema):
-    pass
-
-
-class SpecialProductASchema(SpecialProductSchema, MySchema):
-    class Meta:
-        unknown = INCLUDE
-
-    product = fields.Method("get_product")
-    name = fields.Method("get_name")
-    date_id = fields.Int()
-
-    def get_name(self, obj):
-        if obj.name:
-            return obj.name
-        return obj.storage.title
-
-    def get_product(self, obj):
-        return ProductASchema().dump(obj.storage.product)
-
-    @post_load
-    def make_special_product(self, data, **kwargs):
-        if self.return_dict:
-            return data
-        return SpecialProduct(**data)
-
-
-class SpecialProductESchema(SpecialProductASchema, SpecialProductSchema):
     pass
 
 
