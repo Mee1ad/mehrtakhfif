@@ -1089,7 +1089,7 @@ class Product(Base):
 
     def assign_default_value(self):
         storages = self.storages.filter(available_count_for_sale__gt=0, unavailable=False, disable=False,
-                                        min_count_for_sale__lt=F('available_count_for_sale'))
+                                        min_count_for_sale__lte=F('available_count_for_sale'))
         available = False
         default_storage = self.default_storage
         if storages:
