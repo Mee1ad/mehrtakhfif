@@ -164,7 +164,10 @@ class Filter(View):
             query = {"query": {"match": {"permalink": category_permalink}}, 'min_score': 1}
             category_query = category_document.from_dict(query)
             category_result = category_query.execute()
-            self.category_description = getattr(category_result[0], 'description', None)
+            try:
+                self.category_description = category_result[0].description
+            except AttributeError:
+                self.category_description = None
             query = [
                 {
                     "nested": {
