@@ -208,7 +208,7 @@ class PaymentRequest(LoginRequired):
 
     def create_invoice(self, request, basket=None, charity_id=1):
         user = request.user
-        address = None
+        address = {}
         basket = basket or get_basket(request, require_profit=True, with_changes=True)
         if basket['address_required']:
             if user.default_address.state_id not in [8, 25]:
