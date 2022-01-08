@@ -161,7 +161,7 @@ class Filter(View):
         category_permalink = self.params.get('cat', )
         if category_permalink:
             category_document = Search(using=ES_CLIENT, index="category")
-            query = {"query": {"match": {"permalink": category_permalink}}, 'min_score': 5}
+            query = {"query": {"match": {"permalink": category_permalink}}, 'min_score': 1}
             category_query = category_document.from_dict(query)
             category_result = category_query.execute()
             self.category_description = category_result[0].description
