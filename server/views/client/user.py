@@ -43,8 +43,9 @@ class Profile(LoginRequired):
         user.save()
         return JsonResponse({'user': UserSchema().dump(user)})
 
-
+import pysnooper
 class Orders(LoginRequired):
+    @pysnooper.snoop()
     def get(self, request):
         pk = request.GET.get('id', None)
         if pk:

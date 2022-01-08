@@ -320,9 +320,6 @@ class EditInvoice(LoginRequired):
 
 
 class CallBack(View):
-    def get(self, request):
-        return HttpResponseRedirect(f"{CLIENT_HOST}/profile/all-order")
-
     def post(self, request):
         data = request.body.decode().split('&')
         data_dict = {}
@@ -360,7 +357,9 @@ class CallBack(View):
         invoice.save()
         self.finish_invoice_jobs(invoice, finish=True)
         self.notification_admin(invoice)
-        return HttpResponseRedirect(f"{CLIENT_HOST}/invoice/{invoice_id}")
+        response = HttpResponseRedirect(f"{CLIENT_HOST}/invoice/{invoice_id}")
+        set_custom_signed_cookie(response, 'basket_count', 0)
+        return response
 
     @staticmethod
     def finish_invoice_jobs(invoice, cancel=None, finish=None):
