@@ -96,7 +96,7 @@ class BasketView(View):
             if count < storage.min_count_for_sale:
                 raise ValidationError(
                     f"حداقل تعداد خرید {storage.product.name['fa']} باید {storage.min_count_for_sale} عدد باشد")
-            if count < storage.max_count_for_sale:
+            if count > storage.max_count_for_sale:
                 raise ValidationError(
                     f"حداکثر تعداد خرید {storage.product.name['fa']} باید {storage.max_count_for_sale} عدد باشد")
             basket = request.session.get('basket', [])
@@ -146,7 +146,7 @@ class GetProducts(View):
             obj.product = storage.product
             obj.storage = storage
             obj.features = item['features']
-            if obj.product.type == 'product' and not address_required:
+            if obj.product.get_type_display() == 'product' and not address_required:
                 address_required = True
             obj.product.default_storage = storage
             basket.basket_products.append(obj)
