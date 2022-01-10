@@ -115,7 +115,5 @@ sitemap = [path('sitemap.xml', sitemap, {'sitemaps': {'sitemaps': BaseSitemap}},
            path('product-sitemap.xml', sitemap, {'sitemaps': {'product': ProductSitemap}},
                 name='django.contrib.sitemaps.views.sitemap'),
            path('category-sitemap.xml', sitemap, {'sitemaps': {'category': CategorySitemap}},
-                name='django.contrib.sitemaps.views.sitemap'),
-           path('tag-sitemap.xml', sitemap, {'sitemaps': {'tag': TagSitemap}},
                 name='django.contrib.sitemaps.views.sitemap')]
 urlpatterns = [*home, *category, *user, *shopping, *product, *tourism, *auth, *pay, *urls, *sitemap]

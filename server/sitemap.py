@@ -18,7 +18,7 @@ class BaseSitemap(Sitemap):
     priority = 1
 
     def items(self):
-        return [MySitemap("product"), MySitemap("tag"), MySitemap("category")]
+        return [MySitemap("product"), MySitemap("category")]
 
     def lastmod(self, obj):
         return datetime.now()
@@ -29,7 +29,7 @@ class ProductSitemap(Sitemap):
     priority = 1
 
     def items(self):
-        return Product.objects.all().order_by('-id')
+        return Product.objects.filter(available=True, disable=False).order_by('-id')
 
     def lastmod(self, obj):
         return obj.updated_at
@@ -40,18 +40,7 @@ class CategorySitemap(Sitemap):
     priority = 0.9
 
     def items(self):
-        return Category.objects.all().order_by('-id')
-
-    def lastmod(self, obj):
-        return obj.updated_at
-
-
-class TagSitemap(Sitemap):
-    changefreq = "monthly"
-    priority = 0.8
-
-    def items(self):
-        return Tag.objects.all().order_by('-id')
+        return Category.objects.filter(disable=False).order_by('-id')
 
     def lastmod(self, obj):
         return obj.updated_at
