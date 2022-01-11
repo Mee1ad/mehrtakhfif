@@ -498,6 +498,14 @@ class ProductFeatureSchema(BaseSchema):
         return self.get(obj.feature_value.value)
 
 
+class FeatureSchema(BaseSchema):
+    class Meta:
+        additional = ('id', 'name', 'layout_type')
+
+    type = fields.Function(lambda o: o.get_type_display())
+    layout_type = fields.Function(lambda o: o.get_layout_type_display())
+
+
 class FeatureStorageSchema(BaseSchema):
     id = fields.Int()
     feature = fields.Method('get_feature')
