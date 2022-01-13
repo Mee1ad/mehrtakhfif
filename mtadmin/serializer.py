@@ -1330,4 +1330,30 @@ class SliderASchema(BaseAdminSchema):
         return Slider(**data)
 
 
+class SpecialProductASchema(SpecialProductSchema, MySchema):
+    class Meta:
+        unknown = INCLUDE
+
+    product = fields.Method("get_product")
+    name = fields.Method("get_name")
+    date_id = fields.Int()
+
+    def get_name(self, obj):
+        if obj.name:
+            return obj.name
+        return obj.storage.title
+
+    def get_product(self, obj):
+        return ProductASchema().dump(obj.storage.product)
+
+    @post_load
+    def make_special_product(self, data, **kwargs):
+        if self.return_dict:
+            return data
+        return SpecialProduct(**data)
+
+
+class SpecialProductESchema(SpecialProductASchema, SpecialProductSchema):
+    pass
+
 tables = {'product': ProductASchema, 'media': MediaASchema, 'invoice': InvoiceASchema, 'feature': FeatureASchema}
