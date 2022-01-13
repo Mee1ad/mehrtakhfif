@@ -14,6 +14,7 @@ class FilterDetail(View):
     query = None
     params = None
     category_permalink = None
+    category_description = None
 
     def add_query_filter(self, ):
         q = self.params.get('q', None)
@@ -27,6 +28,11 @@ class FilterDetail(View):
     def add_category_filter(self, ):
         self.category_permalink = self.params.get('cat', )
         if self.category_permalink:
+            category_document = Search(using=ES_CLIENT, index="category")
+            query = {"query": {"match": {"permalink": self.category_permalink}}, 'min_score': 1}
+            category_query = category_document.from_dict(query)
+            category_result = category_query.execute()
+            self.category_description = getattr(category_result[0], "description", None)
             query = [
                 {
                     "nested": {
@@ -110,10 +116,9 @@ class FilterDetail(View):
         breadcrumb = []
         if self.category_permalink:
             breadcrumb = self.get_breadcrumb(self.category_permalink)
-            print(breadcrumb)
         return JsonResponse({"brands": brands, "colors": unique_colors, "categories": categories,
                              "breadcrumb": breadcrumb, 'min_price': prices['min_price']['value'],
-                             'max_price': prices['max_price']['value']})
+                             'max_price': prices['max_price']['value'], "description": self.category_description})
 
 
 # noinspection PyTypeChecker
@@ -160,11 +165,6 @@ class Filter(View):
     def add_category_filter(self, ):
         category_permalink = self.params.get('cat', )
         if category_permalink:
-            category_document = Search(using=ES_CLIENT, index="category")
-            query = {"query": {"match": {"permalink": category_permalink}}, 'min_score': 1}
-            category_query = category_document.from_dict(query)
-            category_result = category_query.execute()
-            self.category_description = getattr(category_result[0], "description", None)
             query = [
                 {
                     "nested": {
@@ -232,8 +232,7 @@ class Filter(View):
         pagination = {"count": count, "step": request.step, "last_page": ceil(count / request.step)}
         serialized_products = FilterProductSchema().dump(products, many=True)
         # todo vip prices
-        return JsonResponse({"data": serialized_products, "description": self.category_description,
-                             "pagination": pagination})
+        return JsonResponse({"data": serialized_products, "pagination": pagination})
 
 
 class GetFeature(View):
