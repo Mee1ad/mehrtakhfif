@@ -90,7 +90,6 @@ class Login_old(View):
     def check_password(user):
         return user.password[:6] == 'argon2'
 
-import pysnooper
 
 class Login(View):
     def post(self, request):
@@ -135,7 +134,7 @@ class Login(View):
     @staticmethod
     def check_password(user):
         return user.password[:6] == 'argon2'
-    @pysnooper.snoop()
+
     def check_code(self, request, code):
         # TODO: get csrf code
         try:
@@ -154,12 +153,6 @@ class Login(View):
                 return JsonResponse({"status": "password_required"})
             login(request, user, backend='server.authentication.MyModelBackend')
             basket_count = sync_session_basket(request)
-            if basket_count > 0:
-                basket = user.baskets.filter('id').last()
-                if not basket:
-                    basket = Basket.objects.create(user=user, created_by=user, updated_by=user)
-                basket.count = basket_count
-                basket.save()
             res = JsonResponse({'status': status})
             res = set_custom_signed_cookie(res, 'basket_count', basket_count)
             res = set_custom_signed_cookie(res, 'is_login', True)
