@@ -93,7 +93,6 @@ class Login_old(View):
 import pysnooper
 
 class Login(View):
-    @pysnooper.snoop()
     def post(self, request):
         data = load_data(request, check_token=False)
         cookie_age = 30 * 60
@@ -124,10 +123,6 @@ class Login(View):
             # login(request, user)
             res = JsonResponse({})
             basket_count = sync_session_basket(request)
-            if basket_count > 0:
-                basket = user.baskets.order_by('id').first()
-                basket.count = basket_count
-                basket.save()
             res = set_custom_signed_cookie(res, 'is_login', True)
             res = set_custom_signed_cookie(res, 'basket_count', basket_count)
             res.delete_cookie('token')
@@ -140,7 +135,7 @@ class Login(View):
     @staticmethod
     def check_password(user):
         return user.password[:6] == 'argon2'
-
+    @pysnooper.snoop()
     def check_code(self, request, code):
         # TODO: get csrf code
         try:
@@ -159,6 +154,12 @@ class Login(View):
                 return JsonResponse({"status": "password_required"})
             login(request, user, backend='server.authentication.MyModelBackend')
             basket_count = sync_session_basket(request)
+            if basket_count > 0:
+                basket = user.baskets.filter('id').last()
+                if not basket:
+                    basket = Basket.objects.create(user=user, created_by=user, updated_by=user)
+                basket.count = basket_count
+                basket.save()
             res = JsonResponse({'status': status})
             res = set_custom_signed_cookie(res, 'basket_count', basket_count)
             res = set_custom_signed_cookie(res, 'is_login', True)
