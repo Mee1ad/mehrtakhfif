@@ -515,7 +515,9 @@ def get_basket_count(user=None, basket_id=None, session=None):
     return user.baskets.order_by('id').prefetch_related('basket_products').last().basket_storages \
                .aggregate(count=Sum('count'))['count'] or 0
 
+import pysnooper
 
+@pysnooper.snoop()
 def sync_session_basket(request):
     user = request.user
     basket_count = 0
