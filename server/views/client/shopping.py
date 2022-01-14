@@ -15,6 +15,7 @@ import pysnooper
 
 
 class BasketView(View):
+
     def get(self, request):
         try:
             basket = Basket.objects.filter(user=request.user) \

@@ -21,9 +21,7 @@ def try_except(func):
         try:
             return func(*args, **kwargs)
         except (PermissionDenied, PermissionError):
-            user = args[0].user
-            res = JsonResponse({"message": "برای استفاده از این باید لاگین کنی", "variant": "warning"}, status=401)
-            return Init.set_login_cookie(user, res=res)
+            return JsonResponse({"message": "شما به این بخش دسترسی ندارید!", "variant": "warning"}, status=401)
         except json.decoder.JSONDecodeError:
             traceback.print_exc()
             return HttpResponseServerError()
