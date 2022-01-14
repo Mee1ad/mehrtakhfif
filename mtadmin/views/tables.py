@@ -41,8 +41,8 @@ class CategoryView(TableView):
 
     def put(self, request):
         data = get_data(request)
-        if data.get('parent_id', None) is None:
-            raise ValidationError("دسته بندی والد نمیتواند خالی باشد")
+        # if data.get('parent_id', None) is None:
+        #     raise ValidationError("دسته بندی والد نمیتواند خالی باشد")
         data.pop('promote', None)
         category = update_object(request, Category, return_item=True, serializer=CategoryASchema, category_key='id',
                                  data=data)
