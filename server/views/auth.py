@@ -90,8 +90,10 @@ class Login_old(View):
     def check_password(user):
         return user.password[:6] == 'argon2'
 
+import pysnooper
 
 class Login(View):
+    @pysnooper.snoop()
     def post(self, request):
         data = load_data(request, check_token=False)
         cookie_age = 30 * 60
@@ -122,6 +124,10 @@ class Login(View):
             # login(request, user)
             res = JsonResponse({})
             basket_count = sync_session_basket(request)
+            if basket_count > 0:
+                basket = user.baskets.order_by('id').first()
+                basket.count = basket_count
+                basket.save()
             res = set_custom_signed_cookie(res, 'is_login', True)
             res = set_custom_signed_cookie(res, 'basket_count', basket_count)
             res.delete_cookie('token')
