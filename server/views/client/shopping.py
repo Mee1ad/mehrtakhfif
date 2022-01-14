@@ -271,7 +271,8 @@ class BookingView(View):
         product = storage.product
         InvoiceStorage.objects.create(storage=storage, invoice_id=invoice_id, count=count,
                                       tax=share['tax'] * count,
-                                      final_price=(storage.final_price - share['tax']) * count, category=product.category,
+                                      final_price=(storage.final_price - share['tax']) * count,
+                                      category=product.category,
                                       discount_price=storage.discount_price * count,
                                       charity=share['charity'] * count,
                                       start_price=storage.start_price * count, admin=share['admin'] * count,

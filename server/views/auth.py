@@ -51,6 +51,10 @@ class Login_old(View):
             # login(request, user)
             res = {'user': UserSchema().dump(user)}
             basket_count = get_basket_count(user=user)
+            if basket_count > 0:
+                basket = user.baskets.order_by('id').first()
+                basket.count = basket_count
+                basket.save()
             res = JsonResponse(res)
             res = set_custom_signed_cookie(res, 'basket_count', basket_count)
             res = set_custom_signed_cookie(res, 'is_login', True)
