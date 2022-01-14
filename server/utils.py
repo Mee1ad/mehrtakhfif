@@ -537,6 +537,8 @@ def sync_session_basket(request):
         request.session['basket'] = []
         request.session.save()
         basket_count = get_basket_count(basket_id=basket.id)
+        basket.count = basket_count
+        basket.save()
     return basket_count
 
 
