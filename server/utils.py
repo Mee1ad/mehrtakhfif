@@ -385,9 +385,10 @@ def check_basket(request, basket):
     changed_items = []
     removed_count = 0
     for basket_product in basket_products:
+        print(basket_product)
         if basket_product.storage.available_count_for_sale == 0:
             deleted_items.append(BasketProductSchema().dump(basket_product))
-            removed_count += basket_product.count + (len(basket_product.accessories) * basket_product.count)
+            removed_count += basket_product.count + (basket_product.accessory_id or 0 * basket_product.count)
             basket_product.delete()
         elif basket_product.count > basket_product.storage.available_count_for_sale:
             changed_items.append({'product_name': basket_product.storage.title['fa'], 'old_count': basket_product.count,
