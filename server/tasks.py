@@ -59,7 +59,7 @@ def cancel_reservation(self, invoice_id, force=False, **kwargs):
             try:
                 invoice = getattr(PaymentHistory.objects.filter(invoice_id=invoice_id).order_by('-id').first(),
                                   'invoice')
-                if not invoice():
+                if not invoice:
                     invoice = Invoice.objects.get(pk=invoice_id)
                 url = f"https://bpm.shaparak.ir/pgwchannel/startpay.mellat?RefId={invoice.reference_id}"
                 r = requests.get(url)
