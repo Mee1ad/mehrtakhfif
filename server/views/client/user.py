@@ -45,7 +45,6 @@ class Profile(LoginRequired):
 
 
 class Orders(LoginRequired):
-    @pysnooper.snoop()
     def get(self, request):
         pk = request.GET.get('id', None)
         if pk:
