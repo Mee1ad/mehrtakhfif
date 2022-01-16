@@ -173,6 +173,7 @@ class SetPassword(View):
             data = json.loads(request.body)
             user.set_password(data['password'])
             user.save()
+            login(request, user, backend='server.authentication.MyModelBackend')
             return JsonResponse({'user': UserSchema().dump(user)})
         except Exception:
             return JsonResponse({}, status=res_code['bad_request'])
