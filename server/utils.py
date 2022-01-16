@@ -182,7 +182,7 @@ def get_share(storage=None, invoice=None):
     :param invoice:
     :return:
     """
-    no_profit_categories = [390]
+    no_profit_categories = [385]
     share = {'tax': 0, 'charity': 0, 'dev': 0, 'admin': 0, 'mt_profit': 0}
     invoice_storages = [storage]
     if invoice:
