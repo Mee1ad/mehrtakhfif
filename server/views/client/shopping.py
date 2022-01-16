@@ -236,7 +236,7 @@ class BookingView(View):
 
     def create_invoice(self, request, storage, count, start_date, end_date, cart_postal_text, charity_id=1):
         user = request.user
-        if user.default_address.state_id not in [8, 25]:
+        if user.default_address.state_id not in [25]:
             raise ValidationError('در حال حاضر محصولات فقط در استان گیلان قابل ارسال میباشد')
         if storage.shipping_cost:
             shipping_cost = storage.shipping_cost + storage.booking_cost

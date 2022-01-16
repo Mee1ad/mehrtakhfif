@@ -385,7 +385,6 @@ def check_basket(request, basket):
     changed_items = []
     removed_count = 0
     for basket_product in basket_products:
-        print(basket_product)
         if basket_product.storage.available_count_for_sale == 0:
             deleted_items.append(BasketProductSchema().dump(basket_product))
             removed_count += basket_product.count + (basket_product.accessory_id or 0 * basket_product.count)
@@ -516,9 +515,7 @@ def get_basket_count(user=None, basket_id=None, session=None):
     return user.baskets.order_by('id').prefetch_related('basket_products').last().basket_storages \
                .aggregate(count=Sum('count'))['count'] or 0
 
-import pysnooper
 
-@pysnooper.snoop()
 def sync_session_basket(request):
     user = request.user
     basket_count = 0
