@@ -256,12 +256,15 @@ def get_barcode(data=None):
 
 # Utils
 
-def send_sms(to, template, token, token2=None):
+def send_sms(to, template, token, token2=None, token3=None, token10=None, token20=None):
     """
     :param to:
     :param template: digital-order-details, order-summary, user-order, verify
     :param token:
     :param token2:
+    :param token3:
+    :param token10:
+    :param token20:
     :return:
     """
     try:
@@ -271,6 +274,9 @@ def send_sms(to, template, token, token2=None):
             'template': template,
             'token': token,
             'token2': token2,
+            'token3': token3,
+            'token10': token10,
+            'token20': token20,
             'type': 'sms',  # sms vs call
         }
         api.verify_lookup(params)

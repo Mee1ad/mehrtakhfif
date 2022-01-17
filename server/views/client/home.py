@@ -92,6 +92,8 @@ class LimitedSpecialProduct(View):
     def get(self, request):
         today = timezone.now()
         selected_date = DateRange.objects.filter(start_date__lte=today, end_date__gte=today).first()
+        if selected_date is None:
+            return JsonResponse({'products': []})
         products = SpecialProduct.objects.filter(date_id=selected_date.id) \
             .select_related('thumbnail', 'storage__product__thumbnail', 'category') \
             .prefetch_related('storage__vip_prices')
