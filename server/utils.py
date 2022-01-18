@@ -33,6 +33,7 @@ from server.serialize import get_tax, BasketSchema, MinProductSchema, BasketProd
 # from barcode import generate
 # from barcode.base import Barcode
 from server.views.post import get_shipping_cost_temp
+from django.db import transaction
 
 random_data = string.ascii_lowercase + string.ascii_uppercase + string.digits
 default_step = 18
@@ -582,19 +583,21 @@ def sync_storage(invoice, op):
             s.sold_count = sub(s.sold_count, c)
 
     attr = {'Basket': 'basket_storages', 'Invoice': 'invoice_storages'}[invoice.__class__.__name__]
-    products = getattr(invoice, attr).all()
-    for product in products:
-        if product.storage.product.get_type_display() == 'package':
-            package_items = Package.objects.filter(package=product.storage)
-            for package_item in package_items:
-                storage = package_item.package_item
-                count = package_item.count
-                update_storage_counts(storage, count)
-                storage.save()
-        count = product.count
-        storage = product.storage
-        update_storage_counts(storage, count)
-        storage.save()
+
+    with transaction.atomic():
+        products = getattr(invoice, attr).all()
+        for product in products:
+            if product.storage.product.get_type_display() == 'package':
+                package_items = Package.objects.filter(package=product.storage)
+                for package_item in package_items:
+                    storage = package_item.package_item
+                    count = package_item.count
+                    update_storage_counts(storage, count)
+                    storage.save()
+            count = product.count
+            storage = product.storage
+            update_storage_counts(storage, count)
+            storage.save()
 
 
 def add_one_off_job(name, args=None, kwargs=None, task='server.tasks.hello', interval=30,
