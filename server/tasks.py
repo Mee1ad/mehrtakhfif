@@ -258,14 +258,15 @@ def send_invoice(self, invoice_id, lang="fa", **kwargs):
                     html.write_pdf(pdf, stylesheets=[css], font_config=font_config)
                     pdf_list.append(pdf)
                     all_renders += rendered
-                    # discount_codes = product.discount_codes.all().values_list('code', flat=True)
-                    # discount_codes = '\n'.join(str(i) for i in discount_codes)
+                    discount_codes = product.discount_codes.all().values_list('code', flat=True)
+                    discount_codes = '\n' + '\n'.join(str(i) for i in discount_codes)
                     # sms_content = f'کد بلیط{getattr(storage.invoice_title, lang, None) or storage.title[lang]}: \n{discount_codes}'
+                    sms_template = "user-digital-order"
                     if product.id == 2158:
                         sms_template = "user-digital-order-charity"
-                        send_sms(user.username, sms_template, token=invoice_id)
-                # if products.count() != digital_products.count():
-                send_sms(user.username, "user-order", {invoice_id}, {invoice_id})
+                    send_sms(user.username, sms_template, token=user.first_name, token2=invoice_id, token20=discount_codes)
+                if products.count() != digital_products.count():
+                    send_sms(user.username, "user-order", {invoice_id}, {invoice_id})
                 email_content = f"سفارش شما با شماره {invoice_id} با موفقیت ثبت شد. برای مشاهده صورتحساب و جزئیات خرید به پنل کاربری خود مراجعه کنید \nhttps://mhrt.ir/i{invoice_id}"
 
                 send_email("صورتحساب خرید", user.email, message=email_content)
