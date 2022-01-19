@@ -29,7 +29,7 @@ bp = {'terminal_id': 5290645, 'username': "takh252", 'password': "71564848",
       'ipg_url': "https://bpm.shaparak.ir/pgwchannel/startpay.mellat",
       'callback': 'https://api.mehrtakhfif.com/payment/callback'}  # mellat
 
-deposit = {'charity': 5000, 'dev': 2}
+deposit = {'charity': 5000, 'dev': 13}
 
 if not DEBUG:
     client = zeep.Client(wsdl="https://bpm.shaparak.ir/pgwchannel/services/pgw?wsdl")
