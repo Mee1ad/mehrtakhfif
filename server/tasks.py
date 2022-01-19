@@ -262,7 +262,7 @@ def send_invoice(self, invoice_id, lang="fa", **kwargs):
                     discount_codes = '\n' + '\n'.join(str(i) for i in discount_codes)
                     # sms_content = f'کد بلیط{getattr(storage.invoice_title, lang, None) or storage.title[lang]}: \n{discount_codes}'
                     sms_template = "user-digital-order"
-                    if product.id == 2158:
+                    if product.storage.product_id == 2158:
                         sms_template = "user-digital-order-charity"
                     send_sms(user.username, sms_template, token=user.first_name, token2=invoice_id, token20=discount_codes)
                 if products.count() != digital_products.count():
