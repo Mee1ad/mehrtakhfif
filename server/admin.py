@@ -817,18 +817,21 @@ class InvoiceSupplierAdmin(admin.ModelAdmin):
 
 
 class MediaAdmin(admin.ModelAdmin):
-    list_display = ('type', 'category', 'url')
+    list_display = ('get_title', 'type', 'category', 'url')
     search_fields = ['name', 'category', 'type']
+    list_filter = ('type', ) + SafeDeleteAdmin.list_filter
     list_per_page = 10
     ordering = ('-id',)
 
     # fields = ('name', 'type',)
+    def get_title(self, obj):
+        return obj.title.get("fa", "")
 
     def url(self, obj):
         # move file
-
         return mark_safe(f'<a href="{HOST}{obj.image.url}">{obj.image.name}</a>')
 
+    get_title.short_description = 'name'
 
 class StateAdmin(admin.ModelAdmin):
     list_display = ('id', 'name',)
