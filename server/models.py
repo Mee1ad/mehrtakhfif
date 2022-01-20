@@ -454,6 +454,7 @@ class User(AbstractUser):
     is_verify = models.BooleanField(default=False)
     email_alert = models.BooleanField(default=True)
     pm_alert = models.BooleanField(default=True)
+    sms_alert = models.BooleanField(default=False)
     privacy_agreement = models.BooleanField(default=False)
     deposit_id = models.PositiveSmallIntegerField(null=True, blank=True)
     default_address = models.OneToOneField(to="Address", on_delete=SET_NULL, null=True, blank=True,
