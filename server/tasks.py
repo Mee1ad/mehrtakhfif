@@ -115,6 +115,16 @@ def support_sale_report(data):
     send_pm(support_group_id, message=data)
 
 
+def supplier_sale_report(invoice_storages):
+    for invoice_storage in invoice_storages:
+        supplier = invoice_storage.storage.supplier
+        if supplier.sms_alert:
+            notification_list = supplier.settings.get('sale_notification_list')
+            for number in notification_list:
+                send_sms(number, 'supplier-sale-report', token=invoice_storage.count,
+                         token20=invoice_storage.storage.title.get('fa', ''))
+
+
 @shared_task(bind=True, max_retries=3)
 def sale_report(self, invoice_id, **kwargs):
     hashcode = md5(f"sale_report{invoice_id}".encode()).hexdigest()
@@ -142,6 +152,7 @@ def sale_report(self, invoice_id, **kwargs):
                         continue
                     owners[owner] = [product_data]
                 support_sale_report(invoice)
+                supplier_sale_report(invoice_storages)
                 all_products = []
                 for owner, products in owners.items():
                     all_products += products
@@ -264,7 +275,8 @@ def send_invoice(self, invoice_id, lang="fa", **kwargs):
                     sms_template = "user-digital-order"
                     if product.storage.product_id == 2158:
                         sms_template = "user-digital-order-charity"
-                    send_sms(user.username, sms_template, token=user.first_name, token2=invoice_id, token20=discount_codes)
+                    send_sms(user.username, sms_template, token=user.first_name, token2=invoice_id,
+                             token20=discount_codes)
                 if products.count() != digital_products.count():
                     send_sms(user.username, "user-order", {invoice_id}, {invoice_id})
                 email_content = f"سفارش شما با شماره {invoice_id} با موفقیت ثبت شد. برای مشاهده صورتحساب و جزئیات خرید به پنل کاربری خود مراجعه کنید \nhttps://mhrt.ir/i{invoice_id}"
