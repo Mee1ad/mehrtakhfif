@@ -80,7 +80,7 @@ def get_shipping_cost_temp(user, basket=None):
     file = open('.env', 'r')
     free_shipping_for_first_purchase = file.read()
     if free_shipping_for_first_purchase == "free_shipping_for_first_purchase=true":
-        if user.settings.get('first_purchase') is True:
+        if user.settings.get('first_purchase', None) is True:
             return 0
     city = user.default_address.city_id
     state = user.default_address.state_id
