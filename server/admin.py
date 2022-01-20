@@ -124,8 +124,9 @@ class UserAdmin(BaseUserAdmin):
     ordering = ('-id',)
     list_per_page = 10
     BaseUserAdmin.fieldsets[2][1]['fields'] = ('is_supplier',) + BaseUserAdmin.fieldsets[2][1]['fields'] + (
-        'vip_types', 'category_permissions')
+        'vip_types', 'category_permissions', )
 
+    BaseUserAdmin.fieldsets[1][1]['fields'] += ('sms_alert', 'email_alert', 'pm_alert', 'settings')
     # UserAdmin.filter_horizontal += ('box_permission',)
 
 
@@ -819,7 +820,7 @@ class InvoiceSupplierAdmin(admin.ModelAdmin):
 class MediaAdmin(admin.ModelAdmin):
     list_display = ('get_title', 'type', 'category', 'url')
     search_fields = ['name', 'category', 'type']
-    list_filter = ('type', ) + SafeDeleteAdmin.list_filter
+    list_filter = ('type',) + SafeDeleteAdmin.list_filter
     list_per_page = 10
     ordering = ('-id',)
 
@@ -832,6 +833,7 @@ class MediaAdmin(admin.ModelAdmin):
         return mark_safe(f'<a href="{HOST}{obj.image.url}">{obj.image.name}</a>')
 
     get_title.short_description = 'name'
+
 
 class StateAdmin(admin.ModelAdmin):
     list_display = ('id', 'name',)
