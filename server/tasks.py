@@ -119,7 +119,7 @@ def supplier_sale_report(invoice_storages):
     for invoice_storage in invoice_storages:
         supplier = invoice_storage.storage.supplier
         if supplier.sms_alert:
-            notification_list = supplier.settings.get('sale_notification_list')
+            notification_list = supplier.settings.get('sale_notification_list', [])
             for number in notification_list:
                 send_sms(number, 'supplier-sale-report', token=invoice_storage.count,
                          token20=invoice_storage.storage.title.get('fa', ''))
