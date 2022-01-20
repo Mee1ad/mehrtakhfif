@@ -71,11 +71,17 @@ def get_shipping_cost_temp(user, basket=None):
         if basket:
             if user.vip_types.filter(name__fa="MehrTakhfif").exists() or basket.discount_codes.filter(type=3).exists():
                 return 0
+
     except AttributeError:
         pass
     if not user.is_authenticated or not user.default_address:
         # todo fix
         return -1
+    file = open('.env', 'r')
+    free_shipping_for_first_purchase = file.read()
+    if free_shipping_for_first_purchase == "free_shipping_for_first_purchase=true":
+        if user.settings.get('first_purchase') is True:
+            return 0
     city = user.default_address.city_id
     state = user.default_address.state_id
     state_position = get_state_position_temp(state, city)
