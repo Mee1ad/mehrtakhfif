@@ -1487,7 +1487,7 @@ class Basket(Base):
     sync_levels = [(0, 'ready'), (1, 'reserved'), (2, 'canceled'), (3, 'done')]
 
     def __str__(self):
-        return f"{self.user}"
+        return f"{self.id}"
 
     user = models.ForeignKey(User, on_delete=CASCADE, null=True, blank=True, related_name="baskets")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created at')
