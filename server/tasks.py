@@ -263,7 +263,8 @@ def send_invoice(self, invoice_id, lang="fa", **kwargs):
                         discount_code.save()
                         data['code'] = discount_code.code
                         rendered += render_to_string('invoice.html', data)
-                    pdf = INVOICE_ROOT + f'/{filename}.pdf'
+                    pdf = f'invoice/{filename}.pdf'  # cant write persian on disk, got permission error
+                    pdf = f'invoice/{invoice_id}-{product.id}.pdf'
                     css = BASE_DIR + '/templates/css/pdf_style.css'
                     font_config = FontConfiguration()
                     html = HTML(string=rendered)
@@ -280,7 +281,8 @@ def send_invoice(self, invoice_id, lang="fa", **kwargs):
                     send_sms(user.username, sms_template, token=user.first_name, token2=invoice_id,
                              token20=discount_codes)
                 if products.count() != digital_products.count():
-                    send_sms(user.username, "user-order", {invoice_id}, {invoice_id})
+                    send_sms("09377467414", "user-order", {invoice_id}, {invoice_id})
+                    # send_sms(user.username, "user-order", {invoice_id}, {invoice_id})
                 email_content = f"سفارش شما با شماره {invoice_id} با موفقیت ثبت شد. برای مشاهده صورتحساب و جزئیات خرید به پنل کاربری خود مراجعه کنید \nhttps://mhrt.ir/i{invoice_id}"
 
                 send_email("صورتحساب خرید", user.email, message=email_content)
@@ -317,7 +319,7 @@ def send_invoice_test(self, invoice_id, lang="fa", **kwargs):
                         key = ''.join(random.sample(random_data, 6))
                         product.key = key
                         try:
-                            # product.save()
+                            product.save()
                             pass
                         except Exception:
                             product.refresh_from_db()
