@@ -252,13 +252,15 @@ def send_invoice(self, invoice_id, lang="fa", **kwargs):
                     if storage.invoice_description[lang]:
                         data['storage_description'] = storage.invoice_description[lang]
                     rendered = ""
-                    for c in range(product.count):
-                        discount_code = product.discount_codes.filter(type=1).first()
-                        if discount_code is None:
-                            discount_code = storage.discount_codes.filter(invoice=None).first()
-                            discount_code.invoice_id = invoice_id
-                            discount_code.invoice_storage = product
-                            discount_code.save()
+                    reserved_codes = product.discount_codes.all()
+                    for reserved_code in reserved_codes:
+                        data['code'] = reserved_code.code
+                        rendered += render_to_string('invoice.html', data)
+                    for count in range(product.count - reserved_codes.count()):
+                        discount_code = storage.discount_codes.filter(invoice=None).first()
+                        discount_code.invoice_id = invoice_id
+                        discount_code.invoice_storage = product
+                        discount_code.save()
                         data['code'] = discount_code.code
                         rendered += render_to_string('invoice.html', data)
                     pdf = INVOICE_ROOT + f'/{filename}.pdf'
@@ -287,6 +289,85 @@ def send_invoice(self, invoice_id, lang="fa", **kwargs):
                 res = 'sms sent'
                 if user.email and all_renders:
                     send_email("صورتحساب خرید", user.email, html_content=all_renders, attach=pdf_list)
+                    res += ', email sent'
+                return res
+            except Exception as e:
+                logger.exception(e)
+                self.retry(countdown=3 ** self.request.retries)
+    return "This task is duplicate"
+
+
+@shared_task(bind=True, max_retries=3)
+def send_invoice_test(self, invoice_id, lang="fa", **kwargs):
+    hashcode = md5('test'.encode()).hexdigest()
+    lock_id = '{0}-lock-{1}'.format(self.name, hashcode)
+    with task_lock(lock_id, self.app.oid) as acquired:
+        if acquired:
+            try:
+                products = InvoiceStorage.objects.filter(invoice_id=invoice_id)
+                digital_products = products.filter(storage__product__type=1)
+                user = Invoice.objects.get(pk=invoice_id).user
+                pdf_list = []
+                all_renders = ""
+                for product in digital_products:
+                    storage = product.storage
+                    filename = f'{storage.product.permalink}-{product.pk}'
+                    product.filename = filename
+                    while product.key is None:
+                        key = ''.join(random.sample(random_data, 6))
+                        product.key = key
+                        try:
+                            # product.save()
+                            pass
+                        except Exception:
+                            product.refresh_from_db()
+                    title = storage.invoice_title[lang]
+                    if not title:
+                        title = storage.title[lang]
+                    data = {'title': title, 'user': f'{user.first_name} {user.last_name}',
+                            'price': storage.discount_price}
+                    if storage.product.invoice_description[lang]:
+                        data['product_description'] = storage.product.invoice_description[lang]
+                    if storage.invoice_description[lang]:
+                        data['storage_description'] = storage.invoice_description[lang]
+                    rendered = ""
+                    reserved_codes = product.discount_codes.all()
+                    for reserved_code in reserved_codes:
+                        data['code'] = reserved_code.code
+                        rendered += render_to_string('invoice.html', data)
+                    for count in range(product.count - reserved_codes.count()):
+                        discount_code = storage.discount_codes.filter(invoice=None).first()
+                        discount_code.invoice_id = invoice_id
+                        discount_code.invoice_storage = product
+                        # discount_code.save()
+                        data['code'] = discount_code.code
+                        rendered += render_to_string('invoice.html', data)
+                    pdf = INVOICE_ROOT + f'/{filename}.pdf'
+                    css = BASE_DIR + '/templates/css/pdf_style.css'
+                    font_config = FontConfiguration()
+                    html = HTML(string=rendered)
+                    css = CSS(css)
+                    html.write_pdf(pdf, stylesheets=[css], font_config=font_config)
+                    pdf_list.append(pdf)
+                    all_renders += rendered
+                    discount_codes = product.discount_codes.all().values_list('code', flat=True)
+                    discount_codes = '\n' + '\n'.join(str(i) for i in discount_codes)
+                    # sms_content = f'کد بلیط{getattr(storage.invoice_title, lang, None) or storage.title[lang]}: \n{discount_codes}'
+                    sms_template = "user-digital-order"
+                    if product.storage.product_id == 2158:
+                        sms_template = "user-digital-order-charity"
+                    send_sms("09015518439", sms_template, token=user.first_name, token2=invoice_id,
+                             token20=discount_codes)
+                if products.count() != digital_products.count():
+                    send_sms("09015518439", "user-order", {invoice_id}, {invoice_id})
+                email_content = f"سفارش شما با شماره {invoice_id} با موفقیت ثبت شد. برای مشاهده صورتحساب و جزئیات خرید به پنل کاربری خود مراجعه کنید \nhttps://mhrt.ir/i{invoice_id}"
+
+                # send_email("صورتحساب خرید", user.email, message=email_content)
+                # if sms_content:
+                #     send_sms(user.username, "digital-order-details", sms_content)
+                res = 'sms sent'
+                if user.email and all_renders:
+                    # send_email("صورتحساب خرید", user.email, html_content=all_renders, attach=pdf_list)
                     res += ', email sent'
                 return res
             except Exception as e:
