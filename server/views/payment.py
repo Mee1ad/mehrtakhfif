@@ -51,6 +51,7 @@ class IPG(View):
 
 class PaymentRequest(LoginRequired):
     def get(self, request, basket_id):
+        redirect = request.GET.get('redirect', 'false')
         # ip = request.META.get('REMOTE_ADDR') or request.META.get('HTTP_X_FORWARDED_FOR')
 
         # debug
@@ -101,6 +102,8 @@ class PaymentRequest(LoginRequired):
         url = self.get_payment_url(invoice)
         basket.products.clear()
         res = JsonResponse({"url": url})
+        if redirect == 'true':
+            res = HttpResponseRedirect(url)
         return set_custom_signed_cookie(res, 'basket_count', 0)
 
     @staticmethod
