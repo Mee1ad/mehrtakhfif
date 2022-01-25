@@ -278,13 +278,13 @@ def send_invoice(self, invoice_id, lang="fa", **kwargs):
                     sms_template = "user-digital-order"
                     if product.storage.product_id == 2158:
                         sms_template = "user-digital-order-charity"
-                    send_sms("09377467414", sms_template, token10=user.first_name, token=invoice_id,
-                             token20=discount_codes)
-                    # send_sms(user.username, sms_template, token10=user.first_name, token2=invoice_id,
+                    # send_sms("09377467414", sms_template, token10=user.first_name, token=invoice_id,
                     #          token20=discount_codes)
+                    send_sms(user.username, sms_template, token10=user.first_name, token=invoice_id,
+                             token20=discount_codes)
                 if products.count() != digital_products.count():
-                    send_sms("09377467414", "user-order", {invoice_id}, {invoice_id})
-                    # send_sms(user.username, "user-order", {invoice_id}, {invoiicce_id})
+                    # send_sms("09377467414", "user-order", {invoice_id}, {invoice_id})
+                    send_sms(user.username, "user-order", {invoice_id}, {invoice_id})
                 email_content = f"سفارش شما با شماره {invoice_id} با موفقیت ثبت شد. برای مشاهده صورتحساب و جزئیات خرید به پنل کاربری خود مراجعه کنید \nhttps://mhrt.ir/i{invoice_id}"
 
                 send_email("صورتحساب خرید", user.email, message=email_content)
