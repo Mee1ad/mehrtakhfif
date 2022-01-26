@@ -363,9 +363,12 @@ class CallBack(View):
         self.notification_admin(invoice)
         response = HttpResponseRedirect(f"{CLIENT_HOST}/invoice/{invoice_id}")
         set_custom_signed_cookie(response, 'basket_count', 0)
-        if request.user.settings.get('first_purchase', None) is True:
-            request.user.settings.update({'first_purchase': False})
-            request.user.save()
+        try:
+            if request.user.settings.get('first_purchase', None) is True:
+                request.user.settings.update({'first_purchase': False})
+                request.user.save()
+        except Exception as e:
+            print(e)
         return response
 
     @staticmethod
