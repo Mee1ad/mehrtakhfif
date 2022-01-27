@@ -34,6 +34,7 @@ from server.serialize import get_tax, BasketSchema, MinProductSchema, BasketProd
 # from barcode.base import Barcode
 from server.views.post import get_shipping_cost_temp
 from django.db import transaction
+from django.core.paginator import EmptyPage
 
 random_data = string.ascii_lowercase + string.ascii_uppercase + string.digits
 default_step = 18
@@ -344,7 +345,11 @@ def get_pagination(request, query, serializer, select=(), prefetch=(), show_all=
     paginator = Paginator(query, step)
     count = len(query)
     # query = query if show_all and count <= 500 else query[(page - 1) * step: step * page]
-    query = paginator.page(page)
+    try:
+        query = paginator.page(page)
+    except EmptyPage:
+        return {'pagination': {'last_page': ceil(count / step), 'count': count, 'step': step},
+                'data': []}
     if show_all and count > 0:
         step = count
     if step > 100:
