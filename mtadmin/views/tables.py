@@ -488,7 +488,8 @@ class InvoiceProductView(TableView):
                                                error_null_category=False, params=params))
 
     def put(self, request):
-        return update_object(request, InvoiceStorage, require_category=False, category_key='category')
+        return update_object(request, InvoiceStorage, serializer=InvoiceStorageASchema, require_category=False,
+                             category_key='category')
 
 
 class MenuView(TableView):
