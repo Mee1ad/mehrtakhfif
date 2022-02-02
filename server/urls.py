@@ -10,8 +10,7 @@ from server.views.client.product import *
 from server.views.client.shopping import *
 from server.views.client.user import *
 from server.views.payment import *
-from django.contrib.sitemaps.views import sitemap
-from .sitemap import *
+
 try:
     from .urls_test import urls
 except ModuleNotFoundError:
@@ -109,11 +108,4 @@ auth = [
     path('send_code', try_except(SendCode.as_view()), name='send_code'),
     path('set_password', try_except(SetPassword.as_view()), name='set_password'),
 ]
-
-sitemap = [path('sitemap.xml', sitemap, {'sitemaps': {'sitemaps': BaseSitemap}},
-                name='django.contrib.sitemaps.views.sitemap'),
-           path('product-sitemap.xml', sitemap, {'sitemaps': {'product': ProductSitemap}},
-                name='django.contrib.sitemaps.views.sitemap'),
-           path('category-sitemap.xml', sitemap, {'sitemaps': {'category': CategorySitemap}},
-                name='django.contrib.sitemaps.views.sitemap')]
-urlpatterns = [*home, *category, *user, *shopping, *product, *tourism, *auth, *pay, *urls, *sitemap]
+urlpatterns = [*home, *category, *user, *shopping, *product, *tourism, *auth, *pay, *urls]

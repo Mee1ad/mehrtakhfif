@@ -67,7 +67,7 @@ INSTALLED_APPS = \
         'prettyjson',
         'django.contrib.sitemaps',
         'guardian',
-        # 'django.contrib.sites'
+        'django.contrib.sites'
     ] + MY_INSTALLED_APPS
 
 DEBUG_TOOLBAR_PANELS = [
